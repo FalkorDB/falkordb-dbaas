@@ -1,0 +1,1 @@
+cd ../tofu && tofu workspace delete $1
