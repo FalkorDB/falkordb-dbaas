@@ -1,1 +1,0 @@
-cd ../tofu && tofu workspace create $1
