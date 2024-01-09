@@ -9,7 +9,7 @@ provider "kubernetes" {
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
-    args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+    args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
   }
 }
 
@@ -21,13 +21,13 @@ provider "helm" {
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
-      args = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
     }
   }
 }
 
 resource "helm_release" "falkordb" {
-  name       = "falkordb"
+  name = "falkordb"
 
   repository = "https://charts.bitnami.com/bitnami"
   chart      = "redis"
@@ -95,7 +95,7 @@ resource "helm_release" "falkordb" {
 }
 
 resource "helm_release" "falkordb-monitoring" {
-  name       = "falkordb-monitoring"
+  name = "falkordb-monitoring"
 
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
@@ -114,7 +114,7 @@ locals {
   azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 
   tags = {
-    customer  = var.name
+    customer = var.name
   }
 
   falkordb_s3_backup_location = "${module.falkordb_backup_s3_bucket.s3_bucket_arn}/backups"
@@ -238,6 +238,27 @@ module "falkordb_backup_s3_bucket" {
   }
 
   tags = local.tags
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "falkordb_backup_s3_bucket_lifecycle_configuration" {
+  bucket = module.falkordb_backup_s3_bucket.s3_bucket_id
+
+  rule {
+    id = "falkordb-rule"
+
+    filter {
+      prefix = "backups/"
+    }
+
+    expiration {
+      days = var.backup_retention_period
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 3
+    }
+
+    status = "Enabled"
+  }
 }
 
 module "ebs_kms_key" {
