@@ -29,10 +29,6 @@ Scripts to help work with this repository
 14. kubectl_connect_prometheus.sh: Port forward into the prometheus gui.
 15. kubectl_connect_alertmanager.sh: Port forward into the alert manager gui.
 
-# Charts
-
-1. values.yaml: example values used for deploying FalkorDB on K8S using the bitnami/redis helm charts.
-
 # Tofu
 
 This folder contains OpenTofu templates to deploy FalkorDB.
