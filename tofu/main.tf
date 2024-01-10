@@ -13,6 +13,79 @@ provider "kubernetes" {
   }
 }
 
+resource "kubernetes_cluster_role" "falkordb_role" {
+  metadata {
+    name = "falkordb-role"
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods"]
+    verbs      = ["get", "watch", "list"]
+  }
+  rule {
+    api_groups = [""]
+    resources  = ["pods/exec"]
+    verbs      = ["create"]
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "falkordb_role_binding" {
+  metadata {
+    name = "falkordb-role-binding"
+  }
+  role_ref {
+    name      = "falkordb-role"
+    kind      = "ClusterRole"
+    api_group = "rbac.authorization.k8s.io"
+  }
+  subject {
+    kind      = "ServiceAccount"
+    name      = "default"
+    namespace = "default"
+  }
+}
+
+resource "kubernetes_cron_job_v1" "falkorbd_backup" {
+  metadata {
+    name = "falkordb-backup"
+  }
+  spec {
+    concurrency_policy = "Replace"
+    schedule           = var.backup_schedule
+    job_template {
+      metadata {}
+      spec {
+        backoff_limit              = 2
+        ttl_seconds_after_finished = 10
+        template {
+          metadata {}
+          spec {
+            container {
+              name  = "backup"
+              image = "amazon/aws-cli"
+              # https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
+              command = ["/bin/sh", "-c", "curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.28.3/2023-11-14/bin/linux/amd64/kubectl; chmod +x kubectl; ./kubectl exec falkordb-redis-master-0 -- redis-cli -a '${random_password.password.result}' save; ./kubectl cp falkordb-redis-master-0:/data/dump.rdb dump.rdb -c redis; ls -l; aws s3 cp dump.rdb s3://${local.falkordb_s3_backup_location}/dump$(date +'%Y-%m-%d_%H-%M-%S').rdb"]
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_config_map" "falkordb_grafana_dashboard" {
+  metadata {
+    name = "falkordb-grafana-dashboard-redis"
+    labels = {
+      grafana_dashboard = "1"
+    }
+  }
+  data = {
+    "falkordb.json" = "${file("${path.module}/dashboards/falkordb.json")}"
+  }
+}
+
 provider "helm" {
   kubernetes {
     host                   = module.eks.cluster_endpoint
@@ -26,12 +99,22 @@ provider "helm" {
   }
 }
 
+resource "random_password" "password" {
+  length           = 16
+  special          = true
+  override_special = ""
+}
+
 resource "helm_release" "falkordb" {
   name = "falkordb"
 
   repository = "https://charts.bitnami.com/bitnami"
   chart      = "redis"
 
+  set {
+    name  = "global.redis.password"
+    value = random_password.password.result
+  }
   set {
     name  = "image.repository"
     value = "falkordb/falkordb"
@@ -104,6 +187,31 @@ resource "helm_release" "falkordb-monitoring" {
     name  = "grafana.adminPassword"
     value = var.grafana_admin_password
   }
+  set {
+    name  = "grafana.additionalDataSources[0].name"
+    value = "FalkorDB"
+  }
+  # https://redisgrafana.github.io/redis-datasource/provisioning/
+  set_list {
+    name  = "grafana.plugins"
+    value = ["redis-datasource"]
+  }
+  set {
+    name  = "grafana.additionalDataSources[0].type"
+    value = "redis-datasource"
+  }
+  set {
+    name  = "grafana.additionalDataSources[0].url"
+    value = "falkordb-redis-master:6379"
+  }
+  set {
+    name  = "grafana.additionalDataSources[0].secureJsonData.password"
+    value = random_password.password.result
+  }
+  set {
+    name  = "grafana.additionalDataSources[0].editable"
+    value = "true"
+  }
 }
 
 data "aws_caller_identity" "current" {}
@@ -117,7 +225,7 @@ locals {
     customer = var.name
   }
 
-  falkordb_s3_backup_location = "${module.falkordb_backup_s3_bucket.s3_bucket_arn}/backups"
+  falkordb_s3_backup_location = "${module.falkordb_backup_s3_bucket.s3_bucket_id}/backups"
 }
 
 ################################################################################
@@ -173,6 +281,46 @@ module "eks_blueprints_addons" {
   }
 
   tags = local.tags
+}
+
+data "aws_iam_policy_document" "assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["pods.eks.amazonaws.com"]
+    }
+
+    actions = [
+      "sts:AssumeRole",
+      "sts:TagSession"
+    ]
+  }
+}
+
+resource "aws_iam_role" "falkordb_backup_role" {
+  name               = "eks-pod-identity-falkordb_backup_role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "falkordb_backup_role_policy_attachment" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+  role       = aws_iam_role.falkordb_backup_role.name
+}
+
+resource "aws_eks_pod_identity_association" "falkordb_backup_association" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "default"
+  service_account = "default"
+  role_arn        = aws_iam_role.falkordb_backup_role.arn
+}
+
+resource "aws_eks_addon" "eks_pod_identity" {
+  cluster_name                = module.eks.cluster_name
+  addon_name                  = "eks-pod-identity-agent"
+  addon_version               = "v1.0.0-eksbuild.1"
+  resolve_conflicts_on_update = "OVERWRITE"
 }
 
 ################################################################################

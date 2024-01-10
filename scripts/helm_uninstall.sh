@@ -1,1 +1,0 @@
-cd ../charts && helm uninstall falkordb

@@ -1,1 +1,0 @@
-cd ../charts && helm install -f values.yaml falkordb oci://registry-1.docker.io/bitnamicharts/redis

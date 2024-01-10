@@ -22,12 +22,12 @@ Scripts to help work with this repository
 7. tofu_plan.sh: Generate execution plan to be deployed.
 8. tofu_apply.sh: Deploy the plan to the cloud provider.
 9. tofu_destroy.sh: Delete the deployment from the cloud provider.
-10. tofu_fmt.sh: Format the *.tf files.
-11. helm_install.sh: Manual install FalkorDB resources on K8S.
-12. helm_upgrade.sh: Upgrade the FalkorDB release on K8S.
-13. helm_uninstall.sh: Uninstall the FalkorDB release from K8S.
-14. helm_add_monitoring.sh: Add the prometheus-community helm charts repository to K8S.
-15. helm_install_monitoring.sh: Install the kube-prometheus-stack
+10. tofu_output.sh: Show deployment output.
+11. aws_update_kubeconfig.sh: Update kubectl config.
+12. kubectl_connect_falkordb_master.sh: Port forward into the FalkorDB master node.
+13. kubectl_connect_grafana.sh: Port forward into the grafana gui.
+14. kubectl_connect_prometheus.sh: Port forward into the prometheus gui.
+15. kubectl_connect_alertmanager.sh: Port forward into the alert manager gui.
 
 # Charts
 

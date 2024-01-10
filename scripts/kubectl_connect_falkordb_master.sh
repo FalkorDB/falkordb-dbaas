@@ -1,0 +1,1 @@
+kubectl port-forward svc/falkordb-redis-master 6379:6379

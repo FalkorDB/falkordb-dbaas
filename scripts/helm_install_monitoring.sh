@@ -1,1 +1,0 @@
-cd ../charts && helm install falkordb-monitoring prometheus-community/kube-prometheus-stack

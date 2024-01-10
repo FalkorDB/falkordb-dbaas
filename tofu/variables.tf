@@ -57,5 +57,9 @@ variable "k8s_node_max_count" {
 variable "backup_retention_period" {
   type    = number
   default = 30
+}
 
+variable "backup_schedule" {
+  type    = string
+  default = "0 * * * *"
 }

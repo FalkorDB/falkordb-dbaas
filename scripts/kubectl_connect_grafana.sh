@@ -1,0 +1,1 @@
+kubectl port-forward svc/falkordb-monitoring-grafana 3000:80
