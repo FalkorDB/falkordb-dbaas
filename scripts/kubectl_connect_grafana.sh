@@ -1,1 +1,1 @@
-kubectl port-forward svc/falkordb-monitoring-grafana 3000:80
+kubectl port-forward svc/falkordb-monitoring-grafana 3000:80 --namespace falkordb-monitoring

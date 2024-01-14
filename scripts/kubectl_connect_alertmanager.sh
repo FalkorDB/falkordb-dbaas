@@ -1,1 +1,1 @@
-kubectl port-forward svc/falkordb-monitoring-kube-p-alertmanager 9093
+kubectl port-forward svc/falkordb-monitoring-kube-p-alertmanager 9093 --namespace falkordb-monitoring

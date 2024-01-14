@@ -1,32 +1,11 @@
 variable "name" {
   type    = string
-  default = "tofu"
+  default = "falkordb"
 }
 
 variable "region" {
   type    = string
   default = "eu-north-1"
-
-}
-
-variable "falkordb_version" {
-  type    = string
-  default = "4.0"
-}
-
-variable "persistance_size" {
-  type    = string
-  default = "8Gi"
-}
-
-variable "falkordb_replicas" {
-  type    = number
-  default = 1
-}
-
-variable "grafana_admin_password" {
-  type    = string
-  default = "admin"
 }
 
 variable "k8s_version" {
@@ -57,9 +36,4 @@ variable "k8s_node_max_count" {
 variable "backup_retention_period" {
   type    = number
   default = 30
-}
-
-variable "backup_schedule" {
-  type    = string
-  default = "0 * * * *"
 }

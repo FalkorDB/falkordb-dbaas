@@ -1,1 +1,1 @@
-kubectl port-forward svc/falkordb-monitoring-kube-p-prometheus 9090
+kubectl port-forward svc/falkordb-monitoring-kube-p-prometheus 9090 --namespace falkordb-monitoring
