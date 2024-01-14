@@ -1,1 +1,1 @@
-kubectl port-forward svc/falkordb-redis-master 6379:6379 --namespace falkordb
+kubectl port-forward svc/falkordb-redis 6379:6379 --namespace falkordb

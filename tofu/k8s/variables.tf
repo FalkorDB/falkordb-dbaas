@@ -20,7 +20,7 @@ variable "persistance_size" {
 
 variable "falkordb_replicas" {
   type    = number
-  default = 1
+  default = 2
 }
 
 variable "grafana_admin_password" {
