@@ -1,6 +1,28 @@
 # This file is maintained automatically by "tofu init".
 # Manual edits may be lost in future updates.
 
+provider "registry.opentofu.org/cloudposse/utils" {
+  version     = "1.14.0"
+  constraints = ">= 0.17.0"
+  hashes = [
+    "h1:x0t9pfIH0MmCqC50RvsNzR0LiJMamtxGU6Zydw1YBwo=",
+    "zh:2e058d206b66224bd5f8f78a03d52f19064eeed179115847fbb8f0e3da34d04c",
+    "zh:3035a0db2ef0950ff6a41764b6b250cdf74084b549c8443da883fdb723367e29",
+    "zh:3750baccaa7a174e7eb97aca6d2442fbe09a508d99edac81e4948083b4df01d7",
+    "zh:4ab57c32778160d15169bcd343537bbca48f3a14ccca410c31a415b591ec628a",
+    "zh:6ad18d78fe54ad3d0a5a4f43488fe9fecf81031106a3d955a102a4791d760751",
+    "zh:6bf256f03fbdfb0aff9751bc2bc4f9a81d8d967ae935cec1855d998fe6e80f03",
+    "zh:8aad026d7c561bf0ada4e0ec8f861fc8339957c3f973661424790c3869abc003",
+    "zh:98becc6c0e4766512f8157bee6fa66c475afd2155a0f9b3d90917c3510ac9010",
+    "zh:a5b85c73b0701c9b4f0c0dc4cc2ca50f07d93de85ecac9737abe5d2f1aae0ec3",
+    "zh:aa817735af915dae7dd2020d3b6eb8fabb2e6618e6c2736c0950d83c2f64a519",
+    "zh:cce2c5fe013a5996a648cdea91a7d934b6faf5d99d6affc2a5a83e058448758e",
+    "zh:e174e3dbe46a2848720d26c0672964c95c9219cb8dc6f8eeee4d30757f2ced1c",
+    "zh:e6c84d2ccac3063aab46706ceeb8f1439d03d4ed824daac9ab0253f0902a4e14",
+    "zh:eada9372e27880b62558e396d2ee1e96f876c2da915fb0c665317f004d619115",
+  ]
+}
+
 provider "registry.opentofu.org/hashicorp/aws" {
   version     = "5.32.1"
   constraints = ">= 3.72.0, >= 4.0.0, >= 4.9.0, >= 4.33.0, >= 4.36.0, >= 4.47.0, >= 4.57.0, >= 5.0.0, >= 5.20.0"
