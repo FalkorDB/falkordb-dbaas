@@ -125,6 +125,7 @@ resource "random_password" "password" {
 resource "helm_release" "falkordb" {
   name      = "falkordb"
   namespace = "falkordb"
+  version   = "18.6.3"
 
   repository = "https://charts.bitnami.com/bitnami"
   chart      = "redis"
@@ -156,6 +157,18 @@ resource "helm_release" "falkordb" {
   set {
     name  = "master.persistence.size"
     value = var.persistance_size
+  }
+  set {
+    name  = "sentinel.service.type"
+    value = "NodePort"
+  }
+  set {
+    name  = "sentinel.service.nodePorts.redis"
+    value = 30100
+  }
+  set {
+    name  = "sentinel.service.nodePorts.sentinel"
+    value = 30200
   }
   set {
     name  = "replica.replicaCount"
@@ -213,6 +226,14 @@ resource "helm_release" "falkordb" {
     name  = "metrics.serviceMonitor.relabelings[0].regex"
     value = "(.*redis.*)"
   }
+  set {
+    name  = "useExternalDNS.enabled"
+    value = "true"
+  }
+  set {
+    name  = "useExternalDNS.suffix"
+    value = "falkordb.io"
+  }
 }
 
 resource "helm_release" "falkordb-monitoring" {
@@ -250,5 +271,19 @@ resource "helm_release" "falkordb-monitoring" {
   set {
     name  = "grafana.additionalDataSources[0].editable"
     value = "true"
+  }
+}
+
+module "eks-external-dns" {
+  source                           = "lablabs/eks-external-dns/aws"
+  version                          = "1.2.0"
+  cluster_identity_oidc_issuer     = var.falkordb_eks_oidc_issuer
+  cluster_identity_oidc_issuer_arn = var.falkordb_eks_oidc_provider_arn
+
+  settings = {
+    "policy"           = "upsert-only"
+    "aws.zoneType"     = "public"
+    "domainFilters[0]" = var.falkordb_domain
+    "txtOwnerId"       = var.falkordb_hosted_zone_id
   }
 }

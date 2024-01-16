@@ -18,3 +18,11 @@ output "falkordb_s3_backup_location" {
   description = "S3 backup location"
   value       = local.falkordb_s3_backup_location
 }
+output "falkordb_eks_oidc_issuer" {
+  description = "EKS OIDC issuer"
+  value       = module.eks.cluster_oidc_issuer_url
+}
+output "falkordb_eks_oidc_provider_arn" {
+  description = "EKS OIDC provider ARN"
+  value       = module.eks.oidc_provider_arn
+}

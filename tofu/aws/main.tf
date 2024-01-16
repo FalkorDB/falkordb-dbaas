@@ -38,6 +38,9 @@ module "eks" {
       min_size     = var.k8s_node_min_count
       max_size     = var.k8s_node_max_count
       desired_size = var.k8s_node_count
+      network_interfaces = [{
+        associate_public_ip_address = true
+      }]
     }
   }
 

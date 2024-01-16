@@ -1,39 +1,31 @@
 variable "name" {
-  type    = string
-  default = "falkordb"
+  type = string
 }
 
 variable "region" {
-  type    = string
-  default = "eu-north-1"
+  type = string
 }
 
 variable "k8s_version" {
-  type    = string
-  default = "1.28"
+  type = string
 }
 
 variable "k8s_instance_type" {
-  type    = string
-  default = "t3.medium"
+  type = string
 }
 
 variable "k8s_node_count" {
-  type    = number
-  default = 2
+  type = number
 }
 
 variable "k8s_node_min_count" {
-  type    = number
-  default = 2
+  type = number
 }
 
 variable "k8s_node_max_count" {
-  type    = number
-  default = 3
+  type = number
 }
 
 variable "backup_retention_period" {
-  type    = number
-  default = 30
+  type = number
 }
