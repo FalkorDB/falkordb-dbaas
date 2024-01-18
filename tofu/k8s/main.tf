@@ -160,15 +160,19 @@ resource "helm_release" "falkordb" {
   }
   set {
     name  = "sentinel.service.type"
-    value = "NodePort"
+    value = "LoadBalancer"
   }
   set {
-    name  = "sentinel.service.nodePorts.redis"
-    value = 30100
+    name  = "sentinel.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-type"
+    value = "external"
   }
   set {
-    name  = "sentinel.service.nodePorts.sentinel"
-    value = 30200
+    name  = "sentinel.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-nlb-target-type"
+    value = "ip"
+  }
+  set {
+    name  = "sentinel.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-scheme"
+    value = "internet-facing"
   }
   set {
     name  = "replica.replicaCount"
@@ -274,6 +278,7 @@ resource "helm_release" "falkordb-monitoring" {
   }
 }
 
+# https://github.com/kubernetes-sigs/external-dns
 module "eks-external-dns" {
   source                           = "lablabs/eks-external-dns/aws"
   version                          = "1.2.0"
@@ -286,4 +291,13 @@ module "eks-external-dns" {
     "domainFilters[0]" = var.falkordb_domain
     "txtOwnerId"       = var.falkordb_hosted_zone_id
   }
+}
+
+module "load_balancer_controller" {
+  source = "git::https://github.com/DNXLabs/terraform-aws-eks-lb-controller.git"
+
+  cluster_identity_oidc_issuer     = var.falkordb_eks_oidc_issuer
+  cluster_identity_oidc_issuer_arn = var.falkordb_eks_oidc_provider_arn
+  cluster_name                     = var.falkordb_eks_cluster_name
+  helm_chart_version = "1.6.2"
 }
