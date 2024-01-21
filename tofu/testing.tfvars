@@ -1,0 +1,17 @@
+name                    = "falkordb-aws-testing"
+region                  = "eu-central-1"
+k8s_version             = "1.28"
+k8s_instance_type       = "t3.medium"
+k8s_node_count          = 2
+k8s_node_min_count      = 2
+k8s_node_max_count      = 3
+backup_retention_period = 7
+falkordb_version        = "v4.0.3"
+falkordb_cpu            = "500m"
+falkordb_memory         = "1Gi"
+persistance_size        = "8Gi"
+falkordb_replicas       = 2
+grafana_admin_password  = "admin"
+backup_schedule         = "0 * * * *"
+falkordb_domain         = "testing.falkordb.com"
+falkordb_hosted_zone_id = "Z1Q1Q1Q1Q1Q1Q1"

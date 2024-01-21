@@ -3,3 +3,5 @@ terraform.tfvars
 terraform.tfstate
 terraform.tfstate.backup
 local
+.venv
+tofu/__tests__/__pycache__

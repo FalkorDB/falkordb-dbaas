@@ -1,0 +1,59 @@
+name: Create and Test AWS infrastructure
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./tofu
+
+jobs:
+  setup-infra-with-tofu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Init AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: eu-central-1
+
+      - name: Set up Tofu
+        uses: opentofu/setup-opentofu@v1.0.1
+        
+      - name: Init infrastructure
+        run: tofu init
+
+      - name: Plan infrastructure
+        run: tofu plan -var-file testing.tfvars
+
+      - name: Apply infrastructure
+        run: tofu apply -var-file testing.tfvars
+        env:
+          TOFU_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          TOFU_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+
+      - name: Output infrastructure details
+        run: tofu output
+
+      - name: Run tests
+        run: tofu test
+
+      - name: Run python tests
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          pytest
+
+      - name: Destroy infrastructure
+        run: tofu destroy -var-file testing.tfvars
+        env:
+            TOFU_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+            TOFU_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
