@@ -41,12 +41,19 @@ jobs:
 
       - name: Apply infrastructure
         id: apply_infrastructure
-        run: tofu apply -auto-approve -var=name=${{ github.job }} -var=region=
+        run: tofu apply -auto-approve -var-file testing.tfvars -state-out=testing_state_${{ github.job }}.tfstate
         timeout-minutes: 20
         continue-on-error: true
         env:
           TOFU_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
           TOFU_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+
+      - name: Archive state file
+        uses: actions/upload-artifact@v4
+        if: steps.apply_infrastructure.outcome == 'success'
+        with:
+          name: state-${{ github.job }}
+          path: testing_state_${{ github.job }}.tfstate
 
       - name: Output infrastructure details
         if: steps.apply_infrastructure.outcome == 'success'
