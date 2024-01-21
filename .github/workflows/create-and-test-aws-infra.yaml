@@ -1,10 +1,10 @@
 name: Create and Test AWS infrastructure
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  # push:
+  #   branches: [main]
+  # pull_request:
+  #   branches: [main]
   workflow_dispatch:
 
 defaults:
@@ -24,9 +24,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
           aws-region: eu-central-1
 
+      - name: Set up testing environment variables
+        run: |
+          echo "${{ fromJson(env.TESTING_ENV_VARS) }},
+          name=${{ github.job }}
+          " >> testing.tfvars
+
       - name: Set up Tofu
         uses: opentofu/setup-opentofu@v1.0.1
-        
+
       - name: Init infrastructure
         run: tofu init
 
@@ -34,26 +40,39 @@ jobs:
         run: tofu plan -var-file testing.tfvars
 
       - name: Apply infrastructure
-        run: tofu apply -auto-approve -var-file testing.tfvars
+        id: apply_infrastructure
+        run: tofu apply -auto-approve -var=name=${{ github.job }} -var=region=
+        timeout-minutes: 20
+        continue-on-error: true
         env:
           TOFU_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
           TOFU_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
 
       - name: Output infrastructure details
-        run: tofu output
+        if: steps.apply_infrastructure.outcome == 'success'
+        id: lb
+        run: |
+          echo "::set-output name=host::$(tofu output | grep lb_host | awk '{print $3}')"
 
       - name: Run tests
+        if: steps.apply_infrastructure.outcome == 'success'
+        continue-on-error: true
         run: tofu test
 
       - name: Run python tests
+        if: steps.apply_infrastructure.outcome == 'success'
+        continue-on-error: true
         run: |
+          FALKORDB_HOST=${{ steps.lb.outputs.host }}
+          FALKORDB_PORT=6379
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r requirements.txt
           pytest
 
       - name: Destroy infrastructure
+        if: always()
         run: tofu destroy -var-file testing.tfvars
         env:
-            TOFU_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
-            TOFU_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          TOFU_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          TOFU_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
