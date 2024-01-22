@@ -34,6 +34,12 @@ variable "falkordb_version" {
   type = string
 }
 
+variable "falkordb_password" {
+  type = string
+  sensitive = true
+  nullable = true
+}
+
 variable "falkordb_cpu" {
   type = string
 }

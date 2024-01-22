@@ -15,3 +15,4 @@ grafana_admin_password  = "admin"
 backup_schedule         = "0 * * * *"
 falkordb_domain         = "<your domain>"
 falkordb_hosted_zone_id = "<your hosted zone id>"
+falkordb_password       = null

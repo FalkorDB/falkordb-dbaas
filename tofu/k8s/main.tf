@@ -80,7 +80,7 @@ resource "kubernetes_cron_job_v1" "falkorbd_backup" {
               name  = "backup"
               image = "amazon/aws-cli"
               # https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
-              command = ["/bin/sh", "-c", "curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.28.3/2023-11-14/bin/linux/amd64/kubectl; chmod +x kubectl; ./kubectl exec falkordb-redis-node-0 --namespace falkordb -- redis-cli -a '${random_password.password.result}' save; ./kubectl cp falkordb-redis-node-0:/data/dump.rdb dump.rdb -c redis --namespace falkordb; aws s3 cp dump.rdb s3://${var.falkordb_s3_backup_location}/dump$(date +'%Y-%m-%d_%H-%M-%S').rdb"]
+              command = ["/bin/sh", "-c", "curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.28.3/2023-11-14/bin/linux/amd64/kubectl; chmod +x kubectl; ./kubectl exec falkordb-redis-node-0 --namespace falkordb -- redis-cli -a '${local.falkordb_password}' save; ./kubectl cp falkordb-redis-node-0:/data/dump.rdb dump.rdb -c redis --namespace falkordb; aws s3 cp dump.rdb s3://${var.falkordb_s3_backup_location}/dump$(date +'%Y-%m-%d_%H-%M-%S').rdb"]
             }
           }
         }
@@ -121,6 +121,10 @@ resource "random_password" "password" {
   override_special = ""
 }
 
+locals {
+  falkordb_password = var.falkordb_password != null ? var.falkordb_password : random_password.password.result
+}
+
 # https://github.com/bitnami/charts/tree/main/bitnami/redis
 resource "helm_release" "falkordb" {
   name      = "falkordb"
@@ -132,7 +136,7 @@ resource "helm_release" "falkordb" {
 
   set {
     name  = "global.redis.password"
-    value = random_password.password.result
+    value = local.falkordb_password
   }
   set {
     name  = "image.repository"
@@ -270,7 +274,7 @@ resource "helm_release" "falkordb-monitoring" {
   }
   set {
     name  = "grafana.additionalDataSources[0].secureJsonData.password"
-    value = random_password.password.result
+    value = local.falkordb_password
   }
   set {
     name  = "grafana.additionalDataSources[0].editable"

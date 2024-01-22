@@ -26,4 +26,5 @@ module "k8s" {
   falkordb_s3_backup_location                 = module.aws.falkordb_s3_backup_location
   falkordb_eks_oidc_issuer                    = module.aws.falkordb_eks_oidc_issuer
   falkordb_eks_oidc_provider_arn              = module.aws.falkordb_eks_oidc_provider_arn
+  falkordb_password                           = var.falkordb_password
 }

@@ -14,7 +14,7 @@ env:
   PLAN_WORKFLOW_NAME: testing-plan-aws-infra.yaml
 
 jobs:
-  apply-and-test-aws-module:
+  initialize-env:
     if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
     environment: testing
@@ -50,6 +50,11 @@ jobs:
           name: environment-${{ env.PR_NUMBER }}
           path: tofu/terraform.tfvars
 
+  apply-and-test-aws-module:
+    needs: [initialize-env]
+    runs-on: ubuntu-latest
+    environment: testing
+    steps:
       - name: Apply infrastructure
         id: apply_infrastructure
         run: ./tofu_apply_aws.sh -- -auto-approve
@@ -67,6 +72,42 @@ jobs:
         run: |
           kubectl get nodes
 
+  apply-and-test-k8s-module:
+    needs: [initialize-env, apply-and-test-aws-module]
+    if: needs.apply-and-test-aws-module.result == 'success'
+    runs-on: ubuntu-latest
+    environment: testing
+    steps:
+      - name: Apply k8s module
+        id: apply_k8s_module
+        run: ./tofu_apply_k8s.sh -- -auto-approve
+        timeout-minutes: 20
+        continue-on-error: true
+
+      - name: Get LoadBalancer host
+        if: steps.apply_k8s_module.outcome == 'success'
+        id: lb
+        run: |
+          echo "host=$(kubectl get svc -n falkordb falkordb -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')" >> $GITHUB_ENV
+
+      - name: Run python tests
+        if: steps.apply_k8s_module.outcome == 'success'
+        working-directory: .
+        continue-on-error: true
+        run: |
+          FALKORDB_HOST=${{ steps.lb.outputs.host }}
+          FALKORDB_PORT=6379
+          FALKORDB_PASSWORD=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          pytest
+
+  destroy-infra:
+    needs: [apply-and-test-aws-module, apply-and-test-k8s-module]
+    runs-on: ubuntu-latest
+    environment: testing
+    steps:
       - name: Destroy infrastructure
         if: always()
         run: ./tofu_destroy.sh

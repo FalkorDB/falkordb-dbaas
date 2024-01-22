@@ -7,16 +7,27 @@ def test_falkordb_connection():
 
     host = os.environ.get("FALKORDB_HOST")
     port = os.environ.get("FALKORDB_PORT")
+    password = os.environ.get("FALKORDB_PASSWORD")
 
-    db = FalkorDB(host, port)
-    assert db is not None
+    assert host is not None
+    assert port is not None and port.isdigit()
 
-    graph = db.select_graph("test")
+    print(f"Connecting to FalkorDB at {host}:{port}")
 
-    res = graph.query(
+    try:
+        db = FalkorDB(host, port, password)
+        assert db is not None
+
+        graph = db.select_graph("test")
+
+        res = graph.query(
+            """
+            RETURN 1
         """
-        RETURN 1
-    """
-    )
-    
-    assert res.result_set[0][0] == 1
+        )
+
+        assert res.result_set[0][0] == 1
+
+    except Exception as e:
+        print(e)
+        assert False

@@ -45,6 +45,7 @@ jobs:
           backup_schedule=\"${{ vars.TF_VAR_BACKUP_SCHEDULE }}\"
           falkordb_domain=\"${{ vars.TF_VAR_FALKORDB_DOMAIN }}\"
           falkordb_hosted_zone_id=\"${{ vars.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}\"
+          falkordb_password=\"${{ secrets.TF_VAR_FALKORDB_PASSWORD }}\"
           " >> ../tofu/terraform.tfvars
 
       - name: Set up Tofu
@@ -81,8 +82,10 @@ jobs:
             const plan_aws_file = fs.readFileSync('plan-aws.out', 'utf8')
             const plan_k8s_file = fs.readFileSync('plan-k8s.out', 'utf8')
          
+            const title = '#### Tofu Plan 📖'
+
             const output = `
-            #### Tofu Plan 📖
+            ${title}
             
             <details><summary>Aws Plan</summary>
             
@@ -102,12 +105,33 @@ jobs:
 
             `
 
-            github.rest.issues.createComment({
+            // Update a comment if it exists, otherwise create a new one
+
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            })
+
+            const comment = comments.data.find(comment => comment.user.login === 'github-actions[bot]' && comment.body.startsWith(title))
+
+            if (comment) {
+              await github.rest.issues.updateComment({
+                comment_id: comment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output
+              })
+              return
+            }
+
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: output
             })
+          
 
 
       - name: Archive aws module state file
