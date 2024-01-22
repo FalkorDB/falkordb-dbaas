@@ -60,19 +60,33 @@ jobs:
         id: plan_aws
         run: |
           ./tofu_plan_aws.sh 
-          echo "summary=$(./tofu_show.sh local-aws)" >> $GITHUB_OUTPUT
+          echo "{summary}={$(./tofu_show.sh local-aws)}" >> "$GITHUB_OUTPUT"
 
       - name: Plan K8S module
         id: plan_k8s
         run: |
           ./tofu_plan_k8s.sh 
-          echo "summary=$(./tofu_show.sh local-k8s)" >> $GITHUB_OUTPUT
+          echo "{summary}={$(./tofu_show.sh local-k8s)}" >> "$GITHUB_OUTPUT"
 
       - name: Add comment with state
         uses: actions/github-script@v4
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+          
+            // Update the comment if it already exists, otherwise create a new one
+            const comment = context.issue.comments.find(comment => comment.body.startsWith('## Terraform Plan'))
+
+            if (comment) {
+              github.issues.updateComment({
+                comment_id: comment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: '## Terraform Plan\n\n' + '${{ steps.plan_aws.outputs.summary }}' + '\n\n' + '${{ steps.plan_k8s.outputs.summary }}'
+              })
+              return
+            }
+
             github.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
