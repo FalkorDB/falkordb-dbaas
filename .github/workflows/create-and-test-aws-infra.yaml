@@ -9,11 +9,12 @@ on:
 
 defaults:
   run:
-    working-directory: ./tofu
+    working-directory: ./scripts
 
 jobs:
-  setup-infra-with-tofu:
+  plan-infra:
     runs-on: ubuntu-latest
+    environment: testing
     steps:
       - uses: actions/checkout@v2
 
@@ -22,55 +23,90 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
-          aws-region: eu-central-1
+          aws-region: ${{ vars.REGION }}
 
       - name: Set up testing environment variables
         run: |
-          echo "${{ fromJson(env.TESTING_ENV_VARS) }},
-          name=${{ github.job }}
-          " >> testing.tfvars
+          name="${{ github.run_id }}",
+          region="${{ vars.REGION }}"
+          k8s_version="${{ vars.K8S_VERSION }}"
+          k8s_instance_type="${{ vars.K8S_INSTANCE_TYPE }}"
+          k8s_node_count="${{ vars.K8S_NODE_COUNT }}" 
+          k8s_node_min_count="${{ vars.K8S_NODE_MIN_COUNT }}"
+          k8s_node_max_count="${{ vars.K8S_NODE_MAX_COUNT }}"
+          backup_retention_period="${{ vars.BACKUP_RETENTION_PERIOD }}"
+          falkordb_version="${{ vars.FALKORDB_VERSION }}"
+          falkordb_cpu="${{ vars.FALKORDB_CPU }}"
+          falkordb_memory="${{ vars.FALKORDB_MEMORY }}"
+          persistance_size="${{ vars.PERSISTANCE_SIZE }}"
+          falkordb_replicas="${{ vars.FALKORDB_REPLICAS }}"
+          grafana_admin_password="${{ vars.GRAFANA_ADMIN_PASSWORD }}"
+          backup_schedule="${{ vars.BACKUP_SCHEDULE }}"
+          falkordb_domain="${{ vars.FALKORDB_DOMAIN }}"
+          falkordb_hosted_zone_id="${{ vars.FALKORDB_HOSTED_ZONE_ID }}"
+          " >> ../tofu/terraform.tfvars
 
       - name: Set up Tofu
         uses: opentofu/setup-opentofu@v1.0.1
 
       - name: Init infrastructure
-        run: tofu init
+        run: ./tofu_init.sh
+
+      - name: Run tests
+        run: ./tofu_test.sh
 
       - name: Plan infrastructure
-        run: tofu plan -var-file testing.tfvars
+        id: plan
+        run: |
+          ./tofu_plan.sh
+          echo "::set-output name=summary::$(./tofu_show.sh)" 
+
+      - name: Wait for approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: AviAvni
+          minimum-approvals: 1
+          issue-title: '[TESTING] Terraform plan for ${{ github.run_id }}'
+          issue-body: 'Please review the terraform plan for ${{ github.run_id }}:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Plan:
+            ${{ steps.plan.outputs.summary }}'
+          exclude-workflow-initiator-as-approver: false
+          additional-approved-words: ''
+          additional-denied-words: ''
 
       - name: Apply infrastructure
         id: apply_infrastructure
-        run: tofu apply -auto-approve -var-file testing.tfvars -state-out=testing_state_${{ github.job }}.tfstate
+        run: ./tofu_apply.sh -- -auto-approve -state-out=testing_state_${{ github.run_id }}.tfstate
         timeout-minutes: 20
         continue-on-error: true
-        env:
-          TOFU_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
-          TOFU_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
 
       - name: Archive state file
         uses: actions/upload-artifact@v4
-        if: steps.apply_infrastructure.outcome == 'success'
         with:
-          name: state-${{ github.job }}
-          path: testing_state_${{ github.job }}.tfstate
+          name: state-${{ github.run_id }}
+          path: ../tofu/testing_state_${{ github.run_id }}.tfstate
 
-      - name: Output infrastructure details
+      - name: Archive environment file
+        uses: actions/upload-artifact@v4
+        with:
+          name: environment-${{ github.run_id }}
+          path: ../tofu/terraform.tfvars
+  
+      - name: Get load balancer hostname
         if: steps.apply_infrastructure.outcome == 'success'
-        id: lb
+        id: get_lb_hostname
         run: |
-          echo "::set-output name=host::$(tofu output | grep lb_host | awk '{print $3}')"
-
-      - name: Run tests
-        if: steps.apply_infrastructure.outcome == 'success'
-        continue-on-error: true
-        run: tofu test
+          echo "::set-output name=host::$(./tofu_output.sh | grep lb_hostname | awk '{print $3}')"
 
       - name: Run python tests
         if: steps.apply_infrastructure.outcome == 'success'
         continue-on-error: true
+        working-directory: ./
         run: |
-          FALKORDB_HOST=${{ steps.lb.outputs.host }}
+          FALKORDB_HOST=${{ steps.get_lb_hostname.outputs.host }}
           FALKORDB_PORT=6379
           python3 -m venv .venv
           source .venv/bin/activate
@@ -79,7 +115,4 @@ jobs:
 
       - name: Destroy infrastructure
         if: always()
-        run: tofu destroy -var-file testing.tfvars
-        env:
-          TOFU_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
-          TOFU_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+        run: ./tofu_destroy.sh

@@ -1,0 +1,1 @@
+cd ../tofu && tofu show -json -out local
