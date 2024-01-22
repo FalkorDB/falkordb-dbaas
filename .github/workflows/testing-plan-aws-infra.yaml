@@ -54,17 +54,12 @@ jobs:
       - name: Set up Tofu
         uses: opentofu/setup-opentofu@v1.0.1
 
-      - name: Generate cache key
-        id: generate_cache_key
-        run: |
-          cat ../tofu/.terraform.lock.hcl | sha256sum | cut -d ' ' -f 1
-
       - name: Cache OpenTofu plugins
         uses: actions/cache@v2
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: ${{ steps.generate_cache_key.outputs }}
-  
+          key: tofu-${{hashFiles('../tofu/.terraform.lock.hcl')}}
+
       - name: Init infrastructure
         run: ./tofu_init.sh
 
