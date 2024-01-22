@@ -1,0 +1,1 @@
+cd ../tofu && tofu apply local-k8s

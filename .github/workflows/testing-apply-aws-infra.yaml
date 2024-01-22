@@ -1,0 +1,67 @@
+name: TESTING Plan AWS infrastructure
+
+on:
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./scripts
+
+env:
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+
+jobs:
+  apply-and-test-aws-module:
+    if: github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    environment: testing
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Init AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ vars.TF_VAR_REGION }}
+
+      - name: Set up Tofu
+        uses: opentofu/setup-opentofu@v1.0.1
+
+      - name: Init infrastructure
+        run: ./tofu_init.sh
+
+      - name: Get aws state file
+        uses: actions/download-artifact@v2
+        with:
+          name: state-aws-${{ env.PR_NUMBER }}
+          path: ../tofu/local-aws
+
+      - name: Get environment file
+        uses: actions/download-artifact@v2
+        with:
+          name: environment-${{ env.PR_NUMBER }}
+          path: ../tofu/terraform.tfvars
+
+      - name: Apply infrastructure
+        id: apply_infrastructure
+        run: ./tofu_apply_aws.sh -- -auto-approve
+        timeout-minutes: 20
+        continue-on-error: true
+
+      - name: Get EKS cluster credentials
+        id: get_eks_credentials
+        if: steps.apply_infrastructure.outcome == 'success'
+        run: |
+          ./aws_update_kubeconfig.sh ${{ env.PR_NUMBER }}
+
+      - name: Check connection to EKS cluster
+        if: steps.get_eks_credentials.outcome == 'success'
+        run: |
+          kubectl get nodes
+
+      - name: Destroy infrastructure
+        if: always()
+        run: ./tofu_destroy.sh

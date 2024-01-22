@@ -1,0 +1,85 @@
+name: TESTING Plan AWS infrastructure
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./scripts
+
+env:
+  PR_NUMBER: ${{ github.event.number }}
+
+jobs:
+  plan-infra:
+    runs-on: ubuntu-latest
+    environment: testing
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Init AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ vars.TF_VAR_REGION }}
+
+      - name: Set up testing environment variables
+        run: |
+          echo "name=\"${{ env.PR_NUMBER }}\",
+          falkordb_version=\"v4.0.3\"
+          " >> ../tofu/terraform.tfvars
+
+      - name: Set up Tofu
+        uses: opentofu/setup-opentofu@v1.0.1
+
+      - name: Init infrastructure
+        run: ./tofu_init.sh
+
+      - name: Run tests
+        run: ./tofu_test.sh
+
+      - name: Plan AWS module
+        id: plan_aws
+        run: |
+          ./tofu_plan_aws.sh 
+          echo "::set-output name=summary::$(./tofu_show.sh -- -out local-aws)" 
+
+      - name: Plan K8S module
+        id: plan_k8s
+        run: |
+          ./tofu_plan_k8s.sh 
+          echo "::set-output name=summary::$(./tofu_show.sh -- -out local-k8s)" 
+
+      - name: Add comment with state
+        uses: actions/github-script@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## Terraform Plan\n\n' + '${{ steps.plan_aws.outputs.summary }}' + '\n\n' + '${{ steps.plan_k8s.outputs.summary }}'
+            })
+
+      - name: Archive aws module state file
+        uses: actions/upload-artifact@v4
+        with:
+          name: state-aws-${{ env.PR_NUMBER }}
+          path: ../tofu/local-aws
+
+      - name: Archive k8s module state file
+        uses: actions/upload-artifact@v4
+        with:
+          name: state-k8s-${{ env.PR_NUMBER }}
+          path: ../tofu/local-k8s
+    
+      - name: Archive environment file
+        uses: actions/upload-artifact@v4
+        with:
+          name: environment-${{ env.PR_NUMBER }}
+          path: ../tofu/terraform.tfvars
+
