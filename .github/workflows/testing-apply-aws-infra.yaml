@@ -51,9 +51,15 @@ jobs:
 
       - name: Apply infrastructure
         id: apply_infrastructure
-        run: ./tofu_apply_aws.sh -- -auto-approve
+        run: ./tofu_apply_aws.sh -- -auto-approve -state-out=../state/state-aws
         timeout-minutes: 20
         continue-on-error: true
+
+      - name: Archive AWS target state
+        uses: actions/upload-artifact@v4
+        with:
+          name: state-aws-${{ env.PR_NUMBER }}
+          path: state/state-aws
 
       - name: Get EKS cluster credentials
         id: get_eks_credentials
@@ -72,13 +78,19 @@ jobs:
         id: plan_k8s
         run: |
           ./tofu_plan_k8s.sh 
-          
+
       - name: Apply k8s module
         id: apply_k8s_module
-        run: ./tofu_apply_k8s.sh -- -auto-approve
+        run: ./tofu_apply_k8s.sh -- -auto-approve -state-out=../state/state-k8s
         timeout-minutes: 20
         continue-on-error: true
 
+      - name: Archive K8S target state
+        uses: actions/upload-artifact@v4
+        with:
+          name: state-k8s-${{ env.PR_NUMBER }}
+          path: state/state-k8s
+            
       - name: Get FalkorDB endpoint
         if: steps.apply_k8s_module.outcome == 'success'
         continue-on-error: true
