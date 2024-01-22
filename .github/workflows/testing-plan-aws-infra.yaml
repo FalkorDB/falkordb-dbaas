@@ -49,7 +49,7 @@ jobs:
           falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
         run: |
           ./create_tfvars_from_env.sh
-          cp ../tofu/terraform.tfvars ${GITHUB_WORKSPACE}/artifacts/terraform.tfvars
+          cp -p ../tofu/terraform.tfvars ${GITHUB_WORKSPACE}/artifacts/terraform.tfvars
 
       - name: Set up Tofu
         uses: opentofu/setup-opentofu@v1.0.1
