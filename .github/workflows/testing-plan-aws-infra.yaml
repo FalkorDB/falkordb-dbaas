@@ -10,7 +10,7 @@ defaults:
     working-directory: ./scripts
 
 env:
-  PR_NUMBER: ${{ github.event.number }}
+  PR_NUMBER: ${{ github.event.pull_request.number }}
 
 jobs:
   plan-infra:
@@ -60,13 +60,17 @@ jobs:
         id: plan_aws
         run: |
           ./tofu_plan_aws.sh 
-          echo "{summary}={$(./tofu_show.sh local-aws)}" >> "$GITHUB_OUTPUT"
+          summary=$(./tofu_show.sh local-aws)
+          summary=$(echo $summary | tr '\n' ' ')
+          echo "summary=$summary" >> "$GITHUB_OUTPUT"
 
       - name: Plan K8S module
         id: plan_k8s
         run: |
           ./tofu_plan_k8s.sh 
-          echo "{summary}={$(./tofu_show.sh local-k8s)}" >> "$GITHUB_OUTPUT"
+          summary=$(./tofu_show.sh local-k8s)
+          summary=$(echo $summary | tr '\n' ' ')
+          echo "summary=$summary" >> "$GITHUB_OUTPUT"
 
       - name: Add comment with state
         uses: actions/github-script@v4
