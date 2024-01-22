@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Init AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4.0.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
@@ -58,7 +58,7 @@ jobs:
 
       - name: Apply infrastructure
         id: apply_infrastructure
-        run: ./tofu_apply_aws.sh -- -auto-approve -state-out=../state/state-aws
+        run: ./tofu_apply_aws.sh plan-aws -- -auto-approve -state-out=../state/state-aws
         timeout-minutes: 20
         continue-on-error: true
 
@@ -82,17 +82,20 @@ jobs:
           kubectl get nodes
 
       - name: Plan K8S module
+        if: steps.get_eks_credentials.outcome == 'success'
         id: plan_k8s
         run: |
           ./tofu_plan_k8s.sh 
 
       - name: Apply k8s module
+        if: steps.plan_k8s.outcome == 'success'
         id: apply_k8s_module
-        run: ./tofu_apply_k8s.sh -- -auto-approve -state-out=../state/state-k8s
+        run: ./tofu_apply_k8s.sh plan-k8s -- -auto-approve -state-out=../state/state-k8s
         timeout-minutes: 20
         continue-on-error: true
 
       - name: Archive K8S target state
+        if: steps.apply_k8s_module.outcome == 'success' 
         uses: actions/upload-artifact@v4
         with:
           name: state-k8s-${{ env.PR_NUMBER }}
@@ -120,4 +123,5 @@ jobs:
 
       - name: Destroy infrastructure
         if: always()
-        run: ./tofu_destroy.sh -- -auto-approve
+        working-directory: ./tofu
+        run: tofu destroy -auto-approve
