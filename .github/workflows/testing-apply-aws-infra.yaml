@@ -52,8 +52,8 @@ jobs:
       - name: Copy artifacts
         working-directory: ./artifacts
         run: |
-          cp plan-aws ../tofu/plan-aws
-          cp plan-k8s ../tofu/plan-k8s
+          cp plan-aws.out ../tofu/plan-aws
+          cp plan-k8s.out ../tofu/plan-k8s
           cp terraform.tfvars ../tofu/terraform.tfvars
 
       - name: Apply infrastructure
