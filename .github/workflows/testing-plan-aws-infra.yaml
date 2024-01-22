@@ -28,7 +28,7 @@ jobs:
 
       - name: Set up testing environment variables
         run: |
-          echo "name=\"${{ env.PR_NUMBER }}\",
+          echo "name=\"${{ env.PR_NUMBER }}\"
           falkordb_version=\"v4.0.3\"
           " >> ../tofu/terraform.tfvars
 
