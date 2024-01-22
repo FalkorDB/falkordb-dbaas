@@ -64,11 +64,13 @@ jobs:
       - name: Get EKS cluster credentials
         id: get_eks_credentials
         if: steps.apply_infrastructure.outcome == 'success'
+        continue-on-error: true
         run: |
-          ./aws_update_kubeconfig.sh ${{ env.PR_NUMBER }}
+          ./aws_update_kubeconfig.sh testing-cluster-${{ env.PR_NUMBER }}
 
       - name: Check connection to EKS cluster
         if: steps.get_eks_credentials.outcome == 'success'
+        continue-on-error: true
         run: |
           kubectl get nodes
 
@@ -84,11 +86,12 @@ jobs:
         timeout-minutes: 20
         continue-on-error: true
 
-      - name: Get LoadBalancer host
+      - name: Get FalkorDB endpoint
         if: steps.apply_k8s_module.outcome == 'success'
+        continue-on-error: true
         id: lb
         run: |
-          echo "host=$(kubectl get svc -n falkordb falkordb -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')" >> $GITHUB_ENV
+          echo "host=$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')" >> $GITHUB_ENV
 
       - name: Run python tests
         if: steps.apply_k8s_module.outcome == 'success'

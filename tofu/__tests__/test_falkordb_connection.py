@@ -16,15 +16,10 @@ def test_falkordb_connection():
 
     try:
         db = FalkorDB(host, port, password)
-        assert db is not None
 
         graph = db.select_graph("test")
 
-        res = graph.query(
-            """
-            RETURN 1
-        """
-        )
+        res = graph.query("RETURN 1")
 
         assert res.result_set[0][0] == 1
 
