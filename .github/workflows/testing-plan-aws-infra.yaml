@@ -61,14 +61,14 @@ jobs:
         run: |
           ./tofu_plan_aws.sh 
           summary=$(./tofu_show.sh local-aws)
-          echo "$summary\n\n" >> plan.out
+          echo "$summary\n\n" > ${GITHUB_WORKSPACE}/plan.out
 
       - name: Plan K8S module
         id: plan_k8s
         run: |
           ./tofu_plan_k8s.sh 
           summary=$(./tofu_show.sh local-k8s)
-          echo "$summary\n\n" >> plan.out
+          echo "$summary\n\n" > ${GITHUB_WORKSPACE}/plan.out
 
       - name: Add comment with state
         uses: actions/github-script@v7.0.1
