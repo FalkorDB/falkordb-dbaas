@@ -1,1 +1,1 @@
-cd ../tofu && tofu plan -target=modules.k8s -out=local-k8s
+cd ../tofu && tofu plan -target=module.k8s -out=local-k8s
