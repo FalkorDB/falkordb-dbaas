@@ -1,4 +1,4 @@
-name: TESTING Plan AWS infrastructure
+name: TESTING Apply AWS infrastructure
 
 on:
   pull_request_review:
@@ -11,6 +11,7 @@ defaults:
 
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
+  PLAN_WORKFLOW_NAME: testing-plan-aws-infra.yaml
 
 jobs:
   apply-and-test-aws-module:
@@ -34,14 +35,18 @@ jobs:
         run: ./tofu_init.sh
 
       - name: Get aws state file
-        uses: actions/download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
         with:
+          workflow: ${{ env.PLAN_WORKFLOW_NAME }}
+          pr: ${{ env.PR_NUMBER }}
           name: state-aws-${{ env.PR_NUMBER }}
           path: tofu/local-aws
 
       - name: Get environment file
-        uses: actions/download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
         with:
+          workflow: ${{ env.PLAN_WORKFLOW_NAME }}
+          pr: ${{ env.PR_NUMBER }}
           name: environment-${{ env.PR_NUMBER }}
           path: tofu/terraform.tfvars
 
