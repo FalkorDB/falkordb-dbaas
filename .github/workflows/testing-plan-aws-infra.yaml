@@ -77,6 +77,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+
+            body = '## Terraform Plan\n\n' + '${{ steps.plan_aws.outputs.summary }}' + '\n\n' + '${{ steps.plan_k8s.outputs.summary }}'
           
             // Update the comment if it already exists, otherwise create a new one
             const comment = context.issue.comments.find(comment => comment.body.startsWith('## Terraform Plan'))
@@ -86,7 +88,7 @@ jobs:
                 comment_id: comment.id,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: '## Terraform Plan\n\n' + '${{ steps.plan_aws.outputs.summary }}' + '\n\n' + '${{ steps.plan_k8s.outputs.summary }}'
+                body: body
               })
               return
             }
@@ -95,7 +97,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '## Terraform Plan\n\n' + '${{ steps.plan_aws.outputs.summary }}' + '\n\n' + '${{ steps.plan_k8s.outputs.summary }}'
+              body: body
             })
 
       - name: Archive aws module state file
