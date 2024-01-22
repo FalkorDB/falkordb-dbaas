@@ -29,7 +29,22 @@ jobs:
       - name: Set up testing environment variables
         run: |
           echo "name=\"${{ env.PR_NUMBER }}\"
+          region=\"${{ vars.TF_VAR_REGION }}\"
+          k8s_version=\"${{ vars.TF_VAR_K8S_VERSION }}\"
+          k8s_instance_type=\"${{ vars.TF_VAR_K8S_INSTANCE_TYPE }}\"
+          k8s_node_count=\"${{ vars.TF_VAR_K8S_NODE_COUNT }}\"
+          k8s_node_min_count=\"${{ vars.TF_VAR_K8S_NODE_MIN_COUNT }}\"
+          k8s_node_max_count=\"${{ vars.TF_VAR_K8S_NODE_MAX_COUNT }}\"
+          backup_retention_period=\"${{ vars.TF_VAR_BACKUP_RETENTION_PERIOD }}\"
           falkordb_version=\"v4.0.3\"
+          falkordb_cpu=\"${{ vars.TF_VAR_FALKORDB_CPU }}\"
+          falkordb_memory=\"${{ vars.TF_VAR_FALKORDB_MEMORY }}\"
+          persistance_size=\"${{ vars.TF_VAR_PERSISTANCE_SIZE }}\"
+          falkordb_replicas=\"${{ vars.TF_VAR_FALKORDB_REPLICAS }}\"
+          grafana_admin_password=\"${{ vars.TF_VAR_GRAFANA_ADMIN_PASSWORD }}\"
+          backup_schedule=\"${{ vars.TF_VAR_BACKUP_SCHEDULE }}\"
+          falkordb_domain=\"${{ vars.TF_VAR_FALKORDB_DOMAIN }}\"
+          falkordb_hosted_zone_id=\"${{ vars.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}\"
           " >> ../tofu/terraform.tfvars
 
       - name: Set up Tofu
@@ -45,13 +60,13 @@ jobs:
         id: plan_aws
         run: |
           ./tofu_plan_aws.sh 
-          echo "::set-output name=summary::$(./tofu_show.sh -- -out local-aws)" 
+          echo "::set-output name=summary::$(./tofu_show.sh -- -out local-aws)"
 
       - name: Plan K8S module
         id: plan_k8s
         run: |
           ./tofu_plan_k8s.sh 
-          echo "::set-output name=summary::$(./tofu_show.sh -- -out local-k8s)" 
+          echo "::set-output name=summary::$(./tofu_show.sh -- -out local-k8s)"
 
       - name: Add comment with state
         uses: actions/github-script@v4
@@ -76,10 +91,9 @@ jobs:
         with:
           name: state-k8s-${{ env.PR_NUMBER }}
           path: ../tofu/local-k8s
-    
+
       - name: Archive environment file
         uses: actions/upload-artifact@v4
         with:
           name: environment-${{ env.PR_NUMBER }}
           path: ../tofu/terraform.tfvars
-
