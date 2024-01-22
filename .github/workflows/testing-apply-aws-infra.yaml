@@ -40,15 +40,23 @@ jobs:
           workflow: ${{ env.PLAN_WORKFLOW_NAME }}
           pr: ${{ env.PR_NUMBER }}
           name: state-aws-${{ env.PR_NUMBER }}
-          path: tofu/local-aws
+          path: tofu
 
+      - name: Get k8s state file
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: ${{ env.PLAN_WORKFLOW_NAME }}
+          pr: ${{ env.PR_NUMBER }}
+          name: state-k8s-${{ env.PR_NUMBER }}
+          path: tofu
+  
       - name: Get environment file
         uses: dawidd6/action-download-artifact@v3
         with:
           workflow: ${{ env.PLAN_WORKFLOW_NAME }}
           pr: ${{ env.PR_NUMBER }}
           name: environment-${{ env.PR_NUMBER }}
-          path: tofu/terraform.tfvars
+          path: tofu
 
       - name: Apply infrastructure
         id: apply_infrastructure
