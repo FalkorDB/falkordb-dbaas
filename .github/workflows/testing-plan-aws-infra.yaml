@@ -71,15 +71,13 @@ jobs:
         id: plan_aws
         run: |
           ./tofu_plan_aws.sh 
-          summary=$(cd ../tofu && tofu show local-aws)
-          echo "$summary\n\n" > ${GITHUB_WORKSPACE}/artifacts/plan-aws.out
+          cp ../tofu/local-aws ${GITHUB_WORKSPACE}/artifacts/plan-aws.out
 
       - name: Plan K8S module
         id: plan_k8s
         run: |
           ./tofu_plan_k8s.sh 
-          summary=$(cd ../tofu && tofu show local-k8s)
-          echo "$summary\n\n" > ${GITHUB_WORKSPACE}/artifacts/plan-k8s.out
+          cp ../tofu/local-k8s ${GITHUB_WORKSPACE}/artifacts/plan-k8s.out
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
