@@ -59,7 +59,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: tofu-${{hashFiles('../tofu/.terraform.lock.hcl')}}
+          key: tofu-${{hashFiles('./tofu/.terraform.lock.hcl')}}
 
       - name: Init infrastructure
         run: ./tofu_init.sh
