@@ -60,13 +60,13 @@ jobs:
         id: plan_aws
         run: |
           ./tofu_plan_aws.sh 
-          echo "::set-output name=summary::$(./tofu_show.sh -- -out local-aws)"
+          echo "summary=$(./tofu_show.sh local-aws)" >> $GITHUB_OUTPUT
 
       - name: Plan K8S module
         id: plan_k8s
         run: |
           ./tofu_plan_k8s.sh 
-          echo "::set-output name=summary::$(./tofu_show.sh -- -out local-k8s)"
+          echo "summary=$(./tofu_show.sh local-k8s)" >> $GITHUB_OUTPUT
 
       - name: Add comment with state
         uses: actions/github-script@v4
