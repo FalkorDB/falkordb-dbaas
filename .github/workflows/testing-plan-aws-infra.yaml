@@ -11,6 +11,7 @@ defaults:
 
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
 
 jobs:
   plan-infra:
@@ -27,30 +28,43 @@ jobs:
           aws-region: ${{ vars.TF_VAR_REGION }}
 
       - name: Set up testing environment variables
+        env:
+          name: testing-cluster-${{ env.PR_NUMBER }}
+          region: ${{ vars.TF_VAR_REGION }}
+          k8s_version: ${{ vars.TF_VAR_K8S_VERSION }}
+          k8s_instance_type: ${{ vars.TF_VAR_K8S_INSTANCE_TYPE }}
+          k8s_node_count: ${{ vars.TF_VAR_K8S_NODE_COUNT }}
+          k8s_node_min_count: ${{ vars.TF_VAR_K8S_NODE_MIN_COUNT }}
+          k8s_node_max_count: ${{ vars.TF_VAR_K8S_NODE_MAX_COUNT }}
+          backup_retention_period: ${{ vars.TF_VAR_BACKUP_RETENTION_PERIOD }}
+          falkordb_version: v4.0.3
+          falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
+          falkordb_memory: ${{ vars.TF_VAR_FALKORDB_MEMORY }}
+          persistance_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
+          falkordb_replicas: ${{ vars.TF_VAR_FALKORDB_REPLICAS }}
+          grafana_admin_password: ${{ vars.TF_VAR_GRAFANA_ADMIN_PASSWORD }}
+          backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
+          falkordb_domain: ${{ vars.TF_VAR_FALKORDB_DOMAIN }}
+          falkordb_hosted_zone_id: ${{ vars.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}
+          falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
         run: |
-          echo "name=\"testing-cluster-${{ env.PR_NUMBER }}\"
-          region=\"${{ vars.TF_VAR_REGION }}\"
-          k8s_version=\"${{ vars.TF_VAR_K8S_VERSION }}\"
-          k8s_instance_type=\"${{ vars.TF_VAR_K8S_INSTANCE_TYPE }}\"
-          k8s_node_count=\"${{ vars.TF_VAR_K8S_NODE_COUNT }}\"
-          k8s_node_min_count=\"${{ vars.TF_VAR_K8S_NODE_MIN_COUNT }}\"
-          k8s_node_max_count=\"${{ vars.TF_VAR_K8S_NODE_MAX_COUNT }}\"
-          backup_retention_period=\"${{ vars.TF_VAR_BACKUP_RETENTION_PERIOD }}\"
-          falkordb_version=\"v4.0.3\"
-          falkordb_cpu=\"${{ vars.TF_VAR_FALKORDB_CPU }}\"
-          falkordb_memory=\"${{ vars.TF_VAR_FALKORDB_MEMORY }}\"
-          persistance_size=\"${{ vars.TF_VAR_PERSISTANCE_SIZE }}\"
-          falkordb_replicas=\"${{ vars.TF_VAR_FALKORDB_REPLICAS }}\"
-          grafana_admin_password=\"${{ vars.TF_VAR_GRAFANA_ADMIN_PASSWORD }}\"
-          backup_schedule=\"${{ vars.TF_VAR_BACKUP_SCHEDULE }}\"
-          falkordb_domain=\"${{ vars.TF_VAR_FALKORDB_DOMAIN }}\"
-          falkordb_hosted_zone_id=\"${{ vars.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}\"
-          falkordb_password=\"${{ secrets.TF_VAR_FALKORDB_PASSWORD }}\"
-          " >> ../tofu/terraform.tfvars
+          ./create_tfvars_from_env.sh
+          cp ../tofu/terraform.tfvars ${GITHUB_WORKSPACE}/artifacts/terraform.tfvars
 
       - name: Set up Tofu
         uses: opentofu/setup-opentofu@v1.0.1
 
+      - name: Generate cache key
+        id: generate_cache_key
+        run: |
+          cat ../tofu/.terraform.lock.hcl | sha256sum | cut -d ' ' -f 1
+
+      - name: Cache OpenTofu plugins
+        uses: actions/cache@v2
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: ${{ steps.generate_cache_key.outputs }}
+  
       - name: Init infrastructure
         run: ./tofu_init.sh
 
@@ -62,29 +76,17 @@ jobs:
         run: |
           ./tofu_plan_aws.sh 
           summary=$(cd ../tofu && tofu show local-aws)
-          echo "$summary\n\n" > ${GITHUB_WORKSPACE}/plan-aws.out
+          echo "$summary\n\n" > ${GITHUB_WORKSPACE}/artifacts/plan-aws.out
 
       - name: Plan K8S module
         id: plan_k8s
         run: |
           ./tofu_plan_k8s.sh 
           summary=$(cd ../tofu && tofu show local-k8s)
-          echo "$summary\n\n" > ${GITHUB_WORKSPACE}/plan-k8s.out
+          echo "$summary\n\n" > ${GITHUB_WORKSPACE}/artifacts/plan-k8s.out
 
-      - name: Archive aws module state file
+      - name: Archive artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: state-aws-${{ env.PR_NUMBER }}
-          path: tofu/local-aws
-
-      - name: Archive k8s module state file
-        uses: actions/upload-artifact@v4
-        with:
-          name: state-k8s-${{ env.PR_NUMBER }}
-          path: tofu/local-k8s
-
-      - name: Archive environment file
-        uses: actions/upload-artifact@v4
-        with:
-          name: environment-${{ env.PR_NUMBER }}
-          path: tofu/terraform.tfvars
+          name: artifacts-${{ env.PR_NUMBER }}
+          path: artifacts

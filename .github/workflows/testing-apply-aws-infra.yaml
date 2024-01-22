@@ -34,29 +34,20 @@ jobs:
       - name: Init infrastructure
         run: ./tofu_init.sh
 
-      - name: Get aws state file
+      - name: Get artifacts
         uses: dawidd6/action-download-artifact@v3
         with:
           workflow: ${{ env.PLAN_WORKFLOW_NAME }}
           pr: ${{ env.PR_NUMBER }}
-          name: state-aws-${{ env.PR_NUMBER }}
-          path: tofu
-
-      - name: Get k8s state file
-        uses: dawidd6/action-download-artifact@v3
-        with:
-          workflow: ${{ env.PLAN_WORKFLOW_NAME }}
-          pr: ${{ env.PR_NUMBER }}
-          name: state-k8s-${{ env.PR_NUMBER }}
-          path: tofu
-  
-      - name: Get environment file
-        uses: dawidd6/action-download-artifact@v3
-        with:
-          workflow: ${{ env.PLAN_WORKFLOW_NAME }}
-          pr: ${{ env.PR_NUMBER }}
-          name: environment-${{ env.PR_NUMBER }}
-          path: tofu
+          name: artifacts-${{ env.PR_NUMBER }}
+          path: artifacts
+      
+      - name: Copy artifacts
+        working-directory: ./artifacts
+        run: |
+          cp plan-aws ../tofu/plan-aws
+          cp plan-k8s ../tofu/plan-k8s
+          cp terraform.tfvars ../tofu/terraform.tfvars
 
       - name: Apply infrastructure
         id: apply_infrastructure
@@ -77,6 +68,11 @@ jobs:
         run: |
           kubectl get nodes
 
+      - name: Plan K8S module
+        id: plan_k8s
+        run: |
+          ./tofu_plan_k8s.sh 
+          
       - name: Apply k8s module
         id: apply_k8s_module
         run: ./tofu_apply_k8s.sh -- -auto-approve
@@ -105,4 +101,4 @@ jobs:
 
       - name: Destroy infrastructure
         if: always()
-        run: ./tofu_destroy.sh
+        run: ./tofu_destroy.sh -- -auto-approve
