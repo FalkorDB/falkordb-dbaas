@@ -84,16 +84,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: state-aws-${{ env.PR_NUMBER }}
-          path: ../tofu/local-aws
+          path: tofu/local-aws
 
       - name: Archive k8s module state file
         uses: actions/upload-artifact@v4
         with:
           name: state-k8s-${{ env.PR_NUMBER }}
-          path: ../tofu/local-k8s
+          path: tofu/local-k8s
 
       - name: Archive environment file
         uses: actions/upload-artifact@v4
         with:
           name: environment-${{ env.PR_NUMBER }}
-          path: ../tofu/terraform.tfvars
+          path: tofu/terraform.tfvars

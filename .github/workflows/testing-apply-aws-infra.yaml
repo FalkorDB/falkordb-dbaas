@@ -37,13 +37,13 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: state-aws-${{ env.PR_NUMBER }}
-          path: ../tofu/local-aws
+          path: tofu/local-aws
 
       - name: Get environment file
         uses: actions/download-artifact@v2
         with:
           name: environment-${{ env.PR_NUMBER }}
-          path: ../tofu/terraform.tfvars
+          path: tofu/terraform.tfvars
 
       - name: Apply infrastructure
         id: apply_infrastructure
