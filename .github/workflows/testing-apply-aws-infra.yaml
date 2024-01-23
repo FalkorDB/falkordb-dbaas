@@ -111,6 +111,7 @@ jobs:
           echo "host=$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')" >> $GITHUB_ENV
 
       - name: Run python tests
+        id: python_tests
         if: steps.apply_k8s_module.outcome == 'success'
         working-directory: .
         continue-on-error: true
@@ -127,3 +128,11 @@ jobs:
         if: always()
         working-directory: ./tofu
         run: tofu destroy -auto-approve
+
+      - name: Fail if tests did not pass
+        if: always()
+        run: |
+          # Check if python tests conclusion is success
+          if [ ${{ steps.python_tests.conclusion }} != 'success' ]; then
+            exit 1
+          fi
