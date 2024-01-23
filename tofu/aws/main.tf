@@ -1,9 +1,19 @@
 provider "aws" {
   region = var.region
+  # assume_role {
+  #   role_arn = "arn:aws:iam::730335275272:role/AdminAccessForPipelineDevelopment"
+  # }
 }
 
-data "aws_caller_identity" "current" {}
-data "aws_availability_zones" "available" {}
+data "aws_caller_identity" "current" {
+}
+
+data "aws_availability_zones" "available" {
+}
+
+resource "random_id" "name_random" {
+  byte_length = 8
+}
 
 locals {
   vpc_cidr = "10.0.0.0/16"
@@ -14,6 +24,8 @@ locals {
   }
 
   falkordb_s3_backup_location = "${module.falkordb_backup_s3_bucket.s3_bucket_id}/backups"
+
+  name_and_random = "${var.name}-${random_id.name_random.hex}"
 }
 
 ################################################################################
@@ -24,7 +36,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.21"
 
-  cluster_name                   = var.name
+  cluster_name                   = local.name_and_random
   cluster_version                = var.k8s_version
   cluster_endpoint_public_access = true
 
@@ -38,13 +50,12 @@ module "eks" {
       min_size     = var.k8s_node_min_count
       max_size     = var.k8s_node_max_count
       desired_size = var.k8s_node_count
-      network_interfaces = [{
-        associate_public_ip_address = true
-      }]
     }
   }
 
+
   tags = local.tags
+
 }
 
 ################################################################################
@@ -72,6 +83,7 @@ module "eks_blueprints_addons" {
   }
 
   tags = local.tags
+
 }
 
 data "aws_iam_policy_document" "assume_role" {
@@ -122,7 +134,7 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
 
-  name = var.name
+  name = local.name_and_random
   cidr = local.vpc_cidr
 
   azs             = local.azs
@@ -148,7 +160,7 @@ module "falkordb_backup_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
-  bucket = "${var.name}-backup"
+  bucket = "${local.name_and_random}-backup"
 
   attach_deny_insecure_transport_policy = true
   attach_require_latest_tls_policy      = true
@@ -177,6 +189,7 @@ module "falkordb_backup_s3_bucket" {
   }
 
   tags = local.tags
+
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "falkordb_backup_s3_bucket_lifecycle_configuration" {
@@ -216,7 +229,8 @@ module "ebs_kms_key" {
   ]
 
   # Aliases
-  aliases = ["eks/${var.name}/ebs"]
+  aliases = ["eks/${local.name_and_random}/ebs"]
+  aliases_use_name_prefix = true
 
   tags = local.tags
 }
@@ -225,7 +239,7 @@ module "ebs_csi_driver_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.20"
 
-  role_name_prefix = "${module.eks.cluster_name}-ebs-csi-driver-"
+  role_name_prefix = "${module.eks.cluster_name}"
 
   attach_ebs_csi_policy = true
 
