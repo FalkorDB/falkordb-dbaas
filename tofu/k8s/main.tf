@@ -27,7 +27,7 @@ provider "kubernetes" {
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", "arn:aws:iam::730335275272:role/AdminAccessForPipelineDevelopment"]
+    args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
   }
 }
 
@@ -161,7 +161,7 @@ provider "helm" {
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", "arn:aws:iam::730335275272:role/AdminAccessForPipelineDevelopment"]
+      args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
     }
   }
 }
@@ -194,7 +194,7 @@ module "ebs_kms_key" {
   # Policy
   key_administrators = [
     # Verify which roles should have access
-    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/AdminAccessForPipelineDevelopment",
+    var.assume_role_arn,
   ]
   key_service_roles_for_autoscaling = [
     # required for the ASG to manage encrypted volumes for nodes
