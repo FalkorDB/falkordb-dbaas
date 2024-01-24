@@ -6,23 +6,7 @@ output "falkordb_eks_cluster_name" {
   description = "EKS cluster name"
   value       = module.eks.cluster_name
 }
-output "falkordb_eks_endpoint" {
-  description = "EKS endpoint"
-  value       = module.eks.cluster_endpoint
-}
-output "falkordb_cluster_certificate_authority_data" {
-  description = "EKS cluster certificate authority data"
-  value       = module.eks.cluster_certificate_authority_data
-}
-output "falkordb_s3_backup_location" {
-  description = "S3 backup location"
-  value       = local.falkordb_s3_backup_location
-}
-output "falkordb_eks_oidc_issuer" {
-  description = "EKS OIDC issuer"
-  value       = module.eks.cluster_oidc_issuer_url
-}
-output "falkordb_eks_oidc_provider_arn" {
-  description = "EKS OIDC provider ARN"
-  value       = module.eks.oidc_provider_arn
+output "falkordb_s3_backup_name" {
+  description = "Backup bucket name"
+  value       = module.falkordb_backup_s3_bucket.s3_bucket_id
 }

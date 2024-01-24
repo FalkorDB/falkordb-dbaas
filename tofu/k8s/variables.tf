@@ -1,11 +1,19 @@
+variable "region" {
+  type    = string
+}
+
+variable "tenant_name" {
+  type = string
+}
+
 variable "falkordb_version" {
   type = string
 }
 
 variable "falkordb_password" {
-  type = string
+  type      = string
   sensitive = true
-  nullable = true
+  nullable  = true
 }
 
 variable "falkordb_cpu" {
@@ -36,23 +44,7 @@ variable "falkordb_eks_cluster_name" {
   type = string
 }
 
-variable "falkordb_eks_endpoint" {
-  type = string
-}
-
-variable "falkordb_cluster_certificate_authority_data" {
-  type = string
-}
-
-variable "falkordb_s3_backup_location" {
-  type = string
-}
-
-variable "falkordb_eks_oidc_provider_arn" {
-  type = string
-}
-
-variable "falkordb_eks_oidc_issuer" {
+variable "falkordb_s3_backup_name" {
   type = string
 }
 
@@ -62,4 +54,8 @@ variable "falkordb_domain" {
 
 variable "falkordb_hosted_zone_id" {
   type = string
+}
+
+variable "backup_retention_period" {
+  type = number
 }

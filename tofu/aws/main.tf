@@ -1,8 +1,9 @@
 provider "aws" {
-  region = var.region
-  # assume_role {
-  #   role_arn = "arn:aws:iam::730335275272:role/AdminAccessForPipelineDevelopment"
-  # }
+  region  = var.region
+  profile = var.aws_profile
+  assume_role {
+    role_arn = "arn:aws:iam::730335275272:role/AdminAccessForPipelineDevelopment"
+  }
 }
 
 data "aws_caller_identity" "current" {
@@ -11,9 +12,6 @@ data "aws_caller_identity" "current" {
 data "aws_availability_zones" "available" {
 }
 
-resource "random_id" "name_random" {
-  byte_length = 8
-}
 
 locals {
   vpc_cidr = "10.0.0.0/16"
@@ -22,10 +20,6 @@ locals {
   tags = {
     customer = var.name
   }
-
-  falkordb_s3_backup_location = "${module.falkordb_backup_s3_bucket.s3_bucket_id}/backups"
-
-  name_and_random = "${var.name}-${random_id.name_random.hex}"
 }
 
 ################################################################################
@@ -36,9 +30,17 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.21"
 
-  cluster_name                   = local.name_and_random
+  cluster_name                   = var.name
   cluster_version                = var.k8s_version
   cluster_endpoint_public_access = true
+
+  aws_auth_accounts = [
+    data.aws_caller_identity.current.account_id
+  ]
+
+  aws_auth_roles = [
+    "arn:aws:iam::730335275272:role/OrganizationAccountAccessRole"
+  ]
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -134,7 +136,7 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
 
-  name = local.name_and_random
+  name = var.name
   cidr = local.vpc_cidr
 
   azs             = local.azs
@@ -160,7 +162,7 @@ module "falkordb_backup_s3_bucket" {
   source  = "terraform-aws-modules/s3-bucket/aws"
   version = "~> 3.0"
 
-  bucket = "${local.name_and_random}-backup"
+  bucket = "${var.name}-backup"
 
   attach_deny_insecure_transport_policy = true
   attach_require_latest_tls_policy      = true
@@ -188,58 +190,17 @@ module "falkordb_backup_s3_bucket" {
     }
   }
 
-  tags = local.tags
-
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "falkordb_backup_s3_bucket_lifecycle_configuration" {
-  bucket = module.falkordb_backup_s3_bucket.s3_bucket_id
-
-  rule {
-    id = "falkordb-rule"
-
-    filter {
-      prefix = "backups/"
-    }
-
-    expiration {
-      days = var.backup_retention_period
-    }
-    abort_incomplete_multipart_upload {
-      days_after_initiation = 3
-    }
-
-    status = "Enabled"
-  }
-}
-
-module "ebs_kms_key" {
-  source  = "terraform-aws-modules/kms/aws"
-  version = "~> 1.5"
-
-  description = "Customer managed key to encrypt EKS managed node group volumes"
-
-  # Policy
-  key_administrators = [data.aws_caller_identity.current.arn]
-  key_service_roles_for_autoscaling = [
-    # required for the ASG to manage encrypted volumes for nodes
-    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
-    # required for the cluster / persistentvolume-controller to create encrypted PVCs
-    module.eks.cluster_iam_role_arn,
-  ]
-
-  # Aliases
-  aliases = ["eks/${local.name_and_random}/ebs"]
-  aliases_use_name_prefix = true
+  force_destroy = true
 
   tags = local.tags
+
 }
 
 module "ebs_csi_driver_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.20"
 
-  role_name_prefix = "${module.eks.cluster_name}"
+  role_name_prefix = module.eks.cluster_name
 
   attach_ebs_csi_policy = true
 

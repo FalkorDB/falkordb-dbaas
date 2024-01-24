@@ -1,3 +1,8 @@
+variable "aws_profile" {
+  type = string
+  default = "default"
+}
+
 variable "name" {
   type = string
 }
@@ -23,9 +28,5 @@ variable "k8s_node_min_count" {
 }
 
 variable "k8s_node_max_count" {
-  type = number
-}
-
-variable "backup_retention_period" {
   type = number
 }

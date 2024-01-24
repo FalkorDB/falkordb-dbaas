@@ -86,6 +86,8 @@ jobs:
       - name: Plan K8S module
         if: steps.get_eks_credentials.outcome == 'success'
         id: plan_k8s
+        env: 
+          TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
         run: |
           ./tofu_plan_k8s.sh 
 
