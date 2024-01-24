@@ -11,6 +11,10 @@ variable "assume_role_arn" {
   type = string
 }
 
+variable "eks_auth_role" {
+  type = string
+}
+
 variable "k8s_version" {
   type = string
 }

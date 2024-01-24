@@ -1,5 +1,5 @@
 provider "aws" {
-  region  = var.region
+  region = var.region
   assume_role {
     role_arn = var.assume_role_arn
   }
@@ -38,7 +38,7 @@ module "eks" {
   ]
 
   aws_auth_roles = [
-    "arn:aws:iam::730335275272:role/OrganizationAccountAccessRole"
+    var.eks_auth_role
   ]
 
   vpc_id     = module.vpc.vpc_id

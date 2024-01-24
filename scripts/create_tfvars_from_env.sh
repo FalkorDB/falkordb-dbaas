@@ -1,6 +1,7 @@
 echo "name=\"$name\"
     region=\"$region\"
     assume_role_arn=\"$assume_role_arn\"
+    aks_auth_role=\"$aks_auth_role\"
     k8s_version=\"$k8s_version\"
     k8s_instance_type=\"$k8s_instance_type\"
     k8s_node_count=\"$k8s_node_count\"

@@ -1,5 +1,7 @@
 name                    = "<cluster name>"
 region                  = "<aws region>"
+assume_role_arn         = "<aws assume role>"
+eks_auth_role           = "<eks_auth_role>"
 k8s_version             = "1.28"
 k8s_instance_type       = "t3.medium"
 k8s_node_count          = 2

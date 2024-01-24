@@ -244,7 +244,7 @@ resource "helm_release" "falkordb" {
 
   # Local-exec to destroy load balancer
   provisioner "local-exec" {
-    when = destroy
+    when    = destroy
     command = <<EOT
       #!/bin/bash
 
@@ -439,5 +439,5 @@ module "load_balancer_controller" {
   cluster_identity_oidc_issuer_arn = data.aws_iam_openid_connect_provider.cluster.arn
   cluster_name                     = var.falkordb_eks_cluster_name
   helm_chart_version               = "1.6.2"
-  
+
 }

@@ -2,6 +2,8 @@ module "aws" {
   source             = "./aws"
   name               = var.name
   region             = var.region
+  assume_role_arn    = var.assume_role_arn
+  eks_auth_role      = var.eks_auth_role
   k8s_version        = var.k8s_version
   k8s_instance_type  = var.k8s_instance_type
   k8s_node_count     = var.k8s_node_count

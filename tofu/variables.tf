@@ -6,6 +6,14 @@ variable "region" {
   type = string
 }
 
+variable "assume_role_arn" {
+  type = string
+}
+
+variable "eks_auth_role" {
+  type = string
+}
+
 variable "k8s_version" {
   type = string
 }
@@ -35,9 +43,9 @@ variable "falkordb_version" {
 }
 
 variable "falkordb_password" {
-  type = string
+  type      = string
   sensitive = true
-  nullable = true
+  nullable  = true
 }
 
 variable "falkordb_cpu" {
