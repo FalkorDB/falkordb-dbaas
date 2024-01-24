@@ -11,7 +11,7 @@ defaults:
 
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
-  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
+  TF_CACHE_DIR: ${{ github.workspace }}/.terraform
 
 jobs:
   plan-infra:
@@ -56,11 +56,11 @@ jobs:
       - name: Set up Tofu
         uses: opentofu/setup-opentofu@v1.0.1
 
-      - name: Cache OpenTofu plugins
+      - name: Cache OpenTofu modules
         uses: actions/cache@v2
         id: cache_opentofu_plugins
         with:
-          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          path: ${{ env.TF_CACHE_DIR }}
           key: tofu-${{hashFiles('./tofu/.terraform.lock.hcl')}}
 
       - name: Init infrastructure
