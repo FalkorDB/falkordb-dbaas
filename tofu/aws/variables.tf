@@ -1,7 +1,3 @@
-variable "aws_profile" {
-  type = string
-  default = "default"
-}
 
 variable "name" {
   type = string

@@ -1,6 +1,5 @@
 provider "aws" {
   region  = var.region
-  profile = var.aws_profile
   assume_role {
     role_arn = "arn:aws:iam::730335275272:role/AdminAccessForPipelineDevelopment"
   }
