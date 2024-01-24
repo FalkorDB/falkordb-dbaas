@@ -31,6 +31,7 @@ jobs:
         env:
           name: testing-cluster-${{ env.PR_NUMBER }}
           region: ${{ vars.TF_VAR_REGION }}
+          assume_role_arn: ${{ vars.TF_VAR_ASSUME_ROLE_ARN }}
           k8s_version: ${{ vars.TF_VAR_K8S_VERSION }}
           k8s_instance_type: ${{ vars.TF_VAR_K8S_INSTANCE_TYPE }}
           k8s_node_count: ${{ vars.TF_VAR_K8S_NODE_COUNT }}
