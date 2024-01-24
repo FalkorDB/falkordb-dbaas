@@ -1,7 +1,7 @@
 provider "aws" {
   region = var.region
   assume_role {
-    role_arn = "arn:aws:iam::730335275272:role/AdminAccessForPipelineDevelopment"
+    role_arn = var.assume_role_arn
   }
 }
 

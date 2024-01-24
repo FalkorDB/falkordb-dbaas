@@ -13,6 +13,7 @@ module "aws" {
 module "k8s" {
   source                    = "./k8s"
   region                    = var.region
+  assume_role_arn           = var.assume_role_arn
   falkordb_eks_cluster_name = module.aws.falkordb_eks_cluster_name
   falkordb_s3_backup_name   = module.aws.falkordb_s3_backup_name
   tenant_name               = var.name
