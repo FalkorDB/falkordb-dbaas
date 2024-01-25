@@ -10,3 +10,13 @@ output "falkordb_s3_backup_name" {
   description = "Backup bucket name"
   value       = module.falkordb_backup_s3_bucket.s3_bucket_id
 }
+
+output "falkordb_eks_cluster_endpoint" {
+  description = "EKS cluster endpoint"
+  value       = module.eks.cluster_endpoint
+}
+
+output "falkordb_eks_cluster_certificate_autority" {
+  description = "EKS cluster certificate autority"
+  value       = module.eks.cluster_certificate_authority_data
+}

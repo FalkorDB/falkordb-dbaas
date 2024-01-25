@@ -1,9 +1,3 @@
-provider "aws" {
-  region = var.region
-  assume_role {
-    role_arn = var.assume_role_arn
-  }
-}
 
 data "aws_caller_identity" "current" {
 }
@@ -20,16 +14,6 @@ data "aws_iam_openid_connect_provider" "cluster" {
   url = data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
 }
 
-provider "kubernetes" {
-  host                   = data.aws_eks_cluster.cluster.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
-
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
-  }
-}
 
 resource "kubernetes_namespace" "backup_namespace" {
   metadata {
@@ -153,19 +137,6 @@ resource "kubernetes_config_map" "falkordb_grafana_dashboard" {
   }
 }
 
-provider "helm" {
-  kubernetes {
-    host                   = data.aws_eks_cluster.cluster.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
-
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
-    }
-  }
-}
-
 resource "random_password" "password" {
   length           = 16
   special          = true
@@ -236,30 +207,14 @@ module "ebs_kms_key" {
 # https://github.com/bitnami/charts/tree/main/bitnami/redis
 resource "helm_release" "falkordb" {
   name      = "falkordb"
-  namespace = "falkordb"
+  namespace = kubernetes_namespace.falkordb.metadata[0].name
   version   = "18.6.3"
+
+  # Necessary so there's enough time to finish installing
+  timeout = 600
 
   # Must be cluster name so we can destroy the load balancer
   description = var.falkordb_eks_cluster_name
-
-  # Local-exec to destroy load balancer
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-      #!/bin/bash
-
-      # Retrieve all elbv2 ARNs
-      all_elbv2_arns=$(aws elbv2 describe-load-balancers --query 'LoadBalancers[].LoadBalancerArn' --output text)
-
-      # Filter for LBs with the specified tags using query on each ARN
-      filtered_lbs=$(for lb_arn in $all_elbv2_arns; do aws elbv2 describe-tags --resource-arns $lb_arn --query 'TagDescriptions[?Tags[?Key == `elbv2.k8s.aws/cluster` && Value == `${self.description}}`] && [?Key == `service.k8s.aws/stack` && Value == `falkordb/falkordb-redis`]].ResourceArn' --output text; done | tr '\n' ' ')
-
-      # Delete the filtered LBs
-      for lb_arn in $filtered_lbs; do
-        aws elbv2 delete-load-balancer --load-balancer-arn $lb_arn
-      done
-    EOT
-  }
 
   repository = "https://charts.bitnami.com/bitnami"
   chart      = "redis"
@@ -377,11 +332,17 @@ resource "helm_release" "falkordb" {
   #   name  = "global.storageClass"
   #   value = "falkordb-storage-class"
   # }
+
+
+  depends_on = [
+    module.load_balancer_controller
+  ]
 }
+
 
 resource "helm_release" "falkordb-monitoring" {
   name      = "falkordb-monitoring"
-  namespace = "falkordb-monitoring"
+  namespace = kubernetes_namespace.falkordb_monitoring.metadata[0].name
 
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"

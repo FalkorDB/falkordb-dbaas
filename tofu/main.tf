@@ -1,3 +1,9 @@
+provider "aws" {
+  region = var.region
+  assume_role {
+    role_arn = var.assume_role_arn
+  }
+}
 module "aws" {
   source             = "./aws"
   name               = var.name
@@ -10,6 +16,33 @@ module "aws" {
   k8s_node_min_count = var.k8s_node_min_count
   k8s_node_max_count = var.k8s_node_max_count
 }
+
+
+provider "kubernetes" {
+  host                   = module.aws.falkordb_eks_cluster_endpoint
+  cluster_ca_certificate = base64decode(module.aws.falkordb_eks_cluster_certificate_autority)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "get-token", "--cluster-name", module.aws.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
+  }
+}
+
+
+provider "helm" {
+  kubernetes {
+    host                   = module.aws.falkordb_eks_cluster_endpoint
+    cluster_ca_certificate = base64decode(module.aws.falkordb_eks_cluster_certificate_autority)
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", module.aws.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
+    }
+  }
+}
+
 module "k8s" {
   source                    = "./k8s"
   region                    = var.region
@@ -28,4 +61,6 @@ module "k8s" {
   falkordb_hosted_zone_id   = var.falkordb_hosted_zone_id
   falkordb_password         = var.falkordb_password
   backup_retention_period   = var.backup_retention_period
+
+  depends_on = [module.aws]
 }
