@@ -12,7 +12,7 @@ defaults:
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
   PLAN_WORKFLOW_NAME: testing-plan-aws-infra.yaml
-  TF_CACHE_DIR: ${{ github.workspace }}/.terraform
+  TF_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
 
 jobs:
   apply-test-aws-k8s-infra:
@@ -31,6 +31,9 @@ jobs:
 
       - name: Set up Tofu
         uses: opentofu/setup-opentofu@v1.0.1
+
+      - name: Create Terraform Plugin Cache Dir
+        run: mkdir --parents ${{ env.TF_CACHE_DIR }}
 
       - name: Cache OpenTofu plugins
         uses: actions/cache@v2
