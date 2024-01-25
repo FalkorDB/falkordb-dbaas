@@ -90,17 +90,21 @@ jobs:
       - name: Plan K8S module
         if: steps.get_eks_credentials.outcome == 'success'
         id: plan_k8s
+        working-directory: ./tofu/k8s
         env:
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
         run: |
-          ./tofu_plan_k8s.sh
+          tofu init
+          tofu plan -out-local-k8s
 
       - name: Apply k8s module
         if: steps.plan_k8s.outcome == 'success'
         id: apply_k8s_module
-        run: cd ../tofu && tofu apply -state-out=../state/state-k8s -state=../state/state-aws plan-k8s
+        working-directory: ./tofu/k8s
         timeout-minutes: 20
         continue-on-error: true
+        run: |
+          tofu apply -auto-approve -state-out ../state/state-k8s
 
       - name: Archive K8S target state
         uses: actions/upload-artifact@v4
