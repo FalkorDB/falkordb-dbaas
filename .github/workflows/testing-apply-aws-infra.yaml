@@ -12,7 +12,7 @@ defaults:
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
   PLAN_WORKFLOW_NAME: testing-plan-aws-infra.yaml
-  TF_CACHE_DIR: ${{ github.workspace }}/tofu/.terraform
+  # TF_CACHE_DIR: ${{ github.workspace }}/tofu/.terraform
 
 jobs:
   apply-test-aws-k8s-infra:
@@ -32,18 +32,18 @@ jobs:
       - name: Set up Tofu
         uses: opentofu/setup-opentofu@v1.0.1
 
-      - name: Create Terraform Plugin Cache Dir
-        run: mkdir --parents ${{ env.TF_CACHE_DIR }}
+      # - name: Create Terraform Plugin Cache Dir
+      #   run: mkdir --parents ${{ env.TF_CACHE_DIR }}
 
-      - name: Cache OpenTofu plugins
-        uses: actions/cache@v2
-        id: cache_opentofu_plugins
-        with:
-          path: ${{ env.TF_CACHE_DIR }}
-          key: tofu-${{hashFiles('./tofu/.terraform.lock.hcl')}}
+      # - name: Cache OpenTofu plugins
+      #   uses: actions/cache@v2
+      #   id: cache_opentofu_plugins
+      #   with:
+      #     path: ${{ env.TF_CACHE_DIR }}
+      #     key: tofu-${{hashFiles('./tofu/.terraform.lock.hcl')}}
 
       - name: Init infrastructure
-        if: steps.cache_opentofu_plugins.outputs.cache-hit != 'true'
+        # if: steps.cache_opentofu_plugins.outputs.cache-hit != 'true'
         run: ./tofu_init.sh
 
       - name: Get artifacts
@@ -63,7 +63,7 @@ jobs:
 
       - name: Apply infrastructure
         id: apply_infrastructure
-        run: ./tofu_apply_aws.sh plan-aws -- -auto-approve
+        run: ./tofu_apply_aws.sh plan-aws
         timeout-minutes: 20
         continue-on-error: true
 
@@ -98,7 +98,7 @@ jobs:
       - name: Apply k8s module
         if: steps.plan_k8s.outcome == 'success'
         id: apply_k8s_module
-        run: ./tofu_apply_k8s.sh plan-k8s -- -auto-approve
+        run: ./tofu_apply_k8s.sh plan-k8s
         timeout-minutes: 20
         continue-on-error: true
 
