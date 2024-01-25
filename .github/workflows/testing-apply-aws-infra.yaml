@@ -60,6 +60,8 @@ jobs:
           cp plan-aws.out ../tofu/plan-aws
           cp plan-k8s.out ../tofu/plan-k8s
           cp terraform.tfvars ../tofu/terraform.tfvars
+          cp terraform.tfvars ../tofu/k8s/terraform.tfvars
+          cp terraform.tfvars ../tofu/aws/terraform.tfvars
 
       - name: Apply infrastructure
         id: apply_infrastructure
