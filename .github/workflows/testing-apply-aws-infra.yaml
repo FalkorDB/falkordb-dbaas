@@ -60,7 +60,7 @@ jobs:
 
       - name: Apply infrastructure
         id: apply_infrastructure
-        run: ./tofu_apply_aws.sh plan-aws -- -auto-approve -state-out=../state/state-aws
+        run: ./tofu_apply_aws.sh plan-aws -- -auto-approve
         timeout-minutes: 20
         continue-on-error: true
 
@@ -69,6 +69,7 @@ jobs:
         with:
           name: state-aws-${{ env.PR_NUMBER }}
           path: state/state-aws
+          if-no-files-found: error
 
       - name: Get EKS cluster credentials
         id: get_eks_credentials
@@ -94,7 +95,7 @@ jobs:
       - name: Apply k8s module
         if: steps.plan_k8s.outcome == 'success'
         id: apply_k8s_module
-        run: ./tofu_apply_k8s.sh plan-k8s -- -auto-approve -state-out=../state/state-k8s
+        run: ./tofu_apply_k8s.sh plan-k8s -- -auto-approve
         timeout-minutes: 20
         continue-on-error: true
 
@@ -104,6 +105,7 @@ jobs:
         with:
           name: state-k8s-${{ env.PR_NUMBER }}
           path: state/state-k8s
+          if-no-files-found: error
 
       - name: Get FalkorDB endpoint
         if: steps.apply_k8s_module.outcome == 'success'
