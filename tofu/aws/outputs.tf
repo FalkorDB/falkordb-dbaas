@@ -20,3 +20,18 @@ output "falkordb_eks_cluster_certificate_autority" {
   description = "EKS cluster certificate autority"
   value       = module.eks.cluster_certificate_authority_data
 }
+
+output "falkordb_eks_cluster_role_arn" {
+  description = "EKS cluster role ARN"
+  value       = module.eks.cluster_iam_role_arn
+}
+
+output "falkordb_eks_cluster_oidc_issuer_url" {
+  description = "EKS cluster OIDC issuer URL"
+  value       = module.eks.cluster_oidc_issuer_url
+}
+
+output "falkordb_eks_cluster_oidc_issuer_arn" {
+  description = "EKS cluster OIDC issuer ARN"
+  value       = module.eks.oidc_provider_arn
+}

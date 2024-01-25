@@ -50,7 +50,7 @@ jobs:
           pr: ${{ env.PR_NUMBER }}
           name: artifacts-${{ env.PR_NUMBER }}
           path: artifacts
-      
+
       - name: Copy artifacts
         working-directory: ./artifacts
         run: |
@@ -75,7 +75,7 @@ jobs:
         if: steps.apply_infrastructure.outcome == 'success'
         continue-on-error: true
         run: |
-          ./aws_update_kubeconfig.sh testing-cluster-${{ env.PR_NUMBER }}
+          ./aws_update_kubeconfig.sh testing-cluster-${{ env.PR_NUMBER }} ${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}
 
       - name: Check connection to EKS cluster
         if: steps.get_eks_credentials.outcome == 'success'
@@ -86,10 +86,10 @@ jobs:
       - name: Plan K8S module
         if: steps.get_eks_credentials.outcome == 'success'
         id: plan_k8s
-        env: 
+        env:
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
         run: |
-          ./tofu_plan_k8s.sh 
+          ./tofu_plan_k8s.sh
 
       - name: Apply k8s module
         if: steps.plan_k8s.outcome == 'success'
@@ -99,12 +99,12 @@ jobs:
         continue-on-error: true
 
       - name: Archive K8S target state
-        if: steps.apply_k8s_module.outcome == 'success' 
+        if: steps.apply_k8s_module.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: state-k8s-${{ env.PR_NUMBER }}
           path: state/state-k8s
-            
+
       - name: Get FalkorDB endpoint
         if: steps.apply_k8s_module.outcome == 'success'
         continue-on-error: true

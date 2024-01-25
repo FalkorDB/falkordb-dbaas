@@ -43,6 +43,10 @@ provider "helm" {
   }
 }
 
+data "aws_caller_identity" "current" {
+}
+
+
 module "k8s" {
   source                    = "./k8s"
   region                    = var.region
@@ -61,6 +65,21 @@ module "k8s" {
   falkordb_hosted_zone_id   = var.falkordb_hosted_zone_id
   falkordb_password         = var.falkordb_password
   backup_retention_period   = var.backup_retention_period
+
+  falkordb_eks_cluster_oidc_issuer_url = module.aws.falkordb_eks_cluster_oidc_issuer_url
+  falkordb_eks_cluster_oidc_issuer_arn = module.aws.falkordb_eks_cluster_oidc_issuer_arn
+
+  key_administrators = [
+    # Verify which roles should have access
+    var.assume_role_arn,
+  ]
+
+  key_service_roles_for_autoscaling = [
+    # required for the ASG to manage encrypted volumes for nodes
+    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
+    # required for the cluster / persistentvolume-controller to create encrypted PVCs
+    module.aws.falkordb_eks_cluster_role_arn
+  ]
 
   depends_on = [module.aws]
 }

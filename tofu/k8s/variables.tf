@@ -63,3 +63,19 @@ variable "falkordb_hosted_zone_id" {
 variable "backup_retention_period" {
   type = number
 }
+
+variable "key_administrators" {
+  type = list(string)
+}
+
+variable "key_service_roles_for_autoscaling" {
+  type = list(string)
+}
+
+variable "falkordb_eks_cluster_oidc_issuer_url" {
+  type = string
+}
+
+variable "falkordb_eks_cluster_oidc_issuer_arn" {
+  type = string
+}

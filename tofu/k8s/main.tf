@@ -1,20 +1,3 @@
-
-data "aws_caller_identity" "current" {
-}
-
-
-data "aws_eks_cluster" "cluster" {
-  name = var.falkordb_eks_cluster_name
-
-  depends_on = [var.falkordb_eks_cluster_name]
-}
-
-# Get OIDC Identity issuer
-data "aws_iam_openid_connect_provider" "cluster" {
-  url = data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
-}
-
-
 resource "kubernetes_namespace" "backup_namespace" {
   metadata {
     name = "falkordb-backup"
@@ -163,16 +146,8 @@ module "ebs_kms_key" {
   description = "Customer managed key to encrypt EKS managed node group volumes"
 
   # Policy
-  key_administrators = [
-    # Verify which roles should have access
-    var.assume_role_arn,
-  ]
-  key_service_roles_for_autoscaling = [
-    # required for the ASG to manage encrypted volumes for nodes
-    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
-    # required for the cluster / persistentvolume-controller to create encrypted PVCs
-    data.aws_eks_cluster.cluster.role_arn
-  ]
+  key_administrators                = var.key_administrators
+  key_service_roles_for_autoscaling = var.key_service_roles_for_autoscaling
 
   # Aliases
   computed_aliases = {
@@ -396,8 +371,8 @@ resource "helm_release" "falkordb-monitoring" {
 module "load_balancer_controller" {
   source = "git::https://github.com/DNXLabs/terraform-aws-eks-lb-controller.git"
 
-  cluster_identity_oidc_issuer     = data.aws_iam_openid_connect_provider.cluster.url
-  cluster_identity_oidc_issuer_arn = data.aws_iam_openid_connect_provider.cluster.arn
+  cluster_identity_oidc_issuer     = var.falkordb_eks_cluster_oidc_issuer_url
+  cluster_identity_oidc_issuer_arn = var.falkordb_eks_cluster_oidc_issuer_arn
   cluster_name                     = var.falkordb_eks_cluster_name
   helm_chart_version               = "1.6.2"
 
