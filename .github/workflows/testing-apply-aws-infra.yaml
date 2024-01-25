@@ -98,12 +98,11 @@ jobs:
       - name: Apply k8s module
         if: steps.plan_k8s.outcome == 'success'
         id: apply_k8s_module
-        run: ./tofu_apply_k8s.sh plan-k8s
+        run: tofu apply -state-out=../state/state-k8s -state=../state/state-aws plan-k8s
         timeout-minutes: 20
         continue-on-error: true
 
       - name: Archive K8S target state
-        if: steps.apply_k8s_module.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: state-k8s-${{ env.PR_NUMBER }}
@@ -131,10 +130,15 @@ jobs:
           pip install -r requirements.txt
           pytest
 
-      - name: Destroy infrastructure
+      - name: Destroy K8S infrastructure
         if: always()
         working-directory: ./tofu
-        run: tofu destroy -auto-approve
+        run: tofu destroy -auto-approve -state ../state/state-k8s
+
+      - name: Destroy AWS infrastructure
+        if: always()
+        working-directory: ./tofu
+        run: tofu destroy -auto-approve -state ../state/state-aws
 
       - name: Fail if tests did not pass
         if: always()
