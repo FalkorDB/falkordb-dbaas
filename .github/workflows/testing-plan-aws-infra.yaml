@@ -15,7 +15,7 @@ defaults:
 
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
-  TF_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
+  TF_CACHE_DIR: ${{ github.workspace }}/tofu/.terraform
 
 jobs:
   plan-infra:
