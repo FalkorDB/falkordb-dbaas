@@ -95,7 +95,7 @@ jobs:
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
         run: |
           tofu init
-          tofu plan -out=local-k8s
+          tofu plan -out=local-k8s -var-file=../terraform.tfvars
 
       - name: Apply k8s module
         if: steps.plan_k8s.outcome == 'success'
@@ -104,7 +104,7 @@ jobs:
         timeout-minutes: 20
         continue-on-error: true
         run: |
-          tofu apply -auto-approve -state-out ../state/state-k8s
+          tofu apply -auto-approve -state-out ../state/state-k8s -var-file=../terraform.tfvars
 
       - name: Archive K8S target state
         uses: actions/upload-artifact@v4
