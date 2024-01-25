@@ -1,7 +1,6 @@
 provider "google" {
-  project = var.project
+  project = var.project_id
   region  = var.region
-  zone    = var.zone
 }
 
 # Get cluster data
@@ -33,176 +32,65 @@ provider "kubernetes" {
   }
 }
 
-# Tenant namespace
-
-resource "kubernetes_namespace" "tenant" {
-  metadata {
-    name = local.tenant_namespace
-  }
+locals {
+  deployment_neg_name = "${var.tenant_name}-neg"
 }
 
-# Tenant deployment
+module "k8s" {
+  source = "./resources/k8s"
 
-resource "kubernetes_deployment" "redis_deployment" {
-  metadata {
-    name      = local.deployment_name
-    namespace = kubernetes_namespace.tenant.metadata.0.name
-  }
+  project_id  = var.project_id
+  tenant_name = var.tenant_name
 
-  spec {
-    replicas = 1
+  falkordb_version  = var.falkordb_version
+  falkordb_password = var.falkordb_password
+  falkordb_cpu      = var.falkordb_cpu
+  falkordb_memory   = var.falkordb_memory
+  falkordb_replicas = var.falkordb_replicas
+  persistance_size  = var.persistance_size
 
-    selector {
-      match_labels = {
-        app = local.deployment_name
-      }
-    }
+  grafana_admin_password = var.grafana_admin_password
 
-    template {
-      metadata {
-        labels = {
-          app = local.deployment_name
-        }
-      }
+  backup_bucket_name = var.backup_bucket_name
+  backup_schedule    = var.backup_schedule
 
-      spec {
-        container {
-          image = var.deployment_image
-          name  = local.deployment_name
-          port {
-            container_port = var.deployment_port
-            protocol       = "TCP"
-          }
-        }
-      }
-    }
-  }
+  deployment_port     = var.deployment_port
+  deployment_neg_name = local.deployment_neg_name
 }
 
-
-# Tenant service
-
-resource "kubernetes_service" "redis_service" {
-  metadata {
-    name      = local.deployment_service_name
-    namespace = kubernetes_namespace.tenant.metadata.0.name
-    annotations = {
-      "cloud.google.com/neg" : "{\"exposed_ports\": {\"${var.deployment_port}\": { \"name\": \"${local.deployment_neg}\"} }}"
-    }
-  }
-
-  spec {
-    type = "ClusterIP"
-    selector = {
-      app = local.deployment_name
-    }
-
-    port {
-      port        = var.deployment_port
-      target_port = var.deployment_port
-      protocol    = "TCP"
-    }
-  }
-
-  lifecycle {
-    ignore_changes = [
-      metadata[0].annotations
-    ]
-  }
-  
-}
-
-
-# Wait 10 seconds
-
+# Wait 10 seconds for the NEGs to be created
 resource "time_sleep" "wait_30_seconds" {
   depends_on = [
-    kubernetes_service.redis_service
+    module.k8s
   ]
 
   create_duration = "30s"
 }
 
-data "google_compute_zones" "region_zones" {
-  region = var.region
-}
+module "networking" {
+  source = "./resources/networking"
 
-# Get all negs with the same name
-data "google_compute_network_endpoint_group" "redis_neg" {
-  for_each = toset(data.google_compute_zones.region_zones.names)
-  name = local.deployment_neg
-  zone = each.value
+  project_id          = var.project_id
+  region              = var.region
+  tenant_name         = var.tenant_name
+  vpc_name            = var.vpc_name
+  deployment_neg_name = local.deployment_neg_name
+  health_check_name   = var.health_check_name
+  ip_address_name     = var.ip_address_name
+  exposed_port        = var.exposed_port
 
-  depends_on = [
-    time_sleep.wait_30_seconds
-  ]
-}
-
-locals {
-  google_compute_region_health_check = "projects/${var.project}/regions/${var.region}/healthChecks/${var.tenant_group_name}-heatlh-check"
-}
-
-# Create backend service
-
-resource "google_compute_region_backend_service" "redis_backend_service" {
-  name        = local.deployment_neg
-  region      = var.region
-  timeout_sec = 10
-
-  # For each NEG, create a backend
-  dynamic "backend" {
-    for_each = data.google_compute_network_endpoint_group.redis_neg
-    content {
-      group                        = backend.value.self_link
-      capacity_scaler              = 1
-      max_connections_per_endpoint = 9999
-    }
-  }
-
-  health_checks = [
-    local.google_compute_region_health_check
-  ]
-
-  load_balancing_scheme = "EXTERNAL_MANAGED"
-  protocol              = "TCP"
-  locality_lb_policy = "ROUND_ROBIN"
-
-  log_config {
-    enable = true
-    sample_rate = 1
-  }
-
-  depends_on = [
-    local.google_compute_region_health_check,
-    time_sleep.wait_30_seconds
-  ]
+  depends_on = [time_sleep.wait_30_seconds]
 }
 
 
-# Get reserved IP address
+module "backup" {
+  source = "./resources/backup"
 
-data "google_compute_address" "lb-ip" {
-  name   = "${var.tenant_group_name}-lb-ip"
-  region = var.region
-}
+  project_id = var.project_id
 
-# Create forwarding rule
+  tenant_name           = var.tenant_name
+  backup_bucket_name    = var.backup_bucket_name
+  backup_writer_sa_name = module.k8s.backup_writer_sa_name
 
-resource "google_compute_forwarding_rule" "redis_forwarding_rule" {
-  name                  = "${var.tenant_name}-forwarding-rule"
-  region                = var.region
-  ip_address            = data.google_compute_address.lb-ip.address
-  port_range            = var.exposed_port
-  network_tier          = "PREMIUM"
-  load_balancing_scheme = "EXTERNAL_MANAGED"
-  ip_protocol           = "TCP"
-  target                = google_compute_region_target_tcp_proxy.default.id
-  network               = "projects/${var.project}/global/networks/${var.vpc_name}"
-
-}
-
-resource "google_compute_region_target_tcp_proxy" "default" {
-  name            = "${var.tenant_name}-target-tcp-proxy"
-  backend_service = google_compute_region_backend_service.redis_backend_service.id
-  region          = var.region
+  depends_on = [module.k8s]
 }

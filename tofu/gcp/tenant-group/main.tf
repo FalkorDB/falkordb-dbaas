@@ -1,145 +1,62 @@
 
 provider "google" {
-  project = var.project
+  project = var.project_id
   region  = var.region
-  zone    = var.zone
 }
 
-# VPC network
-
-resource "google_compute_network" "vpc" {
-  name                    = local.vpc_name
-  auto_create_subnetworks = false
+data "google_compute_zones" "zones" {
+  region = var.region
 }
 
-# Subnetwork
+module "networking" {
+  source = "./resources/networking"
 
-resource "google_compute_subnetwork" "subnet" {
-  name          = local.subnet_name
-  ip_cidr_range = var.subnet_cidr
+  project_id        = var.project_id
+  tenant_group_name = var.tenant_group_name
 
   region = var.region
 
-  network = google_compute_network.vpc.self_link
+  subnet_cidr                  = var.subnet_cidr
+  subnet_proxy_only_cidr_range = var.subnet_proxy_only_cidr_range
+
+  tenant_group_size = var.tenant_group_size
+}
+
+module "gke_cluster" {
+  source = "./resources/cluster"
+
+  project_id        = var.project_id
+  tenant_group_name = var.tenant_group_name
+
+  region = var.region
+  zones  = data.google_compute_zones.zones.names
+
+  vpc_name        = module.networking.network_name
+  subnetwork_name = module.networking.subnets[0].subnet_name
+
+  ip_range_pods     = module.networking.subnets[0].subnet_ip
+  ip_range_services = module.networking.subnets[0].subnet_ip
+
+  node_pools = var.node_pools 
+  
+  node_pools_tags = ["allow-tenant-deployments"]
+}
+
+data "google_client_config" "default" {}
+
+provider "kubernetes" {
+  host                   = "https://${module.gke_cluster.cluster_endpoint}"
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(module.gke_cluster.cluster_ca_certificate)
 }
 
 
-resource "google_compute_subnetwork" "proxy_only_subnet" {
-  name          = "${var.tenant_group_name}-proxy-only-subnet"
-  ip_cidr_range = var.subnet_proxy_only_cidr_range
-  region        = var.region
-  network       = google_compute_network.vpc.self_link
-  purpose       = "REGIONAL_MANAGED_PROXY"
-  role          = "ACTIVE"
-}
+module "backup" {
+  source = "./resources/backup"
 
-# Firewall rules
-
-# Firewall rule to enable traffic from the Load Balancer thorugh NEGs to the Cluster
-resource "google_compute_firewall" "tenant-deployments" {
-  name    = "allow-tenant-deployments"
-  network = google_compute_network.vpc.name
-
-  direction = "INGRESS"
-  priority  = 1000
-
-  allow {
-    protocol = "tcp"
-    # Array of var.tenant_group_size ports starting from 30000
-    ports = ["30000-${var.tenant_group_size + 30000 - 1}"]
-  }
-
-  source_ranges = ["0.0.0.0/0"]
-
-  target_tags = ["allow-tenant-deployments"]
-
-  depends_on = [
-    google_compute_subnetwork.subnet
-  ]
-
-}
-
-
-# Cluster
-
-resource "google_container_cluster" "cluster" {
-  name               = local.cluster_name
-  location           = var.region
-  initial_node_count = 1
-
-  network = google_compute_network.vpc.name
-
-  subnetwork = google_compute_subnetwork.subnet.self_link
-
-  ip_allocation_policy {}
-
-  node_config {
-    machine_type = var.node_pool_machine_type
-    disk_size_gb = var.node_pool_disk_size
-    tags         = ["allow-tenant-deployments"]
-  }
-
-  addons_config {
-    horizontal_pod_autoscaling {
-      disabled = false
-    }
-  }
-
-  master_auth {
-    client_certificate_config {
-      issue_client_certificate = false
-    }
-  }
-
-
-  depends_on = [
-    google_compute_firewall.tenant-deployments
-  ]
-}
-
-# Reserve premium IP Address for the Load Balancer
-
-resource "google_compute_address" "lb-ip" {
-  name         = "${var.tenant_group_name}-lb-ip"
-  address_type = "EXTERNAL"
-  region       = var.region
-  network_tier = "PREMIUM"
-}
-
-
-# Create Health Check
-
-resource "google_compute_region_health_check" "redis" {
-  name                = "${var.tenant_group_name}-heatlh-check"
-  check_interval_sec  = 5
-  timeout_sec         = 5
-  healthy_threshold   = 2
-  unhealthy_threshold = 2
-  region              = var.region
-
-  tcp_health_check {
-    port_specification = "USE_SERVING_PORT"
-  }
-}
-
-
-# Allow healtlhcheck rule
-
-resource "google_compute_firewall" "allow-healthcheck" {
-  name    = "allow-healthcheck"
-  network = google_compute_network.vpc.name
-
-  direction = "INGRESS"
-  priority  = 1000
-
-  allow {
-    protocol = "TCP"
-  }
-
-  source_ranges = ["35.191.0.0/16", "209.85.152.0/22", "209.85.204.0/22", ]
-
-  depends_on = [
-    google_compute_subnetwork.subnet
-  ]
-
+  project_id           = var.project_id
+  region               = var.region
+  tenant_group_name    = var.tenant_group_name
+  
+  force_destroy_bucket = var.force_destroy_bucket
 }
