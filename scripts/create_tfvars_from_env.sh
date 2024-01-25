@@ -19,3 +19,5 @@ echo "name=\"$name\"
     falkordb_hosted_zone_id=\"$falkordb_hosted_zone_id\"
     falkordb_password=\"$falkordb_password\"
     " > ../tofu/terraform.tfvars
+cp ../tofu/terraform.tfvars ../tofu/aws/terraform.tfvars
+cp ../tofu/terraform.tfvars ../tofu/k8s/terraform.tfvars

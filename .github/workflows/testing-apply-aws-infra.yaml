@@ -95,7 +95,7 @@ jobs:
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
         run: |
           tofu init
-          tofu plan -out=local-k8s -var-file=../terraform.tfvars
+          tofu plan -out=local-k8s
 
       - name: Apply k8s module
         if: steps.plan_k8s.outcome == 'success'
