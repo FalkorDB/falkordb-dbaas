@@ -16,7 +16,7 @@ env:
 
 jobs:
   apply-test-aws-k8s-infra:
-    if: github.event.review.state == 'approved'
+    if: github.event.review.state == 'approved' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: testing
     steps:
