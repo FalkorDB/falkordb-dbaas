@@ -1,7 +1,5 @@
-echo "name=\"$name\"
+    echo "name=\"$name\"
     region=\"$region\"
-    assume_role_arn=\"$assume_role_arn\"
-    eks_auth_role=\"$eks_auth_role\"
     k8s_version=\"$k8s_version\"
     k8s_instance_type=\"$k8s_instance_type\"
     k8s_node_count=\"$k8s_node_count\"
@@ -16,8 +14,6 @@ echo "name=\"$name\"
     grafana_admin_password=\"$grafana_admin_password\"
     backup_schedule=\"$backup_schedule\"
     falkordb_domain=\"$falkordb_domain\"
-    falkordb_hosted_zone_id=\"$falkordb_hosted_zone_id\"
-    falkordb_password=\"$falkordb_password\"
     " > ../tofu/terraform.tfvars
 cp ../tofu/terraform.tfvars ../tofu/aws/terraform.tfvars
 cp ../tofu/terraform.tfvars ../tofu/k8s/terraform.tfvars

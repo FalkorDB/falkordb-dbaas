@@ -35,8 +35,6 @@ jobs:
         env:
           name: testing-cluster-${{ env.PR_NUMBER }}
           region: ${{ vars.TF_VAR_REGION }}
-          assume_role_arn: ${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}
-          eks_auth_role: ${{ secrets.TF_VAR_EKS_AUTH_ROLE }}
           k8s_version: ${{ vars.TF_VAR_K8S_VERSION }}
           k8s_instance_type: ${{ vars.TF_VAR_K8S_INSTANCE_TYPE }}
           k8s_node_count: ${{ vars.TF_VAR_K8S_NODE_COUNT }}
@@ -51,8 +49,12 @@ jobs:
           grafana_admin_password: ${{ vars.TF_VAR_GRAFANA_ADMIN_PASSWORD }}
           backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
           falkordb_domain: ${{ vars.TF_VAR_FALKORDB_DOMAIN }}
-          falkordb_hosted_zone_id: ${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}
-          falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
+
+          # If we add these here, they will be exported in the tfvars file
+          # assume_role_arn: ${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}
+          # eks_auth_role: ${{ secrets.TF_VAR_EKS_AUTH_ROLE }}
+          # falkordb_hosted_zone_id: ${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}
+          # falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
         run: |
           ./create_tfvars_from_env.sh
           mkdir -p ${GITHUB_WORKSPACE}/artifacts
@@ -82,14 +84,16 @@ jobs:
 
       - name: Plan AWS module
         id: plan_aws
+        working-directory: ./tofu
         run: |
-          ./tofu_plan_aws.sh 
-          cp ../tofu/local-aws ${GITHUB_WORKSPACE}/artifacts/plan-aws.out
+          tofu plan -out ../local-aws -target=module.aws -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
+          cp ../local-aws ${GITHUB_WORKSPACE}/artifacts/plan-aws.out
 
       - name: Plan K8S module
         id: plan_k8s
+        working-directory: ./tofu
         run: |
-          ./tofu_plan_k8s.sh 
+          tofu plan -out ../local-k8s -target=module.k8s -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
           cp ../tofu/local-k8s ${GITHUB_WORKSPACE}/artifacts/plan-k8s.out
 
       - name: Archive artifacts
