@@ -68,17 +68,17 @@ jobs:
       - name: Copy artifacts
         working-directory: ./artifacts
         run: |
-          cp plan-aws.out ../tofu/plan-aws
-          cp plan-k8s.out ../tofu/plan-k8s
+          cp plan-aws.out ../tofu/aws/plan-aws
+          cp plan-k8s.out ../tofu/k8s/plan-k8s
           cp terraform.tfvars ../tofu/terraform.tfvars
 
       - name: Apply AWS infrastructure
         id: apply_infrastructure
         timeout-minutes: 20
         continue-on-error: true
-        working-directory: ./tofu
+        working-directory: ./tofu/aws
         run: |
-          tofu apply -auto-approve -state-out ../state/state-aws plan-aws
+          tofu apply -auto-approve -state-out ../../state/state-aws plan-aws
       
       - name: Set AWS infra output variables
         continue-on-error: true
@@ -112,16 +112,16 @@ jobs:
         run: |
           kubectl get nodes
 
-      - name: Plan K8S module
-        if: steps.get_eks_credentials.outcome == 'success'
-        id: plan_k8s
-        working-directory: ./tofu/k8s
-        run: |
-          tofu init
-          tofu plan -out=local-k8s -var-file=../terraform.tfvars -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
+      # - name: Plan K8S module
+      #   if: steps.get_eks_credentials.outcome == 'success'
+      #   id: plan_k8s
+      #   working-directory: ./tofu/k8s
+      #   run: |
+      #     tofu init
+      #     tofu plan -out=local-k8s -var-file=../terraform.tfvars -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
 
       - name: Apply k8s module
-        if: steps.plan_k8s.outcome == 'success'
+        if: steps.get_eks_credentials.outcome == 'success'
         id: apply_k8s_module
         timeout-minutes: 20
         continue-on-error: true
@@ -159,13 +159,13 @@ jobs:
 
       - name: Destroy K8S infrastructure
         if: always()
-        working-directory: ./tofu
-        run: tofu destroy -auto-approve -state ../state/state-k8s  -var-file=./terraform.tfvars -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
+        working-directory: ./tofu/k8s
+        run: tofu destroy -auto-approve -state ../../state/state-k8s  -var-file=./terraform.tfvars -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
 
       - name: Destroy AWS infrastructure
         if: always()
-        working-directory: ./tofu
-        run: tofu destroy -auto-approve -state ../state/state-aws  -var-file=./terraform.tfvars -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
+        working-directory: ./tofu/aws
+        run: tofu destroy -auto-approve -state ../../state/state-aws  -var-file=./terraform.tfvars -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
 
       - name: Fail if tests did not pass
         if: always()
