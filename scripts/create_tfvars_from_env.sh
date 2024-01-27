@@ -1,4 +1,5 @@
     echo "name=\"$name\"
+    tenant_name=\"$name\"
     region=\"$region\"
     k8s_version=\"$k8s_version\"
     k8s_instance_type=\"$k8s_instance_type\"
