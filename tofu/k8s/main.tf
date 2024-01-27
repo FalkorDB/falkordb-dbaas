@@ -1,3 +1,33 @@
+
+provider "kubernetes" {
+  host                   = var.falkordb_eks_cluster_endpoint
+  cluster_ca_certificate = base64decode(var.falkordb_eks_cluster_certificate_autority)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
+  }
+}
+
+
+provider "helm" {
+  kubernetes {
+    host                   = var.falkordb_eks_cluster_endpoint
+    cluster_ca_certificate = base64decode(var.falkordb_eks_cluster_certificate_autority)
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
+    }
+  }
+}
+
+data "aws_caller_identity" "current" {
+}
+
+
 resource "kubernetes_namespace" "backup_namespace" {
   metadata {
     name = "falkordb-backup"

@@ -45,7 +45,8 @@ variable "backup_schedule" {
 }
 
 variable "falkordb_eks_cluster_name" {
-  type = string
+  type    = string
+  default = "cluster_name"
 }
 
 variable "falkordb_s3_backup_name" {
@@ -65,11 +66,13 @@ variable "backup_retention_period" {
 }
 
 variable "key_administrators" {
-  type = list(string)
+  type    = list(string)
+  default = []
 }
 
 variable "key_service_roles_for_autoscaling" {
-  type = list(string)
+  type    = list(string)
+  default = []
 }
 
 variable "falkordb_eks_cluster_oidc_issuer_url" {
@@ -77,5 +80,13 @@ variable "falkordb_eks_cluster_oidc_issuer_url" {
 }
 
 variable "falkordb_eks_cluster_oidc_issuer_arn" {
+  type = string
+}
+
+variable "falkordb_eks_cluster_endpoint" {
+  type = string
+}
+
+variable "falkordb_eks_cluster_certificate_autority" {
   type = string
 }
