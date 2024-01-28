@@ -79,12 +79,8 @@ resource "kubernetes_cluster_role_binding" "falkordb_role_binding" {
   }
 }
 
-data "aws_s3_bucket" "falkordb_backup_bucket" {
-  bucket = var.falkordb_s3_backup_name
-}
-
 resource "aws_s3_bucket_lifecycle_configuration" "falkordb_backup_s3_bucket_lifecycle_configuration" {
-  bucket = data.aws_s3_bucket.falkordb_backup_bucket.id
+  bucket = var.falkordb_s3_backup_name
 
   rule {
     id = "falkordb-rule-${var.tenant_name}"
@@ -124,7 +120,7 @@ resource "kubernetes_cron_job_v1" "falkorbd_backup" {
               name  = "backup"
               image = "amazon/aws-cli"
               # https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
-              command = ["/bin/sh", "-c", "curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.28.3/2023-11-14/bin/linux/amd64/kubectl; chmod +x kubectl; ./kubectl exec falkordb-redis-node-0 --namespace falkordb -- redis-cli -a '${local.falkordb_password}' save; ./kubectl cp falkordb-redis-node-0:/data/dump.rdb dump.rdb -c redis --namespace falkordb; aws s3 cp dump.rdb s3://${data.aws_s3_bucket.falkordb_backup_bucket.id}/${var.tenant_name}/dump$(date +'%Y-%m-%d_%H-%M-%S').rdb"]
+              command = ["/bin/sh", "-c", "curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.28.3/2023-11-14/bin/linux/amd64/kubectl; chmod +x kubectl; ./kubectl exec falkordb-redis-node-0 --namespace falkordb -- redis-cli -a '${local.falkordb_password}' save; ./kubectl cp falkordb-redis-node-0:/data/dump.rdb dump.rdb -c redis --namespace falkordb; aws s3 cp dump.rdb s3://${var.falkordb_s3_backup_name}/${var.tenant_name}/dump$(date +'%Y-%m-%d_%H-%M-%S').rdb"]
             }
           }
         }
