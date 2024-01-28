@@ -28,12 +28,22 @@ variable "subnet_name" {
 
 variable "subnet_cidr" {
   type    = string
-  default = "10.208.0.0/20"
+  default = "10.130.1.0/24"
 }
 
 variable "subnet_proxy_only_cidr" {
   type    = string
-  default = "11.208.0.0/20"
+  default = "10.130.2.0/24"
+}
+
+variable "ip_range_pods" {
+  type    = string
+  default = "10.130.10.0/24"
+}
+
+variable "ip_range_services" {
+  type    = string
+  default = "10.130.10.0/24"
 }
 
 variable "tenant_group_size" {

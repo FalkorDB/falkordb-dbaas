@@ -31,6 +31,25 @@ module "vpc" {
 
   subnets = local.subnets
 
+  secondary_ranges = {
+    "${var.tenant_group_name}-subnet" = [{
+      range_name    = "pods"
+      ip_cidr_range = var.ip_range_pods
+      },
+      {
+        range_name    = "services"
+        ip_cidr_range = var.ip_range_services
+    }],
+    "${var.tenant_group_name}-subnet-proxy-only" = [{
+      range_name    = "pods"
+      ip_cidr_range = var.ip_range_pods
+      },
+      {
+        range_name    = "services"
+        ip_cidr_range = var.ip_range_services
+    }]
+  }
+
   ingress_rules = [
     {
       name = "allow-tcp-for-deployments"

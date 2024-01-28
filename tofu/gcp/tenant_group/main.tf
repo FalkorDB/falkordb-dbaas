@@ -19,6 +19,9 @@ module "networking" {
   subnet_cidr            = var.subnet_cidr
   subnet_proxy_only_cidr = var.subnet_proxy_only_cidr
 
+  ip_range_pods     = var.ip_range_pods
+  ip_range_services = var.ip_range_services
+
   tenant_group_size = var.tenant_group_size
 }
 
@@ -34,8 +37,8 @@ module "gke_cluster" {
   vpc_name        = module.networking.network_name
   subnetwork_name = module.networking.subnets[0].subnet_name
 
-  ip_range_pods     = module.networking.subnets[0].subnet_ip
-  ip_range_services = module.networking.subnets[0].subnet_ip
+  ip_range_pods     = "pods"
+  ip_range_services = "services"
 
   node_pools = var.node_pools
 

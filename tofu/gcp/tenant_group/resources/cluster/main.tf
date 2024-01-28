@@ -1,5 +1,6 @@
 module "gke" {
   source                            = "terraform-google-modules/kubernetes-engine/google"
+  version                           = "~> 29.0.0"
   project_id                        = var.project_id
   name                              = "${var.tenant_group_name}-cluster"
   region                            = var.region
@@ -19,7 +20,7 @@ module "gke" {
   node_pools_tags = {
     all = var.node_pools_tags
   }
-  
+
   monitoring_enable_managed_prometheus = true
 }
 

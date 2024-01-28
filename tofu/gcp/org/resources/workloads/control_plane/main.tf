@@ -35,7 +35,7 @@ module "vpc" {
     {
       subnet_name           = "falkordb-control-plane-public-subnet"
       subnet_region         = "me-west1",
-      subnet_ip             = "10.0.0.0/24"
+      subnet_ip             = "10.208.0.0/20"
       subnet_private_access = true
     }
   ]
