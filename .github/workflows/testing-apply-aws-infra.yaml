@@ -158,12 +158,12 @@ jobs:
       - name: Destroy K8S infrastructure
         if: always()
         working-directory: ./tofu/k8s
-        run: tofu destroy -auto-approve -state ../../state/state-k8s  -var-file=./terraform.tfvars -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
+        run: tofu destroy -auto-approve -state ../../state/state-k8s  -var-file=../terraform.tfvars -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
 
       - name: Destroy AWS infrastructure
         if: always()
         working-directory: ./tofu/aws
-        run: tofu destroy -auto-approve -state ../../state/state-aws  -var-file=./terraform.tfvars -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
+        run: tofu destroy -auto-approve -state ../../state/state-aws  -var-file=../terraform.tfvars -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}"
 
       - name: Fail if tests did not pass
         if: always()
