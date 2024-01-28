@@ -1,3 +1,10 @@
+
+###### STATE ######
+variable "state_bucket_name" {
+  type = string
+}
+
+###### PROJECT ######
 variable "project_id" {
   type = string
 }
@@ -48,7 +55,7 @@ variable "node_pools" {
   } ]
 }
 
-variable "force_destroy_bucket" {
+variable "force_destroy_backup_bucket" {
   type    = bool
   default = false
 }

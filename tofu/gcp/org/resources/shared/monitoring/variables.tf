@@ -1,8 +1,9 @@
 
+###### PROJECT ######
+
 variable "org_id" {
   type = string
 }
-
 variable "project_id" {
   type = string
 }
@@ -19,6 +20,8 @@ variable "billing_account_id" {
   type = string
 }
 
-variable "provisioning_sa" {
-  type = string
+###### MONITORING ######
+
+variable "monitored_projects" {
+  type = list(string)
 }

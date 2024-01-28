@@ -1,3 +1,10 @@
+
+###### STATE ######
+variable "state_bucket_name" {
+  type = string
+}
+
+###### PROJECT ######
 variable "project_id" {
   type = string
 }

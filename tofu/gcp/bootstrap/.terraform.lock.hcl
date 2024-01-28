@@ -3,7 +3,7 @@
 
 provider "registry.opentofu.org/hashicorp/google" {
   version     = "5.13.0"
-  constraints = ">= 3.33.0, >= 3.43.0, >= 3.50.0, >= 3.53.0, >= 3.83.0, >= 4.25.0, >= 4.28.0, >= 4.64.0, 5.13.0, < 6.0.0"
+  constraints = ">= 3.43.0, >= 3.50.0, >= 3.53.0, >= 4.28.0, < 6.0.0"
   hashes = [
     "h1:5wSnWzzbxV5sH7ixehXH3dX3oAy74EvXuJkvSAnMToo=",
     "zh:09bf30fef91dba33ecb9f3f4dd1e18ed6b546401747d0653448cc371177e803d",
@@ -21,7 +21,7 @@ provider "registry.opentofu.org/hashicorp/google" {
 
 provider "registry.opentofu.org/hashicorp/google-beta" {
   version     = "5.13.0"
-  constraints = ">= 3.43.0, >= 3.50.0, >= 4.11.0, >= 4.28.0, >= 4.64.0, 5.13.0, < 6.0.0"
+  constraints = ">= 3.43.0, >= 3.50.0, >= 4.11.0, >= 4.28.0, < 6.0.0"
   hashes = [
     "h1:03DlQxVkSodAtPp3lBNUdkAjwatUpW7nuoXqyYjPSXA=",
     "zh:028f288bdb2c697c73ba760f5861a88f672da3fe7f9d160d9662486ba5f537e5",

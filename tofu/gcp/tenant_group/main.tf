@@ -58,5 +58,5 @@ module "backup" {
   region               = var.region
   tenant_group_name    = var.tenant_group_name
   
-  force_destroy_bucket = var.force_destroy_bucket
+  force_destroy_bucket = var.force_destroy_backup_bucket
 }

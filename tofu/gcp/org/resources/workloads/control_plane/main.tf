@@ -41,3 +41,9 @@ module "vpc" {
   ]
 
 }
+
+module "tenant_provision" {
+  source = "./control_plane_provision"
+
+  project_id = var.project_id
+}

@@ -16,10 +16,11 @@ module "gke" {
   node_metadata = "GKE_METADATA"
 
   node_pools = var.node_pools
-
   node_pools_tags = {
     all = var.node_pools_tags
   }
+  
+  monitoring_enable_managed_prometheus = true
 }
 
 # Create Health Check
