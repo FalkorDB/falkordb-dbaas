@@ -53,7 +53,6 @@ module "eks" {
     }
   }
 
-
   tags = local.tags
 
 }
@@ -103,7 +102,7 @@ data "aws_iam_policy_document" "assume_role" {
 }
 
 resource "aws_iam_role" "falkordb_backup_role" {
-  name               = "eks-pod-identity-falkordb_backup_role"
+  name               = "${var.name}-falkordb_backup_role"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
 

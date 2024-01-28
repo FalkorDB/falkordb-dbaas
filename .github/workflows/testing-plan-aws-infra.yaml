@@ -49,7 +49,7 @@ jobs:
           falkordb_replicas: ${{ vars.TF_VAR_FALKORDB_REPLICAS }}
           grafana_admin_password: ${{ vars.TF_VAR_GRAFANA_ADMIN_PASSWORD }}
           backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
-          falkordb_domain: ${{ vars.TF_VAR_FALKORDB_DOMAIN }}
+          # falkordb_domain: ${{ vars.TF_VAR_FALKORDB_DOMAIN }}
 
           # If we add these here, they will be exported in the tfvars file
           # assume_role_arn: ${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}
@@ -98,7 +98,7 @@ jobs:
         run: |
           tofu init
           tofu test
-          tofu plan -out ../../local-k8s -var "falkordb_s3_backup_name='test-backup-bucket-s3'" -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "falkordb_hosted_zone_id=${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}" -var "falkordb_eks_cluster_oidc_issuer_url=''" -var "falkordb_eks_cluster_oidc_issuer_arn=''" -var "falkordb_eks_cluster_endpoint=''" -var "falkordb_eks_cluster_certificate_autority=dGVzdA=="
+          tofu plan -out ../../local-k8s -var "falkordb_s3_backup_name='test-backup-bucket-s3'" -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}" -var "falkordb_eks_cluster_oidc_issuer_url=''" -var "falkordb_eks_cluster_oidc_issuer_arn=''" -var "falkordb_eks_cluster_endpoint=''" -var "falkordb_eks_cluster_certificate_autority=dGVzdA=="
           cp ../../local-k8s ${GITHUB_WORKSPACE}/artifacts/plan-k8s.out
 
       - name: Archive artifacts

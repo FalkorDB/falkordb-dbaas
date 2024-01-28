@@ -53,13 +53,13 @@ variable "falkordb_s3_backup_name" {
   type = string
 }
 
-variable "falkordb_domain" {
-  type = string
-}
+# variable "falkordb_domain" {
+#   type = string
+# }
 
-variable "falkordb_hosted_zone_id" {
-  type = string
-}
+# variable "falkordb_hosted_zone_id" {
+#   type = string
+# }
 
 variable "backup_retention_period" {
   type = number

@@ -14,7 +14,7 @@
     falkordb_replicas=\"$falkordb_replicas\"
     grafana_admin_password=\"$grafana_admin_password\"
     backup_schedule=\"$backup_schedule\"
-    falkordb_domain=\"$falkordb_domain\"
+    # falkordb_domain=\"$falkordb_domain\"
     " > ../tofu/terraform.tfvars
 cp ../tofu/terraform.tfvars ../tofu/aws/terraform.tfvars
 cp ../tofu/terraform.tfvars ../tofu/k8s/terraform.tfvars
