@@ -160,11 +160,6 @@ locals {
   }
 }
 
-resource "random_string" "random_kms_alias" {
-  length  = 4
-  special = false
-}
-
 module "ebs_kms_key" {
   source  = "terraform-aws-modules/kms/aws"
   version = "~> 2.1.0"
@@ -174,14 +169,6 @@ module "ebs_kms_key" {
   # Policy
   key_administrators                = var.key_administrators
   key_service_roles_for_autoscaling = var.key_service_roles_for_autoscaling
-
-  # Aliases
-  computed_aliases = {
-    alias = {
-      name = "eks/${var.tenant_name}_${random_string.random_kms_alias.result}/ebs"
-    }
-  }
-  aliases_use_name_prefix = true
 
   tags = local.tags
 }
