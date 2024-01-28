@@ -1,13 +1,32 @@
+
 provider "kubernetes" {
-  host                   = var.falkordb_eks_endpoint
-  cluster_ca_certificate = base64decode(var.falkordb_cluster_certificate_authority_data)
+  host                   = var.falkordb_eks_cluster_endpoint
+  cluster_ca_certificate = base64decode(var.falkordb_eks_cluster_certificate_autority)
 
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name]
+    args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
   }
 }
+
+
+provider "helm" {
+  kubernetes {
+    host                   = var.falkordb_eks_cluster_endpoint
+    cluster_ca_certificate = base64decode(var.falkordb_eks_cluster_certificate_autority)
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
+    }
+  }
+}
+
+data "aws_caller_identity" "current" {
+}
+
 
 resource "kubernetes_namespace" "backup_namespace" {
   metadata {
@@ -60,6 +79,27 @@ resource "kubernetes_cluster_role_binding" "falkordb_role_binding" {
   }
 }
 
+resource "aws_s3_bucket_lifecycle_configuration" "falkordb_backup_s3_bucket_lifecycle_configuration" {
+  bucket = var.falkordb_s3_backup_name
+
+  rule {
+    id = "falkordb-rule-${var.tenant_name}"
+
+    filter {
+      prefix = "${var.tenant_name}/"
+    }
+
+    expiration {
+      days = var.backup_retention_period
+    }
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 3
+    }
+
+    status = "Enabled"
+  }
+}
+
 resource "kubernetes_cron_job_v1" "falkorbd_backup" {
   metadata {
     name      = "falkordb-backup"
@@ -80,13 +120,17 @@ resource "kubernetes_cron_job_v1" "falkorbd_backup" {
               name  = "backup"
               image = "amazon/aws-cli"
               # https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
-              command = ["/bin/sh", "-c", "curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.28.3/2023-11-14/bin/linux/amd64/kubectl; chmod +x kubectl; ./kubectl exec falkordb-redis-node-0 --namespace falkordb -- redis-cli -a '${random_password.password.result}' save; ./kubectl cp falkordb-redis-node-0:/data/dump.rdb dump.rdb -c redis --namespace falkordb; aws s3 cp dump.rdb s3://${var.falkordb_s3_backup_location}/dump$(date +'%Y-%m-%d_%H-%M-%S').rdb"]
+              command = ["/bin/sh", "-c", "curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.28.3/2023-11-14/bin/linux/amd64/kubectl; chmod +x kubectl; ./kubectl exec falkordb-redis-node-0 --namespace falkordb -- redis-cli -a '${local.falkordb_password}' save; ./kubectl cp falkordb-redis-node-0:/data/dump.rdb dump.rdb -c redis --namespace falkordb; aws s3 cp dump.rdb s3://${var.falkordb_s3_backup_name}/${var.tenant_name}/dump$(date +'%Y-%m-%d_%H-%M-%S').rdb"]
             }
           }
         }
       }
     }
   }
+
+  depends_on = [
+    kubernetes_namespace.backup_namespace
+  ]
 }
 
 # https://docs.syseleven.de/metakube-accelerator/building-blocks/observability-monitoring/kube-prometheus-stack#adding-grafana-dashboards
@@ -102,37 +146,70 @@ resource "kubernetes_config_map" "falkordb_grafana_dashboard" {
   }
 }
 
-provider "helm" {
-  kubernetes {
-    host                   = var.falkordb_eks_endpoint
-    cluster_ca_certificate = base64decode(var.falkordb_cluster_certificate_authority_data)
-
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name]
-    }
-  }
-}
-
 resource "random_password" "password" {
   length           = 16
   special          = true
   override_special = ""
 }
 
+locals {
+  falkordb_password = var.falkordb_password != null ? var.falkordb_password : random_password.password.result
+
+  tags = {
+    customer = var.tenant_name
+  }
+}
+
+module "ebs_kms_key" {
+  source  = "terraform-aws-modules/kms/aws"
+  version = "~> 2.1.0"
+
+  description = "Customer managed key to encrypt EKS managed node group volumes"
+
+  # Policy
+  key_administrators                = var.key_administrators
+  key_service_roles_for_autoscaling = var.key_service_roles_for_autoscaling
+
+  tags = local.tags
+}
+
+# Create a storage class for EBS volumes
+# resource "kubernetes_storage_class" "falkordb" {
+#   metadata {
+#     name = "falkordb-storage-class"
+#   }
+
+#   storage_provisioner = "ebs.csi.aws.com"
+
+#   reclaim_policy         = "Delete"
+#   allow_volume_expansion = true
+
+#   volume_binding_mode = "WaitForFirstConsumer"
+#   parameters = {
+#     type                        = "gp2"
+#     encrypted                   = "true"
+#     kmsKeyId                    = module.ebs_kms_key.key_id
+#   }
+# }
+
 # https://github.com/bitnami/charts/tree/main/bitnami/redis
 resource "helm_release" "falkordb" {
   name      = "falkordb"
-  namespace = "falkordb"
+  namespace = kubernetes_namespace.falkordb.metadata[0].name
   version   = "18.6.3"
+
+  # Necessary so there's enough time to finish installing
+  timeout = 600
+
+  # Must be cluster name so we can destroy the load balancer
+  description = var.falkordb_eks_cluster_name
 
   repository = "https://charts.bitnami.com/bitnami"
   chart      = "redis"
 
   set {
     name  = "global.redis.password"
-    value = random_password.password.result
+    value = local.falkordb_password
   }
   set {
     name  = "image.repository"
@@ -238,11 +315,22 @@ resource "helm_release" "falkordb" {
     name  = "useExternalDNS.suffix"
     value = "falkordb.io"
   }
+
+  # set {
+  #   name  = "global.storageClass"
+  #   value = "falkordb-storage-class"
+  # }
+
+
+  depends_on = [
+    module.load_balancer_controller
+  ]
 }
+
 
 resource "helm_release" "falkordb-monitoring" {
   name      = "falkordb-monitoring"
-  namespace = "falkordb-monitoring"
+  namespace = kubernetes_namespace.falkordb_monitoring.metadata[0].name
 
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
@@ -270,7 +358,7 @@ resource "helm_release" "falkordb-monitoring" {
   }
   set {
     name  = "grafana.additionalDataSources[0].secureJsonData.password"
-    value = random_password.password.result
+    value = local.falkordb_password
   }
   set {
     name  = "grafana.additionalDataSources[0].editable"
@@ -279,25 +367,26 @@ resource "helm_release" "falkordb-monitoring" {
 }
 
 # https://github.com/kubernetes-sigs/external-dns
-module "eks-external-dns" {
-  source                           = "lablabs/eks-external-dns/aws"
-  version                          = "1.2.0"
-  cluster_identity_oidc_issuer     = var.falkordb_eks_oidc_issuer
-  cluster_identity_oidc_issuer_arn = var.falkordb_eks_oidc_provider_arn
+# module "eks-external-dns" {
+#   source                           = "lablabs/eks-external-dns/aws"
+#   version                          = "1.2.0"
+#   cluster_identity_oidc_issuer     = data.aws_iam_openid_connect_provider.cluster.url
+#   cluster_identity_oidc_issuer_arn = data.aws_iam_openid_connect_provider.cluster.arn
 
-  settings = {
-    "policy"           = "upsert-only"
-    "aws.zoneType"     = "public"
-    "domainFilters[0]" = var.falkordb_domain
-    "txtOwnerId"       = var.falkordb_hosted_zone_id
-  }
-}
+#   settings = {
+#     "policy"           = "upsert-only"
+#     "aws.zoneType"     = "public"
+#     "domainFilters[0]" = var.falkordb_domain
+#     "txtOwnerId"       = var.falkordb_hosted_zone_id
+#   }
+# }
 
 module "load_balancer_controller" {
   source = "git::https://github.com/DNXLabs/terraform-aws-eks-lb-controller.git"
 
-  cluster_identity_oidc_issuer     = var.falkordb_eks_oidc_issuer
-  cluster_identity_oidc_issuer_arn = var.falkordb_eks_oidc_provider_arn
+  cluster_identity_oidc_issuer     = var.falkordb_eks_cluster_oidc_issuer_url
+  cluster_identity_oidc_issuer_arn = var.falkordb_eks_cluster_oidc_issuer_arn
   cluster_name                     = var.falkordb_eks_cluster_name
-  helm_chart_version = "1.6.2"
+  helm_chart_version               = "1.6.2"
+
 }

@@ -1,0 +1,108 @@
+name: TESTING Plan AWS infrastructure
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ./scripts
+
+env:
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+  # TF_CACHE_DIR: ${{ github.workspace }}/tofu/.terraform
+
+jobs:
+  plan-infra:
+    runs-on: ubuntu-latest
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Init AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ vars.TF_VAR_REGION }}
+
+      - name: Set up testing environment variables
+        env:
+          name: testing-cluster-${{ env.PR_NUMBER }}
+          tenant_name: testing-tenant-${{ env.PR_NUMBER }}
+          region: ${{ vars.TF_VAR_REGION }}
+          k8s_version: ${{ vars.TF_VAR_K8S_VERSION }}
+          k8s_instance_type: ${{ vars.TF_VAR_K8S_INSTANCE_TYPE }}
+          k8s_node_count: ${{ vars.TF_VAR_K8S_NODE_COUNT }}
+          k8s_node_min_count: ${{ vars.TF_VAR_K8S_NODE_MIN_COUNT }}
+          k8s_node_max_count: ${{ vars.TF_VAR_K8S_NODE_MAX_COUNT }}
+          backup_retention_period: ${{ vars.TF_VAR_BACKUP_RETENTION_PERIOD }}
+          falkordb_version: v4.0.3
+          falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
+          falkordb_memory: ${{ vars.TF_VAR_FALKORDB_MEMORY }}
+          persistance_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
+          falkordb_replicas: ${{ vars.TF_VAR_FALKORDB_REPLICAS }}
+          grafana_admin_password: ${{ vars.TF_VAR_GRAFANA_ADMIN_PASSWORD }}
+          backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
+          # falkordb_domain: ${{ vars.TF_VAR_FALKORDB_DOMAIN }}
+
+          # If we add these here, they will be exported in the tfvars file
+          # assume_role_arn: ${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}
+          # eks_auth_role: ${{ secrets.TF_VAR_EKS_AUTH_ROLE }}
+          # falkordb_hosted_zone_id: ${{ secrets.TF_VAR_FALKORDB_HOSTED_ZONE_ID }}
+          # falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
+        run: |
+          ./create_tfvars_from_env.sh
+          mkdir -p ${GITHUB_WORKSPACE}/artifacts
+          cp ../tofu/terraform.tfvars ${GITHUB_WORKSPACE}/artifacts/terraform.tfvars
+
+      - name: Set up Tofu
+        uses: opentofu/setup-opentofu@v1.0.1
+
+      # - name: Create Tofu Plugin Cache Dir
+      #   run: |
+      #     echo 'plugin_cache_dir="$HOME/.terraform.d/plugin-cache"' >~/.terraformrc
+      #     mkdir --parents ~/.terraform.d/plugin-cache
+
+      # - name: Cache OpenTofu modules
+      #   uses: actions/cache@v2
+      #   id: cache_opentofu_plugins
+      #   with:
+      #     path: ${{ env.TF_CACHE_DIR }}
+      #     key: tofu-${{hashFiles('./tofu/.terraform.lock.hcl')}}
+
+      # - name: Init infrastructure
+      #   # if: steps.cache_opentofu_plugins.outputs.cache-hit != 'true'
+      #   run: ./tofu_init.sh
+
+      # - name: Run tests
+      #   run: ./tofu_test.sh
+
+      - name: Plan AWS module
+        id: plan_aws
+        working-directory: ./tofu/aws
+        run: |
+          tofu init
+          tofu test
+          tofu plan -out ../../local-aws -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "eks_auth_role=${{ secrets.TF_VAR_EKS_AUTH_ROLE }}"
+          cp ../../local-aws ${GITHUB_WORKSPACE}/artifacts/plan-aws.out
+
+      - name: Plan K8S module
+        id: plan_k8s
+        working-directory: ./tofu/k8s
+        run: |
+          tofu init
+          tofu test
+          tofu plan -out ../../local-k8s -var "falkordb_s3_backup_name='test-backup-bucket-s3'" -var "assume_role_arn=${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}" -var "falkordb_password=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}" -var "falkordb_eks_cluster_oidc_issuer_url=''" -var "falkordb_eks_cluster_oidc_issuer_arn=''" -var "falkordb_eks_cluster_endpoint=''" -var "falkordb_eks_cluster_certificate_autority=dGVzdA=="
+          cp ../../local-k8s ${GITHUB_WORKSPACE}/artifacts/plan-k8s.out
+
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts-${{ env.PR_NUMBER }}
+          path: artifacts

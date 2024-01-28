@@ -1,0 +1,1 @@
+cd ../tofu && tofu plan -target=module.aws -out=local-aws
