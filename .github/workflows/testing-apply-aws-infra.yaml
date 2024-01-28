@@ -78,15 +78,15 @@ jobs:
       
       - name: Set AWS infra output variables
         continue-on-error: true
-        working-directory: ./tofu
+        working-directory: ./tofu/aws
         run: |
-          echo "TF_VAR_falkordb_eks_cluster_name=$(terraform output -state=../state/state-aws falkordb_eks_cluster_name)" >> $GITHUB_ENV
-          echo "TF_VAR_falkordb_s3_backup_name=$(terraform output -state=../state/state-aws falkordb_s3_backup_name)" >> $GITHUB_ENV
-          echo "TF_VAR_falkordb_eks_cluster_oidc_issuer_url=$(terraform output -state=../state/state-aws falkordb_eks_cluster_oidc_issuer_url)" >> $GITHUB_ENV
-          echo "TF_VAR_falkordb_eks_cluster_oidc_issuer_arn=$(terraform output -state=../state/state-aws falkordb_eks_cluster_oidc_issuer_arn)" >> $GITHUB_ENV
-          echo "TF_VAR_falkordb_eks_cluster_role_arn=$(terraform output -state=../state/state-aws falkordb_eks_cluster_role_arn)" >> $GITHUB_ENV
-          echo "TF_VAR_falkordb_eks_cluster_endpoint=$(terraform output -state=../state/state-aws falkordb_eks_cluster_endpoint)" >> $GITHUB_ENV
-          echo "TF_VAR_falkordb_eks_cluster_certificate_autority=$(terraform output -state=../state/state-aws falkordb_eks_cluster_certificate_autority)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_eks_cluster_name=$(tofu output -state=../../state/state-aws falkordb_eks_cluster_name)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_s3_backup_name=$(tofu output -state=../../state/state-aws falkordb_s3_backup_name)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_eks_cluster_oidc_issuer_url=$(tofu output -state=../../state/state-aws falkordb_eks_cluster_oidc_issuer_url)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_eks_cluster_oidc_issuer_arn=$(tofu output -state=../../state/state-aws falkordb_eks_cluster_oidc_issuer_arn)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_eks_cluster_role_arn=$(tofu output -state=../../state/state-aws falkordb_eks_cluster_role_arn)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_eks_cluster_endpoint=$(tofu output -state=../../state/state-aws falkordb_eks_cluster_endpoint)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_eks_cluster_certificate_autority=$(tofu output -state=../../state/state-aws falkordb_eks_cluster_certificate_autority)" >> $GITHUB_ENV
 
       - name: Archive AWS target state
         uses: actions/upload-artifact@v4
