@@ -133,7 +133,21 @@ jobs:
         continue-on-error: true
         id: lb
         run: |
-          echo "host=$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')" >> $GITHUB_ENV
+          FALKORDB_HOST = kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+          # If FALKORDB_HOST is empty, wait 30 seconds and try again
+          if [ -z "$FALKORDB_HOST" ]; then
+            sleep 30
+            FALKORDB_HOST = kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+          fi
+          
+          # If FALKORDB_HOST is still empty, exit with error
+          if [ -z "$FALKORDB_HOST" ]; then
+            echo "FALKORDB_HOST is empty"
+            echo "$(kubectl get svc -n falkordb falkordb-redis)"
+            exit 1
+          fi
+
+          echo "host=$FALKORDB_HOST" >> $GITHUB_ENV
 
       - name: Run python tests
         id: python_tests

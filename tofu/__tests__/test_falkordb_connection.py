@@ -9,10 +9,10 @@ def test_falkordb_connection():
     port = os.environ.get("FALKORDB_PORT")
     password = os.environ.get("FALKORDB_PASSWORD")
 
+    print(f"Connecting to FalkorDB at {host}:{port}")
+
     assert host is not None
     assert port is not None and port.isdigit()
-
-    print(f"Connecting to FalkorDB at {host}:{port}")
 
     try:
         db = FalkorDB(host, port, password)
