@@ -9,7 +9,7 @@ locals {
     {
       subnet_name           = "${var.tenant_group_name}-subnet-proxy-only"
       subnet_region         = var.region,
-      subnet_ip             = var.subnet_proxy_only_cidr_range
+      subnet_ip             = var.subnet_proxy_only_cidr
       subnet_private_access = true
       purpose               = "REGIONAL_MANAGED_PROXY"
       role                  = "ACTIVE"

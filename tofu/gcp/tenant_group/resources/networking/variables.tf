@@ -14,7 +14,7 @@ variable "subnet_cidr" {
   type = string
 }
 
-variable "subnet_proxy_only_cidr_range" {
+variable "subnet_proxy_only_cidr" {
   type = string
 }
 

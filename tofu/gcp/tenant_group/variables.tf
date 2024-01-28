@@ -31,7 +31,7 @@ variable "subnet_cidr" {
   default = "10.0.0.0/22"
 }
 
-variable "subnet_proxy_only_cidr_range" {
+variable "subnet_proxy_only_cidr" {
   type    = string
   default = "11.0.0.0/22"
 }

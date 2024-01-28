@@ -16,8 +16,8 @@ module "networking" {
 
   region = var.region
 
-  subnet_cidr                  = var.subnet_cidr
-  subnet_proxy_only_cidr_range = var.subnet_proxy_only_cidr_range
+  subnet_cidr            = var.subnet_cidr
+  subnet_proxy_only_cidr = var.subnet_proxy_only_cidr
 
   tenant_group_size = var.tenant_group_size
 }
@@ -37,8 +37,8 @@ module "gke_cluster" {
   ip_range_pods     = module.networking.subnets[0].subnet_ip
   ip_range_services = module.networking.subnets[0].subnet_ip
 
-  node_pools = var.node_pools 
-  
+  node_pools = var.node_pools
+
   node_pools_tags = ["allow-tenant-deployments"]
 }
 
@@ -54,9 +54,9 @@ provider "kubernetes" {
 module "backup" {
   source = "./resources/backup"
 
-  project_id           = var.project_id
-  region               = var.region
-  tenant_group_name    = var.tenant_group_name
-  
+  project_id        = var.project_id
+  region            = var.region
+  tenant_group_name = var.tenant_group_name
+
   force_destroy_bucket = var.force_destroy_backup_bucket
 }
