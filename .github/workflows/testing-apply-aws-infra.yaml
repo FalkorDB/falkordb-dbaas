@@ -148,6 +148,8 @@ jobs:
           fi
 
           echo "FALKORDB_HOST=$FALKORDB_HOST" >> $GITHUB_ENV
+          echo "FALKORDB_PORT=6379" >> $GITHUB_ENV
+          echo "FALKORDB_PASSWORD=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}" >> $GITHUB_ENV
 
       - name: Run python tests
         id: python_tests
@@ -155,8 +157,6 @@ jobs:
         working-directory: .
         continue-on-error: true
         run: |
-          FALKORDB_PORT=6379
-          FALKORDB_PASSWORD=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r requirements.txt
