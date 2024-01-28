@@ -28,12 +28,12 @@ variable "subnet_name" {
 
 variable "subnet_cidr" {
   type    = string
-  default = "10.0.0.0/22"
+  default = "10.208.0.0/20"
 }
 
 variable "subnet_proxy_only_cidr" {
   type    = string
-  default = "11.0.0.0/22"
+  default = "11.208.0.0/20"
 }
 
 variable "tenant_group_size" {
