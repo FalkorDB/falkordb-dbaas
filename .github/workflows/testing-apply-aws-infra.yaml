@@ -133,17 +133,17 @@ jobs:
         continue-on-error: true
         id: lb
         run: |
-          set FALKORDB_HOST=$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          FALKORDB_HOST=$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           # If FALKORDB_HOST is empty, wait 30 seconds and try again
           if [ -z "$FALKORDB_HOST" ]; then
             sleep 30
-            set FALKORDB_HOST=$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+            FALKORDB_HOST=$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           fi
           
           # If FALKORDB_HOST is still empty, exit with error
           if [ -z "$FALKORDB_HOST" ]; then
             echo "FALKORDB_HOST is empty"
-            echo "$(kubectl get svc -n falkordb falkordb-redis)"
+            echo "$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
             exit 1
           fi
 
@@ -151,7 +151,7 @@ jobs:
 
       - name: Run python tests
         id: python_tests
-        if: steps.apply_k8s_module.outcome == 'success'
+        if: steps.lb.outcome == 'success'
         working-directory: .
         continue-on-error: true
         run: |
