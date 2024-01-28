@@ -133,11 +133,11 @@ jobs:
         continue-on-error: true
         id: lb
         run: |
-          FALKORDB_HOST = kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+          set FALKORDB_HOST=$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           # If FALKORDB_HOST is empty, wait 30 seconds and try again
           if [ -z "$FALKORDB_HOST" ]; then
             sleep 30
-            FALKORDB_HOST = kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+            set FALKORDB_HOST=$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
           fi
           
           # If FALKORDB_HOST is still empty, exit with error
@@ -177,6 +177,6 @@ jobs:
         if: always()
         run: |
           # Check if python tests conclusion is success
-          if [ ${{ steps.python_tests.conclusion }} != 'success' ]; then
+          if [ ${{ steps.python_tests.outcome }} != 'success' ]; then
             exit 1
           fi
