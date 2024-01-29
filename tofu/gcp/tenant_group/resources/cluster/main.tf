@@ -5,15 +5,15 @@ module "gke" {
   name                              = "${var.tenant_group_name}-cluster"
   region                            = var.region
   zones                             = var.zones
-  network                           = "${var.tenant_group_name}-vpc"
+  network                           = var.vpc_name
   subnetwork                        = var.subnetwork_name
   ip_range_pods                     = var.ip_range_pods
   ip_range_services                 = var.ip_range_services
   create_service_account            = false
-  remove_default_node_pool          = false
+  remove_default_node_pool          = true
   disable_legacy_metadata_endpoints = false
   deletion_protection               = false
-
+  
   node_metadata = "GKE_METADATA"
 
   node_pools = var.node_pools
@@ -32,6 +32,9 @@ resource "google_compute_region_health_check" "redis" {
   healthy_threshold   = 2
   unhealthy_threshold = 2
   region              = var.region
+  log_config {
+    enable = true
+  }
 
   tcp_health_check {
     port_specification = "USE_SERVING_PORT"

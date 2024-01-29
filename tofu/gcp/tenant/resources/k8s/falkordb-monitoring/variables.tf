@@ -13,3 +13,7 @@ variable "grafana_admin_password" {
   sensitive = true
   nullable  = true
 }
+
+variable "deployment_namespace" {
+  type = string
+}

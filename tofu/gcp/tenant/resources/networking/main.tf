@@ -7,13 +7,6 @@ data "google_compute_zones" "region_zones" {
   region = var.region
 }
 
-# Get all negs with the same name
-data "google_compute_network_endpoint_group" "redis_neg" {
-  for_each = toset(data.google_compute_zones.region_zones.names)
-  name     = var.deployment_neg_name
-  zone     = each.value
-}
-
 # Create backend service
 resource "google_compute_region_backend_service" "redis_backend_service" {
   name        = var.deployment_neg_name
@@ -22,9 +15,9 @@ resource "google_compute_region_backend_service" "redis_backend_service" {
 
   # For each NEG, create a backend
   dynamic "backend" {
-    for_each = data.google_compute_network_endpoint_group.redis_neg
+    for_each = data.google_compute_zones.region_zones.names
     content {
-      group                        = backend.value.self_link
+      group                        = "projects/${var.project_id}/zones/${backend.value}/networkEndpointGroups/${var.deployment_neg_name}"
       capacity_scaler              = 1
       max_connections_per_endpoint = 9999
     }
@@ -45,15 +38,13 @@ resource "google_compute_region_backend_service" "redis_backend_service" {
 
   depends_on = [
     local.google_compute_region_health_check,
-    time_sleep.wait_30_seconds,
-    kubernetes_service.redis_service
   ]
 }
 
 
 # Get reserved IP address
 
-data "google_compute_address" "lb-ip" {
+data "google_compute_address" "lb" {
   name   = var.ip_address_name
   region = var.region
 }
@@ -63,7 +54,7 @@ data "google_compute_address" "lb-ip" {
 resource "google_compute_forwarding_rule" "redis_forwarding_rule" {
   name                  = "${var.tenant_name}-forwarding-rule"
   region                = var.region
-  ip_address            = data.google_compute_address.lb-ip.address
+  ip_address            = data.google_compute_address.lb.self_link
   port_range            = var.exposed_port
   network_tier          = "PREMIUM"
   load_balancing_scheme = "EXTERNAL_MANAGED"

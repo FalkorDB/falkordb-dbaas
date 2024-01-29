@@ -28,7 +28,34 @@ provider "kubernetes" {
       var.cluster_name,
       "--region",
       var.region,
+      "--project",
+      var.project_id,
     ]
+  }
+}
+
+provider "helm" {
+  kubernetes {
+    host  = "https://${data.google_container_cluster.cluster.endpoint}"
+    token = data.google_client_config.provider.access_token
+    cluster_ca_certificate = base64decode(
+      data.google_container_cluster.cluster.master_auth[0].cluster_ca_certificate,
+    )
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "gcloud"
+      args = [
+        "container",
+        "clusters",
+        "get-credentials",
+        var.cluster_name,
+        "--region",
+        var.region,
+        "--project",
+        var.project_id,
+      ]
+    }
   }
 }
 
@@ -61,7 +88,7 @@ module "k8s" {
 # Wait 10 seconds for the NEGs to be created
 resource "time_sleep" "wait_30_seconds" {
   depends_on = [
-    module.k8s
+    module.k8s.falkordb_deployment,
   ]
 
   create_duration = "30s"

@@ -18,10 +18,6 @@ variable "vpc_name" {
   type = string
 }
 
-variable "subnet_name" {
-  type = string
-}
-
 variable "cluster_name" {
   type = string
 }
@@ -78,10 +74,6 @@ variable "deployment_port" {
   type    = number
   default = 6379
 }
-variable "deployment_neg_name" {
-  type = string
-}
-
 variable "backup_schedule" {
   type    = string
   default = "0 0 * * *"

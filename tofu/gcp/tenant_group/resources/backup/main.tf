@@ -5,7 +5,8 @@ resource "google_storage_bucket" "backup_bucket" {
   storage_class = "REGIONAL"
   force_destroy = var.force_destroy_bucket
 
-  enable_object_retention = true
+  enable_object_retention     = true
+  uniform_bucket_level_access = true
 
   retention_policy {
     retention_period = 302400

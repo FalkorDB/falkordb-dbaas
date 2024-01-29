@@ -39,7 +39,7 @@ resource "helm_release" "falkordb-monitoring" {
 
   set {
     name  = "grafana.adminPassword"
-    value = local.grafana_admin_password
+    value = "${local.grafana_admin_password}"
   }
   set {
     name  = "grafana.additionalDataSources[0].name"
@@ -56,11 +56,11 @@ resource "helm_release" "falkordb-monitoring" {
   }
   set {
     name  = "grafana.additionalDataSources[0].url"
-    value = "falkordb-redis.falkordb.svc.cluster.local:6379"
+    value = "falkordb-redis.${var.deployment_namespace}.svc.cluster.local:6379"
   }
   set {
     name  = "grafana.additionalDataSources[0].secureJsonData.password"
-    value = var.falkordb_password
+    value = "${var.falkordb_password}"
   }
   set {
     name  = "grafana.additionalDataSources[0].editable"

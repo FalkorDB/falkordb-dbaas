@@ -17,6 +17,7 @@ module "falkordb_monitoring" {
   source = "./falkordb-monitoring"
 
   tenant_name            = var.tenant_name
+  deployment_namespace   = module.falkordb_deployment.deployment_namespace
   falkordb_password      = module.falkordb_deployment.falkordb_password
   grafana_admin_password = var.grafana_admin_password
 }

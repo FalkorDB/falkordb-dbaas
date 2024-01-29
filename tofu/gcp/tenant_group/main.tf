@@ -23,6 +23,8 @@ module "networking" {
   ip_range_services = var.ip_range_services
 
   tenant_group_size = var.tenant_group_size
+
+  deployment_port = var.deployment_port
 }
 
 module "gke_cluster" {
@@ -43,6 +45,8 @@ module "gke_cluster" {
   node_pools = var.node_pools
 
   node_pools_tags = ["allow-tenant-deployments"]
+
+  depends_on = [module.networking]
 }
 
 data "google_client_config" "default" {}

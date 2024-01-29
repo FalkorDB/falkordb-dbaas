@@ -13,6 +13,7 @@ locals {
       subnet_private_access = true
       purpose               = "REGIONAL_MANAGED_PROXY"
       role                  = "ACTIVE"
+      subnet_private_access = false
     },
   ]
 }
@@ -40,14 +41,6 @@ module "vpc" {
         range_name    = "services"
         ip_cidr_range = var.ip_range_services
     }],
-    "${var.tenant_group_name}-subnet-proxy-only" = [{
-      range_name    = "pods"
-      ip_cidr_range = var.ip_range_pods
-      },
-      {
-        range_name    = "services"
-        ip_cidr_range = var.ip_range_services
-    }]
   }
 
   ingress_rules = [
@@ -57,7 +50,7 @@ module "vpc" {
       allow = [
         {
           protocol = "tcp"
-          ports    = ["30000-${var.tenant_group_size + 30000 - 1}"]
+          ports    = ["${var.deployment_port}"]
         }
       ]
 
@@ -65,6 +58,9 @@ module "vpc" {
       source_ranges = ["0.0.0.0/0"]
 
       target_tags = ["allow-tenant-deployments"]
+      log_config = {
+        metadata = "INCLUDE_ALL_METADATA"
+      }
     },
     {
       name = "allow-healthcheck"
@@ -72,7 +68,7 @@ module "vpc" {
       allow = [
         {
           protocol = "TCP"
-          ports    = ["30000-${var.tenant_group_size + 30000 - 1}"]
+          ports    = ["${var.deployment_port}"]
         }
       ]
 
@@ -90,7 +86,7 @@ module "lb_ip" {
   project_id = var.project_id
   region     = var.region
 
-  global       = true
+  global       = false
   address_type = "EXTERNAL"
   network_tier = "PREMIUM"
 

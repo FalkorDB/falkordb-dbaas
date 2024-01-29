@@ -29,3 +29,6 @@ variable "ip_range_pods" {
 variable "ip_range_services" {
   type = string
 }
+variable "deployment_port" {
+  type = number 
+}

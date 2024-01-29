@@ -57,19 +57,7 @@ resource "helm_release" "falkordb" {
   }
   set {
     name  = "sentinel.service.type"
-    value = "LoadBalancer"
-  }
-  set {
-    name  = "sentinel.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-type"
-    value = "external"
-  }
-  set {
-    name  = "sentinel.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-nlb-target-type"
-    value = "ip"
-  }
-  set {
-    name  = "sentinel.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-scheme"
-    value = "internet-facing"
+    value = "ClusterIP"
   }
   set {
     name  = "replica.replicaCount"
@@ -96,10 +84,17 @@ resource "helm_release" "falkordb" {
     value = true
   }
   set {
-    name = "sentinel.annotations"
-    value = {
-      "cloud.google.com/neg" : "{\"exposed_ports\": {\"${var.deployment_port}\": { \"name\": \"${var.deployment_neg_name}\"} }}"
-    }
+    name = "sentinel.service.annotations.cloud\\.google\\.com/neg"
+    value = "\\{\"exposed_ports\":\\{\"${var.deployment_port}\":\\{\"name\":\"${var.deployment_neg_name}\"\\}\\}\\}"
+    # value = jsonencode({
+    #   "cloud.google.com/neg" : {
+    #     "exposed_ports" : {
+    #       "${var.deployment_port}" : {
+    #         "name" : "${var.deployment_neg_name}"
+    #       }
+    #     }
+    #   }
+    # })
   }
   set {
     name  = "metrics.enabled"
@@ -111,7 +106,7 @@ resource "helm_release" "falkordb" {
   }
   set {
     name  = "metrics.serviceMonitor.namespace"
-    value = "falkordb"
+    value = kubernetes_namespace.falkordb.metadata[0].name
   }
   set {
     name  = "metrics.serviceMonitor.additionalLabels.release"

@@ -14,7 +14,7 @@ resource "google_storage_bucket_iam_member" "backup_writer" {
   condition {
     title = "Pod role with Identity Workload enabled"
     description = "Allow SA to write to bucket if identity.namespace is the name of the folder"
-    expression = "resource.name.startsWith(\"projects/_/buckets/${google_storage_bucket.backup_bucket.name}/objects/${var.tenant_name}/\")"
+    expression = "resource.name.startsWith(\"projects/_/buckets/${var.backup_bucket_name}/objects/${var.tenant_name}/\")"
   }
 }
 
