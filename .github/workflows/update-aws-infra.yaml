@@ -1,0 +1,138 @@
+name: DEV Update AWS infrastructure
+
+on:
+  push:
+    branches:
+      - main
+
+defaults:
+  run:
+    working-directory: ./scripts
+
+env:
+  TF_VAR_falkordb_eks_cluster_name: ${{ vars.CLUSTER_NAME }}
+  TF_VAR_tenant_name: ${{ vars.TENANT_NAME }}
+  TF_VAR_region: ${{ vars.TF_VAR_REGION }}
+  TF_VAR_k8s_version: ${{ vars.TF_VAR_K8S_VERSION }}
+  TF_VAR_k8s_instance_type: ${{ vars.TF_VAR_K8S_INSTANCE_TYPE }}
+  TF_VAR_k8s_node_count: ${{ vars.TF_VAR_K8S_NODE_COUNT }}
+  TF_VAR_k8s_node_min_count: ${{ vars.TF_VAR_K8S_NODE_MIN_COUNT }}
+  TF_VAR_k8s_node_max_count: ${{ vars.TF_VAR_K8S_NODE_MAX_COUNT }}
+  TF_VAR_backup_retention_period: ${{ vars.TF_VAR_BACKUP_RETENTION_PERIOD }}
+  TF_VAR_falkordb_version: v4.0.3
+  TF_VAR_falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
+  TF_VAR_falkordb_memory: ${{ vars.TF_VAR_FALKORDB_MEMORY }}
+  TF_VAR_persistance_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
+  TF_VAR_falkordb_replicas: ${{ vars.TF_VAR_FALKORDB_REPLICAS }}
+  TF_VAR_grafana_admin_password: ${{ vars.TF_VAR_GRAFANA_ADMIN_PASSWORD }}
+  TF_VAR_backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
+  TF_VAR_assume_role_arn: ${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}
+  TF_VAR_eks_auth_role: ${{ secrets.TF_VAR_EKS_AUTH_ROLE }}
+  TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
+
+jobs:
+  update-aws-infra:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Init AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ vars.TF_VAR_REGION }}
+
+      - name: Set up Tofu
+        uses: opentofu/setup-opentofu@v1.0.1
+        with:
+          tofu_wrapper: false
+
+      - name: Apply AWS infrastructure
+        id: apply_infrastructure
+        timeout-minutes: 20
+        continue-on-error: true
+        working-directory: ./tofu/aws
+        run: |
+          tofu init
+          tofu apply -auto-approve -state-out ../../state/state-aws
+
+      - name: Set AWS infra output variables
+        continue-on-error: true
+        working-directory: ./tofu/aws
+        run: |
+          echo "TF_VAR_falkordb_eks_cluster_name=$(tofu output -state=../../state/state-aws -raw falkordb_eks_cluster_name)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_s3_backup_name=$(tofu output -state=../../state/state-aws -raw falkordb_s3_backup_name)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_eks_cluster_oidc_issuer_url=$(tofu output -state=../../state/state-aws -raw falkordb_eks_cluster_oidc_issuer_url)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_eks_cluster_oidc_issuer_arn=$(tofu output -state=../../state/state-aws -raw falkordb_eks_cluster_oidc_issuer_arn)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_eks_cluster_role_arn=$(tofu output -state=../../state/state-aws -raw falkordb_eks_cluster_role_arn)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_eks_cluster_endpoint=$(tofu output -state=../../state/state-aws -raw falkordb_eks_cluster_endpoint)" >> $GITHUB_ENV
+          echo "TF_VAR_falkordb_eks_cluster_certificate_autority=$(tofu output -state=../../state/state-aws -raw falkordb_eks_cluster_certificate_autority)" >> $GITHUB_ENV
+
+      - name: Archive AWS target state
+        uses: actions/upload-artifact@v4
+        with:
+          name: state-aws-${{ github.run_id }}
+          path: state/state-aws
+          if-no-files-found: error
+
+      - name: Get EKS cluster credentials
+        id: get_eks_credentials
+        if: steps.apply_infrastructure.outcome == 'success'
+        continue-on-error: true
+        run: |
+          ./aws_update_kubeconfig.sh ${{ env.TF_VAR_falkordb_eks_cluster_name }} ${{ secrets.TF_VAR_ASSUME_ROLE_ARN }}
+
+      - name: Check connection to EKS cluster
+        if: steps.get_eks_credentials.outcome == 'success'
+        continue-on-error: true
+        run: |
+          kubectl get nodes
+
+      - name: Apply k8s module
+        if: steps.get_eks_credentials.outcome == 'success'
+        id: apply_k8s_module
+        continue-on-error: true
+        timeout-minutes: 20
+        working-directory: ./tofu/k8s
+        run: |
+          tofu init
+          tofu apply -auto-approve -state-out ../../state/state-k8s
+
+      - name: Archive K8S target state
+        uses: actions/upload-artifact@v4
+        with:
+          name: state-k8s-${{ github.run_id }}
+          path: state/state-k8s
+          if-no-files-found: error
+
+      - name: Get FalkorDB endpoint
+        id: lb
+        run: |
+          FALKORDB_HOST=$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          # If FALKORDB_HOST is empty, wait 30 seconds and try again
+          if [ -z "$FALKORDB_HOST" ]; then
+            sleep 30
+            FALKORDB_HOST=$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          fi
+
+          # If FALKORDB_HOST is still empty, exit with error
+          if [ -z "$FALKORDB_HOST" ]; then
+            echo "FALKORDB_HOST is empty"
+            echo "$(kubectl get svc -n falkordb falkordb-redis -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+            exit 1
+          fi
+
+          echo "FALKORDB_HOST=$FALKORDB_HOST" >> $GITHUB_ENV
+          echo "FALKORDB_PORT=6379" >> $GITHUB_ENV
+          echo "FALKORDB_PASSWORD=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}" >> $GITHUB_ENV
+
+      - name: Run python tests
+        id: python_tests
+        working-directory: .
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          pytest

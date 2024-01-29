@@ -5,3 +5,7 @@ terraform.tfstate.backup
 local
 .venv
 tofu/__tests__/__pycache__
+
+*.tfstate
+*.tfplan
+*.tfvars
