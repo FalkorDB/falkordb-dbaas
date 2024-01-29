@@ -81,8 +81,6 @@ variable "backup_schedule" {
 
 variable "exposed_port" {
   type    = number
-  default = 30000
-
   validation {
     condition     = var.exposed_port >= 30000 && var.exposed_port <= 32767
     error_message = "Exposed port must be between 30000 and 32767"
