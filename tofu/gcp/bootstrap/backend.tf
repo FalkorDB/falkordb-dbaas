@@ -1,7 +1,7 @@
 terraform {
 
   backend "local" {
-    path = "terraform.tfstate"
+    path = "bootstrap.tfstate"
   }
 
   # backend "gcs" {
@@ -10,3 +10,11 @@ terraform {
   # }
   
 }
+
+# data "terraform_remote_state" "gcs_state" {
+#   backend = "gcs"
+#   config = {
+#     bucket = var.state_bucket_name
+#     prefix = "bootstrap"
+#   }
+# }

@@ -1,7 +1,8 @@
 .terraform
-terraform.tfvars
-terraform.tfstate
-terraform.tfstate.backup
 local
 __pycache__
 .venv
+
+*.tfstate
+*.tfplan
+*.tfvars

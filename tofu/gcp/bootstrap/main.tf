@@ -4,6 +4,7 @@ module "seed_project" {
 
   org_id             = var.org_id
   billing_account_id = var.billing_account_id
+  seed_project_id    = var.seed_project_id
 
   parent_folder_id = var.root_folder_id
 

@@ -2,8 +2,9 @@ module "bootstrap" {
   source  = "terraform-google-modules/bootstrap/google"
   version = "~> 7.0"
 
-  org_id        = var.org_id
-  parent_folder = "folders/${var.parent_folder_id}"
+  org_id         = var.org_id
+  folder_id      = var.parent_folder_id
+  project_id     = var.seed_project_id
 
   billing_account      = var.billing_account_id
   group_org_admins     = "gcp-organization-admins@falkordb.com"

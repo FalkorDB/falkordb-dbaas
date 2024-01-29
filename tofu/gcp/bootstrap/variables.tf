@@ -13,6 +13,10 @@ variable "billing_account_id" {
 
 ###### SEED PROJECT ######
 
+variable "seed_project_id" {
+  type = string
+}
+
 variable "state_bucket_name" {
   type = string
 }
