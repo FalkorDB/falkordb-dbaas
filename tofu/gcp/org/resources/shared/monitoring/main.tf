@@ -2,6 +2,7 @@ module "project" {
   source  = "terraform-google-modules/project-factory/google"
   version = "~> 14.4.0"
 
+  project_id      = var.project_id
   name            = var.project_name
   folder_id       = var.project_parent_id
   org_id          = var.org_id
@@ -21,8 +22,11 @@ module "project" {
   ]
 }
 
-resource "google_monitoring_monitored_project" "projects_monitored" {
-  for_each      = var.monitored_projects
-  metrics_scope = join("", ["locations/global/metricsScopes/", var.project_id])
-  name          = each.value
-}
+# TODO: Issue https://github.com/hashicorp/terraform-provider-google/issues/15625
+# Workaround: Add projects manually to the metrics scope
+
+# resource "google_monitoring_monitored_project" "projects_monitored" {
+#   for_each      = var.monitored_projects
+#   metrics_scope = "locations/global/metricsScopes/${module.project.project_number}"
+#   name          = each.value
+# }

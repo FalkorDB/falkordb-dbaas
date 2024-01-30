@@ -32,6 +32,6 @@ module "application_plane" {
   project_parent_id  = google_folder.root_folder.id
   billing_account_id = var.billing_account_id
 
-  provisioning_sa = module.control_plane.provisioning_sa
+  provisioning_sa = module.control_plane.provisioning_sa_email
 
 }

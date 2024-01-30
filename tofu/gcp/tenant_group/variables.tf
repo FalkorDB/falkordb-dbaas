@@ -1,9 +1,3 @@
-
-###### STATE ######
-variable "state_bucket_name" {
-  type = string
-}
-
 ###### PROJECT ######
 variable "project_id" {
   type = string
@@ -55,6 +49,10 @@ variable "node_pools" {
     machine_type = "e2-medium"
     disk_size_gb = 20
   }]
+}
+
+variable "tenant_provision_sa" {
+  type = string
 }
 
 variable "force_destroy_backup_bucket" {

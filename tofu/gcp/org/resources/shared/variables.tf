@@ -26,7 +26,7 @@ variable "monitoring_project_name" {
 }
 
 variable "monitored_projects" {
-  type = list(string)
+  type = set(string)
 }
 
 

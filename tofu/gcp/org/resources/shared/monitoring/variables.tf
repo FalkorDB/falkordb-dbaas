@@ -23,5 +23,5 @@ variable "billing_account_id" {
 ###### MONITORING ######
 
 variable "monitored_projects" {
-  type = list(string)
+  type = set(string)
 }

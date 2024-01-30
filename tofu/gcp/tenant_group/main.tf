@@ -57,6 +57,13 @@ provider "kubernetes" {
   cluster_ca_certificate = base64decode(module.gke_cluster.cluster_ca_certificate)
 }
 
+module "k8s" {
+  source = "./resources/k8s"
+
+  project_id = var.project_id
+  tenant_provision_sa = var.tenant_provision_sa
+}
+
 
 module "backup" {
   source = "./resources/backup"

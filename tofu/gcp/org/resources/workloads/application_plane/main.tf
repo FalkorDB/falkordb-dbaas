@@ -3,6 +3,7 @@ module "project" {
   version = "~> 14.4.0"
 
   org_id          = var.org_id
+  project_id      = var.project_id
   name            = var.project_name
   folder_id       = var.project_parent_id
   billing_account = var.billing_account_id
@@ -28,6 +29,8 @@ module "project" {
 resource "google_project_iam_member" "provisioning_sa" {
   project = var.project_id
   # TODO: Create a custom role with only the permissions needed
-  role    = "roles/owner"
-  member  = "serviceAccount:${var.provisioning_sa}"
+  role   = "roles/owner"
+  member = "serviceAccount:${var.provisioning_sa}"
+
+  depends_on = [ module.project ]
 }

@@ -2,6 +2,7 @@ module "project" {
   source  = "terraform-google-modules/project-factory/google"
   version = "~> 14.4.0"
 
+  project_id      = var.project_id
   name            = var.project_name
   folder_id       = var.project_parent_id
   org_id          = var.org_id
@@ -39,11 +40,12 @@ module "vpc" {
       subnet_private_access = true
     }
   ]
-
+  depends_on = [ module.project ]
 }
 
 module "tenant_provision" {
   source = "./control_plane_provision"
 
   project_id = var.project_id
+  depends_on = [ module.project ]
 }

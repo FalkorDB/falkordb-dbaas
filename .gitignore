@@ -4,6 +4,7 @@ __pycache__
 .venv
 
 *.tfstate
+*.tfstate.backup
 *.tfplan
 *.tfvars
 backend.conf

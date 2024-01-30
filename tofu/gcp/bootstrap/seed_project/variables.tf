@@ -14,14 +14,6 @@ variable "billing_account_id" {
   type = string
 }
 
-variable "state_bucket_name" {
+variable "state_bucket_name_prefix" {
   type = string
-}
-
-variable "state_bucket_location" {
-  type = string
-}
-
-variable "state_bucket_force_destroy" {
-  type = bool
 }

@@ -1,22 +1,10 @@
-
-###### STATE ######
-variable "state_bucket_name" {
-  type = string
-}
-
 ###### ORGANIZATION ######
 variable "org_id" {
   type = string
 }
-
 variable "billing_account_id" {
   type = string
 }
-
-variable "root_folder_name" {
-  type = string
-}
-
 variable "root_folder_id" {
   type = string
 }
@@ -39,6 +27,10 @@ variable "workloads_folder_name" {
 ###### WORKLOADS: APPLICATION PLANE ######
 variable "application_plane_project_id" {
   type = string
+  validation {
+    condition = length(var.application_plane_project_id) < 22
+    error_message = "Project ID must be less than 22 characters"
+  }
 }
 
 variable "application_plane_project_name" {
@@ -48,6 +40,10 @@ variable "application_plane_project_name" {
 ###### WORKLOADS: CONTROL PLANE ######
 variable "control_plane_project_id" {
   type = string
+  validation {
+    condition = length(var.control_plane_project_id) < 22
+    error_message = "Project ID must be less than 22 characters"
+  }
 }
 
 variable "control_plane_project_name" {
@@ -64,6 +60,10 @@ variable "shared_resources_folder_name" {
 ###### SHARED RESOURCES: MONITORING ######
 variable "monitoring_project_id" {
   type = string
+  validation {
+    condition = length(var.monitoring_project_id) < 22
+    error_message = "Project ID must be less than 22 characters"
+  }
 }
 
 variable "monitoring_project_name" {
@@ -71,5 +71,5 @@ variable "monitoring_project_name" {
 }
 
 variable "monitored_projects" {
-  type = list(string)
+  type = set(string)
 }
