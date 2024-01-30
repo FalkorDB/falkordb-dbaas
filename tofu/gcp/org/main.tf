@@ -18,6 +18,7 @@ module "workloads_resources" {
 
   control_plane_project_id   = "${var.control_plane_project_id}-${random_bytes.project_suffix.hex}"
   control_plane_project_name = var.control_plane_project_name
+  state_bucket_name          = var.state_bucket_name
 
 }
 

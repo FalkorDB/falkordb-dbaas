@@ -12,3 +12,10 @@ resource "google_project_iam_member" "provisioning_sa" {
   role    = "roles/cloudbuild.builds.builder"
   member  = "serviceAccount:${google_service_account.provisioning_sa.email}"
 }
+
+# Add read/write permission to the state bucket
+resource "google_storage_bucket_iam_member" "provisioning_sa" {
+  bucket = var.state_bucket_name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.provisioning_sa.email}"
+}

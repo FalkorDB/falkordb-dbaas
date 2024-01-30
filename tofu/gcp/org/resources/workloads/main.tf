@@ -18,6 +18,8 @@ module "control_plane" {
   project_parent_id  = google_folder.root_folder.id
   billing_account_id = var.billing_account_id
 
+  state_bucket_name = var.state_bucket_name
+
   public_network_name    = local.public_network_name
   public_network_subnets = local.public_network_subnets
 }

@@ -60,10 +60,6 @@ variable "force_destroy_backup_bucket" {
   default = false
 }
 
-variable "backup_bucket_name" {
-  type = string
-}
-
 variable "deployment_port" {
   type    = number
   default = 6379

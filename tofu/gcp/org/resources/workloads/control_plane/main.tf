@@ -19,6 +19,7 @@ module "project" {
     "servicemanagement.googleapis.com",
     "serviceusage.googleapis.com",
     "storage.googleapis.com",
+    "cloudbuild.googleapis.com",
   ]
 }
 
@@ -47,5 +48,7 @@ module "tenant_provision" {
   source = "./control_plane_provision"
 
   project_id = var.project_id
+  state_bucket_name = var.state_bucket_name
+
   depends_on = [ module.project ]
 }

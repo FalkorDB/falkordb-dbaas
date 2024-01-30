@@ -6,7 +6,7 @@ module "org_policy_domain_whitelist" {
   policy_for = "organization"
 
   domains_to_allow = var.domains_to_allow
-
+  
 }
 
 module "org_policy_skip_default_network" {
