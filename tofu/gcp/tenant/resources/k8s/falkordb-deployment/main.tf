@@ -19,13 +19,11 @@ resource "kubernetes_namespace" "falkordb" {
 resource "helm_release" "falkordb" {
   name      = "falkordb"
   namespace = kubernetes_namespace.falkordb.metadata[0].name
-  version   = "18.6.3"
 
   # Necessary so there's enough time to finish installing
   timeout = 600
 
-  repository = "https://charts.bitnami.com/bitnami"
-  chart      = "redis"
+  chart = "https://charts.bitnami.com/bitnami/redis-18.6.3.tgz"
 
   set {
     name  = "global.redis.password"
@@ -84,7 +82,7 @@ resource "helm_release" "falkordb" {
     value = true
   }
   set {
-    name = "sentinel.service.annotations.cloud\\.google\\.com/neg"
+    name  = "sentinel.service.annotations.cloud\\.google\\.com/neg"
     value = "\\{\"exposed_ports\":\\{\"${var.deployment_port}\":\\{\"name\":\"${var.deployment_neg_name}\"\\}\\}\\}"
     # value = jsonencode({
     #   "cloud.google.com/neg" : {
