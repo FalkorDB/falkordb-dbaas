@@ -52,7 +52,12 @@ variable "node_pools" {
 }
 
 variable "tenant_provision_sa" {
-  type = string
+  type        = string
+  description = "The GCP Service Account to be used by the Tenant Provisioner. Format: projects/<project_id>/serviceAccounts/<service_account_name>@<project_id>.iam.gserviceaccount.com"
+  validation {
+    condition = can(regex("projects/[^/]+/serviceAccounts/[^@]+@[^.]+\\.iam\\.gserviceaccount\\.com", var.tenant_provision_sa))
+    error_message = "The tenant_provision_sa variable must be in the format: projects/<project_id>/serviceAccounts/<service_account_name>@<project_id>.iam.gserviceaccount.com"
+  }
 }
 
 variable "force_destroy_backup_bucket" {

@@ -1,5 +1,6 @@
 locals {
-  service_account_name = split("@", var.tenant_provision_sa)[0]
+  service_account_email = reverse(split("/", var.tenant_provision_sa))[0]
+  service_account_name = split("@", local.service_account_email)[0]
 }
 resource "kubernetes_role" "tenant_provision_sa_role" {
   metadata {
@@ -17,7 +18,7 @@ resource "kubernetes_service_account" "tenant_provision_sa" {
   metadata {
     name = local.service_account_name
     annotations = {
-      "iam.gke.io/gcp-service-account" = var.tenant_provision_sa
+      "iam.gke.io/gcp-service-account" = local.service_account_email
     }
   }
 }
@@ -45,7 +46,7 @@ data "google_iam_policy" "tenant_provision_sa_binding_policy" {
   binding {
     role = "roles/iam.workloadIdentityUser"
     members = [
-      "serviceAccount:${var.project_id}.svc.id.goog[default/${local.service_account_name}]"
+      "serviceAccount:${var.project_id}.svc.id.goog[default/${kubernetes_service_account.tenant_provision_sa.metadata[0].name}]"
     ]
   }
 }
