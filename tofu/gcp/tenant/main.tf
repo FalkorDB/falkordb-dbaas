@@ -35,6 +35,8 @@ provider "kubernetes" {
 }
 
 provider "helm" {
+  debug = true
+
   kubernetes {
     host  = "https://${data.google_container_cluster.cluster.endpoint}"
     token = data.google_client_config.provider.access_token
