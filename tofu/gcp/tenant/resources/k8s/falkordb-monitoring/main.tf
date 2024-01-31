@@ -31,7 +31,7 @@ resource "kubernetes_config_map" "falkordb_grafana_dashboard" {
 
 
 resource "helm_release" "falkordb-monitoring" {
-  name      = "falkordb-monitoring"
+  name      = "falkordb-monitoring-${var.tenant_name}"
   namespace = kubernetes_namespace.falkordb_monitoring.metadata[0].name
 
   chart      = "oci://registry-1.docker.io/bitnamicharts/kube-prometheus"
