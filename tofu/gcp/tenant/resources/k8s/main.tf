@@ -30,7 +30,6 @@ module "falkordb_deployment" {
   deployment_namespace            = kubernetes_namespace.falkordb.metadata[0].name
   deployment_monitoring_namespace = "monitoring"
 
-  depends_on = [module.falkordb_monitoring]
 }
 
 module "falkordb_backup" {
