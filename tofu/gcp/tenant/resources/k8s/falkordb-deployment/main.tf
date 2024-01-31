@@ -89,7 +89,7 @@ resource "helm_release" "falkordb" {
   }
   set {
     name  = "metrics.serviceMonitor.namespace"
-    value = var.deployment_monitoring_namespace
+    value = var.deployment_namespace
   }
   set {
     name  = "metrics.serviceMonitor.additionalLabels.release"
