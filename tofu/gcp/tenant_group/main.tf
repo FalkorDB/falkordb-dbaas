@@ -52,10 +52,55 @@ module "gke_cluster" {
 data "google_client_config" "default" {}
 
 provider "kubernetes" {
-  host                   = "https://${module.gke_cluster.cluster_endpoint}"
-  token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(module.gke_cluster.cluster_ca_certificate)
+  host  = "https://${data.google_container_cluster.cluster.endpoint}"
+  token = data.google_client_config.provider.access_token
+  cluster_ca_certificate = base64decode(
+    data.google_container_cluster.cluster.master_auth[0].cluster_ca_certificate,
+  )
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "gcloud"
+    args = [
+      "container",
+      "clusters",
+      "get-credentials",
+      var.cluster_name,
+      "--region",
+      var.region,
+      "--project",
+      var.project_id,
+    ]
+  }
 }
+
+provider "helm" {
+  debug = true
+
+  kubernetes {
+    host  = "https://${data.google_container_cluster.cluster.endpoint}"
+    token = data.google_client_config.provider.access_token
+    cluster_ca_certificate = base64decode(
+      data.google_container_cluster.cluster.master_auth[0].cluster_ca_certificate,
+    )
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "gcloud"
+      args = [
+        "container",
+        "clusters",
+        "get-credentials",
+        var.cluster_name,
+        "--region",
+        var.region,
+        "--project",
+        var.project_id,
+      ]
+    }
+  }
+}
+
 
 module "k8s" {
   source = "./resources/k8s"
