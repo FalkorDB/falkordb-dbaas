@@ -78,8 +78,6 @@ module "k8s" {
   falkordb_replicas = var.falkordb_replicas
   persistance_size  = var.persistance_size
 
-  grafana_admin_password = var.grafana_admin_password
-
   backup_bucket_name = var.backup_bucket_name
   backup_schedule    = var.backup_schedule
 
