@@ -1,24 +1,8 @@
 
 
-resource "random_password" "falkordb_password" {
-  length  = 8
-  special = false
-}
-
-locals {
-  falkordb_password = var.falkordb_password != null ? var.falkordb_password : random_password.falkordb_password.result
-}
-
-resource "kubernetes_namespace" "falkordb" {
-  metadata {
-    name = "${var.tenant_name}-falkordb"
-  }
-}
-
-
 resource "helm_release" "falkordb" {
   name      = "falkordb"
-  namespace = kubernetes_namespace.falkordb.metadata[0].name
+  namespace = var.deployment_namespace
 
   # Necessary so there's enough time to finish installing
   timeout = 600
@@ -27,7 +11,7 @@ resource "helm_release" "falkordb" {
 
   set {
     name  = "global.redis.password"
-    value = local.falkordb_password
+    value = var.falkordb_password
   }
   set {
     name  = "image.repository"
@@ -104,7 +88,7 @@ resource "helm_release" "falkordb" {
   }
   set {
     name  = "metrics.serviceMonitor.namespace"
-    value = kubernetes_namespace.falkordb.metadata[0].name
+    value = var.deployment_monitoring_namespace
   }
   set {
     name  = "metrics.serviceMonitor.additionalLabels.release"

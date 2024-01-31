@@ -9,7 +9,6 @@ variable "falkordb_version" {
 variable "falkordb_password" {
   type      = string
   sensitive = true
-  nullable  = true
 }
 
 variable "falkordb_cpu" {
@@ -29,10 +28,17 @@ variable "falkordb_replicas" {
 }
 
 variable "deployment_port" {
-    type    = number
-    default = 6379
+  type    = number
+  default = 6379
 }
 
 variable "deployment_neg_name" {
-    type = string
+  type = string
+}
+
+variable "deployment_namespace" {
+  type = string
+}
+variable "deployment_monitoring_namespace" {
+  type = string
 }
