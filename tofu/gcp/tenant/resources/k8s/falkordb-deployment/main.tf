@@ -8,6 +8,7 @@ resource "helm_release" "falkordb" {
   timeout = 600
 
   chart = "oci://registry-1.docker.io/bitnamicharts/redis"
+  version = "18.9.1"
 
   set {
     name  = "global.redis.password"
