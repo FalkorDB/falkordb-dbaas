@@ -34,9 +34,7 @@ resource "helm_release" "falkordb-monitoring" {
   name      = "falkordb-monitoring"
   namespace = kubernetes_namespace.falkordb_monitoring.metadata[0].name
 
-  repository = "https://prometheus-community.github.io/helm-charts"
-  chart      = "prometheus-community/kube-prometheus-stack"
-  version    = "56.3.0"
+  chart      = "oci://registry-1.docker.io/bitnamicharts/kube-prometheus"
 
   set {
     name  = "grafana.adminPassword"
