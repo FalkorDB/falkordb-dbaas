@@ -48,8 +48,8 @@ module "falkordb_backup" {
 
   project_id           = var.project_id
   tenant_name          = var.tenant_name
-  deployment_namespace = module.falkordb_deployment.deployment_namespace
+  deployment_namespace = kubernetes_namespace.falkordb.metadata[0].name
   backup_bucket_name   = var.backup_bucket_name
   backup_schedule      = var.backup_schedule
-  falkordb_password    = module.falkordb_deployment.falkordb_password
+  falkordb_password    = local.falkordb_password
 }
