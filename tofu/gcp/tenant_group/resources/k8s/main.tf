@@ -1,6 +1,6 @@
 locals {
   service_account_email = reverse(split("/", var.tenant_provision_sa))[0]
-  service_account_name = split("@", local.service_account_email)[0]
+  service_account_name  = split("@", local.service_account_email)[0]
 }
 resource "kubernetes_role" "tenant_provision_sa_role" {
   metadata {
@@ -56,4 +56,6 @@ resource "google_service_account_iam_policy" "tenant_provision_sa_binding" {
   policy_data        = data.google_iam_policy.tenant_provision_sa_binding_policy.policy_data
 }
 
-
+module "falkordb_monitoring" {
+  source = "./monitoring"
+}

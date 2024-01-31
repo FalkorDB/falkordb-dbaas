@@ -16,12 +16,6 @@ variable "falkordb_password" {
   nullable  = true
 }
 
-variable "grafana_admin_password" {
-  type      = string
-  sensitive = true
-  nullable  = true
-}
-
 variable "falkordb_cpu" {
   type = string
 }

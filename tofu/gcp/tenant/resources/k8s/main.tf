@@ -14,16 +14,6 @@ resource "kubernetes_namespace" "falkordb" {
 }
 
 
-module "falkordb_monitoring" {
-  source = "./falkordb-monitoring"
-
-  tenant_name            = var.tenant_name
-  deployment_namespace   = kubernetes_namespace.falkordb.metadata[0].name
-  falkordb_password      = local.falkordb_password
-  grafana_admin_password = var.grafana_admin_password
-}
-
-
 module "falkordb_deployment" {
   source = "./falkordb-deployment"
 
@@ -38,7 +28,7 @@ module "falkordb_deployment" {
   deployment_neg_name = var.deployment_neg_name
 
   deployment_namespace            = kubernetes_namespace.falkordb.metadata[0].name
-  deployment_monitoring_namespace = module.falkordb_monitoring.deployment_monitoring_namespace
+  deployment_monitoring_namespace = "monitoring"
 
   depends_on = [module.falkordb_monitoring]
 }
