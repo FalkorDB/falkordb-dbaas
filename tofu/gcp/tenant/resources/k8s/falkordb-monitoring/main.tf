@@ -1,7 +1,7 @@
 
 resource "random_password" "grafana_admin_password" {
-  length           = 8
-  special          = false
+  length  = 8
+  special = false
 }
 
 locals {
@@ -18,7 +18,7 @@ resource "kubernetes_namespace" "falkordb_monitoring" {
 # https://docs.syseleven.de/metakube-accelerator/building-blocks/observability-monitoring/kube-prometheus-stack#adding-grafana-dashboards
 resource "kubernetes_config_map" "falkordb_grafana_dashboard" {
   metadata {
-    name = "falkordb-grafana-dashboard-redis"
+    name      = "falkordb-grafana-dashboard-redis"
     namespace = kubernetes_namespace.falkordb_monitoring.metadata[0].name
     labels = {
       grafana_dashboard = "1"
@@ -34,11 +34,13 @@ resource "helm_release" "falkordb-monitoring" {
   name      = "falkordb-monitoring"
   namespace = kubernetes_namespace.falkordb_monitoring.metadata[0].name
 
-  chart      = "https://prometheus-community.github.io/helm-charts/prometheus-community/kube-prometheus-stack"
+  repository = "https://prometheus-community.github.io/helm-charts"
+  chart      = "prometheus-community/kube-prometheus-stack"
+  version    = "56.3.0"
 
   set {
     name  = "grafana.adminPassword"
-    value = "${local.grafana_admin_password}"
+    value = local.grafana_admin_password
   }
   set {
     name  = "grafana.additionalDataSources[0].name"
@@ -59,7 +61,7 @@ resource "helm_release" "falkordb-monitoring" {
   }
   set {
     name  = "grafana.additionalDataSources[0].secureJsonData.password"
-    value = "${var.falkordb_password}"
+    value = var.falkordb_password
   }
   set {
     name  = "grafana.additionalDataSources[0].editable"

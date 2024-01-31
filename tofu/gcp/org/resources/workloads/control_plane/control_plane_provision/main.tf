@@ -19,3 +19,27 @@ resource "google_storage_bucket_iam_member" "provisioning_sa" {
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.provisioning_sa.email}"
 }
+
+# Add service usage consumer role to the service account
+resource "google_project_iam_member" "provisioning_sa_service_usage" {
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageConsumer"
+  member  = "serviceAccount:${google_service_account.provisioning_sa.email}"
+}
+
+# Add service account viewer role to the service account
+resource "google_project_iam_member" "provisioning_sa_service_account_viewer" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountViewer"
+  member  = "serviceAccount:${google_service_account.provisioning_sa.email}"
+}
+
+# Grant service account admin role permission to itself
+resource "google_service_account_iam_binding" "provisioning_sa" {
+  service_account_id = google_service_account.provisioning_sa.name
+  role               = "roles/iam.serviceAccountAdmin"
+
+  members = [
+    "serviceAccount:${google_service_account.provisioning_sa.email}",
+  ]
+}

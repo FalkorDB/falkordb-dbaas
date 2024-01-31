@@ -23,7 +23,7 @@ resource "helm_release" "falkordb" {
   # Necessary so there's enough time to finish installing
   timeout = 600
 
-  chart = "https://charts.bitnami.com/bitnami/redis-18.6.3.tgz"
+  chart = "oci://registry-1.docker.io/bitnamicharts/redis"
 
   set {
     name  = "global.redis.password"
