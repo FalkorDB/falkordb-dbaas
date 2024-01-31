@@ -52,12 +52,9 @@ module "gke_cluster" {
 data "google_client_config" "default" {}
 
 provider "kubernetes" {
-  host  = "https://${data.google_container_cluster.cluster.endpoint}"
-  token = data.google_client_config.provider.access_token
-  cluster_ca_certificate = base64decode(
-    data.google_container_cluster.cluster.master_auth[0].cluster_ca_certificate,
-  )
-
+  host                   = "https://${module.gke_cluster.cluster_endpoint}"
+  token                  = data.google_client_config.default.access_token
+  cluster_ca_certificate = base64decode(module.gke_cluster.cluster_ca_certificate)
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "gcloud"
@@ -78,12 +75,9 @@ provider "helm" {
   debug = true
 
   kubernetes {
-    host  = "https://${data.google_container_cluster.cluster.endpoint}"
-    token = data.google_client_config.provider.access_token
-    cluster_ca_certificate = base64decode(
-      data.google_container_cluster.cluster.master_auth[0].cluster_ca_certificate,
-    )
-
+    host                   = "https://${module.gke_cluster.cluster_endpoint}"
+    token                  = data.google_client_config.default.access_token
+    cluster_ca_certificate = base64decode(module.gke_cluster.cluster_ca_certificate)
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "gcloud"
@@ -105,7 +99,7 @@ provider "helm" {
 module "k8s" {
   source = "./resources/k8s"
 
-  project_id = var.project_id
+  project_id          = var.project_id
   tenant_provision_sa = var.tenant_provision_sa
 }
 
