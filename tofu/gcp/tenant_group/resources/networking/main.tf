@@ -45,7 +45,7 @@ module "vpc" {
 
   ingress_rules = [
     {
-      name = "allow-tcp-for-deployments"
+      name = "deployments-tcp-${var.tenant_group_name}"
 
       allow = [
         {
@@ -63,7 +63,7 @@ module "vpc" {
       }
     },
     {
-      name = "allow-healthcheck"
+      name = "allow-healthcheck-${var.tenant_group_name}"
 
       allow = [
         {
