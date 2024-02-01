@@ -121,3 +121,15 @@ module "backup" {
 
   depends_on = [module.k8s]
 }
+
+module "dns" {
+  source = "./resources/dns"
+
+  tenant_name   = var.tenant_name
+  dns_zone_name = var.dns_zone_name
+  dns_name      = var.dns_name
+
+  ip_address = module.networking.ip_address
+
+  depends_on = [module.networking]
+}

@@ -35,10 +35,9 @@ resource "google_project_iam_member" "provisioning_sa_service_account_viewer" {
 }
 
 # Grant service account admin role permission to itself
-resource "google_service_account_iam_member" "provisioning_sa" {
+resource "google_service_account_iam_member" "provisioning_sa_admin_itself" {
   service_account_id = google_service_account.provisioning_sa.name
   role               = "roles/iam.serviceAccountAdmin"
 
   member = "serviceAccount:${google_service_account.provisioning_sa.email}"
-
 }

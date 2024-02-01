@@ -113,3 +113,12 @@ module "backup" {
 
   force_destroy_bucket = var.force_destroy_backup_bucket
 }
+
+
+module "dns" {
+  source = "./resources/dns"
+
+  project_id        = var.project_id
+  tenant_group_name = var.tenant_group_name
+  dns_domain        = var.dns_domain
+}

@@ -69,3 +69,8 @@ variable "deployment_port" {
   type    = number
   default = 6379
 }
+
+variable "dns_domain" {
+  type = string
+  default = "cloud.falkordb.com"
+}
