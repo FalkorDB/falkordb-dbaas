@@ -30,6 +30,9 @@ variable "ip_address_name" {
   type = string
 }
 
+variable "ip_address" {
+  type = string
+}
 variable "tenant_name" {
   type = string
 }

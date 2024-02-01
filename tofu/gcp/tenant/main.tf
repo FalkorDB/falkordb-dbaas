@@ -129,7 +129,7 @@ module "dns" {
   dns_zone_name = var.dns_zone_name
   dns_domain      = var.dns_domain
   
-  ip_address = module.networking.ip_address
+  ip_address = var.ip_address
 
   depends_on = [module.networking]
 }
