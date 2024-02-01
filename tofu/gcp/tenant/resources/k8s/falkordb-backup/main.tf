@@ -80,7 +80,7 @@ resource "kubernetes_cron_job_v1" "falkorbd_backup" {
               command = [
                 "/bin/bash",
                 "-c",
-                "curl -fsSL https://packages.redis.io/gpg | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg && echo \"deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main\" | sudo tee /etc/apt/sources.list.d/redis.list && apt-get update && apt-get install -y kubectl redis && kubectl exec  falkordb-redis-node-0 -n ${var.deployment_namespace} -- redis-cli -a '${var.falkordb_password}' BGSAVE && kubectl cp falkordb-redis-node-0:/data/dump.rdb dump.rdb -c redis --namespace ${var.deployment_namespace} && gsutil cp /tmp/dump.rdb gs://${var.backup_bucket_name}/${var.tenant_name}/dump_$(date +%Y-%m-%d-%H-%M-%S).rdb"
+                "curl -fsSL https://packages.redis.io/gpg | gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg && echo \"deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main\" | tee /etc/apt/sources.list.d/redis.list && apt-get update && apt-get install -y kubectl redis && kubectl exec  falkordb-redis-node-0 -n ${var.deployment_namespace} -- redis-cli -a '${var.falkordb_password}' BGSAVE && kubectl cp falkordb-redis-node-0:/data/dump.rdb dump.rdb -c redis --namespace ${var.deployment_namespace} && gsutil cp /tmp/dump.rdb gs://${var.backup_bucket_name}/${var.tenant_name}/dump_$(date +%Y-%m-%d-%H-%M-%S).rdb"
               ]
 
             }
