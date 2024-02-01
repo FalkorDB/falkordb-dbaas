@@ -7,7 +7,7 @@ resource "helm_release" "falkordb" {
   # Necessary so there's enough time to finish installing
   timeout = 600
 
-  chart = "oci://registry-1.docker.io/bitnamicharts/redis"
+  chart   = "oci://registry-1.docker.io/bitnamicharts/redis"
   version = "18.9.1"
 
   set {
@@ -119,6 +119,20 @@ resource "helm_release" "falkordb" {
     name  = "useExternalDNS.suffix"
     value = "falkordb.io"
   }
+  # Set pod monitor to be discovered by google-managed prometheus
+  set {
+    name = "metrics.podMonitor.enabled"
+    value = true
+  }
+  set {
+    name = "metrics.podMonitor.namespace"
+    value = var.deployment_namespace
+  }
+  set {
+    name = "metrics.podMonitor.additionalLabels.app\\.kubernetes\\.io/part-of"
+    value = "google-cloud-managed-prometheus"
+  }
+
 
   # set {
   #   name  = "global.storageClass"
