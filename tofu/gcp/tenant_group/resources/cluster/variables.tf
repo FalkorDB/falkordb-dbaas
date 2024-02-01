@@ -37,15 +37,3 @@ variable "node_pools" {
 variable "node_pools_tags" {
   type = list(string)
 }
-
-variable "master_ipv4_cidr_block" {
-  type    = string
-  default = "172.16.0.32/28"
-}
-variable "master_authorized_networks" {
-  type = list(object({
-    cidr_block   = string
-    display_name = string
-  }))
-  default = []
-}

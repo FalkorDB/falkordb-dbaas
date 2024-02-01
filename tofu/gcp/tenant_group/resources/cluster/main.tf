@@ -19,8 +19,6 @@ module "gke" {
   enable_private_endpoint = false
   enable_private_nodes    = true
 
-  # master_ipv4_cidr_block     = var.master_ipv4_cidr_block
-
   node_metadata = "GKE_METADATA"
 
   node_pools = var.node_pools
