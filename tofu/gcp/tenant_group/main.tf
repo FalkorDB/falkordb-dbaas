@@ -46,6 +46,11 @@ module "gke_cluster" {
 
   node_pools_tags = ["allow-tenant-deployments"]
 
+  master_authorized_networks = [{
+    cidr_block   = module.networking.subnets[0].subnet_ip
+    display_name = "Tenant Group"
+  }]
+
   depends_on = [module.networking]
 }
 
