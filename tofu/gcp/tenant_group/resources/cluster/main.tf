@@ -1,5 +1,5 @@
 module "gke" {
-  source                            = "terraform-google-modules/kubernetes-engine/google"
+  source                            = "terraform-google-modules/kubernetes-engine/google//modules/private-cluster"
   version                           = "~> 29.0.0"
   project_id                        = var.project_id
   name                              = "${var.tenant_group_name}-cluster"
@@ -13,6 +13,9 @@ module "gke" {
   remove_default_node_pool          = true
   disable_legacy_metadata_endpoints = false
   deletion_protection               = false
+
+  enable_private_endpoint = true
+  enable_private_nodes    = true
   
   node_metadata = "GKE_METADATA"
 
