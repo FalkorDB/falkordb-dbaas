@@ -38,11 +38,7 @@ variable "node_pools_tags" {
   type = list(string)
 }
 
-variable "master_authorized_networks_cidr_block" {
+variable "master_ipv4_cidr_block" {
   type = string
-  default = "0.0.0.0/0"
-}
-variable "master_authorized_networks_display_name" {
-  type = string
-  default = "Public access"
+  default = "172.16.0.32/28"
 }

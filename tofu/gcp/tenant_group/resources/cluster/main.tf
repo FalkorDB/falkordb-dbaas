@@ -19,12 +19,8 @@ module "gke" {
   enable_private_endpoint = true
   enable_private_nodes    = true
 
-  master_authorized_networks = [
-    {
-      cidr_block   = var.master_authorized_networks_cidr_block
-      display_name = var.master_authorized_networks_display_name
-    }
-  ]
+  master_authorized_networks = []
+  master_ipv4_cidr_block     = var.master_ipv4_cidr_block
 
   node_metadata = "GKE_METADATA"
 
