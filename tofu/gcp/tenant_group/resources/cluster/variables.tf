@@ -37,3 +37,12 @@ variable "node_pools" {
 variable "node_pools_tags" {
   type = list(string)
 }
+
+variable "master_authorized_networks_cidr_block" {
+  type = string
+  default = "0.0.0.0/0"
+}
+variable "master_authorized_networks_display_name" {
+  type = string
+  default = "Public access"
+}
