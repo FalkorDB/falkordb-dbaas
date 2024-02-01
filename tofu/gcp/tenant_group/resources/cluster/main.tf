@@ -16,11 +16,10 @@ module "gke" {
   disable_legacy_metadata_endpoints = false
   deletion_protection               = false
 
-  enable_private_endpoint = true
+  enable_private_endpoint = false
   enable_private_nodes    = true
 
-  master_authorized_networks = var.master_authorized_networks
-  master_ipv4_cidr_block     = var.master_ipv4_cidr_block
+  # master_ipv4_cidr_block     = var.master_ipv4_cidr_block
 
   node_metadata = "GKE_METADATA"
 
