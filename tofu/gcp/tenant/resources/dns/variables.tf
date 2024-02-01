@@ -7,7 +7,7 @@ variable "dns_zone_name" {
   type = string
 }
 
-variable "dns_name" {
+variable "dns_domain" {
   type = string
 }
 

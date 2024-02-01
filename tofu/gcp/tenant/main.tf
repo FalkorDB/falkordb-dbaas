@@ -127,8 +127,8 @@ module "dns" {
 
   tenant_name   = var.tenant_name
   dns_zone_name = var.dns_zone_name
-  dns_name      = var.dns_name
-
+  dns_domain      = var.dns_domain
+  
   ip_address = module.networking.ip_address
 
   depends_on = [module.networking]
