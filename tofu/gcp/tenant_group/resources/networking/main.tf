@@ -92,3 +92,28 @@ module "lb_ip" {
 
   names = ["${var.tenant_group_name}-ip"]
 }
+
+
+# Create NAT
+resource "google_compute_router" "router" {
+  name    = "${var.tenant_group_name}-router"
+  region  = var.region
+  project = var.project_id
+
+  network = module.vpc.network_name
+
+  bgp {
+    asn = 64514
+  }
+}
+
+resource "google_compute_router_nat" "nat" {
+  name    = "${var.tenant_group_name}-nat"
+  region  = var.region
+  project = var.project_id
+
+  router = google_compute_router.router.name
+
+  nat_ip_allocate_option = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+}
