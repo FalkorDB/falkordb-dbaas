@@ -40,17 +40,6 @@ resource "kubernetes_cluster_role_binding" "tenant_provision_sa_role_binding" {
   }
 }
 
-# # Bind the GCP Service Account to the Kubernetes Service Account
-# Try to move this to control plane project to prevent tenant group from deleting it
-
-# resource "google_service_account_iam_binding" "tenant_provision_sa_binding" {
-#   service_account_id = var.tenant_provision_sa
-#   members = [
-#     "serviceAccount:${var.project_id}.svc.id.goog[default/${kubernetes_service_account.tenant_provision_sa.metadata[0].name}]"
-#   ]
-#   role = "roles/iam.workloadIdentityUser"
-# }
-
 module "falkordb_monitoring" {
   source = "./monitoring"
 }

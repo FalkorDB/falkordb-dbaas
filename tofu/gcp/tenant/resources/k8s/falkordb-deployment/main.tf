@@ -95,6 +95,11 @@ resource "helm_release" "falkordb" {
     name  = "metrics.serviceMonitor.additionalLabels.release"
     value = "falkordb-monitoring"
   }
+  set {
+    name = "metrics.serviceMonitor.additionalLabels.app\\.kubernetes\\.io/part-of"
+    value = "google-cloud-managed-prometheus"
+  }
+
   set_list {
     name  = "metrics.serviceMonitor.relabelings[0].sourceLabels"
     value = ["__meta_kubernetes_pod_name"]
