@@ -22,5 +22,5 @@ resource "google_storage_bucket_iam_member" "backup_writer" {
 resource "google_service_account_iam_member" "workload_identity_binding" {
   service_account_id = google_service_account.backup_writer.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.tenant_name}/${var.backup_writer_sa_name}]"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.tenant_name}-falkordb/${var.backup_writer_sa_name}]"
 }
