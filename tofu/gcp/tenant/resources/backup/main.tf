@@ -17,7 +17,7 @@ resource "google_storage_bucket_iam_member" "backup_reader" {
   condition {
     title       = "Pod role with Identity Workload enabled"
     description = "Allow SA to list bucket if identity.namespace is the name of the folder"
-    expression  = "resource.name.startsWith(\"projects/_/buckets/${var.backup_bucket_name}/objects/${local.deployment_namespace}/\")"
+    expression  = "resource.name.startsWith(\"projects/_/buckets/${var.backup_bucket_name}/objects/${local.deployment_namespace}/\") || resource.name == \"projects/_/buckets/${var.backup_bucket_name}\""
   }
 }
 
