@@ -75,7 +75,7 @@ resource "kubernetes_cron_job_v1" "falkorbd_backup" {
               command = [
                 "/bin/bash",
                 "-c",
-                "kubectl exec falkordb-redis-node-0 -n ${var.deployment_namespace} -- redis-cli -a '${var.falkordb_password}' BGSAVE && kubectl cp falkordb-redis-node-0:/data/dump.rdb dump.rdb -c redis --namespace ${var.deployment_namespace} && gsutil cp dump.rdb gs://${var.backup_bucket_name}/${var.tenant_name}/dump_$(date +%Y-%m-%d-%H-%M-%S).rdb"
+                "kubectl exec falkordb-redis-node-0 -n ${var.deployment_namespace} -- redis-cli -a '${var.falkordb_password}' BGSAVE && kubectl cp falkordb-redis-node-0:/data/dump.rdb dump.rdb -c redis --namespace ${var.deployment_namespace} && gsutil cp dump.rdb gs://${var.backup_bucket_name}/${var.deployment_namespace}/dump_$(date +%Y-%m-%d-%H-%M-%S).rdb"
               ]
 
             }
