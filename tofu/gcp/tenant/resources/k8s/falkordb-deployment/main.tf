@@ -96,7 +96,7 @@ resource "helm_release" "falkordb" {
     value = "falkordb-monitoring"
   }
   set {
-    name = "metrics.serviceMonitor.additionalLabels.app\\.kubernetes\\.io/part-of"
+    name  = "metrics.serviceMonitor.additionalLabels.app\\.kubernetes\\.io/part-of"
     value = "google-cloud-managed-prometheus"
   }
 
@@ -126,15 +126,15 @@ resource "helm_release" "falkordb" {
   }
   # Set pod monitor to be discovered by google-managed prometheus
   set {
-    name = "metrics.podMonitor.enabled"
+    name  = "metrics.podMonitor.enabled"
     value = true
   }
   set {
-    name = "metrics.podMonitor.namespace"
+    name  = "metrics.podMonitor.namespace"
     value = var.deployment_namespace
   }
   set {
-    name = "metrics.podMonitor.additionalLabels.app\\.kubernetes\\.io/part-of"
+    name  = "metrics.podMonitor.additionalLabels.app\\.kubernetes\\.io/part-of"
     value = "google-cloud-managed-prometheus"
   }
 
