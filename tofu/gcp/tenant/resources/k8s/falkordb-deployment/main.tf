@@ -69,16 +69,11 @@ resource "helm_release" "falkordb" {
   set {
     name  = "sentinel.service.annotations.cloud\\.google\\.com/neg"
     value = "\\{\"exposed_ports\":\\{\"${var.deployment_port}\":\\{\"name\":\"${var.deployment_neg_name}\"\\}\\}\\}"
-    # value = jsonencode({
-    #   "cloud.google.com/neg" : {
-    #     "exposed_ports" : {
-    #       "${var.deployment_port}" : {
-    #         "name" : "${var.deployment_neg_name}"
-    #       }
-    #     }
-    #   }
-    # })
   }
+  # set {
+  #   name = "sentinel.service.annotations.loadbalancer\\.openstack\\.org/proxy-protocol"
+  #   value = "true"
+  # }
   set {
     name  = "metrics.enabled"
     value = true

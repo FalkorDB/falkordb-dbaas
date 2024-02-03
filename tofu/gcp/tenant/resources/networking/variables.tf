@@ -29,3 +29,12 @@ variable "ip_address_name" {
 variable "exposed_port" {
   type = number
 }
+
+variable "source_ip_ranges" {
+  type = list(string)
+}
+
+variable "max_connections_per_endpoint" {
+  type    = number
+  default = 9999
+}

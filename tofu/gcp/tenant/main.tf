@@ -105,6 +105,7 @@ module "networking" {
   health_check_name   = var.health_check_name
   ip_address_name     = var.ip_address_name
   exposed_port        = var.exposed_port
+  source_ip_ranges    = var.source_ip_ranges
 
   depends_on = [time_sleep.wait_30_seconds]
 }
@@ -127,8 +128,8 @@ module "dns" {
 
   tenant_name   = var.tenant_name
   dns_zone_name = var.dns_zone_name
-  dns_domain      = var.dns_domain
-  
+  dns_domain    = var.dns_domain
+
   ip_address = var.ip_address
 
   depends_on = [module.networking]

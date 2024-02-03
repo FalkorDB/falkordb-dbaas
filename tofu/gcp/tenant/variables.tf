@@ -83,6 +83,10 @@ variable "exposed_port" {
     error_message = "Exposed port must be between 30000 and 32767"
   }
 }
+variable "source_ip_ranges" {
+  type    = list(string)
+  default = []
+}
 variable "dns_zone_name" {
   type = string
 }
