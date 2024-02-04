@@ -1,23 +1,9 @@
-# Create DNS Service account
-resource "google_service_account" "external_dns" {
-  account_id   = var.external_dns_sa_name
-  display_name = "external-dns-sa"
-}
-
-# Bind DNS Service account to DNS Admin role
-resource "google_project_iam_member" "external_dns" {
-  project = var.project_id
-  role    = "roles/dns.admin"
-  member  = "serviceAccount:${google_service_account.external_dns.email}"
-}
-
 # Add Workload Identity to the DNS Service account
 resource "google_service_account_iam_member" "workload_identity_binding" {
-  service_account_id = google_service_account.external_dns.name
+  service_account_id = var.external_dns_sa.id
   role               = "roles/iam.workloadIdentityUser"
-  member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.external_dns_namespace}/${var.external_dns_sa_name}]"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.external_dns_namespace}/${var.external_dns_sa.name}]"
 }
-
 
 resource "kubernetes_namespace" "external_dns" {
   metadata {
@@ -27,7 +13,7 @@ resource "kubernetes_namespace" "external_dns" {
 
 resource "kubernetes_service_account" "external_dns_sa" {
   metadata {
-    name      = var.external_dns_sa_name
+    name      = var.external_dns_sa.name
     namespace = kubernetes_namespace.external_dns.metadata.0.name
     labels = {
       "app.kubernetes.io/name" = "external-dns"

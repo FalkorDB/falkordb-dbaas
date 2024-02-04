@@ -96,11 +96,21 @@ provider "helm" {
 }
 
 
+module "dns" {
+  source = "./resources/dns"
+
+  project_id        = var.project_id
+  tenant_group_name = var.tenant_group_name
+  dns_domain        = var.dns_domain
+  dns_sa_name       = "${var.tenant_group_name}-dns-sa"
+}
+
 module "k8s" {
   source = "./resources/k8s"
 
   project_id          = var.project_id
   tenant_provision_sa = var.tenant_provision_sa
+  external_dns_sa     = module.dns.dns_sa
 }
 
 
@@ -112,13 +122,4 @@ module "backup" {
   tenant_group_name = var.tenant_group_name
 
   force_destroy_bucket = var.force_destroy_backup_bucket
-}
-
-
-module "dns" {
-  source = "./resources/dns"
-
-  project_id        = var.project_id
-  tenant_group_name = var.tenant_group_name
-  dns_domain        = var.dns_domain
 }

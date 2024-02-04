@@ -49,4 +49,6 @@ module "external_dns" {
   source = "./external_dns"
   
   project_id = var.project_id
+  external_dns_sa = var.external_dns_sa
+  
 }

@@ -5,3 +5,7 @@ variable "project_id" {
 variable "tenant_provision_sa" {
   type = string
 }
+
+variable "external_dns_sa" {
+  type = any
+}
