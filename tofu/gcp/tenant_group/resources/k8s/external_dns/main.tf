@@ -13,7 +13,7 @@ resource "google_project_iam_member" "external_dns" {
 
 # Add Workload Identity to the DNS Service account
 resource "google_service_account_iam_member" "workload_identity_binding" {
-  service_account_id = google_service_account.backup_writer.name
+  service_account_id = google_service_account.external_dns.name
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.external_dns_namespace}/${var.external_dns_sa_name}]"
 }
