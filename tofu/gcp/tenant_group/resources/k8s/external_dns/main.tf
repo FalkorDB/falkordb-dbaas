@@ -18,6 +18,9 @@ resource "kubernetes_service_account" "external_dns_sa" {
     labels = {
       "app.kubernetes.io/name" = "external-dns"
     }
+    annotations = {
+      "iam.gke.io/gcp-service-account" = var.external_dns_sa.email
+    }
   }
 }
 
@@ -84,6 +87,9 @@ resource "kubernetes_deployment" "external_dns" {
       }
       spec {
         service_account_name = kubernetes_service_account.external_dns_sa.metadata.0.name
+        node_selector = {
+          "iam.gke.io/gke-metadata-server-enabled" : "true"
+        }
         container {
           name  = "external-dns"
           image = "registry.k8s.io/external-dns/external-dns:v0.14.0"
@@ -96,7 +102,8 @@ resource "kubernetes_deployment" "external_dns" {
             "--registry=txt",
             "--txt-owner-id=${var.project_id}",
             "--interval=30s",
-            "--log-format=json"
+            "--log-format=json",
+            "--domain-filter=${var.dns_domain}",
           ]
         }
       }

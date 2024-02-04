@@ -35,8 +35,8 @@ resource "kubernetes_cluster_role_binding" "tenant_provision_sa_role_binding" {
   }
 
   subject {
-    kind      = "ServiceAccount"
-    name      = kubernetes_service_account.tenant_provision_sa.metadata[0].name
+    kind = "ServiceAccount"
+    name = kubernetes_service_account.tenant_provision_sa.metadata[0].name
   }
 }
 
@@ -47,8 +47,8 @@ module "falkordb_monitoring" {
 
 module "external_dns" {
   source = "./external_dns"
-  
-  project_id = var.project_id
+
+  project_id      = var.project_id
   external_dns_sa = var.external_dns_sa
-  
+  dns_domain      = var.dns_domain
 }

@@ -10,3 +10,7 @@ variable "external_dns_namespace" {
 variable "external_dns_sa" {
   type = any
 }
+
+variable "dns_domain" {
+  type = string
+}

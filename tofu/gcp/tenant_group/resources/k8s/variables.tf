@@ -9,3 +9,7 @@ variable "tenant_provision_sa" {
 variable "external_dns_sa" {
   type = any
 }
+
+variable "dns_domain" {
+  type = string
+}
