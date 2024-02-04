@@ -22,16 +22,61 @@ resource "helm_release" "falkordb" {
     name  = "image.tag"
     value = var.falkordb_version
   }
+  ###### EXTERNAL DNS ######
+  set {
+    name  = "useExternalDNS.enabled"
+    value = "true"
+  }
+  set {
+    name  = "useExternalDNS.annotationKey"
+    value = false
+  }
+
+  ###### SENTINEL ######
+  set {
+    name  = "sentinel.enabled"
+    value = true
+  }
+  set {
+    name  = "sentinel.service.type"
+    value = "LoadBalancer"
+  }
+  set {
+    name  = "sentinel.service.loadBalancerIP"
+    value = var.dns_ip_address
+  }
+  set {
+    name  = "sentinel.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/hostname"
+    value = var.dns_hostname
+  }
+  set {
+    name  = "sentinel.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/ttl"
+    value = var.dns_ttl
+  }
+  set {
+    name  = "sentinel.containerPorts.sentinel"
+    value = var.sentinel_port
+  }
+  set {
+    name  = "sentinel.service.ports.sentinel"
+    value = var.sentinel_port
+  }
+  set {
+    name  = "sentinel.service.ports.redis"
+    value = var.redis_port
+  }
+
+  ###### MASTER ######
   set_list {
     name  = "master.extraFlags"
     value = ["--loadmodule", "/FalkorDB/bin/linux-x64-release/src/falkordb.so"]
   }
   set {
-    name  = "master.resources.requests.cpu"
+    name  = "master.resources.limits.cpu"
     value = var.falkordb_cpu
   }
   set {
-    name  = "master.resources.requests.memory"
+    name  = "master.resources.limits.memory"
     value = var.falkordb_memory
   }
   set {
@@ -39,9 +84,16 @@ resource "helm_release" "falkordb" {
     value = var.persistance_size
   }
   set {
-    name  = "sentinel.service.type"
-    value = "ClusterIP"
+    name  = "master.containerPorts.redis"
+    value = var.redis_port
   }
+  set {
+    name  = "master.service.ports.redis"
+    value = var.redis_port
+  }
+
+
+  ###### REPLICA ######
   set {
     name  = "replica.replicaCount"
     value = var.falkordb_replicas
@@ -51,11 +103,11 @@ resource "helm_release" "falkordb" {
     value = ["--loadmodule", "/FalkorDB/bin/linux-x64-release/src/falkordb.so"]
   }
   set {
-    name  = "replica.resources.requests.cpu"
+    name  = "replica.resources.limits.cpu"
     value = var.falkordb_cpu
   }
   set {
-    name  = "replica.resources.requests.memory"
+    name  = "replica.resources.limits.memory"
     value = var.falkordb_memory
   }
   set {
@@ -63,17 +115,16 @@ resource "helm_release" "falkordb" {
     value = var.persistance_size
   }
   set {
-    name  = "sentinel.enabled"
-    value = true
+    name  = "replica.containerPorts.redis"
+    value = var.redis_port
   }
   set {
-    name  = "sentinel.service.annotations.cloud\\.google\\.com/neg"
-    value = "\\{\"exposed_ports\":\\{\"${var.deployment_port}\":\\{\"name\":\"${var.deployment_neg_name}\"\\}\\}\\}"
+    name  = "replica.service.ports.redis"
+    value = var.redis_port
   }
-  # set {
-  #   name = "sentinel.service.annotations.loadbalancer\\.openstack\\.org/proxy-protocol"
-  #   value = "true"
-  # }
+
+
+  ###### METRICS ######
   set {
     name  = "metrics.enabled"
     value = true
@@ -112,15 +163,6 @@ resource "helm_release" "falkordb" {
     value = "(.*redis.*)"
   }
   set {
-    name  = "useExternalDNS.enabled"
-    value = "true"
-  }
-  set {
-    name  = "useExternalDNS.suffix"
-    value = "falkordb.io"
-  }
-  # Set pod monitor to be discovered by google-managed prometheus
-  set {
     name  = "metrics.podMonitor.enabled"
     value = true
   }
@@ -132,12 +174,6 @@ resource "helm_release" "falkordb" {
     name  = "metrics.podMonitor.additionalLabels.app\\.kubernetes\\.io/part-of"
     value = "google-cloud-managed-prometheus"
   }
-
-
-  # set {
-  #   name  = "global.storageClass"
-  #   value = "falkordb-storage-class"
-  # }
 
 }
 

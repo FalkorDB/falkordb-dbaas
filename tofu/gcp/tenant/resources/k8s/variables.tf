@@ -31,19 +31,19 @@ variable "persistance_size" {
 variable "falkordb_replicas" {
   type = number
 }
-
 variable "deployment_port" {
   type    = number
   default = 6379
 }
-variable "deployment_neg_name" {
+variable "dns_domain" {
   type = string
 }
-
+variable "dns_ip_address" {
+  type = string
+}
 variable "backup_bucket_name" {
   type = string
 }
-
 variable "backup_schedule" {
   type    = string
   default = "0 0 * * *"

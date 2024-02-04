@@ -5,16 +5,7 @@ locals {
       subnet_region         = var.region,
       subnet_ip             = var.subnet_cidr
       subnet_private_access = true
-    },
-    {
-      subnet_name           = "${var.tenant_group_name}-subnet-proxy-only"
-      subnet_region         = var.region,
-      subnet_ip             = var.subnet_proxy_only_cidr
-      subnet_private_access = true
-      purpose               = "REGIONAL_MANAGED_PROXY"
-      role                  = "ACTIVE"
-      subnet_private_access = false
-    },
+    }
   ]
 }
 
@@ -61,18 +52,6 @@ module "vpc" {
       log_config = {
         metadata = "INCLUDE_ALL_METADATA"
       }
-    },
-    {
-      name = "allow-healthcheck-${var.tenant_group_name}"
-
-      allow = [
-        {
-          protocol = "TCP"
-          ports    = ["${var.deployment_port}"]
-        }
-      ]
-
-      source_ranges = ["35.191.0.0/16", "209.85.152.0/22", "209.85.204.0/22"]
     }
   ]
 

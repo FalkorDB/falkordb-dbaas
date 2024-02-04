@@ -1,7 +1,3 @@
-variable "tenant_name" {
-  type = string
-}
-
 variable "falkordb_version" {
   type = string
 }
@@ -27,18 +23,24 @@ variable "falkordb_replicas" {
   type = number
 }
 
-variable "deployment_port" {
+variable "redis_port" {
   type    = number
   default = 6379
 }
-
-variable "deployment_neg_name" {
-  type = string
+variable "sentinel_port" {
+  type    = number
+  default = 26379
 }
-
 variable "deployment_namespace" {
   type = string
 }
-variable "deployment_monitoring_namespace" {
+variable "dns_ip_address" {
   type = string
+}
+variable "dns_hostname" {
+  type = string
+}
+variable "dns_ttl" {
+  type    = number
+  default = 15
 }

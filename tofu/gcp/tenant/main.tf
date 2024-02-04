@@ -81,8 +81,10 @@ module "k8s" {
   backup_bucket_name = var.backup_bucket_name
   backup_schedule    = var.backup_schedule
 
-  deployment_port     = var.deployment_port
-  deployment_neg_name = local.deployment_neg_name
+  deployment_port = var.deployment_port
+  
+  dns_domain      = var.dns_domain
+  dns_ip_address  = var.ip_address
 }
 
 # Wait 10 seconds for the NEGs to be created
@@ -94,21 +96,21 @@ resource "time_sleep" "wait_30_seconds" {
   create_duration = "30s"
 }
 
-module "networking" {
-  source = "./resources/networking"
+# module "networking" {
+#   source = "./resources/networking"
 
-  project_id          = var.project_id
-  region              = var.region
-  tenant_name         = var.tenant_name
-  vpc_name            = var.vpc_name
-  deployment_neg_name = local.deployment_neg_name
-  health_check_name   = var.health_check_name
-  ip_address_name     = var.ip_address_name
-  exposed_port        = var.exposed_port
-  source_ip_ranges    = var.source_ip_ranges
+#   project_id          = var.project_id
+#   region              = var.region
+#   tenant_name         = var.tenant_name
+#   vpc_name            = var.vpc_name
+#   deployment_neg_name = local.deployment_neg_name
+#   health_check_name   = var.health_check_name
+#   ip_address_name     = var.ip_address_name
+#   exposed_port        = var.exposed_port
+#   source_ip_ranges    = var.source_ip_ranges
 
-  depends_on = [time_sleep.wait_30_seconds]
-}
+#   depends_on = [time_sleep.wait_30_seconds]
+# }
 
 
 module "backup" {
@@ -123,14 +125,14 @@ module "backup" {
   depends_on = [module.k8s]
 }
 
-module "dns" {
-  source = "./resources/dns"
+# module "dns" {
+#   source = "./resources/dns"
 
-  tenant_name   = var.tenant_name
-  dns_zone_name = var.dns_zone_name
-  dns_domain    = var.dns_domain
+#   tenant_name   = var.tenant_name
+#   dns_zone_name = var.dns_zone_name
+#   dns_domain    = var.dns_domain
 
-  ip_address = var.ip_address
+#   ip_address = var.ip_address
 
-  depends_on = [module.networking]
-}
+#   depends_on = [module.networking]
+# }

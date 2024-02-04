@@ -87,9 +87,6 @@ variable "source_ip_ranges" {
   type    = list(string)
   default = []
 }
-variable "dns_zone_name" {
-  type = string
-}
 variable "dns_domain" {
   type = string
 }

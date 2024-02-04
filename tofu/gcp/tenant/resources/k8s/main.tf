@@ -5,6 +5,7 @@ resource "random_password" "falkordb_password" {
 
 locals {
   falkordb_password = var.falkordb_password != null ? var.falkordb_password : random_password.falkordb_password.result
+  dns_hostname      = "${var.tenant_name}.${var.dns_domain}"
 }
 
 resource "kubernetes_namespace" "falkordb" {
@@ -17,18 +18,18 @@ resource "kubernetes_namespace" "falkordb" {
 module "falkordb_deployment" {
   source = "./falkordb-deployment"
 
-  tenant_name         = var.tenant_name
-  falkordb_version    = var.falkordb_version
-  falkordb_password   = local.falkordb_password
-  falkordb_cpu        = var.falkordb_cpu
-  falkordb_memory     = var.falkordb_memory
-  persistance_size    = var.persistance_size
-  falkordb_replicas   = var.falkordb_replicas
-  deployment_port     = var.deployment_port
-  deployment_neg_name = var.deployment_neg_name
+  falkordb_version  = var.falkordb_version
+  falkordb_password = local.falkordb_password
+  falkordb_cpu      = var.falkordb_cpu
+  falkordb_memory   = var.falkordb_memory
+  persistance_size  = var.persistance_size
+  falkordb_replicas = var.falkordb_replicas
+  deployment_port   = var.deployment_port
 
-  deployment_namespace            = kubernetes_namespace.falkordb.metadata[0].name
-  deployment_monitoring_namespace = "monitoring"
+  deployment_namespace = kubernetes_namespace.falkordb.metadata[0].name
+
+  dns_ip_address = var.dns_ip_address
+  dns_hostname   = local.dns_hostname
 
 }
 
