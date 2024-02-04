@@ -8,5 +8,5 @@ variable "external_dns_namespace" {
 }
 
 variable "external_dns_sa" {
-  type = string
+  type = any
 }
