@@ -13,7 +13,7 @@ resource "kubernetes_namespace" "external_dns" {
 
 resource "kubernetes_service_account" "external_dns_sa" {
   metadata {
-    name      = var.external_dns_sa.name
+    name      = var.external_dns_sa.display_name
     namespace = kubernetes_namespace.external_dns.metadata.0.name
     labels = {
       "app.kubernetes.io/name" = "external-dns"
