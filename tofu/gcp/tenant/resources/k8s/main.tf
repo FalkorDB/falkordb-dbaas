@@ -24,7 +24,8 @@ module "falkordb_deployment" {
   falkordb_memory   = var.falkordb_memory
   persistance_size  = var.persistance_size
   falkordb_replicas = var.falkordb_replicas
-  deployment_port   = var.deployment_port
+  redis_port        = var.redis_port
+  sentinel_port     = var.sentinel_port
 
   deployment_namespace = kubernetes_namespace.falkordb.metadata[0].name
 

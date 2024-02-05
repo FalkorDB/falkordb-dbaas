@@ -24,12 +24,10 @@ variable "falkordb_replicas" {
 }
 
 variable "redis_port" {
-  type    = number
-  default = 6379
+  type = number
 }
 variable "sentinel_port" {
-  type    = number
-  default = 26379
+  type = number
 }
 variable "deployment_namespace" {
   type = string

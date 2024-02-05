@@ -81,7 +81,8 @@ module "k8s" {
   backup_bucket_name = var.backup_bucket_name
   backup_schedule    = var.backup_schedule
 
-  deployment_port = var.deployment_port
+  redis_port    = var.redis_port
+  sentinel_port = var.sentinel_port
   
   dns_domain      = var.dns_domain
   dns_ip_address  = var.ip_address

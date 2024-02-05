@@ -31,9 +31,11 @@ variable "persistance_size" {
 variable "falkordb_replicas" {
   type = number
 }
-variable "deployment_port" {
-  type    = number
-  default = 6379
+variable "redis_port" {
+  type = number
+}
+variable "sentinel_port" {
+  type = number
 }
 variable "dns_domain" {
   type = string
