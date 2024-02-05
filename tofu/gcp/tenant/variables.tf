@@ -22,14 +22,6 @@ variable "cluster_name" {
   type = string
 }
 
-variable "health_check_name" {
-  type = string
-}
-
-variable "ip_address_name" {
-  type = string
-}
-
 variable "ip_address" {
   type = string
 }
@@ -68,21 +60,21 @@ variable "falkordb_replicas" {
 }
 variable "redis_port" {
   type = number
+  validation {
+    condition     = var.redis_port >= 30000 && var.redis_port <= 32767
+    error_message = "Port must be between 30000 and 32767"
+  }
 }
 variable "sentinel_port" {
   type = number
+  validation {
+    condition     = var.sentinel_port >= 30000 && var.sentinel_port <= 32767
+    error_message = "Port must be between 30000 and 32767"
+  }
 }
 variable "backup_schedule" {
   type    = string
   default = "0 0 * * *"
-}
-
-variable "exposed_port" {
-  type = number
-  validation {
-    condition     = var.exposed_port >= 30000 && var.exposed_port <= 32767
-    error_message = "Exposed port must be between 30000 and 32767"
-  }
 }
 variable "source_ip_ranges" {
   type    = list(string)
