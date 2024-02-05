@@ -51,19 +51,19 @@ resource "helm_release" "falkordb" {
   }
   set {
     name  = "sentinel.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/ttl"
-    value = var.dns_ttl
+    value = "${var.dns_ttl}"
   }
   set {
     name  = "sentinel.containerPorts.sentinel"
-    value = var.sentinel_port
+    value = "${var.sentinel_port}"
   }
   set {
     name  = "sentinel.service.ports.sentinel"
-    value = var.sentinel_port
+    value = "${var.sentinel_port}"
   }
   set {
     name  = "sentinel.service.ports.redis"
-    value = var.redis_port
+    value = "${var.redis_port}"
   }
 
   ###### MASTER ######
@@ -85,11 +85,11 @@ resource "helm_release" "falkordb" {
   }
   set {
     name  = "master.containerPorts.redis"
-    value = var.redis_port
+    value = "${var.redis_port}"
   }
   set {
     name  = "master.service.ports.redis"
-    value = var.redis_port
+    value = "${var.redis_port}"
   }
 
 
@@ -116,11 +116,11 @@ resource "helm_release" "falkordb" {
   }
   set {
     name  = "replica.containerPorts.redis"
-    value = var.redis_port
+    value = "${var.redis_port}"
   }
   set {
     name  = "replica.service.ports.redis"
-    value = var.redis_port
+    value = "${var.redis_port}"
   }
 
 
