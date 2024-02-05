@@ -2,7 +2,7 @@
 resource "google_service_account_iam_member" "workload_identity_binding" {
   service_account_id = var.external_dns_sa.id
   role               = "roles/iam.workloadIdentityUser"
-  member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.external_dns_namespace}/${var.external_dns_sa.name}]"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[${var.external_dns_namespace}/${var.external_dns_sa.display_name}]"
 }
 
 resource "kubernetes_namespace" "external_dns" {
