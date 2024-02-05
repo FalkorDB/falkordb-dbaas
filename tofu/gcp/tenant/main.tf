@@ -89,13 +89,13 @@ module "k8s" {
 }
 
 # Wait 10 seconds for the NEGs to be created
-resource "time_sleep" "wait_30_seconds" {
-  depends_on = [
-    module.k8s.falkordb_deployment,
-  ]
+# resource "time_sleep" "wait_30_seconds" {
+#   depends_on = [
+#     module.k8s.falkordb_deployment,
+#   ]
 
-  create_duration = "30s"
-}
+#   create_duration = "30s"
+# }
 
 # module "networking" {
 #   source = "./resources/networking"
