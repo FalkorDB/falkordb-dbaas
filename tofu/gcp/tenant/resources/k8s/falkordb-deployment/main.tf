@@ -1,7 +1,9 @@
-
+locals {
+  deployment_name = "falkordb"
+}
 
 resource "helm_release" "falkordb" {
-  name      = "falkordb"
+  name      = local.deployment_name
   namespace = var.deployment_namespace
 
   # Necessary so there's enough time to finish installing
@@ -87,7 +89,42 @@ resource "helm_release" "falkordb" {
     name  = "replica.service.ports.redis"
     value = var.redis_port
   }
+  dynamic "set" {
+    for_each = var.multi_zone != null ? [1] : []
+    content {
+      name  = "replica.topologySpreadConstraints[0].maxSkew"
+      value = 1
+    }
+  }
 
+  dynamic "set" {
+    for_each = var.multi_zone != null ? [1] : []
+    content {
+      name  = "replica.topologySpreadConstraints[0].topologyKey"
+      value = "topology.kubernetes.io/zone"
+    }
+  }
+  dynamic "set" {
+    for_each = var.multi_zone != null ? [1] : []
+    content {
+      name  = "replica.topologySpreadConstraints[0].whenUnsatisfiable"
+      value = "ScheduleAnyway"
+    }
+  }
+  dynamic "set" {
+    for_each = var.multi_zone != null ? [1] : []
+    content {
+      name  = "replica.topologySpreadConstraints[0].labelSelector.matchLabels.app\\.kubernetes\\.io/instance"
+      value = local.deployment_name
+    }
+  }
+  dynamic "set" {
+    for_each = var.pod_zone != null ? [1] : []
+    content {
+      name  = "replica.nodeSelector.topology\\.kubernetes\\.io/zone"
+      value = var.pod_zone
+    }
+  }
 
   ###### METRICS ######
   set {

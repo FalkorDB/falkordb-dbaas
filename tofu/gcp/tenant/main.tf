@@ -86,6 +86,9 @@ module "k8s" {
 
   dns_domain     = var.dns_domain
   dns_ip_address = var.ip_address
+
+  multi_zone = var.multi_zone
+  pod_zone   = var.pod_zone
 }
 
 # Wait 10 seconds for the NEGs to be created

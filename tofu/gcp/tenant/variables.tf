@@ -83,3 +83,16 @@ variable "source_ip_ranges" {
 variable "dns_domain" {
   type = string
 }
+
+variable "multi_zone" {
+  type     = bool
+  nullable = true
+  default  = false
+}
+
+variable "pod_zone" {
+  type        = string
+  nullable    = true
+  description = "The zone in which the pods will be deployed. Ignored if multi_zone is true."
+  default     = null
+}

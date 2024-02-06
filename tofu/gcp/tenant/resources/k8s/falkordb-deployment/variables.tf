@@ -42,3 +42,15 @@ variable "dns_ttl" {
   type    = number
   default = 15
 }
+
+variable "multi_zone" {
+  type     = bool
+  nullable = true
+  default  = false
+}
+
+variable "pod_zone" {
+  type        = string
+  nullable    = true
+  description = "The zone in which the pods will be deployed. Ignored if multi_zone is true."
+}

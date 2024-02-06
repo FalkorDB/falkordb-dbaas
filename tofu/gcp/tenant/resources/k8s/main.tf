@@ -32,6 +32,9 @@ module "falkordb_deployment" {
   dns_ip_address = var.dns_ip_address
   dns_hostname   = local.dns_hostname
 
+  multi_zone = var.multi_zone
+  pod_zone   = var.pod_zone
+
 }
 
 module "falkordb_backup" {
