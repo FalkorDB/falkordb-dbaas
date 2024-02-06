@@ -34,6 +34,7 @@ Scripts to help work with this repository
 19. kubectl_connect_grafana.sh: Port forward into the grafana gui.
 20. kubectl_connect_prometheus.sh: Port forward into the prometheus gui.
 21. kubectl_connect_alertmanager.sh: Port forward into the alert manager gui.
+22. gcp_update_kubeconfig.sh: Update kubectl config. Args: 1=cluster-name, 2=region, 3=project-name 
 
 # Tofu
 
