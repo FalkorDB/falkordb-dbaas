@@ -58,33 +58,6 @@ resource "helm_release" "falkordb" {
     value = var.redis_port
   }
 
-  ###### MASTER ######
-  set_list {
-    name  = "master.extraFlags"
-    value = ["--loadmodule", "/FalkorDB/bin/linux-x64-release/src/falkordb.so"]
-  }
-  set {
-    name  = "master.resources.limits.cpu"
-    value = var.falkordb_cpu
-  }
-  set {
-    name  = "master.resources.limits.memory"
-    value = var.falkordb_memory
-  }
-  set {
-    name  = "master.persistence.size"
-    value = var.persistance_size
-  }
-  set {
-    name  = "master.containerPorts.redis"
-    value = var.redis_port
-  }
-  set {
-    name  = "master.service.ports.redis"
-    value = var.redis_port
-  }
-
-
   ###### REPLICA ######
   set {
     name  = "replica.replicaCount"
