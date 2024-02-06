@@ -19,3 +19,10 @@ resource "google_dns_managed_zone_iam_member" "external_dns" {
   role         = "roles/dns.admin"
   member       = "serviceAccount:${google_service_account.external_dns.email}"
 }
+
+# Give view access to the DNS zone to the external-dns service account
+resource "google_project_iam_member" "external_dns" {
+  project = var.project_id
+  role    = "roles/dns.reader"
+  member  = "serviceAccount:${google_service_account.external_dns.email}"
+}
