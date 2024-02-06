@@ -112,6 +112,8 @@ module "k8s" {
   tenant_provision_sa = var.tenant_provision_sa
   external_dns_sa     = module.dns.dns_sa
   dns_domain          = module.dns.dns_name
+
+  depends_on = [ module.gke_cluster ]
 }
 
 
