@@ -22,15 +22,6 @@ resource "helm_release" "falkordb" {
     name  = "image.tag"
     value = var.falkordb_version
   }
-  ###### EXTERNAL DNS ######
-  set {
-    name  = "useExternalDNS.enabled"
-    value = "true"
-  }
-  set {
-    name  = "useExternalDNS.annotationKey"
-    value = false
-  }
 
   ###### SENTINEL ######
   set {
@@ -138,50 +129,4 @@ resource "helm_release" "falkordb" {
     name  = "metrics.podLabels.app\\.kubernetes\\.io/name"
     value = "redis"
   }
-  # set {
-  #   name  = "metrics.serviceMonitor.enabled"
-  #   value = true
-  # }
-  # set {
-  #   name  = "metrics.serviceMonitor.namespace"
-  #   value = var.deployment_namespace
-  # }
-  # set {
-  #   name  = "metrics.serviceMonitor.additionalLabels.release"
-  #   value = "falkordb-monitoring"
-  # }
-  # set {
-  #   name  = "metrics.serviceMonitor.additionalLabels.app\\.kubernetes\\.io/part-of"
-  #   value = "google-cloud-managed-prometheus"
-  # }
-
-  # set_list {
-  #   name  = "metrics.serviceMonitor.relabelings[0].sourceLabels"
-  #   value = ["__meta_kubernetes_pod_name"]
-  # }
-  # set {
-  #   name  = "metrics.serviceMonitor.relabelings[0].action"
-  #   value = "Replace"
-  # }
-  # set {
-  #   name  = "metrics.serviceMonitor.relabelings[0].targetLabel"
-  #   value = "instance"
-  # }
-  # set {
-  #   name  = "metrics.serviceMonitor.relabelings[0].regex"
-  #   value = "(.*redis.*)"
-  # }
-  # set {
-  #   name  = "metrics.podMonitor.enabled"
-  #   value = true
-  # }
-  # set {
-  #   name  = "metrics.podMonitor.namespace"
-  #   value = var.deployment_namespace
-  # }
-  # set {
-  #   name  = "metrics.podMonitor.additionalLabels.app\\.kubernetes\\.io/part-of"
-  #   value = "google-cloud-managed-prometheus"
-  # }
-
 }
