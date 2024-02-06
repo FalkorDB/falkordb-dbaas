@@ -49,6 +49,27 @@ module "gke_cluster" {
   depends_on = [module.networking]
 }
 
+
+module "dns" {
+  source = "./resources/dns"
+
+  project_id        = var.project_id
+  tenant_group_name = var.tenant_group_name
+  dns_domain        = var.dns_domain
+  dns_sa_name       = "${var.tenant_group_name}-dns-sa"
+}
+
+module "backup" {
+  source = "./resources/backup"
+
+  project_id        = var.project_id
+  region            = var.region
+  tenant_group_name = var.tenant_group_name
+
+  force_destroy_bucket = var.force_destroy_backup_bucket
+}
+
+
 data "google_client_config" "default" {}
 
 provider "kubernetes" {
@@ -95,34 +116,16 @@ provider "helm" {
   }
 }
 
-
-module "dns" {
-  source = "./resources/dns"
-
-  project_id        = var.project_id
-  tenant_group_name = var.tenant_group_name
-  dns_domain        = var.dns_domain
-  dns_sa_name       = "${var.tenant_group_name}-dns-sa"
-}
-
 module "k8s" {
   source = "./resources/k8s"
+
+  count = var.create_k8s_resources ? 1 : 0
 
   project_id          = var.project_id
   tenant_provision_sa = var.tenant_provision_sa
   external_dns_sa     = module.dns.dns_sa
   dns_domain          = module.dns.dns_name
 
-  depends_on = [ module.gke_cluster ]
+  depends_on = [module.gke_cluster]
 }
 
-
-module "backup" {
-  source = "./resources/backup"
-
-  project_id        = var.project_id
-  region            = var.region
-  tenant_group_name = var.tenant_group_name
-
-  force_destroy_bucket = var.force_destroy_backup_bucket
-}
