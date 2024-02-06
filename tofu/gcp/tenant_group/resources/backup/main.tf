@@ -9,7 +9,7 @@ resource "google_storage_bucket" "backup_bucket" {
   uniform_bucket_level_access = true
 
   retention_policy {
-    retention_period = 302400
+    retention_period = var.retention_policy_days * 24 * 60 * 60
   }
 
   lifecycle_rule {

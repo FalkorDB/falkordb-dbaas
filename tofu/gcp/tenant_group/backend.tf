@@ -1,5 +1,5 @@
 terraform {
-  backend "gcs" { }
+  backend "gcs" {}
 }
 
 # data "terraform_remote_state" "tenant_group" {

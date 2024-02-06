@@ -6,5 +6,5 @@ variable "project_id" {
 }
 
 variable "state_bucket_name" {
-  type = string  
+  type = string
 }

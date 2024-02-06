@@ -83,9 +83,9 @@ module "k8s" {
 
   redis_port    = var.redis_port
   sentinel_port = var.sentinel_port
-  
-  dns_domain      = var.dns_domain
-  dns_ip_address  = var.ip_address
+
+  dns_domain     = var.dns_domain
+  dns_ip_address = var.ip_address
 }
 
 # Wait 10 seconds for the NEGs to be created
@@ -126,6 +126,7 @@ module "backup" {
   depends_on = [module.k8s]
 }
 
+# Required only for proxy LB
 # module "dns" {
 #   source = "./resources/dns"
 

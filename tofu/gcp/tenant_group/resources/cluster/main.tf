@@ -22,27 +22,25 @@ module "gke" {
   node_metadata = "GKE_METADATA"
 
   node_pools = var.node_pools
-  node_pools_tags = {
-    all = var.node_pools_tags
-  }
 
   monitoring_enable_managed_prometheus = true
 }
 
 # Create Health Check
-resource "google_compute_region_health_check" "redis" {
-  name                = "${var.tenant_group_name}-heatlh-check"
-  check_interval_sec  = 5
-  timeout_sec         = 5
-  healthy_threshold   = 2
-  unhealthy_threshold = 2
-  region              = var.region
-  log_config {
-    enable = true
-  }
+# Required only for proxy LB
+# resource "google_compute_region_health_check" "redis" {
+#   name                = "${var.tenant_group_name}-heatlh-check"
+#   check_interval_sec  = 5
+#   timeout_sec         = 5
+#   healthy_threshold   = 2
+#   unhealthy_threshold = 2
+#   region              = var.region
+#   log_config {
+#     enable = true
+#   }
 
-  tcp_health_check {
-    port_specification = "USE_SERVING_PORT"
-  }
-}
+#   tcp_health_check {
+#     port_specification = "USE_SERVING_PORT"
+#   }
+# }
 

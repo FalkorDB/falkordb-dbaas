@@ -3,7 +3,7 @@ output "network_name" {
 }
 
 output "subnets" {
-    value = local.subnets
+  value = local.subnets
 }
 output "ip_address_name" {
   value = module.lb_ip.names[0]

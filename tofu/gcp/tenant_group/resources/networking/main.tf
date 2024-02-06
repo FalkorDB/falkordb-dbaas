@@ -34,26 +34,27 @@ module "vpc" {
     }],
   }
 
-  ingress_rules = [
-    {
-      name = "deployments-tcp-${var.tenant_group_name}"
+  # Required only for proxy LB
+  # ingress_rules = [
+  #   {
+  #     name = "deployments-tcp-${var.tenant_group_name}"
 
-      allow = [
-        {
-          protocol = "tcp"
-          ports    = ["${var.deployment_port}"]
-        }
-      ]
+  #     allow = [
+  #       {
+  #         protocol = "tcp"
+  #         ports    = ["${var.deployment_port}"]
+  #       }
+  #     ]
 
-      # How to block unknown customers?
-      source_ranges = ["0.0.0.0/0"]
+  #     # How to block unknown customers?
+  #     source_ranges = ["0.0.0.0/0"]
 
-      target_tags = ["allow-tenant-deployments"]
-      log_config = {
-        metadata = "INCLUDE_ALL_METADATA"
-      }
-    }
-  ]
+  #     target_tags = ["allow-tenant-deployments"]
+  #     log_config = {
+  #       metadata = "INCLUDE_ALL_METADATA"
+  #     }
+  #   }
+  # ]
 
 }
 
@@ -93,6 +94,6 @@ resource "google_compute_router_nat" "nat" {
 
   router = google_compute_router.router.name
 
-  nat_ip_allocate_option = "AUTO_ONLY"
+  nat_ip_allocate_option             = "AUTO_ONLY"
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 }

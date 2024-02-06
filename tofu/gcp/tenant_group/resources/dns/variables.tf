@@ -11,6 +11,6 @@ variable "dns_domain" {
 }
 
 variable "dns_sa_name" {
-  type = string
+  type    = string
   default = "external-dns-sa"
 }

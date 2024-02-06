@@ -19,7 +19,7 @@ module "monitoring" {
 module "policies" {
   source = "./policies"
 
-  org_id = var.org_id
+  org_id           = var.org_id
   domains_to_allow = var.domains_to_allow
   enforce_policies = var.enforce_policies
 }

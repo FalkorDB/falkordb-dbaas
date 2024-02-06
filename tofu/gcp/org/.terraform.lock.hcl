@@ -6,6 +6,7 @@ provider "registry.opentofu.org/hashicorp/google" {
   constraints = ">= 3.33.0, >= 3.43.0, >= 3.50.0, >= 3.53.0, >= 3.83.0, >= 4.25.0, >= 4.28.0, >= 4.64.0, 5.13.0, < 6.0.0"
   hashes = [
     "h1:5wSnWzzbxV5sH7ixehXH3dX3oAy74EvXuJkvSAnMToo=",
+    "h1:hStswVMbQWltgPHRhJ6ixcfInST4EBWl8Sm4GSeQdOs=",
     "zh:09bf30fef91dba33ecb9f3f4dd1e18ed6b546401747d0653448cc371177e803d",
     "zh:3895c338ac8b99efdaf75d66c63abb6db9fac10be3ce0f361245bc6bd47fd45d",
     "zh:4de92222654cabfe32d60b171aa9d6b27d5ef2429365f32e041dbecb39148ac5",
@@ -24,6 +25,7 @@ provider "registry.opentofu.org/hashicorp/google-beta" {
   constraints = ">= 3.43.0, >= 3.50.0, >= 4.11.0, >= 4.28.0, >= 4.64.0, 5.13.0, < 6.0.0"
   hashes = [
     "h1:03DlQxVkSodAtPp3lBNUdkAjwatUpW7nuoXqyYjPSXA=",
+    "h1:PwcB5ApfQCN06W6jswYE/BjOzV2CdSW8Z89hz8v3zUo=",
     "zh:028f288bdb2c697c73ba760f5861a88f672da3fe7f9d160d9662486ba5f537e5",
     "zh:0fc3d7a064738056b04decc1fcbe9bad16be42a753a7e236f2c55aff1fb1900b",
     "zh:34f3315d45eef7b2541fa3849d60be9e2fef67614f33ec497bb3072966085ca4",
@@ -42,6 +44,7 @@ provider "registry.opentofu.org/hashicorp/null" {
   constraints = ">= 2.1.0"
   hashes = [
     "h1:P8+KlqxeTE3fNqzngzTxfwXFJaGl2Csw7lYJtFff508=",
+    "h1:sU0t6ANQ4IfEwZbbBmcNeOCg2CDCViVb7L7QVfIHrCs=",
     "zh:00e5877d19fb1c1d8c4b3536334a46a5c86f57146fd115c7b7b4b5d2bf2de86d",
     "zh:1755c2999e73e4d73f9de670c145c9a0dc5a373802799dff06a0e9c161354163",
     "zh:2b29d706353bc9c4edda6a2946af3322abe94372ffb421d81fa176f1e57e33be",
@@ -57,8 +60,9 @@ provider "registry.opentofu.org/hashicorp/null" {
 
 provider "registry.opentofu.org/hashicorp/random" {
   version     = "3.6.0"
-  constraints = ">= 2.2.0, >= 3.1.0"
+  constraints = ">= 2.2.0"
   hashes = [
+    "h1:6QMZ6JACl+V2t8daN5GTlw22EtG7nhc3BbkbJDw2a5M=",
     "h1:dMz6mC37wIEfyrB0VA8gzPx/tsCQJuQmjpoxUgwwEqU=",
     "zh:486a1c921eab5c51a480f2eb0ad85173f207c9b7bb215f3893e58bc38d3b7c75",
     "zh:6901b3afa4607d1e31934ba91ed2625215ada42b3518c3a9adeeac7a5f656dc3",
@@ -78,6 +82,7 @@ provider "registry.opentofu.org/hashicorp/time" {
   constraints = ">= 0.5.0"
   hashes = [
     "h1:58xhugSr4hDVmzUqkAuVQIJjJ0E7cyOmnqTM0TQboEs=",
+    "h1:LZb3ZijtbUDBYaKoEim7oX2OkP9GqOBfp2fWwgRZhUs=",
     "zh:0997e9e82dbf3b01b783d75e4ad14dfa135d7dea9ef2e6ccd48348ed9dd31c27",
     "zh:2794dc8a5b79f331ad780b757dd7a04e539551cc8b8c50d25ebeb43994c7fe1d",
     "zh:2f5e81ebc5c4d9329c392de67483fb2144d2c0cae4001e6ec2c83e1ab71d62ca",

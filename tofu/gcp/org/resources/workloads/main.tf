@@ -3,12 +3,6 @@ resource "google_folder" "root_folder" {
   parent       = "folders/${var.parent_folder_id}"
 }
 
-locals {
-  public_network_name = "falkordb-control-plane-public-network"
-
-  public_network_subnets = []
-}
-
 module "control_plane" {
   source = "./control_plane"
 
@@ -20,8 +14,8 @@ module "control_plane" {
 
   state_bucket_name = var.state_bucket_name
 
-  public_network_name    = local.public_network_name
-  public_network_subnets = local.public_network_subnets
+  public_network_name    = var.control_plane_public_network_name
+  public_network_subnets = var.control_plane_public_network_subnets
 }
 
 

@@ -23,8 +23,6 @@ module "networking" {
   ip_range_services = var.ip_range_services
 
   tenant_group_size = var.tenant_group_size
-
-  deployment_port = var.deployment_port
 }
 
 module "gke_cluster" {
@@ -44,7 +42,7 @@ module "gke_cluster" {
 
   node_pools = var.node_pools
 
-  node_pools_tags = ["allow-tenant-deployments"]
+  cluster_deletion_protection = var.cluster_deletion_protection
 
   depends_on = [module.networking]
 }
@@ -65,6 +63,8 @@ module "backup" {
   project_id        = var.project_id
   region            = var.region
   tenant_group_name = var.tenant_group_name
+
+  retention_policy_days = var.backup_retention_policy_days
 
   force_destroy_bucket = var.force_destroy_backup_bucket
 }

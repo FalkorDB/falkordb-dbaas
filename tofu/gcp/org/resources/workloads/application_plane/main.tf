@@ -32,7 +32,7 @@ resource "google_project_iam_member" "provisioning_sa" {
   role   = "roles/owner"
   member = "serviceAccount:${var.provisioning_sa}"
 
-  depends_on = [ module.project ]
+  depends_on = [module.project]
 }
 
 # Add service usage role to provisioning SA
@@ -41,5 +41,5 @@ resource "google_project_iam_member" "provisioning_sa_service_usage" {
   role    = "roles/serviceusage.serviceUsageAdmin"
   member  = "serviceAccount:${var.provisioning_sa}"
 
-  depends_on = [ module.project ]
+  depends_on = [module.project]
 }

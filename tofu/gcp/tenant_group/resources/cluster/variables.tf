@@ -35,5 +35,12 @@ variable "node_pools" {
 }
 
 variable "node_pools_tags" {
-  type = list(string)
+  type     = list(string)
+  nullable = true
+  default  = []
+}
+
+variable "cluster_deletion_protection" {
+  type    = bool
+  default = true
 }

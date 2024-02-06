@@ -38,5 +38,18 @@ variable "control_plane_project_name" {
 }
 
 variable "state_bucket_name" {
-  type = string  
+  type = string
+}
+variable "control_plane_public_network_name" {
+  type = string
+}
+variable "control_plane_public_network_subnets" {
+  type = set(
+    object({
+      subnet_name           = string
+      subnet_region         = string
+      subnet_ip             = string
+      subnet_private_access = bool
+    })
+  )
 }

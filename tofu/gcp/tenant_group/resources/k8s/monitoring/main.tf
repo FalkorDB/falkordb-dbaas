@@ -74,7 +74,7 @@ resource "kubernetes_manifest" "pod_monitoring" {
     apiVersion = "monitoring.googleapis.com/v1"
     kind       = "ClusterPodMonitoring"
     metadata = {
-      name      = "falkordb-redis"
+      name = "falkordb-redis"
       labels = {
         "app.kubernetes.io/name"    = "redis"
         "app.kubernetes.io/part-of" = "google-cloud-managed-prometheus"

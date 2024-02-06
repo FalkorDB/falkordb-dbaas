@@ -46,6 +46,11 @@ variable "cluster_name" {
   type = string
 }
 
+variable "cluster_deletion_protection" {
+  type    = bool
+  default = true
+}
+
 variable "node_pools" {
   type = list(map(any))
 
@@ -70,12 +75,12 @@ variable "force_destroy_backup_bucket" {
   default = false
 }
 
-variable "deployment_port" {
-  type    = number
-  default = 6379
-}
-
 variable "dns_domain" {
   type    = string
   default = "cloud.falkordb.com"
+}
+
+variable "backup_retention_policy_days" {
+  type    = number
+  default = 0
 }

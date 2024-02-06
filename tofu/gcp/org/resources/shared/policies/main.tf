@@ -1,12 +1,12 @@
 module "org_policy_domain_whitelist" {
-  source  = "terraform-google-modules/org-policy/google//modules/domain_restricted_sharing"
+  source = "terraform-google-modules/org-policy/google//modules/domain_restricted_sharing"
 
   organization_id = var.org_id
 
   policy_for = "organization"
 
   domains_to_allow = var.domains_to_allow
-  
+
 }
 
 module "org_policy_skip_default_network" {

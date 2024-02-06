@@ -6,5 +6,5 @@ terraform {
 
   backend "gcs" {
   }
-  
+
 }

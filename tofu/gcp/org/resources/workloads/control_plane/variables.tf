@@ -2,40 +2,41 @@
 ###### PROJECT ######
 
 variable "org_id" {
-    type = string
+  type = string
 }
 variable "project_id" {
-    type = string
+  type = string
 }
 
 variable "project_name" {
-    type = string
+  type = string
 }
 
 variable "project_parent_id" {
-    type = string
+  type = string
 }
 
 variable "billing_account_id" {
-    type = string
+  type = string
 }
 
 variable "state_bucket_name" {
-  type = string  
+  type = string
 }
 
 ###### NETWORKING ######
 
 variable "public_network_name" {
-    type = string
+  type = string
 }
 
 variable "public_network_subnets" {
-    type = set(
-        object({
-            name = string
-            region = string
-            cidr = string
-        })
-    )
+  type = set(
+    object({
+      subnet_name           = string
+      subnet_region         = string
+      subnet_ip             = string
+      subnet_private_access = bool
+    })
+  )
 }

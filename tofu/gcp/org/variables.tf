@@ -28,7 +28,7 @@ variable "workloads_folder_name" {
 variable "application_plane_project_id" {
   type = string
   validation {
-    condition = length(var.application_plane_project_id) < 22
+    condition     = length(var.application_plane_project_id) < 22
     error_message = "Project ID must be less than 22 characters"
   }
 }
@@ -41,7 +41,7 @@ variable "application_plane_project_name" {
 variable "control_plane_project_id" {
   type = string
   validation {
-    condition = length(var.control_plane_project_id) < 22
+    condition     = length(var.control_plane_project_id) < 22
     error_message = "Project ID must be less than 22 characters"
   }
 }
@@ -51,7 +51,21 @@ variable "control_plane_project_name" {
 }
 
 variable "state_bucket_name" {
-  type = string  
+  type = string
+}
+
+variable "control_plane_public_network_name" {
+  type = string
+}
+variable "control_plane_public_network_subnets" {
+  type = set(
+    object({
+      subnet_name           = string
+      subnet_region         = string
+      subnet_ip             = string
+      subnet_private_access = bool
+    })
+  )
 }
 
 ###### SHARED RESOURCES ######
@@ -64,7 +78,7 @@ variable "shared_resources_folder_name" {
 variable "monitoring_project_id" {
   type = string
   validation {
-    condition = length(var.monitoring_project_id) < 22
+    condition     = length(var.monitoring_project_id) < 22
     error_message = "Project ID must be less than 22 characters"
   }
 }

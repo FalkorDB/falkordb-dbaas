@@ -21,6 +21,6 @@ variable "backup_schedule" {
 }
 
 variable "falkordb_password" {
-  type = string
+  type      = string
   sensitive = true
 }
