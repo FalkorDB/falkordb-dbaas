@@ -14,10 +14,6 @@ output "cluster_name" {
   value = module.gke_cluster.cluster_name
 }
 
-output "health_check_name" {
-  value = module.gke_cluster.health_check_name
-}
-
 output "backup_bucket_name" {
   value = module.backup.backup_bucket_name
 }
