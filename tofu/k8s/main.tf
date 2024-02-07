@@ -1,4 +1,9 @@
-
+provider "aws" {
+  region = var.region
+  assume_role {
+    role_arn = var.assume_role_arn
+  }
+}
 provider "kubernetes" {
   host                   = var.falkordb_eks_cluster_endpoint
   cluster_ca_certificate = base64decode(var.falkordb_eks_cluster_certificate_autority)
@@ -6,7 +11,7 @@ provider "kubernetes" {
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
+    args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn, "--profile", "pipelines-development"]
   }
 }
 
@@ -19,7 +24,7 @@ provider "helm" {
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn]
+      args        = ["eks", "get-token", "--cluster-name", var.falkordb_eks_cluster_name, "--role-arn", var.assume_role_arn, "--profile", "pipelines-development"]
     }
   }
 }
