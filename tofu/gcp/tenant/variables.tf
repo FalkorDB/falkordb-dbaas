@@ -1,9 +1,3 @@
-
-###### STATE ######
-variable "state_bucket_name" {
-  type = string
-}
-
 ###### PROJECT ######
 variable "project_id" {
   type = string
@@ -17,7 +11,12 @@ variable "region" {
 variable "vpc_name" {
   type = string
 }
-
+variable "cluster_endpoint" {
+  type = string
+}
+variable "cluster_ca_certificate" {
+  type = string
+}
 variable "cluster_name" {
   type = string
 }

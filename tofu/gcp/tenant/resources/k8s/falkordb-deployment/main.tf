@@ -96,7 +96,34 @@ resource "helm_release" "falkordb" {
       value = 1
     }
   }
-
+  dynamic "set" {
+    for_each = var.multi_zone != null ? [1] : []
+    content {
+      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey"
+      value = "topology.kubernetes.io/zone"
+    }
+  }
+  dynamic "set" {
+    for_each = var.multi_zone != null ? [1] : []
+    content {
+      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchExpressions[0].key"
+      value = "app.kubernetes.io/instance"
+    }
+  }
+  dynamic "set" {
+    for_each = var.multi_zone != null ? [1] : []
+    content {
+      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchExpressions[0].operator"
+      value = "In"
+    }
+  }
+  dynamic "set" {
+    for_each = var.multi_zone != null ? [1] : []
+    content {
+      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchExpressions[0].values[0]"
+      value = local.deployment_name
+    }
+  }
   dynamic "set" {
     for_each = var.pod_zone != null ? [1] : []
     content {
@@ -118,35 +145,4 @@ resource "helm_release" "falkordb" {
     name  = "metrics.podLabels.app\\.kubernetes\\.io/name"
     value = "redis"
   }
-}
-
-
-resource "kubernetes_manifest" "multizone_pod_anti_affinity" {
-  count = var.multi_zone != null ? 1 : 0
-
-  manifest = {
-    apiVersion = "v1"
-    kind       = "PodAntiAffinity"
-    metadata = {
-      name      = "falkordb-multizone-pod-anti-affinity"
-      namespace = var.deployment_namespace
-    }
-    spec = {
-      requiredDuringSchedulingIgnoredDuringExecution = [
-        {
-          labelSelector = {
-            matchExpressions = [
-              {
-                key      = "app.kubernetes.io/instance"
-                operator = "In"
-                values   = [local.deployment_name]
-              }
-            ]
-          }
-          topologyKey = "topology.kubernetes.io/zone"
-        }
-      ]
-    }
-  }
-
 }

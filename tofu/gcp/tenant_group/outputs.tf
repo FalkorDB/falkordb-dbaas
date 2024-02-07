@@ -14,6 +14,16 @@ output "cluster_name" {
   value = module.gke_cluster.cluster_name
 }
 
+output "cluster_endpoint" {
+  value     = module.gke_cluster.cluster_endpoint
+  sensitive = true
+}
+
+output "cluster_ca_certificate" {
+  value = module.gke_cluster.cluster_ca_certificate
+  sensitive = true
+}
+
 output "backup_bucket_name" {
   value = module.backup.backup_bucket_name
 }

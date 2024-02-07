@@ -3,19 +3,14 @@ provider "google" {
   region  = var.region
 }
 
-# Get cluster data
-data "google_container_cluster" "cluster" {
-  name     = var.cluster_name
-  location = var.region
-}
 
 data "google_client_config" "provider" {}
 
 provider "kubernetes" {
-  host  = "https://${data.google_container_cluster.cluster.endpoint}"
+  host  = "https://${var.cluster_endpoint}"
   token = data.google_client_config.provider.access_token
   cluster_ca_certificate = base64decode(
-    data.google_container_cluster.cluster.master_auth[0].cluster_ca_certificate,
+    var.cluster_ca_certificate
   )
 
   exec {
@@ -38,10 +33,10 @@ provider "helm" {
   debug = true
 
   kubernetes {
-    host  = "https://${data.google_container_cluster.cluster.endpoint}"
+    host  = "https://${var.cluster_endpoint}"
     token = data.google_client_config.provider.access_token
     cluster_ca_certificate = base64decode(
-      data.google_container_cluster.cluster.master_auth[0].cluster_ca_certificate,
+    var.cluster_ca_certificate
     )
 
     exec {

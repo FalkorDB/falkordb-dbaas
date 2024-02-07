@@ -68,6 +68,27 @@ variable "control_plane_public_network_subnets" {
   )
 }
 
+###### WORKLOADS: CONTROL PLANE ######
+variable "create_pipelines_development" {
+  type    = bool
+  default = false
+}
+
+variable "pipelines_development_project_id" {
+  type = string
+  default = "pipelines-development"
+}
+
+variable "pipelines_development_project_name" {
+  type = string
+  default = "Pipelines Development"
+}
+
+variable "pipelines_development_repo_name" {
+  type = string
+  default = "FalkorDB/falkordb-dbaas"  
+}
+
 ###### SHARED RESOURCES ######
 
 variable "shared_resources_folder_name" {

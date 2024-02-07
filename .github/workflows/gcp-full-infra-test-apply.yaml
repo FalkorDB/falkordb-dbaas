@@ -1,0 +1,170 @@
+name: GCP Full Infra Creation/Deletion Test [APPLY]
+
+on:
+  workflow_dispatch:
+  pull_request_review:
+    types: [submitted]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+  PLAN_WORKFLOW_NAME: gcp-full-infra-test-plan.yaml
+
+jobs:
+  apply:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')
+    runs-on: ubuntu-latest
+    environment: testing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set PR_NUMBER env variable
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # If event is workflow_dispatch, use the event.workflow_dispatch.inputs.pr_number
+          echo "PR_NUMBER=${{ github.event.inputs.pr_number }}" >> $GITHUB_ENV
+
+      - name: Setup GCloud
+        uses: "google-github-actions/auth@v2.1.1"
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: "google-github-actions/setup-gcloud@v2.1.0"
+        with:
+          version: ">= 363.0.0"
+
+      - name: Set up Tofu
+        uses: opentofu/setup-opentofu@v1.0.1
+
+      - name: Retrieve artifacts from last plan
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: ${{ env.PLAN_WORKFLOW_NAME }}
+          pr: ${{ env.PR_NUMBER }}
+          workflow_conclusion: success
+          name: artifacts-${{ env.PR_NUMBER }}
+          path: artifacts
+
+      - name: Apply Tenant Group Infra
+        id: apply_tenant_group
+        timeout-minutes: 20
+        continue-on-error: true
+        run: |
+          tofu apply -auto-approve -state-out ${GITHUB_WORKSPACE}/state/tenant_group ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
+
+      - name: Archive Tenant Group State
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: tenant_group_state
+          path: state/tenant_group
+          if-no-files-found: error
+
+      - name: Set output variables from Tenant Group
+        continue-on-error: true
+        run: |
+          outputJson=$(tofu output -json -state ${GITHUB_WORKSPACE}/state/tenant_group)
+          echo "TF_VAR_vpc_name=$(echo $outputJson | jq -r '.vpc_name.value')" >> $GITHUB_ENV
+          echo "TF_VAR_cluster_name=$(echo $outputJson | jq -r '.cluster_name.value')" >> $GITHUB_ENV
+          echo "TF_VAR_cluster_endpoint=$(echo $outputJson | jq -r '.cluster_endpoint.value')" >> $GITHUB_ENV
+          echo "TF_VAR_cluster_ca_certificate=$(echo $outputJson | jq -r '.cluster_ca_certificate.value')" >> $GITHUB_ENV
+          echo "TF_VAR_backup_bucket_name=$(echo $outputJson | jq -r '.backup_bucket_name.value')" >> $GITHUB_ENV
+          echo "TF_VAR_ip_address=$(echo $outputJson | jq -r '.ip_address.value')" >> $GITHUB_ENV
+
+      - name: Get cluster credentials
+        if: steps.apply_tenant_group.outcome == 'success'
+        id: get_cluster_credentials
+        continue-on-error: true
+        run: |
+          gcloud container clusters get-credentials ${{ env.TF_VAR_cluster_name }} --region ${{ env.GCP_REGION }} --project ${{ env.GCP_PROJECT_ID }}
+
+      - name: Check connection to cluster
+        if: steps.get_cluster_credentials.outcome == 'success'
+        continue-on-error: true
+        run: |
+          kubectl get pods --all-namespaces
+
+      - name: Plan tenant
+        if: steps.get_cluster_credentials.outcome == 'success'
+        id: plan_tenant
+        continue-on-error: true
+        env:
+          tenant_name: "tenant-1"
+          TF_VAR_project_id: ${{ env.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ env.GCP_REGION }}
+          TF_VAR_tenant_name: ${{ env.tenant_name }}
+          TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
+          TF_VAR_falkordb_version: ${{ env.TF_VAR_FALKORDB_VERSION }}
+          TF_VAR_falkordb_cpu: ${{ env.TF_VAR_FALKORDB_CPU }}
+          TF_VAR_falkordb_memory: ${{ env.TF_VAR_FALKORDB_MEMORY }}
+          TF_VAR_persistance_size: ${{ env.TF_VAR_PERSISTANCE_SIZE }}
+          TF_VAR_falkordb_replicas: ${{ env.TF_VAR_FALKORDB_REPLICAS }}
+          TF_VAR_redis_port: ${{ env.GCP_REDIS_PORT }}
+          TF_VAR_sentinel_port: ${{ env.GCP_SENTINEL_PORT }}
+          TF_VAR_backup_schedule: ${{ env.TF_VAR_BACKUP_SCHEDULE }}
+          TF_VAR_dns_domain: "${{ env.tenant_name }}.${{ env.TF_VAR_DNS_DOMAIN }}"
+          TF_VAR_multi_zone: true
+          TF_VAR_pod_zone: null
+        working-directory: ./tofu/gcp/tenant
+        run: |
+          tofu init -backend-config="bucket=${{ env.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant/${{ env.tenant_name }}"
+          tofu test
+          tofu plan -out ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
+
+      - name: Apply Tenant Infra
+        if: steps.plan_tenant.outcome == 'success'
+        id: apply_tenant
+        continue-on-error: true
+        run: |
+          tofu apply -auto-approve -state-out ${GITHUB_WORKSPACE}/state/tenant ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
+
+      - name: Archive Tenant State
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: tenant_state
+          path: state/tenant
+          if-no-files-found: error
+
+      - name: Set tenant connection variables
+        if: steps.apply_tenant.outcome == 'success'
+        continue-on-error: true
+        run: |
+          echo "FALKORDB_HOST=$(tofu output -json -state ${GITHUB_WORKSPACE}/state/tenant | jq -r '.falkordb_host.value')" >> $GITHUB_ENV
+          echo "FALKORDB_PORT=$(tofu output -json -state ${GITHUB_WORKSPACE}/state/tenant | jq -r '.falkordb_redis_port.value')" >> $GITHUB_ENV
+          echo "FALKORDB_PASSWORD=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}" >> $GITHUB_ENV
+
+      - name: Run python tests
+        if: steps.apply_tenant.outcome == 'success'
+        id: python_tests
+        continue-on-error: true
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+          pytest
+
+      - name: Destroy tenant
+        if: always()
+        continue-on-error: true
+        run: |
+          tofu destroy -auto-approve -state-out ${GITHUB_WORKSPACE}/state/tenant ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
+
+      - name: Destroy tenant group
+        if: always()
+        continue-on-error: true
+        run: |
+          tofu destroy -auto-approve -state-out ${GITHUB_WORKSPACE}/state/tenant_group ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
+
+      - name: Fail if tests did not pass
+        if: always()
+        run: |
+          # Check if python tests conclusion is success
+          if [ ${{ steps.python_tests.outcome }} != 'success' ]; then
+            exit 1
+          fi

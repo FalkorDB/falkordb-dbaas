@@ -14,14 +14,6 @@ variable "subnet_cidr" {
   type = string
 }
 
-variable "subnet_proxy_only_cidr" {
-  type = string
-}
-
-variable "tenant_group_size" {
-  type = number
-}
-
 variable "ip_range_pods" {
   type = string
 }

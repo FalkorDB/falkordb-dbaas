@@ -17,12 +17,9 @@ module "networking" {
   region = var.region
 
   subnet_cidr            = var.subnet_cidr
-  subnet_proxy_only_cidr = var.subnet_proxy_only_cidr
 
   ip_range_pods     = var.ip_range_pods
   ip_range_services = var.ip_range_services
-
-  tenant_group_size = var.tenant_group_size
 }
 
 module "gke_cluster" {

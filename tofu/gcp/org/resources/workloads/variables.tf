@@ -53,3 +53,21 @@ variable "control_plane_public_network_subnets" {
     })
   )
 }
+
+
+###### PIPELINES DEVELOPMENT ######
+variable "create_pipelines_development" {
+  type = bool
+}
+
+variable "pipelines_development_project_id" {
+  type = string
+}
+
+variable "pipelines_development_project_name" {
+  type = string
+}
+
+variable "pipelines_development_repo_name" {
+  type = string
+}

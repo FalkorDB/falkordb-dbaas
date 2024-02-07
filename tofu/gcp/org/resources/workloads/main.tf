@@ -31,3 +31,18 @@ module "application_plane" {
   provisioning_sa = module.control_plane.provisioning_sa_email
 
 }
+
+module "pipelines_development" {
+  count = var.create_pipelines_development ? 1 : 0
+
+  source = "./pipelines_development"
+
+  org_id             = var.org_id
+  project_id         = var.pipelines_development_project_id
+  project_name       = var.pipelines_development_project_name
+  project_parent_id  = google_folder.root_folder.id
+  billing_account_id = var.billing_account_id
+
+  repo_name = var.pipelines_development_repo_name
+
+}

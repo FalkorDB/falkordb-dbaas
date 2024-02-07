@@ -22,6 +22,11 @@ module "workloads_resources" {
   control_plane_public_network_name    = var.control_plane_public_network_name
   control_plane_public_network_subnets = var.control_plane_public_network_subnets
 
+  create_pipelines_development       = var.create_pipelines_development
+  pipelines_development_project_id   = "${var.pipelines_development_project_id}-${random_bytes.project_suffix.hex}"
+  pipelines_development_project_name = var.pipelines_development_project_name
+  pipelines_development_repo_name    = var.pipelines_development_repo_name
+
 }
 
 module "shared_resources" {
