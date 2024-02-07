@@ -67,30 +67,57 @@
 # }
 
 
-# Google Managed Prometheus Monitoring
+# # Google Managed Prometheus Monitoring
 
-resource "kubernetes_manifest" "pod_monitoring" {
-  manifest = {
-    apiVersion = "monitoring.googleapis.com/v1"
-    kind       = "ClusterPodMonitoring"
-    metadata = {
-      name = "falkordb-redis"
-      labels = {
-        "app.kubernetes.io/name"    = "redis"
-        "app.kubernetes.io/part-of" = "google-cloud-managed-prometheus"
-      }
-    }
+# resource "kubernetes_manifest" "pod_monitoring" {
+#   manifest = {
+#     apiVersion = "monitoring.googleapis.com/v1"
+#     kind       = "ClusterPodMonitoring"
+#     metadata = {
+#       name = "falkordb-redis"
+#       labels = {
+#         "app.kubernetes.io/name"    = "redis"
+#         "app.kubernetes.io/part-of" = "google-cloud-managed-prometheus"
+#       }
+#     }
 
-    spec = {
-      selector = {
-        matchLabels = {
-          "app.kubernetes.io/name" : "redis"
-        }
-      }
-      endpoints = [{
-        port     = "metrics"
-        interval = "30s"
-      }]
-    }
+#     spec = {
+#       selector = {
+#         matchLabels = {
+#           "app.kubernetes.io/name" : "redis"
+#         }
+#       }
+#       endpoints = [{
+#         port     = "metrics"
+#         interval = "30s"
+#       }]
+#     }
+#   }
+# }
+
+resource "null_resource" "falkordb_pod_monitoring" {
+  provisioner "local-exec" {
+    when    = create
+    command = <<EOF
+    gcloud container clusters get-credentials ${var.cluster_name} --region ${var.region} --project ${var.project_id}
+    kubectl apply -f - <<EOF2
+apiVersion: monitoring.googleapis.com/v1
+kind: ClusterPodMonitoring
+metadata:
+  name: falkordb-redis
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/part-of: google-cloud-managed-prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  endpoints:
+  - port: metrics
+    interval: 30s
+EOF2
+EOF
+
   }
+
 }

@@ -12,11 +12,6 @@ variable "tenant_group_name" {
   type = string
 }
 
-variable "create_k8s_resources" {
-  type    = bool
-  default = false
-}
-
 variable "subnet_cidr" {
   type    = string
   default = "10.130.1.0/24"

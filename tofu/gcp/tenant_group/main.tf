@@ -119,12 +119,12 @@ provider "helm" {
 module "k8s" {
   source = "./resources/k8s"
 
-  count = var.create_k8s_resources ? 1 : 0
-
   project_id          = var.project_id
   tenant_provision_sa = var.tenant_provision_sa
   external_dns_sa     = module.dns.dns_sa
   dns_domain          = module.dns.dns_name
+  cluster_name        = module.gke_cluster.cluster_name
+  region              = var.region
 
   depends_on = [module.gke_cluster]
 }

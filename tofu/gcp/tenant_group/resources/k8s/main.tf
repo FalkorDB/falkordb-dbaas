@@ -42,6 +42,10 @@ resource "kubernetes_cluster_role_binding" "tenant_provision_sa_role_binding" {
 
 module "falkordb_monitoring" {
   source = "./monitoring"
+
+  project_id   = var.project_id
+  cluster_name = var.cluster_name
+  region       = var.region
 }
 
 
