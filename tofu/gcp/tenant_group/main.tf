@@ -16,7 +16,7 @@ module "networking" {
 
   region = var.region
 
-  subnet_cidr            = var.subnet_cidr
+  subnet_cidr = var.subnet_cidr
 
   ip_range_pods     = var.ip_range_pods
   ip_range_services = var.ip_range_services

@@ -75,18 +75,18 @@ variable "create_pipelines_development" {
 }
 
 variable "pipelines_development_project_id" {
-  type = string
+  type    = string
   default = "pipelines-development"
 }
 
 variable "pipelines_development_project_name" {
-  type = string
+  type    = string
   default = "Pipelines Development"
 }
 
 variable "pipelines_development_repo_name" {
-  type = string
-  default = "FalkorDB/falkordb-dbaas"  
+  type    = string
+  default = "FalkorDB/falkordb-dbaas"
 }
 
 ###### SHARED RESOURCES ######
