@@ -98,27 +98,6 @@ resource "helm_release" "falkordb" {
   }
 
   dynamic "set" {
-    for_each = var.multi_zone != null ? [1] : []
-    content {
-      name  = "replica.topologySpreadConstraints[0].topologyKey"
-      value = "topology.kubernetes.io/zone"
-    }
-  }
-  dynamic "set" {
-    for_each = var.multi_zone != null ? [1] : []
-    content {
-      name  = "replica.topologySpreadConstraints[0].whenUnsatisfiable"
-      value = "ScheduleAnyway"
-    }
-  }
-  dynamic "set" {
-    for_each = var.multi_zone != null ? [1] : []
-    content {
-      name  = "replica.topologySpreadConstraints[0].labelSelector.matchLabels.app\\.kubernetes\\.io/instance"
-      value = local.deployment_name
-    }
-  }
-  dynamic "set" {
     for_each = var.pod_zone != null ? [1] : []
     content {
       name  = "replica.nodeSelector.topology\\.kubernetes\\.io/zone"
@@ -139,4 +118,35 @@ resource "helm_release" "falkordb" {
     name  = "metrics.podLabels.app\\.kubernetes\\.io/name"
     value = "redis"
   }
+}
+
+
+resource "kubernetes_manifest" "multizone_pod_anti_affinity" {
+  count = var.multi_zone != null ? 1 : 0
+
+  manifest = {
+    apiVersion = "v1"
+    kind       = "PodAntiAffinity"
+    metadata = {
+      name      = "falkordb-multizone-pod-anti-affinity"
+      namespace = var.deployment_namespace
+    }
+    spec = {
+      requiredDuringSchedulingIgnoredDuringExecution = [
+        {
+          labelSelector = {
+            matchExpressions = [
+              {
+                key      = "app.kubernetes.io/instance"
+                operator = "In"
+                values   = [local.deployment_name]
+              }
+            ]
+          }
+          topologyKey = "topology.kubernetes.io/zone"
+        }
+      ]
+    }
+  }
+
 }
