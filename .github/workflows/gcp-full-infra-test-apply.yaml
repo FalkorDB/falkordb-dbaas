@@ -68,7 +68,7 @@ jobs:
         working-directory: ./tofu/gcp/tenant_group
         run: |
           mkdir -p ${GITHUB_WORKSPACE}/state
-          cp ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan ${GITHUB_WORKSPACE}/tofu/gcp/tenant_group
+          cp ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan ${GITHUB_WORKSPACE}/tofu/gcp/tenant_group.tfplan
           tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}"
           tofu apply -auto-approve -state-out ${GITHUB_WORKSPACE}/state/tenant_group.tfstate ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
 
@@ -77,7 +77,7 @@ jobs:
         continue-on-error: true
         with:
           name: tenant_group_state
-          path: ${GITHUB_WORKSPACE}/state/tenant_group.tfstate
+          path: state/tenant_group.tfstate
           if-no-files-found: error
 
       - name: Set output variables from Tenant Group
@@ -142,7 +142,7 @@ jobs:
         continue-on-error: true
         with:
           name: tenant_state
-          path: ${GITHUB_WORKSPACE}/state/tenant.tfstate
+          path: state/tenant.tfstate
           if-no-files-found: error
 
       - name: Set tenant connection variables
@@ -167,13 +167,13 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
-          tofu destroy -auto-approve -state-out ${GITHUB_WORKSPACE}/state/tenant ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
+          tofu destroy -auto-approve -state ${GITHUB_WORKSPACE}/state/tenant.tfstate
 
       - name: Destroy tenant group
         if: always()
         continue-on-error: true
         run: |
-          tofu destroy -auto-approve -state-out ${GITHUB_WORKSPACE}/state/tenant_group ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
+          tofu destroy -auto-approve -state ${GITHUB_WORKSPACE}/state/tenant_group.tfstate
 
       - name: Fail if tests did not pass
         if: always()
