@@ -79,6 +79,7 @@ jobs:
         working-directory: ./tofu/gcp/tenant_group
         run: |
           outputJson=$(tofu output -json)
+          echo $outputJson
           echo "TF_VAR_vpc_name=$(echo $outputJson | jq -r '.vpc_name.value')" >> $GITHUB_ENV
           echo "TF_VAR_cluster_name=$(echo $outputJson | jq -r '.cluster_name.value')" >> $GITHUB_ENV
           echo "TF_VAR_cluster_endpoint=$(echo $outputJson | jq -r '.cluster_endpoint.value')" >> $GITHUB_ENV
