@@ -157,7 +157,23 @@ jobs:
       - name: Destroy tenant
         if: always()
         continue-on-error: true
-        working-directory: ./tofu/gcp/tenant
+        working-directory: ./tofu/gcp/tenant        
+        env:
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_region: ${{ vars.GCP_REGION }}
+          TF_VAR_tenant_name: ${{ env.tenant_name }}
+          TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
+          TF_VAR_falkordb_version: ${{ env.TF_VAR_FALKORDB_VERSION }}
+          TF_VAR_falkordb_cpu: ${{ env.TF_VAR_FALKORDB_CPU }}
+          TF_VAR_falkordb_memory: ${{ env.TF_VAR_FALKORDB_MEMORY }}
+          TF_VAR_persistance_size: ${{ env.TF_VAR_PERSISTANCE_SIZE }}
+          TF_VAR_falkordb_replicas: ${{ env.TF_VAR_FALKORDB_REPLICAS }}
+          TF_VAR_redis_port: ${{ vars.GCP_REDIS_PORT }}
+          TF_VAR_sentinel_port: ${{ vars.GCP_SENTINEL_PORT }}
+          TF_VAR_backup_schedule: ${{ env.TF_VAR_BACKUP_SCHEDULE }}
+          TF_VAR_dns_domain: "${{ env.tenant_name }}.${{ env.TF_VAR_DNS_DOMAIN }}"
+          TF_VAR_multi_zone: true
+          TF_VAR_pod_zone: null
         run: |
           tofu destroy -auto-approve
 
@@ -165,6 +181,18 @@ jobs:
         if: always()
         continue-on-error: true
         working-directory: ./tofu/gcp/tenant_group
+        env:
+          TF_VAR_cluster_name: ${{ env.tenant_group_name }}
+          TF_VAR_tenant_group_name: ${{ env.tenant_group_name }}
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_force_destroy_backup_bucket: ${{ vars.GCP_FORCE_DESTROY_BACKUP_BUCKET }}
+          TF_VAR_region: ${{ vars.GCP_REGION }}
+          TF_VAR_subnet_cidr: ${{ vars.GCP_SUBNET_CIDR }}
+          TF_VAR_ip_range_pods: ${{ vars.GCP_IP_RANGE_PODS }}
+          TF_VAR_ip_range_services: ${{ vars.GCP_IP_RANGE_SERVICES }}
+          TF_VAR_tenant_provision_sa: ${{ vars.GCP_TENANT_PROVISION_SA }}
+          TF_VAR_backup_retention_policy_days: ${{ vars.GCP_BACKUP_RETENTION_POLICY_DAYS }}
+          TF_VAR_cluster_deletion_protection: ${{ vars.GCP_CLUSTER_DELETION_PROTECTION }}
         run: |
           tofu destroy -auto-approve
 
