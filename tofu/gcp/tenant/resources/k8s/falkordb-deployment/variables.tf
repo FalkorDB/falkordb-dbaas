@@ -54,3 +54,8 @@ variable "pod_zone" {
   nullable    = true
   description = "The zone in which the pods will be deployed. Ignored if multi_zone is true."
 }
+
+variable "storage_class_name" {
+  type    = string
+  default = "standard-rwo"
+}

@@ -12,6 +12,7 @@ module "gke" {
   create_service_account            = true
   remove_default_node_pool          = true
   horizontal_pod_autoscaling        = true
+  gce_pd_csi_driver                 = true
   filestore_csi_driver              = false
   disable_legacy_metadata_endpoints = false
   deletion_protection               = false
