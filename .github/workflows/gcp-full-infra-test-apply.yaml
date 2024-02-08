@@ -52,6 +52,8 @@ jobs:
 
       - name: Set up Tofu
         uses: opentofu/setup-opentofu@v1.0.1
+        with:
+          tofu_wrapper: false
 
       - name: Retrieve artifacts from last plan
         uses: dawidd6/action-download-artifact@v3
