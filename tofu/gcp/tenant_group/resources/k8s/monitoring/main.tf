@@ -100,7 +100,7 @@ resource "null_resource" "falkordb_pod_monitoring" {
     when    = create
     command = <<EOF
     gcloud container clusters get-credentials ${var.cluster_name} --region ${var.region} --project ${var.project_id}
-    kubectl wait --for=condition=Ready --timeout=5m -n gmp-system deployment/gmp-operator
+    kubectl wait --for=condition=Available --timeout=5m -n gmp-system deployment/gmp-operator
     kubectl apply -f - <<EOF2
 apiVersion: monitoring.googleapis.com/v1
 kind: ClusterPodMonitoring
