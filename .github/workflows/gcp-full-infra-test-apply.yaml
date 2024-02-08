@@ -131,6 +131,7 @@ jobs:
         if: steps.plan_tenant.outcome == 'success'
         id: apply_tenant
         continue-on-error: true
+        working-directory: ./tofu/gcp/tenant
         run: |
           tofu apply -auto-approve ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
 
