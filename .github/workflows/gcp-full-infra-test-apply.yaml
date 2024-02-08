@@ -67,17 +67,17 @@ jobs:
         continue-on-error: true
         working-directory: ./tofu/gcp/tenant_group
         run: |
-          mkdir -p ${GITHUB_WORKSPACE}/state
+          mkdir -p ./state
           cp ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan ${GITHUB_WORKSPACE}/tofu/gcp/tenant_group.tfplan
           tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}"
-          tofu apply -auto-approve -state-out ${GITHUB_WORKSPACE}/state/tenant_group.tfstate ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
+          tofu apply -auto-approve -state-out ./state/tenant_group.tfstate ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
 
       - name: Archive Tenant Group State
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
           name: tenant_group_state
-          path: state/tenant_group.tfstate
+          path: ./state/tenant_group.tfstate
           if-no-files-found: error
 
       - name: Set output variables from Tenant Group
@@ -135,14 +135,14 @@ jobs:
         id: apply_tenant
         continue-on-error: true
         run: |
-          tofu apply -auto-approve -state-out ${GITHUB_WORKSPACE}/state/tenant.tfstate ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
+          tofu apply -auto-approve -state-out ./state/tenant.tfstate ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
 
       - name: Archive Tenant State
         uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
           name: tenant_state
-          path: state/tenant.tfstate
+          path: ./state/tenant.tfstate
           if-no-files-found: error
 
       - name: Set tenant connection variables
