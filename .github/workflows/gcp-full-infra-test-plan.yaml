@@ -70,15 +70,15 @@ jobs:
           TF_VAR_ip_address: "255.255.255.255"
           TF_VAR_tenant_name: ${{ env.tenant_name }}
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
-          TF_VAR_falkordb_version: ${{ env.TF_VAR_FALKORDB_VERSION }}
-          TF_VAR_falkordb_cpu: ${{ env.TF_VAR_FALKORDB_CPU }}
-          TF_VAR_falkordb_memory: ${{ env.TF_VAR_FALKORDB_MEMORY }}
-          TF_VAR_persistance_size: ${{ env.TF_VAR_PERSISTANCE_SIZE }}
-          TF_VAR_falkordb_replicas: ${{ env.TF_VAR_FALKORDB_REPLICAS }}
+          TF_VAR_falkordb_version: ${{ vars.TF_VAR_FALKORDB_VERSION }}
+          TF_VAR_falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
+          TF_VAR_falkordb_memory: ${{ vars.TF_VAR_FALKORDB_MEMORY }}
+          TF_VAR_persistance_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
+          TF_VAR_falkordb_replicas: ${{ vars.TF_VAR_FALKORDB_REPLICAS }}
           TF_VAR_redis_port: ${{ vars.GCP_REDIS_PORT }}
           TF_VAR_sentinel_port: ${{ vars.GCP_SENTINEL_PORT }}
-          TF_VAR_backup_schedule: ${{ env.TF_VAR_BACKUP_SCHEDULE }}
-          TF_VAR_dns_domain: "${{ env.tenant_name }}.${{ env.TF_VAR_DNS_DOMAIN }}"
+          TF_VAR_backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
+          TF_VAR_dns_domain: "${{ env.tenant_name }}.${{ vars.TF_VAR_DNS_DOMAIN }}"
           TF_VAR_multi_zone: true
           TF_VAR_pod_zone: null
         working-directory: ./tofu/gcp/tenant
