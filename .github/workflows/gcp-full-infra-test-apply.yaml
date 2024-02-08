@@ -9,9 +9,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: "read"
+  id-token: "write"
+
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
   PLAN_WORKFLOW_NAME: gcp-full-infra-test-plan.yaml
+  tenant_name: "tenant-1"
 
 jobs:
   apply:
@@ -95,7 +100,6 @@ jobs:
         id: plan_tenant
         continue-on-error: true
         env:
-          tenant_name: "tenant-1"
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
           TF_VAR_tenant_name: ${{ env.tenant_name }}
