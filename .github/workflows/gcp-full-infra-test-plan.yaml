@@ -9,6 +9,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: 'read'
+  id-token: 'write'
+
 jobs:
   plan:
     runs-on: ubuntu-latest
