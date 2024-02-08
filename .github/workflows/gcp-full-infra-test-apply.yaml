@@ -167,13 +167,13 @@ jobs:
         if: always()
         continue-on-error: true
         run: |
-          tofu destroy -auto-approve -state ${GITHUB_WORKSPACE}/state/tenant.tfstate
+          tofu destroy -auto-approve -state ./state/tenant.tfstate
 
       - name: Destroy tenant group
         if: always()
         continue-on-error: true
         run: |
-          tofu destroy -auto-approve -state ${GITHUB_WORKSPACE}/state/tenant_group.tfstate
+          tofu destroy -auto-approve -state ./state/tenant_group.tfstate
 
       - name: Fail if tests did not pass
         if: always()
