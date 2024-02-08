@@ -64,6 +64,8 @@ jobs:
           TF_VAR_region: ${{ vars.GCP_REGION }}
           TF_VAR_vpc_name: "vpc"
           TF_VAR_cluster_name: "some-cluster"
+          TF_VAR_cluster_ca_certificate: "dGVzdA=="
+          TF_VAR_cluster_endpoint: "255.255.255.255"
           TF_VAR_backup_bucket_name: "backup-bucket"
           TF_VAR_ip_address: "255.255.255.255"
           TF_VAR_tenant_name: ${{ env.tenant_name }}
@@ -79,8 +81,6 @@ jobs:
           TF_VAR_dns_domain: "${{ env.tenant_name }}.${{ env.TF_VAR_DNS_DOMAIN }}"
           TF_VAR_multi_zone: true
           TF_VAR_pod_zone: null
-          TF_VAR_cluster_ca_certificate: "dGVzdA=="
-          TF_VAR_cluster_endpoint: "255.255.255.255"
         working-directory: ./tofu/gcp/tenant
         run: |
           tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant/${{ env.tenant_name }}"
