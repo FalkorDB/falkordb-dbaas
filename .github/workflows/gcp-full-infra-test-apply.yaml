@@ -55,7 +55,6 @@ jobs:
         with:
           workflow: ${{ env.PLAN_WORKFLOW_NAME }}
           pr: ${{ env.PR_NUMBER }}
-          workflow_conclusion: success
           name: artifacts-${{ env.PR_NUMBER }}
           path: artifacts
 
