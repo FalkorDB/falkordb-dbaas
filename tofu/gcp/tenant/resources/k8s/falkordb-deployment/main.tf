@@ -1,5 +1,6 @@
 locals {
   deployment_name = "falkordb"
+  pod_name_prefix = "falkordb-redis"
 }
 
 resource "kubernetes_persistent_volume_claim" "falkordb" {

@@ -43,7 +43,8 @@ module "falkordb_backup" {
   project_id           = var.project_id
   tenant_name          = var.tenant_name
   deployment_namespace = kubernetes_namespace.falkordb.metadata[0].name
-  backup_bucket_name   = var.backup_bucket_name
+  deployment_name      = module.falkordb_deployment.pod_name_prefix
+  backup_location      = "gs://${var.backup_bucket_name}/${kubernetes_namespace.falkordb.metadata[0].name}"
   backup_schedule      = var.backup_schedule
   falkordb_password    = local.falkordb_password
 }
