@@ -13,6 +13,10 @@ permissions:
   contents: "read"
   id-token: "write"
 
+env:
+  tenant_group_name: "worflow-run-${{ github.run_number }}"
+  tenant_name: "tenant-1"
+
 jobs:
   plan:
     runs-on: ubuntu-latest
@@ -36,7 +40,6 @@ jobs:
 
       - name: Plan tenant group
         env:
-          tenant_group_name: "worflow-run-${{ github.run_number }}"
           TF_VAR_cluster_name: ${{ env.tenant_group_name }}
           TF_VAR_tenant_group_name: ${{ env.tenant_group_name }}
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
@@ -50,13 +53,13 @@ jobs:
           TF_VAR_cluster_deletion_protection: ${{ vars.GCP_CLUSTER_DELETION_PROTECTION }}
         working-directory: ./tofu/gcp/tenant_group
         run: |
+          mkdir -p ${GITHUB_WORKSPACE}/artifacts
           tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}"
           tofu test
           tofu plan -out ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
 
       - name: Plan tenant
         env:
-          tenant_name: "tenant-1"
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
           TF_VAR_vpc_name: "vpc"
