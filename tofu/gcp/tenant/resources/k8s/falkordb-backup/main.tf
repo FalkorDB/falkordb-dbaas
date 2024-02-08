@@ -115,7 +115,7 @@ resource "kubernetes_cron_job_v1" "falkorbd_backup" {
               name = kubernetes_config_map.backup_script.metadata.0.name
               config_map {
                 name         = kubernetes_config_map.backup_script.metadata.0.name
-                default_mode = 0774
+                default_mode = "0774"
               }
             }
           }
