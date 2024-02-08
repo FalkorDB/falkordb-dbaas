@@ -55,6 +55,7 @@ jobs:
         timeout-minutes: 20
         continue-on-error: true
         run: |
+          mkdir -p ${GITHUB_WORKSPACE}/state
           tofu apply -auto-approve -state-out ${GITHUB_WORKSPACE}/state/tenant_group ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
 
       - name: Archive Tenant Group State
