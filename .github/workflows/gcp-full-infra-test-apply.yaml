@@ -2,8 +2,6 @@ name: GCP Full Infra Creation/Deletion Test [APPLY]
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [main]
   pull_request_review:
     types: [submitted]
 
