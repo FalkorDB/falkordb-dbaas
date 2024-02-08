@@ -19,6 +19,7 @@ permissions:
 
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
+  tenant_group_name: "workflow-pr-${{ github.event.pull_request.number }}"
   tenant_name: "tenant-1"
 
 jobs:
@@ -33,7 +34,7 @@ jobs:
         run: |
           # If event is workflow_dispatch, use the event.workflow_dispatch.inputs.pr_number
           echo "PR_NUMBER=${{ github.event.inputs.pr_number }}" >> $GITHUB_ENV
-          echo "tenant_group_name=workflow-pr-${{ env.PR_NUMBER }}" >> $GITHUB_ENV
+          echo "tenant_group_name=workflow-pr-${{ github.event.inputs.pr_number }}" >> $GITHUB_ENV
 
       - name: Setup GCloud
         uses: "google-github-actions/auth@v2.1.1"
