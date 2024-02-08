@@ -113,28 +113,35 @@ resource "helm_release" "falkordb" {
   dynamic "set" {
     for_each = var.multi_zone != null ? [1] : []
     content {
-      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey"
+      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].weight"
+      value = 100
+    }
+  }
+  dynamic "set" {
+    for_each = var.multi_zone != null ? [1] : []
+    content {
+      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.topologyKey"
       value = "topology.kubernetes.io/zone"
     }
   }
   dynamic "set" {
     for_each = var.multi_zone != null ? [1] : []
     content {
-      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchExpressions[0].key"
+      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[0].key"
       value = "app.kubernetes.io/instance"
     }
   }
   dynamic "set" {
     for_each = var.multi_zone != null ? [1] : []
     content {
-      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchExpressions[0].operator"
+      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[0].operator"
       value = "In"
     }
   }
   dynamic "set" {
     for_each = var.multi_zone != null ? [1] : []
     content {
-      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchExpressions[0].values[0]"
+      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[0].values[0]"
       value = local.deployment_name
     }
   }
