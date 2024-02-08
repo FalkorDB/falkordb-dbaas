@@ -3,23 +3,6 @@ locals {
   pod_name_prefix = "falkordb-redis"
 }
 
-resource "kubernetes_persistent_volume_claim" "falkordb" {
-  metadata {
-    name      = "deployment-pvc"
-    namespace = var.deployment_namespace
-  }
-  spec {
-    access_modes = ["ReadWriteOnce"]
-    resources {
-      requests = {
-        storage = var.persistance_size
-      }
-    }
-    storage_class_name = var.storage_class_name
-  }
-
-}
-
 resource "helm_release" "falkordb" {
   name      = local.deployment_name
   namespace = var.deployment_namespace
@@ -112,8 +95,8 @@ resource "helm_release" "falkordb" {
     value = true
   }
   set {
-    name  = "replica.persistence.existingClaim"
-    value = kubernetes_persistent_volume_claim.falkordb.metadata[0].name
+    name  = "replica.persistence.storageClass"
+    value = var.storage_class_name
   }
   set {
     name  = "replica.persistentVolumeClaimRetentionPolicy.enabled"
@@ -126,13 +109,6 @@ resource "helm_release" "falkordb" {
   set {
     name  = "replica.persistentVolumeClaimRetentionPolicy.whenDeleted"
     value = "Delete"
-  }
-  dynamic "set" {
-    for_each = var.multi_zone != null ? [1] : []
-    content {
-      name  = "replica.topologySpreadConstraints[0].maxSkew"
-      value = 1
-    }
   }
   dynamic "set" {
     for_each = var.multi_zone != null ? [1] : []
