@@ -70,18 +70,14 @@ jobs:
           mkdir -p ./state
           cp ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan ${GITHUB_WORKSPACE}/tofu/gcp/tenant_group.tfplan
           tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}"
-          tofu apply -auto-approve -state-out ./state/tenant_group.tfstate ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
+          tofu apply -auto-approve ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
 
-      - name: Archive Tenant Group State
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        with:
-          name: tenant_group_state
-          path: ./state/tenant_group.tfstate
-          if-no-files-found: error
+      - name: Get link for Tenant Group state
+        run: echo "https://console.cloud.google.com/storage/browser/${{ vars.GCP_STATE_BUCKET_NAME }}/tenant_group/${{ env.tenant_group_name }}?project=${{ vars.GCP_PROJECT_ID }}"
 
       - name: Set output variables from Tenant Group
         continue-on-error: true
+        working-directory: ./tofu/gcp/tenant_group
         run: |
           outputJson=$(tofu output -json -state ${GITHUB_WORKSPACE}/state/tenant_group)
           echo "TF_VAR_vpc_name=$(echo $outputJson | jq -r '.vpc_name.value')" >> $GITHUB_ENV
@@ -126,7 +122,7 @@ jobs:
           TF_VAR_pod_zone: null
         working-directory: ./tofu/gcp/tenant
         run: |
-          tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant/${{ env.tenant_name }}"
+          tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}/tenant/${{ env.tenant_name }}"
           tofu test
           tofu plan -out ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
 
@@ -135,19 +131,15 @@ jobs:
         id: apply_tenant
         continue-on-error: true
         run: |
-          tofu apply -auto-approve -state-out ./state/tenant.tfstate ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
+          tofu apply -auto-approve ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
 
-      - name: Archive Tenant State
-        uses: actions/upload-artifact@v4
-        continue-on-error: true
-        with:
-          name: tenant_state
-          path: ./state/tenant.tfstate
-          if-no-files-found: error
+      - name: Get link for Tenant state
+        run: echo "https://console.cloud.google.com/storage/browser/${{ vars.GCP_STATE_BUCKET_NAME }}/tenant_group/${{ env.tenant_group_name }}/tenant/${{ env.tenant_name }}?project=${{ vars.GCP_PROJECT_ID }}"
 
       - name: Set tenant connection variables
         if: steps.apply_tenant.outcome == 'success'
         continue-on-error: true
+        working-directory: ./tofu/gcp/tenant
         run: |
           echo "FALKORDB_HOST=$(tofu output -json -state ${GITHUB_WORKSPACE}/state/tenant | jq -r '.falkordb_host.value')" >> $GITHUB_ENV
           echo "FALKORDB_PORT=$(tofu output -json -state ${GITHUB_WORKSPACE}/state/tenant | jq -r '.falkordb_redis_port.value')" >> $GITHUB_ENV
@@ -166,14 +158,16 @@ jobs:
       - name: Destroy tenant
         if: always()
         continue-on-error: true
+        working-directory: ./tofu/gcp/tenant
         run: |
-          tofu destroy -auto-approve -state ./state/tenant.tfstate
+          tofu destroy -auto-approve
 
       - name: Destroy tenant group
         if: always()
         continue-on-error: true
+        working-directory: ./tofu/gcp/tenant_group
         run: |
-          tofu destroy -auto-approve -state ./state/tenant_group.tfstate
+          tofu destroy -auto-approve
 
       - name: Fail if tests did not pass
         if: always()
