@@ -86,7 +86,7 @@ variable "pipelines_development_project_name" {
 
 variable "pipelines_development_repo_name" {
   type    = string
-  default = "dudizimber/falkordb-dbaas"
+  default = "FalkorDB/falkordb-dbaas"
 }
 
 ###### SHARED RESOURCES ######
