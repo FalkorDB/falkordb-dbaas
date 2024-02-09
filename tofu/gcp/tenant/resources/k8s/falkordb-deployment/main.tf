@@ -146,7 +146,7 @@ resource "helm_release" "falkordb" {
     }
   }
   dynamic "set" {
-    for_each = length(var.pod_zone) > 1 ? [1] : []
+    for_each = var.multi_zone != true && var.pod_zone != null && var.pod_zone != "" ? [1] : []
     content {
       name  = "replica.nodeSelector.topology\\.kubernetes\\.io/zone"
       value = var.pod_zone

@@ -52,7 +52,7 @@ variable "multi_zone" {
 variable "pod_zone" {
   type        = string
   description = "The zone in which the pods will be deployed. Ignored if multi_zone is true."
-  default = ""
+  default     = ""
 }
 
 variable "storage_class_name" {
