@@ -132,13 +132,13 @@ resource "helm_release" "falkordb" {
 
   # TODO: Issue
 
-# │ Error: YAML parse error on redis/templates/sentinel/statefulset.yaml: error converting YAML to JSON: yaml: line 63: mapping values are not allowed in this context
-# │ 
-# │   with module.k8s.module.falkordb_deployment.helm_release.falkordb,
-# │   on resources/k8s/falkordb-deployment/main.tf line 25, in resource "helm_release" "falkordb":
-# │   25: resource "helm_release" "falkordb" {
+  # │ Error: YAML parse error on redis/templates/sentinel/statefulset.yaml: error converting YAML to JSON: yaml: line 63: mapping values are not allowed in this context
+  # │ 
+  # │   with module.k8s.module.falkordb_deployment.helm_release.falkordb,
+  # │   on resources/k8s/falkordb-deployment/main.tf line 25, in resource "helm_release" "falkordb":
+  # │   25: resource "helm_release" "falkordb" {
 
-# When trying to run the pipeline with multi zone enabled
+  # When trying to run the pipeline with multi zone enabled
 
   # dynamic "set" {
   #   for_each = var.multi_zone == true ? [1] : []

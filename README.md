@@ -39,3 +39,14 @@ Scripts to help work with this repository
 # Tofu
 
 This folder contains OpenTofu templates to deploy FalkorDB.
+
+
+# Folder Structure
+
+## GCP
+
+- tofu/gcp: Contain the folder structure for the organization to be deployed on GCP
+  - [bootstrap](./tofu/gcp/bootstrap/README.md): Contain the terraform resources for bootstrapping the projects and creating the state bucket 
+  - [org](./tofu/gcp/org/README.md): Contain the files for creating the Organization hierarchy and projects required for the system. It also activates required APIs and setup Service Accounts and permissions
+  - [tenant_group](./tofu/gcp/tenant_group/README.md): Contain the files to provision a Tenant Group in GCP, including infrastructure and setting up the cluster resources
+  - [tenant](./tofu/gcp/tenant/README.md): Contain the files to provision a Tenant inside a Tenant Group in GCP, including infrastructure and setting up the cluster resources
