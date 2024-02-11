@@ -129,20 +129,31 @@ resource "helm_release" "falkordb" {
     name  = "replica.persistentVolumeClaimRetentionPolicy.whenDeleted"
     value = "Delete"
   }
-  dynamic "set" {
-    for_each = var.multi_zone == true ? [1] : []
-    content {
-      name  = "replica.affinity"
-      value = yamlencode(local.pod_anti_affinity)
-    }
-  }
-  dynamic "set" {
-    for_each = var.multi_zone != true && var.pod_zone != null && var.pod_zone != "" ? [1] : []
-    content {
-      name  = "replica.nodeSelector.topology\\.kubernetes\\.io/zone"
-      value = var.pod_zone
-    }
-  }
+
+  # TODO: Issue
+
+# │ Error: YAML parse error on redis/templates/sentinel/statefulset.yaml: error converting YAML to JSON: yaml: line 63: mapping values are not allowed in this context
+# │ 
+# │   with module.k8s.module.falkordb_deployment.helm_release.falkordb,
+# │   on resources/k8s/falkordb-deployment/main.tf line 25, in resource "helm_release" "falkordb":
+# │   25: resource "helm_release" "falkordb" {
+
+# When trying to run the pipeline with multi zone enabled
+
+  # dynamic "set" {
+  #   for_each = var.multi_zone == true ? [1] : []
+  #   content {
+  #     name  = "replica.affinity"
+  #     value = yamlencode(local.pod_anti_affinity)
+  #   }
+  # }
+  # dynamic "set" {
+  #   for_each = var.multi_zone != true && var.pod_zone != null && var.pod_zone != "" ? [1] : []
+  #   content {
+  #     name  = "replica.nodeSelector.topology\\.kubernetes\\.io/zone"
+  #     value = var.pod_zone
+  #   }
+  # }
 
   ###### METRICS ######
   set {
