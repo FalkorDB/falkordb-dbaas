@@ -22,6 +22,8 @@ env:
   PLAN_WORKFLOW_NAME: gcp-full-infra-test-plan.yaml
   tenant_group_name: "workflow-pr-${{ github.event.pull_request.number }}"
   tenant_name: "tenant-1"
+  TF_VAR_FALKORDB_VERSION: ${{ vars.TF_VAR_FALKORDB_VERSION || 'v4.0.3' }}
+  TF_VAR_DNS_DOMAIN: ${{ vars.TF_VAR_DNS_DOMAIN || 'cloud.falkordb.com' }}
 
 jobs:
   apply:
