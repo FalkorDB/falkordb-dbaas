@@ -1,6 +1,30 @@
 locals {
   deployment_name = "falkordb"
   pod_name_prefix = "falkordb-redis"
+
+  pod_anti_affinity = <<EOF
+{
+  "podAntiAffinity": {
+    "preferredDuringSchedulingIgnoredDuringExecution": [
+      {
+        "weight": 100,
+        "podAffinityTerm": {
+          "topologyKey": "topology.kubernetes.io/zone",
+          "labelSelector": {
+            "matchExpressions": [
+              {
+                "key": "app.kubernetes.io/instance",
+                "operator": "In",
+                "values": ["${local.deployment_name}"]
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
+EOF
 }
 
 resource "helm_release" "falkordb" {
@@ -111,38 +135,10 @@ resource "helm_release" "falkordb" {
     value = "Delete"
   }
   dynamic "set" {
-    for_each = var.multi_zone != null ? [1] : []
+    for_each = var.multi_zone == true ? [1] : []
     content {
-      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].weight"
-      value = 100
-    }
-  }
-  dynamic "set" {
-    for_each = var.multi_zone != null ? [1] : []
-    content {
-      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.topologyKey"
-      value = "topology.kubernetes.io/zone"
-    }
-  }
-  dynamic "set" {
-    for_each = var.multi_zone != null ? [1] : []
-    content {
-      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[0].key"
-      value = "app.kubernetes.io/instance"
-    }
-  }
-  dynamic "set" {
-    for_each = var.multi_zone != null ? [1] : []
-    content {
-      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[0].operator"
-      value = "In"
-    }
-  }
-  dynamic "set" {
-    for_each = var.multi_zone != null ? [1] : []
-    content {
-      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[0].values[0]"
-      value = local.deployment_name
+      name  = "replica.affinity"
+      value = local.pod_anti_affinity
     }
   }
   dynamic "set" {
