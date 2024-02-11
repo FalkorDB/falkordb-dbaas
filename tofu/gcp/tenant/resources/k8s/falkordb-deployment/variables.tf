@@ -1,5 +1,5 @@
 variable "falkordb_version" {
-  type = string
+  type    = string
   default = "v4.0.3"
 
   # Cannot be empty
