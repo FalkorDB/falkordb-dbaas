@@ -2,29 +2,24 @@ locals {
   deployment_name = "falkordb"
   pod_name_prefix = "falkordb-redis"
 
-  pod_anti_affinity = <<EOF
-{
-  "podAntiAffinity": {
-    "preferredDuringSchedulingIgnoredDuringExecution": [
-      {
-        "weight": 100,
-        "podAffinityTerm": {
-          "topologyKey": "topology.kubernetes.io/zone",
-          "labelSelector": {
-            "matchExpressions": [
-              {
-                "key": "app.kubernetes.io/instance",
-                "operator": "In",
-                "values": ["${local.deployment_name}"]
+  pod_anti_affinity = {
+    "podAntiAffinity" : {
+      "preferredDuringSchedulingIgnoredDuringExecution" : [
+        {
+          "weight" : 100,
+          "podAffinityTerm" : {
+            "topologyKey" : "topology.kubernetes.io/zone",
+            "labelSelector" : {
+              "matchLabels" : {
+                "app.kubernetes.io/instance" : local.deployment_name
               }
-            ]
+            }
           }
         }
-      }
-    ]
+      ]
+    }
   }
-}
-EOF
+
 }
 
 resource "helm_release" "falkordb" {
@@ -138,7 +133,7 @@ resource "helm_release" "falkordb" {
     for_each = var.multi_zone == true ? [1] : []
     content {
       name  = "replica.affinity"
-      value = local.pod_anti_affinity
+      value = yamlencode(local.pod_anti_affinity)
     }
   }
   dynamic "set" {
