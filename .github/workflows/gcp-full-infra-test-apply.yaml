@@ -22,6 +22,7 @@ env:
   PLAN_WORKFLOW_NAME: gcp-full-infra-test-plan.yaml
   tenant_group_name: "workflow-pr-${{ github.event.pull_request.number }}"
   tenant_name: "tenant-1"
+  TF_VAR_falkordb_version: 'v4.0.3'
 
 jobs:
   apply:
@@ -110,7 +111,6 @@ jobs:
           TF_VAR_region: ${{ vars.GCP_REGION }}
           TF_VAR_tenant_name: ${{ env.tenant_name }}
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
-          TF_VAR_falkordb_version: ${{ vars.TF_VAR_FALKORDB_VERSION || 'v4.0.3' }}
           TF_VAR_falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
           TF_VAR_falkordb_memory: ${{ vars.TF_VAR_FALKORDB_MEMORY }}
           TF_VAR_persistance_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
@@ -167,7 +167,6 @@ jobs:
           TF_VAR_region: ${{ vars.GCP_REGION }}
           TF_VAR_tenant_name: ${{ env.tenant_name }}
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
-          TF_VAR_falkordb_version: ${{ vars.TF_VAR_FALKORDB_VERSION || 'v4.0.3'}}
           TF_VAR_falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
           TF_VAR_falkordb_memory: ${{ vars.TF_VAR_FALKORDB_MEMORY }}
           TF_VAR_persistance_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
