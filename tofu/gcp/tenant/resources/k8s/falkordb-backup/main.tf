@@ -49,6 +49,38 @@ resource "kubernetes_role_binding" "falkordb_role_binding" {
   }
 }
 
+resource "kubernetes_config_map" "backup_script" {
+  metadata {
+    name      = "backup-script"
+    namespace = var.deployment_namespace
+  }
+  data = {
+    "backup.sh" = <<EOF
+#!/bin/bash
+
+# Check if the BGSAVE is in progress
+if [ "$(kubectl exec ${var.deployment_name}-node-0 -n ${var.deployment_namespace} -- redis-cli -a '${var.falkordb_password}' INFO PERSISTENCE | grep rdb_bgsave_in_progress | awk -F: '{print $2}')" != "0" ]; then
+  echo "BGSAVE is in progress, skipping backup"
+  exit 0
+fi
+
+# Execute BGSAVE
+kubectl exec ${var.deployment_name}-node-0 -n ${var.deployment_namespace} -- redis-cli -a '${var.falkordb_password}' BGSAVE
+
+# Wait until the BGSAVE is done
+while [ "$(kubectl exec ${var.deployment_name}-node-0 -n ${var.deployment_namespace} -- redis-cli -a '${var.falkordb_password}' INFO PERSISTENCE | grep rdb_bgsave_in_progress | awk -F: '{print $2}')" != "0" ]; do
+  sleep 1
+done
+
+# Copy the dump.rdb to the pod
+kubectl cp ${var.deployment_name}-node-0:/data/dump.rdb dump.rdb -c redis --namespace ${var.deployment_namespace}
+
+# Copy the dump.rdb to the bucket
+gsutil cp dump.rdb ${var.backup_location}/dump_$(date +%Y-%m-%d-%H-%M-%S).rdb
+EOF
+  }
+}
+
 resource "kubernetes_cron_job_v1" "falkorbd_backup" {
   metadata {
     name      = "falkordb-backup"
@@ -70,14 +102,21 @@ resource "kubernetes_cron_job_v1" "falkorbd_backup" {
               "iam.gke.io/gke-metadata-server-enabled" : "true"
             }
             container {
-              name  = "backup"
-              image = "dudizimber/gcloud-kubectl-redis:latest"
-              command = [
-                "/bin/bash",
-                "-c",
-                "kubectl exec falkordb-redis-node-0 -n ${var.deployment_namespace} -- redis-cli -a '${var.falkordb_password}' BGSAVE && kubectl cp falkordb-redis-node-0:/data/dump.rdb dump.rdb -c redis --namespace ${var.deployment_namespace} && gsutil cp dump.rdb gs://${var.backup_bucket_name}/${var.deployment_namespace}/dump_$(date +%Y-%m-%d-%H-%M-%S).rdb"
-              ]
+              name    = "backup"
+              image   = "dudizimber/gcloud-kubectl-redis:latest"
+              command = ["/scripts/backup.sh"]
+              volume_mount {
+                name       = kubernetes_config_map.backup_script.metadata.0.name
+                mount_path = "/scripts"
+              }
 
+            }
+            volume {
+              name = kubernetes_config_map.backup_script.metadata.0.name
+              config_map {
+                name         = kubernetes_config_map.backup_script.metadata.0.name
+                default_mode = "0774"
+              }
             }
           }
         }

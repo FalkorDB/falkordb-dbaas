@@ -1,5 +1,6 @@
 locals {
   deployment_name = "falkordb"
+  pod_name_prefix = "falkordb-redis"
 }
 
 resource "helm_release" "falkordb" {
@@ -89,43 +90,63 @@ resource "helm_release" "falkordb" {
     name  = "replica.service.ports.redis"
     value = var.redis_port
   }
+  set {
+    name  = "replica.persistence.enabled"
+    value = true
+  }
+  set {
+    name  = "replica.persistence.storageClass"
+    value = var.storage_class_name
+  }
+  set {
+    name  = "replica.persistentVolumeClaimRetentionPolicy.enabled"
+    value = true
+  }
+  set {
+    name  = "replica.persistentVolumeClaimRetentionPolicy.whenScaled"
+    value = "Delete"
+  }
+  set {
+    name  = "replica.persistentVolumeClaimRetentionPolicy.whenDeleted"
+    value = "Delete"
+  }
   dynamic "set" {
     for_each = var.multi_zone != null ? [1] : []
     content {
-      name  = "replica.topologySpreadConstraints[0].maxSkew"
-      value = 1
+      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].weight"
+      value = 100
     }
   }
   dynamic "set" {
     for_each = var.multi_zone != null ? [1] : []
     content {
-      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey"
+      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.topologyKey"
       value = "topology.kubernetes.io/zone"
     }
   }
   dynamic "set" {
     for_each = var.multi_zone != null ? [1] : []
     content {
-      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchExpressions[0].key"
+      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[0].key"
       value = "app.kubernetes.io/instance"
     }
   }
   dynamic "set" {
     for_each = var.multi_zone != null ? [1] : []
     content {
-      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchExpressions[0].operator"
+      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[0].operator"
       value = "In"
     }
   }
   dynamic "set" {
     for_each = var.multi_zone != null ? [1] : []
     content {
-      name  = "replica.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].labelSelector.matchExpressions[0].values[0]"
+      name  = "replica.affinity.podAntiAffinity.preferredDuringSchedulingIgnoredDuringExecution[0].podAffinityTerm.labelSelector.matchExpressions[0].values[0]"
       value = local.deployment_name
     }
   }
   dynamic "set" {
-    for_each = var.pod_zone != null ? [1] : []
+    for_each = var.multi_zone != true && var.pod_zone != null && var.pod_zone != "" ? [1] : []
     content {
       name  = "replica.nodeSelector.topology\\.kubernetes\\.io/zone"
       value = var.pod_zone

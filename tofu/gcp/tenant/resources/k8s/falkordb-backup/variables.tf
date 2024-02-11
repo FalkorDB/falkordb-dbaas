@@ -10,7 +10,11 @@ variable "deployment_namespace" {
   type = string
 }
 
-variable "backup_bucket_name" {
+variable "deployment_name" {
+  type = string
+}
+
+variable "backup_location" {
   type = string
 }
 
