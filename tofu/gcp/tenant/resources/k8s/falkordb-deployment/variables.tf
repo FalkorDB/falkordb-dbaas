@@ -1,5 +1,12 @@
 variable "falkordb_version" {
   type = string
+  default = "v4.0.3"
+
+  # Cannot be empty
+  validation {
+    condition     = length(var.falkordb_version) > 0
+    error_message = "FalkorDB version cannot be empty"
+  }
 }
 
 variable "falkordb_password" {

@@ -22,8 +22,6 @@ env:
   PLAN_WORKFLOW_NAME: gcp-full-infra-test-plan.yaml
   tenant_group_name: "workflow-pr-${{ github.event.pull_request.number }}"
   tenant_name: "tenant-1"
-  TF_VAR_FALKORDB_VERSION: ${{ vars.TF_VAR_FALKORDB_VERSION || 'v4.0.3' }}
-  TF_VAR_DNS_DOMAIN: ${{ vars.TF_VAR_DNS_DOMAIN || 'cloud.falkordb.com' }}
 
 jobs:
   apply:
@@ -112,7 +110,7 @@ jobs:
           TF_VAR_region: ${{ vars.GCP_REGION }}
           TF_VAR_tenant_name: ${{ env.tenant_name }}
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
-          TF_VAR_falkordb_version: ${{ vars.TF_VAR_FALKORDB_VERSION }}
+          TF_VAR_falkordb_version: ${{ vars.TF_VAR_FALKORDB_VERSION || 'v4.0.3' }}
           TF_VAR_falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
           TF_VAR_falkordb_memory: ${{ vars.TF_VAR_FALKORDB_MEMORY }}
           TF_VAR_persistance_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
@@ -120,7 +118,7 @@ jobs:
           TF_VAR_redis_port: ${{ vars.GCP_REDIS_PORT }}
           TF_VAR_sentinel_port: ${{ vars.GCP_SENTINEL_PORT }}
           TF_VAR_backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
-          TF_VAR_dns_domain: "${{ env.tenant_group_name }}.${{ vars.TF_VAR_DNS_DOMAIN }}"
+          TF_VAR_dns_domain: "${{ env.tenant_group_name }}.${{ vars.TF_VAR_DNS_DOMAIN || 'cloud.falkordb.com'}}"
           TF_VAR_multi_zone: true
         working-directory: ./tofu/gcp/tenant
         run: |
@@ -163,13 +161,13 @@ jobs:
       - name: Destroy tenant
         if: always()
         continue-on-error: true
-        working-directory: ./tofu/gcp/tenant        
+        working-directory: ./tofu/gcp/tenant
         env:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
           TF_VAR_tenant_name: ${{ env.tenant_name }}
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
-          TF_VAR_falkordb_version: ${{ vars.TF_VAR_FALKORDB_VERSION }}
+          TF_VAR_falkordb_version: ${{ vars.TF_VAR_FALKORDB_VERSION || 'v4.0.3'}}
           TF_VAR_falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
           TF_VAR_falkordb_memory: ${{ vars.TF_VAR_FALKORDB_MEMORY }}
           TF_VAR_persistance_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
@@ -177,7 +175,7 @@ jobs:
           TF_VAR_redis_port: ${{ vars.GCP_REDIS_PORT }}
           TF_VAR_sentinel_port: ${{ vars.GCP_SENTINEL_PORT }}
           TF_VAR_backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
-          TF_VAR_dns_domain: "${{ env.tenant_group_name }}.${{ vars.TF_VAR_DNS_DOMAIN }}"
+          TF_VAR_dns_domain: "${{ env.tenant_group_name }}.${{ vars.TF_VAR_DNS_DOMAIN || 'cloud.falkordb.com' }}"
           TF_VAR_multi_zone: true
           TF_VAR_pod_zone: null
         run: |
