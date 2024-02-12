@@ -69,3 +69,8 @@ variable "pod_zone" {
   nullable    = true
   description = "The zone in which the pods will be deployed. Ignored if multi_zone is true."
 }
+
+variable "cidr_blocks" {
+  type    = list(string)
+  default = []
+}
