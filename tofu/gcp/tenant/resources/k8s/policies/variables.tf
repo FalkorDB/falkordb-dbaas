@@ -3,7 +3,7 @@ variable "deployment_name" {
 }
 
 variable "allow_ports_pod" {
-  type = list(string)
+  type    = list(string)
   default = []
 }
 

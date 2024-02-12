@@ -64,6 +64,6 @@ variable "pod_zone" {
 }
 
 variable "cidr_block" {
-  type = string
+  type    = string
   default = "0.0.0.0/0"
 }
