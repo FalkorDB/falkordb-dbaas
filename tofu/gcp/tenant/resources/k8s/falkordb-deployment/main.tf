@@ -1,5 +1,7 @@
 locals {
   pod_name_prefix = "falkordb-redis"
+  deployment_name = "falkordb"
+  metrics_port = 9121
 }
 
 module "standalone" {

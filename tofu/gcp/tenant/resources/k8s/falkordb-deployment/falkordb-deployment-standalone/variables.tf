@@ -1,3 +1,6 @@
+variable "deployment_name" {
+  type = string
+}
 variable "falkordb_version" {
   type    = string
   default = "v4.0.3"

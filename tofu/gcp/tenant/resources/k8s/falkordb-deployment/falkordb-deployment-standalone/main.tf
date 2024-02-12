@@ -1,7 +1,4 @@
 locals {
-  deployment_name = "falkordb"
-  pod_name_prefix = "falkordb-redis"
-
   pod_anti_affinity = {
     "podAntiAffinity" : {
       "preferredDuringSchedulingIgnoredDuringExecution" : [
@@ -11,7 +8,7 @@ locals {
             "topologyKey" : "topology.kubernetes.io/zone",
             "labelSelector" : {
               "matchLabels" : {
-                "app.kubernetes.io/instance" : local.deployment_name
+                "app.kubernetes.io/instance" : var.deployment_name
               }
             }
           }
@@ -23,7 +20,7 @@ locals {
 }
 
 resource "helm_release" "falkordb" {
-  name      = local.deployment_name
+  name      = var.deployment_name
   namespace = var.deployment_namespace
 
   # Necessary so there's enough time to finish installing
