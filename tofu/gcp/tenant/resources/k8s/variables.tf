@@ -6,6 +6,13 @@ variable "tenant_name" {
   type = string
 }
 
+variable "falkordb_replication_configuration" {
+  type = object({
+    enable     = bool
+    multi_zone = bool
+  })
+}
+
 variable "falkordb_version" {
   type = string
 }

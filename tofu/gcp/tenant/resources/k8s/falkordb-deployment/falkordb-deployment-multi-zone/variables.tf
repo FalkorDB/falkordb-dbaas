@@ -1,10 +1,3 @@
-variable "replication_configuration" {
-  type = object({
-    enable     = bool
-    multi_zone = bool
-  })
-}
-
 variable "falkordb_version" {
   type    = string
   default = "v4.0.3"
@@ -21,10 +14,6 @@ variable "falkordb_password" {
   sensitive = true
 }
 
-variable "falkordb_replicas" {
-  type = number
-}
-
 variable "falkordb_cpu" {
   type = string
 }
@@ -35,6 +24,16 @@ variable "falkordb_memory" {
 
 variable "persistance_size" {
   type = string
+}
+
+variable "falkordb_replicas" {
+  type    = number
+  default = 2
+
+  validation {
+    condition     = var.falkordb_replicas <= 3
+    error_message = "Replicas must be lower than the number of regions (Pod Anti Affinity Policy)"
+  }
 }
 
 variable "redis_port" {

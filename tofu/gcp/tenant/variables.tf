@@ -32,6 +32,18 @@ variable "backup_bucket_name" {
   type = string
 }
 
+variable "falkordb_replication_configuration" {
+  type = object({
+    enable     = bool
+    multi_zone = bool
+  })
+
+  default = {
+    enable = false
+    multi_zone = false
+  }
+}
+
 variable "falkordb_version" {
   type = string
 }

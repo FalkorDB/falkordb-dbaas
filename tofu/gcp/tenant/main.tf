@@ -66,12 +66,13 @@ module "k8s" {
   project_id  = var.project_id
   tenant_name = var.tenant_name
 
-  falkordb_version  = var.falkordb_version
-  falkordb_password = var.falkordb_password
-  falkordb_cpu      = var.falkordb_cpu
-  falkordb_memory   = var.falkordb_memory
-  falkordb_replicas = var.falkordb_replicas
-  persistance_size  = var.persistance_size
+  falkordb_replication_configuration = var.falkordb_replication_configuration
+  falkordb_version                   = var.falkordb_version
+  falkordb_password                  = var.falkordb_password
+  falkordb_cpu                       = var.falkordb_cpu
+  falkordb_memory                    = var.falkordb_memory
+  falkordb_replicas                  = var.falkordb_replicas
+  persistance_size                   = var.persistance_size
 
   backup_bucket_name = var.backup_bucket_name
   backup_schedule    = var.backup_schedule
