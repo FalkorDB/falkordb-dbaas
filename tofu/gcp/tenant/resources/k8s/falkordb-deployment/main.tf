@@ -8,6 +8,7 @@ module "standalone" {
   count  = var.replication_configuration.enable == false ? 1 : 0
   source = "./falkordb-deployment-standalone"
 
+  deployment_name      = local.deployment_name
   falkordb_version     = var.falkordb_version
   falkordb_password    = var.falkordb_password
   falkordb_cpu         = var.falkordb_cpu
@@ -25,6 +26,7 @@ module "single_zone" {
   count  = var.replication_configuration.enable == true && var.replication_configuration.multi_zone == false ? 1 : 0
   source = "./falkordb-deployment-single-zone"
 
+  deployment_name      = local.deployment_name
   falkordb_version     = var.falkordb_version
   falkordb_password    = var.falkordb_password
   falkordb_cpu         = var.falkordb_cpu
@@ -44,6 +46,7 @@ module "multi_zone" {
   count  = var.replication_configuration.enable == true && var.replication_configuration.multi_zone == true ? 1 : 0
   source = "./falkordb-deployment-multi-zone"
 
+  deployment_name      = local.deployment_name
   falkordb_version     = var.falkordb_version
   falkordb_password    = var.falkordb_password
   falkordb_replicas    = var.falkordb_replicas
