@@ -1,8 +1,17 @@
+
 variable "name" {
   type = string
 }
 
 variable "region" {
+  type = string
+}
+
+variable "assume_role_arn" {
+  type = string
+}
+
+variable "eks_auth_role" {
   type = string
 }
 
@@ -23,9 +32,5 @@ variable "k8s_node_min_count" {
 }
 
 variable "k8s_node_max_count" {
-  type = number
-}
-
-variable "backup_retention_period" {
   type = number
 }
