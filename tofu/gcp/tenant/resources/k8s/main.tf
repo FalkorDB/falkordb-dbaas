@@ -47,4 +47,19 @@ module "falkordb_backup" {
   backup_location      = "gs://${var.backup_bucket_name}/${kubernetes_namespace.falkordb.metadata[0].name}"
   backup_schedule      = var.backup_schedule
   falkordb_password    = local.falkordb_password
+  port                 = var.redis_port
+}
+
+
+module "falkordb_policies" {
+  source = "./policies"
+
+  deployment_name      = module.falkordb_deployment.deployment_name
+  deployment_namespace = kubernetes_namespace.falkordb.metadata[0].name
+  allow_ports_pod = [
+    var.redis_port,
+    var.sentinel_port,
+    module.falkordb_deployment.metrics_port
+  ]
+  cidr_blocks = var.cidr_blocks
 }

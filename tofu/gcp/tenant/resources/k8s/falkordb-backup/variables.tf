@@ -28,3 +28,7 @@ variable "falkordb_password" {
   type      = string
   sensitive = true
 }
+
+variable "port" {
+  type = number
+}
