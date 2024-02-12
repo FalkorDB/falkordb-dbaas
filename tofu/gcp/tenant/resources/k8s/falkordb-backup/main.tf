@@ -58,22 +58,28 @@ resource "kubernetes_config_map" "backup_script" {
     "backup.sh" = <<EOF
 #!/bin/bash
 
+# TODO: Choose pod according to zone
+POD_NAME="${var.deployment_name}-node-0"
+
 # Check if the BGSAVE is in progress
-if [ "$(kubectl exec ${var.deployment_name}-node-0 -n ${var.deployment_namespace} -- redis-cli -a '${var.falkordb_password}' INFO PERSISTENCE | grep rdb_bgsave_in_progress | awk -F: '{print $2}')" != "0" ]; then
+IS_IN_BACKUP=$(kubectl exec $POD_NAME -c redis -n ${var.deployment_namespace} -- redis-cli --no-auth-warning -p ${var.port} -a '${var.falkordb_password}' INFO PERSISTENCE | grep rdb_bgsave_in_progress | awk -F: '{print $2}')
+if ["$IS_IN_BACKUP" != "0"]; then
   echo "BGSAVE is in progress, skipping backup"
   exit 0
 fi
 
 # Execute BGSAVE
-kubectl exec ${var.deployment_name}-node-0 -n ${var.deployment_namespace} -- redis-cli -a '${var.falkordb_password}' BGSAVE
+kubectl exec $POD_NAME -c redis -n ${var.deployment_namespace} -- redis-cli --no-auth-warning -p ${var.port} -a '${var.falkordb_password}' BGSAVE
 
 # Wait until the BGSAVE is done
-while [ "$(kubectl exec ${var.deployment_name}-node-0 -n ${var.deployment_namespace} -- redis-cli -a '${var.falkordb_password}' INFO PERSISTENCE | grep rdb_bgsave_in_progress | awk -F: '{print $2}')" != "0" ]; do
-  sleep 1
+IS_IN_BACKUP=$(kubectl exec $POD_NAME -c redis -n ${var.deployment_namespace} -- redis-cli --no-auth-warning -p ${var.port} -a '${var.falkordb_password}' INFO PERSISTENCE | grep rdb_bgsave_in_progress | awk -F: '{print $2}')
+while ["$IS_IN_BACKUP" != "0"]; do
+  echo "Backup not done yet, sleeping..."
+  sleep 5
 done
 
 # Copy the dump.rdb to the pod
-kubectl cp ${var.deployment_name}-node-0:/data/dump.rdb dump.rdb -c redis --namespace ${var.deployment_namespace}
+kubectl cp $POD_NAME:/data/dump.rdb dump.rdb -c redis --namespace ${var.deployment_namespace}
 
 # Copy the dump.rdb to the bucket
 gsutil cp dump.rdb ${var.backup_location}/dump_$(date +%Y-%m-%d-%H-%M-%S).rdb
@@ -95,7 +101,11 @@ resource "kubernetes_cron_job_v1" "falkorbd_backup" {
         backoff_limit              = 2
         ttl_seconds_after_finished = 60
         template {
-          metadata {}
+          metadata {
+            labels = {
+              "app.kubernetes.io/instance" = "falkordb-backup"
+            }
+          }
           spec {
             service_account_name = kubernetes_service_account.backup_write_sa.metadata.0.name
             node_selector = {

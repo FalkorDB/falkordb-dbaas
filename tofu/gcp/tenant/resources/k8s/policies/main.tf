@@ -2,24 +2,14 @@
 # Deny all policy
 resource "kubernetes_network_policy" "default_deny_all" {
   metadata {
-    name = "np-default-deny-all"
+    name      = "default-deny-all"
+    namespace = var.deployment_namespace
   }
   spec {
     pod_selector {
-      match_labels = {
-        "app.kubernetes.io/instance" : var.deployment_name
-      }
     }
 
     policy_types = ["Ingress", "Egress"]
-
-    ingress {
-
-    }
-
-    egress {
-
-    }
   }
 }
 
@@ -27,7 +17,8 @@ resource "kubernetes_network_policy" "default_deny_all" {
 # Allow same-set pod communication in ports defined
 resource "kubernetes_network_policy" "allow_same_set_pod_communication" {
   metadata {
-    name = "np-allow-same-set-pod-communication"
+    name      = "allow-same-set-pod-communication"
+    namespace = var.deployment_namespace
   }
   spec {
     pod_selector {
@@ -56,13 +47,6 @@ resource "kubernetes_network_policy" "allow_same_set_pod_communication" {
     }
 
     egress {
-      to {
-        pod_selector {
-          match_labels = {
-            "app.kubernetes.io/instance" : var.deployment_name
-          }
-        }
-      }
     }
   }
 }
@@ -71,10 +55,14 @@ resource "kubernetes_network_policy" "allow_same_set_pod_communication" {
 # Allow DNS policy
 resource "kubernetes_network_policy" "allow_dns" {
   metadata {
-    name = "np-allow-dns"
+    name      = "allow-dns"
+    namespace = var.deployment_namespace
   }
   spec {
     pod_selector {
+      match_labels = {
+        "app.kubernetes.io/instance" : var.deployment_name
+      }
     }
 
     policy_types = ["Egress"]
@@ -97,11 +85,73 @@ resource "kubernetes_network_policy" "allow_dns" {
   }
 }
 
+# Allow backup pod to connect to deployment
+resource "kubernetes_network_policy" "allow_backup_all_egress" {
+  metadata {
+    name      = "allow-backup-all-egress"
+    namespace = var.deployment_namespace
+  }
+
+  spec {
+    pod_selector {
+      match_labels = {
+        "app.kubernetes.io/instance" : "falkordb-backup"
+      }
+    }
+
+    policy_types = ["Egress"]
+
+    egress {
+
+    }
+  }
+}
+
+resource "kubernetes_network_policy" "allow_pod_backup" {
+  metadata {
+    name      = "allow-pod-backup"
+    namespace = var.deployment_namespace
+  }
+
+  spec {
+    pod_selector {
+      match_labels = {
+        "app.kubernetes.io/instance" : var.deployment_name
+      }
+    }
+
+    policy_types = ["Ingress"]
+
+    ingress {
+      from {
+        pod_selector {
+          match_labels = {
+            "app.kubernetes.io/instance" : "falkordb-backup"
+          }
+        }
+      }
+      dynamic "ports" {
+        for_each = var.allow_ports_pod
+        content {
+          protocol = "TCP"
+          port     = ports.value
+        }
+      }
+
+    }
+
+  }
+}
+
+
+
+
 
 # Allow specific CIDR policy
 resource "kubernetes_network_policy" "allow_specific_cidr" {
   metadata {
-    name = "np-allow-specific-cidr"
+    name      = "allow-specific-cidr"
+    namespace = var.deployment_namespace
   }
   spec {
     pod_selector {
@@ -113,12 +163,17 @@ resource "kubernetes_network_policy" "allow_specific_cidr" {
     policy_types = ["Ingress", "Egress"]
 
     ingress {
-      from {
-        ip_block {
-          cidr = var.cidr_block
+      dynamic "from" {
+        for_each = length(var.cidr_blocks) > 0 ? [1] : []
+        content {
+          dynamic "ip_block" {
+            for_each = var.cidr_blocks
+            content {
+              cidr = each.value
+            }
+          }
         }
       }
-
       dynamic "ports" {
         for_each = var.allow_ports_pod
         content {
@@ -130,12 +185,17 @@ resource "kubernetes_network_policy" "allow_specific_cidr" {
     }
 
     egress {
-      to {
-        ip_block {
-          cidr = var.cidr_block
+      dynamic "to" {
+        for_each = length(var.cidr_blocks) > 0 ? [1] : []
+        content {
+          dynamic "ip_block" {
+            for_each = var.cidr_blocks
+            content {
+              cidr = each.value
+            }
+          }
         }
       }
-
       dynamic "ports" {
         for_each = var.allow_ports_pod
         content {
