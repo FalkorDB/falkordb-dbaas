@@ -48,3 +48,16 @@ module "falkordb_backup" {
   backup_schedule      = var.backup_schedule
   falkordb_password    = local.falkordb_password
 }
+
+
+module "falkordb_policies" {
+  source = "./policies"
+
+  deployment_name = module.falkordb_deployment.deployment_name
+  allow_ports_pod = [
+    var.redis_port,
+    var.sentinel_port,
+    module.falkordb_deployment.metrics_port
+  ]
+  cidr_block = var.cidr_block
+}

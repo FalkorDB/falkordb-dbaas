@@ -125,7 +125,6 @@ jobs:
           tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}/tenant/${{ env.tenant_name }}"
           tofu test
           tofu plan -out ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
-          tofu show -json ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
 
       - name: Apply Tenant Infra
         if: steps.plan_tenant.outcome == 'success'

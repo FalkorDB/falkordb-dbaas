@@ -1,6 +1,7 @@
 locals {
   deployment_name = "falkordb"
   pod_name_prefix = "falkordb-redis"
+  metrics_port    = 9121
 
   pod_anti_affinity = {
     "podAntiAffinity" : {
