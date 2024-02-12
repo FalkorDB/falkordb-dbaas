@@ -27,7 +27,7 @@ variable "persistance_size" {
 }
 
 variable "falkordb_replicas" {
-  type = number
+  type    = number
   default = 2
 }
 

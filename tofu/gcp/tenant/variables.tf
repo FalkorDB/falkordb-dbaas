@@ -39,7 +39,7 @@ variable "falkordb_replication_configuration" {
   })
 
   default = {
-    enable = false
+    enable     = false
     multi_zone = false
   }
 }

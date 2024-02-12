@@ -46,7 +46,7 @@ resource "helm_release" "falkordb" {
   }
 
   set {
-    name = "architecture"
+    name  = "architecture"
     value = "standalone"
   }
 
@@ -112,7 +112,7 @@ resource "helm_release" "falkordb" {
     name  = "master.persistentVolumeClaimRetentionPolicy.whenDeleted"
     value = "Delete"
   }
-  
+
   ###### METRICS ######
   set {
     name  = "metrics.enabled"
