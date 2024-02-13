@@ -1,3 +1,5 @@
+"use client"
+
 import { Github } from "@/components/icons/github";
 import { Google } from "@/components/icons/google";
 import { Button } from "@/components/ui/button";
