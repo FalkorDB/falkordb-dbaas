@@ -8,14 +8,14 @@ data "google_compute_zones" "region_zones" {
 }
 
 resource "google_compute_target_pool" "target_pool" {
-  name = var.deployment_neg_name
-  region = var.region
-  instances = []
-  health_checks = [local.google_compute_region_health_check]
+  name             = var.deployment_neg_name
+  region           = var.region
+  instances        = []
+  health_checks    = [local.google_compute_region_health_check]
   session_affinity = "CLIENT_IP"
-  failover_ratio = 0.1
-  backup_pool = null
-  project = var.project_id
+  failover_ratio   = 0.1
+  backup_pool      = null
+  project          = var.project_id
 }
 
 # Create backend service
@@ -72,8 +72,8 @@ resource "google_compute_forwarding_rule" "forwarding_rule" {
   ip_protocol           = "TCP"
   target                = google_compute_region_target_tcp_proxy.default.id
 
-  network               = "projects/${var.project_id}/global/networks/${var.vpc_name}"
-  source_ip_ranges      = var.source_ip_ranges
+  network          = "projects/${var.project_id}/global/networks/${var.vpc_name}"
+  source_ip_ranges = var.source_ip_ranges
 
 }
 
