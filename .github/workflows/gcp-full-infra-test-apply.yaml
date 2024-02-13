@@ -70,9 +70,8 @@ jobs:
         continue-on-error: true
         working-directory: ./tofu/gcp/test_env
         run: |
-          cp ${GITHUB_WORKSPACE}/artifacts/test_env.tfplan ./test_env.tfplan
           tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=test_env/$PR_NUMBER"
-          tofu apply -auto-approve ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
+          tofu apply -auto-approve ${GITHUB_WORKSPACE}/artifacts/test_env.tfplan
 
       - name: Get link for Tenant Group state
         run: echo "https://console.cloud.google.com/storage/browser/${{ vars.GCP_STATE_BUCKET_NAME }}/test_env/$PR_NUMBER?project=${{ vars.GCP_PROJECT_ID }}"
