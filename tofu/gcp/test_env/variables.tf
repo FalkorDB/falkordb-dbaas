@@ -39,7 +39,7 @@ variable "node_pools" {
     name               = "simple-pool"
     machine_type       = "e2-medium"
     disk_size_gb       = 20
-    initial_node_count = 6
+    initial_node_count = 3
   }]
 }
 
