@@ -13,7 +13,7 @@ module "standalone" {
   falkordb_password    = var.falkordb_password
   falkordb_cpu         = var.falkordb_cpu
   falkordb_memory      = var.falkordb_memory
-  persistance_size     = var.persistance_size
+  persistence_size     = var.persistence_size
   redis_port           = var.redis_port
   deployment_namespace = var.deployment_namespace
   dns_ip_address       = var.dns_ip_address
@@ -31,7 +31,7 @@ module "single_zone" {
   falkordb_password    = var.falkordb_password
   falkordb_cpu         = var.falkordb_cpu
   falkordb_memory      = var.falkordb_memory
-  persistance_size     = var.persistance_size
+  persistence_size     = var.persistence_size
   redis_port           = var.redis_port
   sentinel_port        = var.sentinel_port
   deployment_namespace = var.deployment_namespace
@@ -52,7 +52,7 @@ module "multi_zone" {
   falkordb_replicas    = var.falkordb_replicas
   falkordb_cpu         = var.falkordb_cpu
   falkordb_memory      = var.falkordb_memory
-  persistance_size     = var.persistance_size
+  persistence_size     = var.persistence_size
   redis_port           = var.redis_port
   sentinel_port        = var.sentinel_port
   deployment_namespace = var.deployment_namespace

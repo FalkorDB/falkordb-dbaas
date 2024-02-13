@@ -72,7 +72,7 @@ module "k8s" {
   falkordb_cpu                       = var.falkordb_cpu
   falkordb_memory                    = var.falkordb_memory
   falkordb_replicas                  = var.falkordb_replicas
-  persistance_size                   = var.persistance_size
+  persistence_size                   = var.persistence_size
 
   backup_bucket_name = var.backup_bucket_name
   backup_schedule    = var.backup_schedule

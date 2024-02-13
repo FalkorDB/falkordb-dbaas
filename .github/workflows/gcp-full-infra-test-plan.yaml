@@ -85,7 +85,7 @@ jobs:
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
           TF_VAR_falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
           TF_VAR_falkordb_memory: ${{ vars.TF_VAR_FALKORDB_MEMORY }}
-          TF_VAR_persistance_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
+          TF_VAR_persistence_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
           TF_VAR_falkordb_replicas: ${{ vars.TF_VAR_FALKORDB_REPLICAS }}
           TF_VAR_redis_port: ${{ vars.GCP_REDIS_PORT }}
           TF_VAR_sentinel_port: ${{ vars.GCP_SENTINEL_PORT }}

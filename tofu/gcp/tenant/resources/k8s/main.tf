@@ -24,7 +24,7 @@ module "falkordb_deployment" {
   falkordb_password = local.falkordb_password
   falkordb_cpu      = var.falkordb_cpu
   falkordb_memory   = var.falkordb_memory
-  persistance_size  = var.persistance_size
+  persistence_size  = var.persistence_size
   falkordb_replicas = var.falkordb_replicas
   redis_port        = var.redis_port
   sentinel_port     = var.sentinel_port

@@ -62,11 +62,11 @@ variable "falkordb_memory" {
   type = string
 }
 
-variable "persistance_size" {
+variable "persistence_size" {
   type = string
 
   validation {
-    condition     = can(regex("^[0-9]+Gi$", var.persistance_size)) && parseint(regex("^[0-9]+", var.persistance_size), 10) >= 11
+    condition     = can(regex("^[0-9]+Gi$", var.persistence_size)) && parseint(regex("^[0-9]+", var.persistence_size), 10) >= 11
     error_message = "Size must be equal or higher than 11Gi"
   }
 }

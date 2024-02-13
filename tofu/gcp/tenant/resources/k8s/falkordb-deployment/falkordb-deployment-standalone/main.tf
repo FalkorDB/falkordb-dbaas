@@ -79,7 +79,7 @@ resource "helm_release" "falkordb" {
   }
   set {
     name  = "master.persistence.size"
-    value = var.persistance_size
+    value = var.persistence_size
   }
   set {
     name  = "master.containerPorts.redis"

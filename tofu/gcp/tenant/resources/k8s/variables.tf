@@ -31,7 +31,7 @@ variable "falkordb_memory" {
   type = string
 }
 
-variable "persistance_size" {
+variable "persistence_size" {
   type = string
 }
 
