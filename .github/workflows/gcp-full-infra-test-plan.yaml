@@ -75,7 +75,7 @@ jobs:
           TF_VAR_dns_domain: "${{ env.tenant_name }}.${{ vars.TF_VAR_DNS_DOMAIN }}"
         working-directory: ./tofu/gcp/test_env
         run: |
-          tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}/tenant/${{ env.tenant_name }}"
+          tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=test_env/$PR_NUMBER"
           tofu test
           tofu plan -out ${GITHUB_WORKSPACE}/artifacts/test_env.tfplan
 
