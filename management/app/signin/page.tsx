@@ -17,7 +17,7 @@ export default function Page() {
     // Redirect to home page if already signed in
     useEffect(() => {
         if (status === 'authenticated') {
-            router.replace('/sandbox');
+            router.replace('/dashboard');
         }
     }, [status, router]);
 
