@@ -64,30 +64,18 @@ jobs:
           name: artifacts-${{ env.PR_NUMBER }}
           path: artifacts
 
-      - name: Apply Tenant Group Infra
+      - name: Apply GCP Test Environment
         id: apply_tenant_group
         timeout-minutes: 20
         continue-on-error: true
-        working-directory: ./tofu/gcp/tenant_group
+        working-directory: ./tofu/gcp/test_env
         run: |
-          cp ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan ${GITHUB_WORKSPACE}/tofu/gcp/tenant_group.tfplan
+          cp ${GITHUB_WORKSPACE}/artifacts/test_env.tfplan ./test_env.tfplan
           tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}"
           tofu apply -auto-approve ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
 
       - name: Get link for Tenant Group state
         run: echo "https://console.cloud.google.com/storage/browser/${{ vars.GCP_STATE_BUCKET_NAME }}/tenant_group/${{ env.tenant_group_name }}?project=${{ vars.GCP_PROJECT_ID }}"
-
-      - name: Set output variables from Tenant Group
-        continue-on-error: true
-        working-directory: ./tofu/gcp/tenant_group
-        run: |
-          outputJson=$(tofu output -json)
-          echo "TF_VAR_vpc_name=$(echo $outputJson | jq -r '.vpc_name.value')" >> $GITHUB_ENV
-          echo "TF_VAR_cluster_name=$(echo $outputJson | jq -r '.cluster_name.value')" >> $GITHUB_ENV
-          echo "TF_VAR_cluster_endpoint=$(echo $outputJson | jq -r '.cluster_endpoint.value')" >> $GITHUB_ENV
-          echo "TF_VAR_cluster_ca_certificate=$(echo $outputJson | jq -r '.cluster_ca_certificate.value')" >> $GITHUB_ENV
-          echo "TF_VAR_backup_bucket_name=$(echo $outputJson | jq -r '.backup_bucket_name.value')" >> $GITHUB_ENV
-          echo "TF_VAR_ip_address=$(echo $outputJson | jq -r '.ip_address.value')" >> $GITHUB_ENV
 
       - name: Get cluster credentials
         if: steps.apply_tenant_group.outcome == 'success'
@@ -101,38 +89,6 @@ jobs:
         continue-on-error: true
         run: |
           kubectl get pods --all-namespaces
-
-      - name: Plan tenant
-        if: steps.get_cluster_credentials.outcome == 'success'
-        id: plan_tenant
-        continue-on-error: true
-        env:
-          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
-          TF_VAR_region: ${{ vars.GCP_REGION }}
-          TF_VAR_tenant_name: ${{ env.tenant_name }}
-          TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
-          TF_VAR_falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
-          TF_VAR_falkordb_memory: ${{ vars.TF_VAR_FALKORDB_MEMORY }}
-          TF_VAR_persistence_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
-          TF_VAR_falkordb_replicas: ${{ vars.TF_VAR_FALKORDB_REPLICAS }}
-          TF_VAR_redis_port: ${{ vars.GCP_REDIS_PORT }}
-          TF_VAR_sentinel_port: ${{ vars.GCP_SENTINEL_PORT }}
-          TF_VAR_backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
-          TF_VAR_dns_domain: "${{ env.tenant_group_name }}.${{ vars.TF_VAR_DNS_DOMAIN || 'cloud.falkordb.com'}}"
-          TF_VAR_multi_zone: true
-        working-directory: ./tofu/gcp/tenant
-        run: |
-          tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}/tenant/${{ env.tenant_name }}"
-          tofu test
-          tofu plan -out ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
-
-      - name: Apply Tenant Infra
-        if: steps.plan_tenant.outcome == 'success'
-        id: apply_tenant
-        continue-on-error: true
-        working-directory: ./tofu/gcp/tenant
-        run: |
-          tofu apply -auto-approve ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
 
       - name: Get link for Tenant state
         run: echo "https://console.cloud.google.com/storage/browser/${{ vars.GCP_STATE_BUCKET_NAME }}/tenant_group/${{ env.tenant_group_name }}/tenant/${{ env.tenant_name }}?project=${{ vars.GCP_PROJECT_ID }}"
@@ -157,13 +113,21 @@ jobs:
           pip install -r requirements.txt
           pytest
 
-      - name: Destroy tenant
+      - name: Destroy GCP Test Environment
         if: always()
         continue-on-error: true
-        working-directory: ./tofu/gcp/tenant
+        working-directory: ./tofu/gcp/test_env
         env:
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
+          TF_VAR_tenant_group_name: ${{ env.tenant_group_name }}
+          TF_VAR_force_destroy_backup_bucket: ${{ vars.GCP_FORCE_DESTROY_BACKUP_BUCKET }}
+          TF_VAR_subnet_cidr: ${{ vars.GCP_SUBNET_CIDR }}
+          TF_VAR_ip_range_pods: ${{ vars.GCP_IP_RANGE_PODS }}
+          TF_VAR_ip_range_services: ${{ vars.GCP_IP_RANGE_SERVICES }}
+          TF_VAR_tenant_provision_sa: ${{ vars.GCP_TENANT_PROVISION_SA }}
+          TF_VAR_backup_retention_policy_days: ${{ vars.GCP_BACKUP_RETENTION_POLICY_DAYS }}
+          TF_VAR_cluster_deletion_protection: ${{ vars.GCP_CLUSTER_DELETION_PROTECTION }}
           TF_VAR_tenant_name: ${{ env.tenant_name }}
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
           TF_VAR_falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
@@ -173,28 +137,7 @@ jobs:
           TF_VAR_redis_port: ${{ vars.GCP_REDIS_PORT }}
           TF_VAR_sentinel_port: ${{ vars.GCP_SENTINEL_PORT }}
           TF_VAR_backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
-          TF_VAR_dns_domain: "${{ env.tenant_group_name }}.${{ vars.TF_VAR_DNS_DOMAIN || 'cloud.falkordb.com' }}"
-          TF_VAR_multi_zone: true
-          TF_VAR_pod_zone: null
-        run: |
-          tofu destroy -auto-approve
-
-      - name: Destroy tenant group
-        if: always()
-        continue-on-error: true
-        working-directory: ./tofu/gcp/tenant_group
-        env:
-          TF_VAR_cluster_name: ${{ env.tenant_group_name }}
-          TF_VAR_tenant_group_name: ${{ env.tenant_group_name }}
-          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
-          TF_VAR_force_destroy_backup_bucket: ${{ vars.GCP_FORCE_DESTROY_BACKUP_BUCKET }}
-          TF_VAR_region: ${{ vars.GCP_REGION }}
-          TF_VAR_subnet_cidr: ${{ vars.GCP_SUBNET_CIDR }}
-          TF_VAR_ip_range_pods: ${{ vars.GCP_IP_RANGE_PODS }}
-          TF_VAR_ip_range_services: ${{ vars.GCP_IP_RANGE_SERVICES }}
-          TF_VAR_tenant_provision_sa: ${{ vars.GCP_TENANT_PROVISION_SA }}
-          TF_VAR_backup_retention_policy_days: ${{ vars.GCP_BACKUP_RETENTION_POLICY_DAYS }}
-          TF_VAR_cluster_deletion_protection: ${{ vars.GCP_CLUSTER_DELETION_PROTECTION }}
+          TF_VAR_dns_domain: "${{ env.tenant_name }}.${{ vars.TF_VAR_DNS_DOMAIN }}"
         run: |
           tofu destroy -auto-approve
 

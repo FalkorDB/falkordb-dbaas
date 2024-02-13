@@ -1,0 +1,95 @@
+module "tenant_group" {
+  source = "../tenant_group"
+
+  project_id                   = var.project_id
+  region                       = var.region
+  tenant_group_name            = var.tenant_group_name
+  subnet_cidr                  = var.subnet_cidr
+  ip_range_pods                = var.ip_range_pods
+  ip_range_services            = var.ip_range_services
+  cluster_name                 = var.cluster_name
+  cluster_deletion_protection  = var.cluster_deletion_protection
+  node_pools                   = var.node_pools
+  tenant_provision_sa          = var.tenant_provision_sa
+  force_destroy_backup_bucket  = var.force_destroy_backup_bucket
+  dns_domain                   = var.dns_domain
+  backup_retention_policy_days = var.backup_retention_policy_days
+}
+
+module "standalone_tenant" {
+  source = "../tenant"
+
+  ip_address             = module.tenant_group.ip_address
+  dns_domain             = var.dns_domain
+  cluster_name           = var.cluster_name
+  redis_port             = var.redis_port
+  falkordb_memory        = var.falkordb_memory
+  sentinel_port          = var.sentinel_port
+  cluster_endpoint       = module.tenant_group.cluster_endpoint
+  falkordb_password      = var.falkordb_password
+  project_id             = var.project_id
+  falkordb_version       = var.falkordb_version
+  backup_bucket_name     = module.tenant_group.backup_bucket_name
+  falkordb_cpu           = var.falkordb_cpu
+  persistence_size       = var.persistence_size
+  tenant_name            = "${var.tenant_name}-standalone"
+  vpc_name               = module.tenant_group.vpc_name
+  falkordb_replicas      = 0
+  cluster_ca_certificate = module.tenant_group.cluster_ca_certificate
+  falkordb_replication_configuration = {
+    enable     = false,
+    multi_zone = false
+  }
+}
+
+module "single_zone_tenant" {
+  source = "../tenant"
+
+  ip_address             = module.tenant_group.ip_address
+  dns_domain             = var.dns_domain
+  cluster_name           = var.cluster_name
+  redis_port             = var.redis_port + 1
+  falkordb_memory        = var.falkordb_memory
+  sentinel_port          = var.sentinel_port + 1
+  cluster_endpoint       = module.tenant_group.cluster_endpoint
+  falkordb_password      = var.falkordb_password
+  project_id             = var.project_id
+  falkordb_version       = var.falkordb_version
+  backup_bucket_name     = module.tenant_group.backup_bucket_name
+  falkordb_cpu           = var.falkordb_cpu
+  persistence_size       = var.persistence_size
+  tenant_name            = "${var.tenant_name}-single-zone"
+  vpc_name               = module.tenant_group.vpc_name
+  falkordb_replicas      = 1
+  cluster_ca_certificate = module.tenant_group.cluster_ca_certificate
+  falkordb_replication_configuration = {
+    enable     = true,
+    multi_zone = false
+  }
+}
+
+module "multi_zone_tenant" {
+  source = "../tenant"
+
+  ip_address             = module.tenant_group.ip_address
+  dns_domain             = var.dns_domain
+  cluster_name           = var.cluster_name
+  redis_port             = var.redis_port + 2
+  falkordb_memory        = var.falkordb_memory
+  sentinel_port          = var.sentinel_port + 2
+  cluster_endpoint       = module.tenant_group.cluster_endpoint
+  falkordb_password      = var.falkordb_password
+  project_id             = var.project_id
+  falkordb_version       = var.falkordb_version
+  backup_bucket_name     = module.tenant_group.backup_bucket_name
+  falkordb_cpu           = var.falkordb_cpu
+  persistence_size       = var.persistence_size
+  tenant_name            = "${var.tenant_name}-multi-zone"
+  vpc_name               = module.tenant_group.vpc_name
+  falkordb_replicas      = 1
+  cluster_ca_certificate = module.tenant_group.cluster_ca_certificate
+  falkordb_replication_configuration = {
+    enable     = true,
+    multi_zone = true
+  }
+}

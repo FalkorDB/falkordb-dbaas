@@ -51,36 +51,18 @@ jobs:
       - name: Set up Tofu
         uses: opentofu/setup-opentofu@v1.0.1
 
-      - name: Plan tenant group
+      - name: Plan GCP Test Environment
         env:
-          TF_VAR_cluster_name: ${{ env.tenant_group_name }}
-          TF_VAR_tenant_group_name: ${{ env.tenant_group_name }}
           TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
-          TF_VAR_force_destroy_backup_bucket: ${{ vars.GCP_FORCE_DESTROY_BACKUP_BUCKET }}
           TF_VAR_region: ${{ vars.GCP_REGION }}
+          TF_VAR_tenant_group_name: ${{ env.tenant_group_name }}
+          TF_VAR_force_destroy_backup_bucket: ${{ vars.GCP_FORCE_DESTROY_BACKUP_BUCKET }}
           TF_VAR_subnet_cidr: ${{ vars.GCP_SUBNET_CIDR }}
           TF_VAR_ip_range_pods: ${{ vars.GCP_IP_RANGE_PODS }}
           TF_VAR_ip_range_services: ${{ vars.GCP_IP_RANGE_SERVICES }}
           TF_VAR_tenant_provision_sa: ${{ vars.GCP_TENANT_PROVISION_SA }}
           TF_VAR_backup_retention_policy_days: ${{ vars.GCP_BACKUP_RETENTION_POLICY_DAYS }}
           TF_VAR_cluster_deletion_protection: ${{ vars.GCP_CLUSTER_DELETION_PROTECTION }}
-        working-directory: ./tofu/gcp/tenant_group
-        run: |
-          mkdir -p ${GITHUB_WORKSPACE}/artifacts
-          tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}"
-          tofu test
-          tofu plan -out ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
-
-      - name: Plan tenant
-        env:
-          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
-          TF_VAR_region: ${{ vars.GCP_REGION }}
-          TF_VAR_vpc_name: "vpc"
-          TF_VAR_cluster_name: "some-cluster"
-          TF_VAR_cluster_ca_certificate: "dGVzdA=="
-          TF_VAR_cluster_endpoint: "255.255.255.255"
-          TF_VAR_backup_bucket_name: "backup-bucket"
-          TF_VAR_ip_address: "255.255.255.255"
           TF_VAR_tenant_name: ${{ env.tenant_name }}
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
           TF_VAR_falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
@@ -91,13 +73,11 @@ jobs:
           TF_VAR_sentinel_port: ${{ vars.GCP_SENTINEL_PORT }}
           TF_VAR_backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
           TF_VAR_dns_domain: "${{ env.tenant_name }}.${{ vars.TF_VAR_DNS_DOMAIN }}"
-          TF_VAR_multi_zone: true
-          TF_VAR_pod_zone: null
-        working-directory: ./tofu/gcp/tenant
+        working-directory: ./tofu/gcp/test_env
         run: |
           tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}/tenant/${{ env.tenant_name }}"
           tofu test
-          tofu plan -out ${GITHUB_WORKSPACE}/artifacts/tenant.tfplan
+          tofu plan -out ${GITHUB_WORKSPACE}/artifacts/test_env.tfplan
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
