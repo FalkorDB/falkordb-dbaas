@@ -7,6 +7,17 @@ data "google_compute_zones" "region_zones" {
   region = var.region
 }
 
+resource "google_compute_target_pool" "target_pool" {
+  name = var.deployment_neg_name
+  region = var.region
+  instances = []
+  health_checks = [local.google_compute_region_health_check]
+  session_affinity = "CLIENT_IP"
+  failover_ratio = 0.1
+  backup_pool = null
+  project = var.project_id
+}
+
 # Create backend service
 resource "google_compute_region_backend_service" "backend_service" {
   name        = var.deployment_neg_name
@@ -60,6 +71,7 @@ resource "google_compute_forwarding_rule" "forwarding_rule" {
   load_balancing_scheme = "EXTERNAL_MANAGED"
   ip_protocol           = "TCP"
   target                = google_compute_region_target_tcp_proxy.default.id
+
   network               = "projects/${var.project_id}/global/networks/${var.vpc_name}"
   source_ip_ranges      = var.source_ip_ranges
 

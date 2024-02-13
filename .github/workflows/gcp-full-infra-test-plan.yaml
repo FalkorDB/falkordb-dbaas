@@ -72,7 +72,7 @@ jobs:
           TF_VAR_redis_port: ${{ vars.GCP_REDIS_PORT }}
           TF_VAR_sentinel_port: ${{ vars.GCP_SENTINEL_PORT }}
           TF_VAR_backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
-          TF_VAR_dns_domain: "${{ env.tenant_name }}.${{ vars.TF_VAR_DNS_DOMAIN }}"
+          TF_VAR_dns_domain: "${{ env.tenant_group_name }}.${{ vars.TF_VAR_DNS_DOMAIN }}"
         working-directory: ./tofu/gcp/test_env
         run: |
           mkdir -p ${GITHUB_WORKSPACE}/artifacts
