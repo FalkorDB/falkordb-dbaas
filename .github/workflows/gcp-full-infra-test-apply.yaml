@@ -71,11 +71,11 @@ jobs:
         working-directory: ./tofu/gcp/test_env
         run: |
           cp ${GITHUB_WORKSPACE}/artifacts/test_env.tfplan ./test_env.tfplan
-          tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=tenant_group/${{ env.tenant_group_name }}"
+          tofu init -backend-config="bucket=${{ vars.GCP_STATE_BUCKET_NAME }}" -backend-config="prefix=test_env/$PR_NUMBER"
           tofu apply -auto-approve ${GITHUB_WORKSPACE}/artifacts/tenant_group.tfplan
 
       - name: Get link for Tenant Group state
-        run: echo "https://console.cloud.google.com/storage/browser/${{ vars.GCP_STATE_BUCKET_NAME }}/tenant_group/${{ env.tenant_group_name }}?project=${{ vars.GCP_PROJECT_ID }}"
+        run: echo "https://console.cloud.google.com/storage/browser/${{ vars.GCP_STATE_BUCKET_NAME }}/test_env/$PR_NUMBER?project=${{ vars.GCP_PROJECT_ID }}"
 
       - name: Get cluster credentials
         if: steps.apply_tenant_group.outcome == 'success'
@@ -89,9 +89,6 @@ jobs:
         continue-on-error: true
         run: |
           kubectl get pods --all-namespaces
-
-      - name: Get link for Tenant state
-        run: echo "https://console.cloud.google.com/storage/browser/${{ vars.GCP_STATE_BUCKET_NAME }}/tenant_group/${{ env.tenant_group_name }}/tenant/${{ env.tenant_name }}?project=${{ vars.GCP_PROJECT_ID }}"
 
       - name: Set tenant connection variables
         if: steps.apply_tenant.outcome == 'success'
