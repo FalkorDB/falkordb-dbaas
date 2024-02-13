@@ -38,10 +38,6 @@ output "falkordb_standalone_tenant_host" {
   value = module.standalone_tenant.falkordb_host
 }
 
-output "falkordb_standalone_tenant_sentinel_port" {
-  value = module.standalone_tenant.falkordb_sentinel_port
-}
-
 output "falkordb_standalone_tenant_redis_port" {
   value = module.standalone_tenant.falkordb_redis_port
 }
