@@ -20,7 +20,7 @@ permissions:
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
   tenant_group_name: "workflow-pr-${{ github.event.pull_request.number }}"
-  tenant_name: "tenant-1"
+  tenant_name: "t-1"
   TF_VAR_falkordb_version: 'v4.0.3'
 
 jobs:

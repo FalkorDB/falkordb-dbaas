@@ -31,7 +31,7 @@ module "standalone_tenant" {
   backup_bucket_name     = module.tenant_group.backup_bucket_name
   falkordb_cpu           = var.falkordb_cpu
   persistence_size       = var.persistence_size
-  tenant_name            = "${var.tenant_name}-standalone"
+  tenant_name            = "${var.tenant_name}-s"
   vpc_name               = module.tenant_group.vpc_name
   falkordb_replicas      = 0
   cluster_ca_certificate = module.tenant_group.cluster_ca_certificate
@@ -57,7 +57,7 @@ module "single_zone_tenant" {
   backup_bucket_name     = module.tenant_group.backup_bucket_name
   falkordb_cpu           = var.falkordb_cpu
   persistence_size       = var.persistence_size
-  tenant_name            = "${var.tenant_name}-single-zone"
+  tenant_name            = "${var.tenant_name}-sz"
   vpc_name               = module.tenant_group.vpc_name
   falkordb_replicas      = 2
   cluster_ca_certificate = module.tenant_group.cluster_ca_certificate
@@ -83,7 +83,7 @@ module "multi_zone_tenant" {
   backup_bucket_name     = module.tenant_group.backup_bucket_name
   falkordb_cpu           = var.falkordb_cpu
   persistence_size       = var.persistence_size
-  tenant_name            = "${var.tenant_name}-multi-zone"
+  tenant_name            = "${var.tenant_name}-mz"
   vpc_name               = module.tenant_group.vpc_name
   falkordb_replicas      = 2
   cluster_ca_certificate = module.tenant_group.cluster_ca_certificate
