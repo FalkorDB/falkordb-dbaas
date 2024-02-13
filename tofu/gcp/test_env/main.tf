@@ -59,7 +59,7 @@ module "single_zone_tenant" {
   persistence_size       = var.persistence_size
   tenant_name            = "${var.tenant_name}-single-zone"
   vpc_name               = module.tenant_group.vpc_name
-  falkordb_replicas      = 1
+  falkordb_replicas      = 2
   cluster_ca_certificate = module.tenant_group.cluster_ca_certificate
   falkordb_replication_configuration = {
     enable     = true,
@@ -85,7 +85,7 @@ module "multi_zone_tenant" {
   persistence_size       = var.persistence_size
   tenant_name            = "${var.tenant_name}-multi-zone"
   vpc_name               = module.tenant_group.vpc_name
-  falkordb_replicas      = 1
+  falkordb_replicas      = 2
   cluster_ca_certificate = module.tenant_group.cluster_ca_certificate
   falkordb_replication_configuration = {
     enable     = true,

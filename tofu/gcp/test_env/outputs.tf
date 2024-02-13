@@ -1,5 +1,5 @@
 output "vpc_name" {
-  value = module.tenant_group.network_name
+  value = module.tenant_group.vpc_name
 }
 
 output "ip_address_name" {
