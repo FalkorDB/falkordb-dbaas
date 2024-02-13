@@ -27,10 +27,6 @@ variable "ip_range_services" {
   default = "10.130.20.0/24"
 }
 
-variable "cluster_name" {
-  type = string
-}
-
 variable "cluster_deletion_protection" {
   type    = bool
   default = true

@@ -7,7 +7,6 @@ module "tenant_group" {
   subnet_cidr                  = var.subnet_cidr
   ip_range_pods                = var.ip_range_pods
   ip_range_services            = var.ip_range_services
-  cluster_name                 = var.cluster_name
   cluster_deletion_protection  = var.cluster_deletion_protection
   node_pools                   = var.node_pools
   tenant_provision_sa          = var.tenant_provision_sa
@@ -21,7 +20,7 @@ module "standalone_tenant" {
 
   ip_address             = module.tenant_group.ip_address
   dns_domain             = var.dns_domain
-  cluster_name           = var.cluster_name
+  cluster_name           = module.tenant_group.cluster_name
   redis_port             = var.redis_port
   falkordb_memory        = var.falkordb_memory
   sentinel_port          = var.sentinel_port
@@ -47,7 +46,7 @@ module "single_zone_tenant" {
 
   ip_address             = module.tenant_group.ip_address
   dns_domain             = var.dns_domain
-  cluster_name           = var.cluster_name
+  cluster_name           = module.tenant_group.cluster_name
   redis_port             = var.redis_port + 1
   falkordb_memory        = var.falkordb_memory
   sentinel_port          = var.sentinel_port + 1
@@ -73,7 +72,7 @@ module "multi_zone_tenant" {
 
   ip_address             = module.tenant_group.ip_address
   dns_domain             = var.dns_domain
-  cluster_name           = var.cluster_name
+  cluster_name           = module.tenant_group.cluster_name
   redis_port             = var.redis_port + 2
   falkordb_memory        = var.falkordb_memory
   sentinel_port          = var.sentinel_port + 2
