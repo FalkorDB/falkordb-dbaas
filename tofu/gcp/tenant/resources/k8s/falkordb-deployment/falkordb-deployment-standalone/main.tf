@@ -1,23 +1,3 @@
-locals {
-  pod_anti_affinity = {
-    "podAntiAffinity" : {
-      "preferredDuringSchedulingIgnoredDuringExecution" : [
-        {
-          "weight" : 100,
-          "podAffinityTerm" : {
-            "topologyKey" : "topology.kubernetes.io/zone",
-            "labelSelector" : {
-              "matchLabels" : {
-                "app.kubernetes.io/instance" : var.deployment_name
-              }
-            }
-          }
-        }
-      ]
-    }
-  }
-
-}
 
 resource "helm_release" "falkordb" {
   name      = var.deployment_name
