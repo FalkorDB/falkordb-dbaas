@@ -1,9 +1,9 @@
 import type { AuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import GithubProvider from "next-auth/providers/github"
-import { TypeORMAdapter, getManager } from '@auth/typeorm-adapter'
-import { Adapter } from "next-auth/adapters"
+import { TypeORMAdapter } from '@auth/typeorm-adapter'
 import { DataSourceOptions } from "typeorm"
+import { Adapter } from "next-auth/adapters"
 
 const env = process.env.NODE_ENV;
 const dataSourceOptions: DataSourceOptions = {
@@ -13,8 +13,8 @@ const dataSourceOptions: DataSourceOptions = {
     username: process.env.POSTGRES_USER as string,
     password: process.env.POSTGRES_PASSWORD as string,
     database: (process.env.POSTGRES_DATABASE || "falkordb") as string,
-    synchronize: (env == "development" ? true : false),
-    ssl: (env == "development" ? undefined : {
+    synchronize: env === "development",
+    ssl: (env === "development" ? undefined : {
         rejectUnauthorized: false,
         requestCert: true,
     }),

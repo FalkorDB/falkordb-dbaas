@@ -1,17 +1,13 @@
 "use client"
 
-import { Button } from '@/components/ui/button';
-import { useSession, signIn, signOut } from 'next-auth/react';
-import Spinning from '../components/spinning';
-
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from 'next-auth/react';
+import { useRouter } from "next/navigation";
 import { Suspense, useEffect } from 'react';
-import { Google } from '@/components/icons/google';
-import { Github } from '@/components/icons/github';
-import { Providers } from './providers';
+import Spinning from '../components/spinning';
+import Providers from './providers';
 
 export default function Page() {
-    const { data: session, status } = useSession();
+    const { status } = useSession();
     const router = useRouter();
 
     // Redirect to home page if already signed in

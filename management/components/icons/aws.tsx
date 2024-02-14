@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function AWS() {
+export default function AWS() {
 
     return (
         <svg viewBox="0 0 304 182">

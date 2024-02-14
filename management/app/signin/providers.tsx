@@ -1,12 +1,12 @@
 "use client"
 
-import { Github } from "@/components/icons/github";
-import { Google } from "@/components/icons/google";
+import Github from "@/components/icons/github";
+import Google from "@/components/icons/google";
 import { Button } from "@/components/ui/button";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 
-export function Providers() {
+export default function Providers() {
     const searchParams = useSearchParams()
     const callbackUrl = searchParams.get('callbackUrl') ?? '/'
 
