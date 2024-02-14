@@ -95,7 +95,7 @@ jobs:
         working-directory: ./tofu/gcp/test_env
         run: |
           # echo "FALKORDB_HOST=$(tofu output -json | jq -r '.falkordb_host.value')" >> $GITHUB_ENV
-          echo "FALKORDB_HOST=$TF_VAR_ip_address" >> $GITHUB_ENV
+          echo "FALKORDB_HOST=$(tofu output -json | jq -r '.ip_address.value')" >> $GITHUB_ENV
           echo "FALKORDB_PORT=$(tofu output -json | jq -r '.falkordb_standalone_tenant_redis_port.value')" >> $GITHUB_ENV
           echo "FALKORDB_PASSWORD=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}" >> $GITHUB_ENV
 
