@@ -85,6 +85,9 @@ module "k8s" {
 
   multi_zone = var.multi_zone
   pod_zone   = var.pod_zone
+
+  # Required for test suite to wait for the tenant group to be ready
+  depends_on = [var.cluster_endpoint, var.cluster_ca_certificate]
 }
 
 # Wait 10 seconds for the NEGs to be created

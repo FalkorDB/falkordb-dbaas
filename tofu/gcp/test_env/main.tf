@@ -39,8 +39,6 @@ module "standalone_tenant" {
     enable     = false,
     multi_zone = false
   }
-
-  depends_on = [module.tenant_group]
 }
 
 module "single_zone_tenant" {
@@ -67,8 +65,6 @@ module "single_zone_tenant" {
     enable     = true,
     multi_zone = false
   }
-
-  depends_on = [module.tenant_group]
 }
 
 module "multi_zone_tenant" {
@@ -95,6 +91,4 @@ module "multi_zone_tenant" {
     enable     = true,
     multi_zone = true
   }
-
-  depends_on = [module.tenant_group]
 }
