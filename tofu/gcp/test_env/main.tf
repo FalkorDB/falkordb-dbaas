@@ -21,9 +21,9 @@ module "standalone_tenant" {
   ip_address             = module.tenant_group.ip_address
   dns_domain             = var.dns_domain
   cluster_name           = module.tenant_group.cluster_name
-  redis_port             = var.redis_port
+  redis_port             = 30000
+  sentinel_port          = 30001
   falkordb_memory        = var.falkordb_memory
-  sentinel_port          = var.sentinel_port
   cluster_endpoint       = module.tenant_group.cluster_endpoint
   falkordb_password      = var.falkordb_password
   project_id             = var.project_id
@@ -47,9 +47,9 @@ module "single_zone_tenant" {
   ip_address             = module.tenant_group.ip_address
   dns_domain             = var.dns_domain
   cluster_name           = module.tenant_group.cluster_name
-  redis_port             = var.redis_port + 2
+  redis_port             = 30002
+  sentinel_port          = 30003
   falkordb_memory        = var.falkordb_memory
-  sentinel_port          = var.sentinel_port + 3
   cluster_endpoint       = module.tenant_group.cluster_endpoint
   falkordb_password      = var.falkordb_password
   project_id             = var.project_id
@@ -73,9 +73,9 @@ module "multi_zone_tenant" {
   ip_address             = module.tenant_group.ip_address
   dns_domain             = var.dns_domain
   cluster_name           = module.tenant_group.cluster_name
-  redis_port             = var.redis_port + 4
+  redis_port             = 30004
+  sentinel_port          = 30005
   falkordb_memory        = var.falkordb_memory
-  sentinel_port          = var.sentinel_port + 5
   cluster_endpoint       = module.tenant_group.cluster_endpoint
   falkordb_password      = var.falkordb_password
   project_id             = var.project_id

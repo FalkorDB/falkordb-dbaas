@@ -36,9 +36,9 @@ variable "node_pools" {
   type = list(map(any))
 
   default = [{
-    name               = "simple-pool"
-    machine_type       = "e2-medium"
-    disk_size_gb       = 20
+    name         = "simple-pool"
+    machine_type = "e2-medium"
+    disk_size_gb = 20
     initial_node_count = 2
   }]
 }
@@ -96,21 +96,6 @@ variable "persistence_size" {
   validation {
     condition     = can(regex("^[0-9]+Gi$", var.persistence_size)) && parseint(regex("^[0-9]+", var.persistence_size), 10) >= 11
     error_message = "Size must be equal or higher than 11Gi"
-  }
-}
-
-variable "redis_port" {
-  type = number
-  validation {
-    condition     = var.redis_port >= 30000 && var.redis_port <= 32767
-    error_message = "Port must be between 30000 and 32767"
-  }
-}
-variable "sentinel_port" {
-  type = number
-  validation {
-    condition     = var.sentinel_port >= 30000 && var.sentinel_port <= 32767
-    error_message = "Port must be between 30000 and 32767"
   }
 }
 variable "backup_schedule" {
