@@ -25,8 +25,6 @@ module "gke" {
   enable_private_endpoint = false
   enable_private_nodes    = var.enable_private_nodes
 
-  node_metadata = "GKE_METADATA"
-
   node_pools = var.node_pools
 
 }

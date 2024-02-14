@@ -47,6 +47,7 @@ variable "node_pools" {
       disk_size_gb    = 10
       total_min_count = 0
       total_max_count = 50
+      node_metadata   = "GKE_METADATA_SERVER"
     },
     {
       name               = "backup-pool"
@@ -56,6 +57,7 @@ variable "node_pools" {
       total_max_count    = 50
       initial_node_count = 0
       spot               = true
+      node_metadata   = "GKE_METADATA_SERVER"
     },
     {
       name               = "tier-m0"
