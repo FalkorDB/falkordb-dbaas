@@ -19,6 +19,8 @@ module "gke" {
   disable_legacy_metadata_endpoints    = false
   deletion_protection                  = false
 
+  default_max_pods_per_node = var.default_max_pods_per_node
+
   enable_private_endpoint = false
   enable_private_nodes    = true
 
