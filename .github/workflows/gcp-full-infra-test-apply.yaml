@@ -81,7 +81,7 @@ jobs:
         id: get_cluster_credentials
         continue-on-error: true
         run: |
-          gcloud container clusters get-credentials ${{ env.TF_VAR_cluster_name }} --region ${{ vars.GCP_REGION }} --project ${{ vars.GCP_PROJECT_ID }}
+          gcloud container clusters get-credentials $(tofu output -json | jq -r '.cluster_name.value') --region ${{ vars.GCP_REGION }} --project ${{ vars.GCP_PROJECT_ID }}
 
       - name: Check connection to cluster
         if: steps.get_cluster_credentials.outcome == 'success'
@@ -90,9 +90,9 @@ jobs:
           kubectl get pods --all-namespaces
 
       - name: Set tenant connection variables
-        if: steps.apply_tenant.outcome == 'success'
+        if: steps.apply_tenant_group.outcome == 'success'
         continue-on-error: true
-        working-directory: ./tofu/gcp/tenant
+        working-directory: ./tofu/gcp/test_env
         run: |
           # echo "FALKORDB_HOST=$(tofu output -json | jq -r '.falkordb_host.value')" >> $GITHUB_ENV
           echo "FALKORDB_HOST=$TF_VAR_ip_address" >> $GITHUB_ENV
@@ -100,7 +100,7 @@ jobs:
           echo "FALKORDB_PASSWORD=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}" >> $GITHUB_ENV
 
       - name: Run python tests
-        if: steps.apply_tenant.outcome == 'success'
+        if: steps.apply_tenant_group.outcome == 'success'
         id: python_tests
         continue-on-error: true
         run: |
