@@ -2,7 +2,7 @@ variable "deployment_name" {
   type = string
 }
 variable "node_pool_name" {
-  type     = string
+  type    = string
   default = "default-pool"
 }
 variable "falkordb_version" {
