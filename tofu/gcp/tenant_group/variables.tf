@@ -57,7 +57,7 @@ variable "node_pools" {
       total_max_count    = 50
       initial_node_count = 0
       spot               = true
-      node_metadata   = "GKE_METADATA_SERVER"
+      node_metadata      = "GKE_METADATA_SERVER"
     },
     {
       name               = "tier-m0"
