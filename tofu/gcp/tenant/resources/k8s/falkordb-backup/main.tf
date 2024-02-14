@@ -110,6 +110,7 @@ resource "kubernetes_cron_job_v1" "falkorbd_backup" {
             service_account_name = kubernetes_service_account.backup_write_sa.metadata.0.name
             node_selector = {
               "iam.gke.io/gke-metadata-server-enabled" : "true"
+              "cloud.google.com/gke-nodepool" : var.node_pool_name
             }
             container {
               name    = "backup"

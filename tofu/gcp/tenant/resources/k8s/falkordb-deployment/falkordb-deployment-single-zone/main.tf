@@ -1,5 +1,20 @@
 locals {
   pod_affinity = {
+    "podAntiAffinity" : {
+      "requiredDuringSchedulingIgnoredDuringExecution" : [
+        # Place one pod per node
+        {
+          "weight" : 1,
+          "topologyKey" : "kubernetes.io/hostname",
+          "namespaceSelector" : {},
+          "labelSelector" : {
+            "matchLabels" : {
+              "app.kubernetes.io/instance" : var.deployment_name
+            }
+          }
+        },
+      ],
+    },
     "podAffinity" : {
       "requiredDuringSchedulingIgnoredDuringExecution" : [
         {
@@ -79,18 +94,14 @@ resource "helm_release" "falkordb" {
     name  = "replica.replicaCount"
     value = var.falkordb_replicas
   }
-  set_list {
-    name  = "replica.extraFlags"
-    value = ["--loadmodule", "/FalkorDB/bin/linux-x64-release/src/falkordb.so"]
-  }
-  set {
-    name  = "replica.resources.limits.cpu"
-    value = var.falkordb_cpu
-  }
-  set {
-    name  = "replica.resources.limits.memory"
-    value = var.falkordb_memory
-  }
+  # set {
+  #   name  = "replica.resources.requests.cpu"
+  #   value = var.falkordb_cpu
+  # }
+  # set {
+  #   name  = "replica.resources.requests.memory"
+  #   value = var.falkordb_memory
+  # }
   set {
     name  = "replica.persistence.size"
     value = var.persistence_size
@@ -122,6 +133,11 @@ resource "helm_release" "falkordb" {
   set {
     name  = "replica.persistentVolumeClaimRetentionPolicy.whenDeleted"
     value = "Delete"
+  }
+  # Node Selector to node_pool_name
+  set {
+    name  = "replica.nodeSelector.cloud\\.google\\.com/gke-nodepool"
+    value = var.node_pool_name
   }
 
   set {

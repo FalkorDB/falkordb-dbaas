@@ -26,21 +26,83 @@ variable "ip_range_services" {
   type    = string
   default = "10.130.20.0/24"
 }
-
-variable "cluster_deletion_protection" {
-  type    = bool
-  default = true
-}
-
 variable "node_pools" {
   type = list(map(any))
 
-  default = [{
-    name         = "simple-pool"
-    machine_type = "e2-medium"
-    disk_size_gb = 20
-    initial_node_count = 2
-  }]
+  default = [
+    {
+      name            = "default-pool"
+      machine_type    = "e2-medium"
+      disk_size_gb    = 10
+      total_min_count = 0
+      total_max_count = 50
+    },
+    {
+      name               = "backup-pool"
+      machine_type       = "e2-medium"
+      disk_size_gb       = 10
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+      spot               = true
+    },
+
+    {
+      name               = "tier-m0"
+      machine_type       = "e2-micro"
+      disk_size_gb       = 10
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m1"
+      machine_type       = "e2-custom-1-1024"
+      disk_size_gb       = 10
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m2"
+      machine_type       = "e2-custom-2-2048"
+      disk_size_gb       = 10
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m4"
+      machine_type       = "e2-custom-2-4096"
+      disk_size_gb       = 12
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m8"
+      machine_type       = "e2-custom-4-8192"
+      disk_size_gb       = 24
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m16"
+      machine_type       = "e2-custom-8-16384"
+      disk_size_gb       = 48
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m32"
+      machine_type       = "e2-custom-16-32768"
+      disk_size_gb       = 96
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+  }, ]
 }
 
 variable "tenant_provision_sa" {
@@ -94,8 +156,8 @@ variable "persistence_size" {
   type = string
 
   validation {
-    condition     = can(regex("^[0-9]+Gi$", var.persistence_size)) && parseint(regex("^[0-9]+", var.persistence_size), 10) >= 11
-    error_message = "Size must be equal or higher than 11Gi"
+    condition     = can(regex("^[0-9]+Gi$", var.persistence_size)) && parseint(regex("^[0-9]+", var.persistence_size), 10) >= 10
+    error_message = "Size must be equal or higher than 10Gi"
   }
 }
 variable "backup_schedule" {

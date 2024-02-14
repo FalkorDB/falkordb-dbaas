@@ -5,7 +5,10 @@ variable "project_id" {
 variable "tenant_name" {
   type = string
 }
-
+variable "node_pool_name" {
+  type    = string
+  default = "backup-pool"
+}
 variable "deployment_namespace" {
   type = string
 }

@@ -63,8 +63,9 @@ locals {
 module "k8s" {
   source = "./resources/k8s"
 
-  project_id  = var.project_id
-  tenant_name = var.tenant_name
+  project_id     = var.project_id
+  tenant_name    = var.tenant_name
+  node_pool_name = var.node_pool_name
 
   falkordb_replication_configuration = var.falkordb_replication_configuration
   falkordb_version                   = var.falkordb_version

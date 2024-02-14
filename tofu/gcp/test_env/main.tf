@@ -1,3 +1,36 @@
+locals {
+  tiers = {
+    "tier-m0" = {
+      persistence_size = "10Gi",
+      replicas         = 0
+    },
+    "tier-m1" = {
+      persistence_size = "10Gi",
+      replicas         = 2
+    },
+    "tier-m2" = {
+      persistence_size = "10Gi",
+      replicas         = 2
+    },
+    "tier-m4" = {
+      persistence_size = "12Gi",
+      replicas         = 2
+    },
+    "tier-m8" = {
+      persistence_size = "24Gi",
+      replicas         = 2
+    },
+    "tier-m16" = {
+      persistence_size = "48Gi",
+      replicas         = 2
+    },
+    "tier-m32" = {
+      persistence_size = "96Gi",
+      replicas         = 2
+    },
+  }
+}
+
 module "tenant_group" {
   source = "../tenant_group"
 
@@ -7,7 +40,7 @@ module "tenant_group" {
   subnet_cidr                  = var.subnet_cidr
   ip_range_pods                = var.ip_range_pods
   ip_range_services            = var.ip_range_services
-  cluster_deletion_protection  = var.cluster_deletion_protection
+  cluster_deletion_protection  = false
   node_pools                   = var.node_pools
   tenant_provision_sa          = var.tenant_provision_sa
   force_destroy_backup_bucket  = var.force_destroy_backup_bucket
@@ -23,17 +56,18 @@ module "standalone_tenant" {
   cluster_name           = module.tenant_group.cluster_name
   redis_port             = 30000
   sentinel_port          = 30001
-  falkordb_memory        = var.falkordb_memory
-  cluster_endpoint       = module.tenant_group.cluster_endpoint
+  node_pool_name         = "tier-m1"
   falkordb_password      = var.falkordb_password
-  project_id             = var.project_id
   falkordb_version       = var.falkordb_version
-  backup_bucket_name     = module.tenant_group.backup_bucket_name
+  falkordb_memory        = var.falkordb_memory
   falkordb_cpu           = var.falkordb_cpu
-  persistence_size       = var.persistence_size
+  persistence_size       = local.tiers["tier-m1"].persistence_size
+  falkordb_replicas      = local.tiers["tier-m1"].replicas
+  cluster_endpoint       = module.tenant_group.cluster_endpoint
+  project_id             = var.project_id
+  backup_bucket_name     = module.tenant_group.backup_bucket_name
   tenant_name            = "${var.tenant_name}-s"
   vpc_name               = module.tenant_group.vpc_name
-  falkordb_replicas      = 0
   cluster_ca_certificate = module.tenant_group.cluster_ca_certificate
   falkordb_replication_configuration = {
     enable     = false,
@@ -49,17 +83,18 @@ module "single_zone_tenant" {
   cluster_name           = module.tenant_group.cluster_name
   redis_port             = 30002
   sentinel_port          = 30003
-  falkordb_memory        = var.falkordb_memory
-  cluster_endpoint       = module.tenant_group.cluster_endpoint
+  node_pool_name         = "tier-m1"
   falkordb_password      = var.falkordb_password
-  project_id             = var.project_id
   falkordb_version       = var.falkordb_version
-  backup_bucket_name     = module.tenant_group.backup_bucket_name
+  falkordb_memory        = var.falkordb_memory
   falkordb_cpu           = var.falkordb_cpu
-  persistence_size       = var.persistence_size
+  persistence_size       = local.tiers["tier-m1"].persistence_size
+  falkordb_replicas      = local.tiers["tier-m1"].replicas
+  cluster_endpoint       = module.tenant_group.cluster_endpoint
+  project_id             = var.project_id
+  backup_bucket_name     = module.tenant_group.backup_bucket_name
   tenant_name            = "${var.tenant_name}-sz"
   vpc_name               = module.tenant_group.vpc_name
-  falkordb_replicas      = 2
   cluster_ca_certificate = module.tenant_group.cluster_ca_certificate
   falkordb_replication_configuration = {
     enable     = true,
@@ -75,17 +110,18 @@ module "multi_zone_tenant" {
   cluster_name           = module.tenant_group.cluster_name
   redis_port             = 30004
   sentinel_port          = 30005
-  falkordb_memory        = var.falkordb_memory
-  cluster_endpoint       = module.tenant_group.cluster_endpoint
+  node_pool_name         = "tier-m1"
   falkordb_password      = var.falkordb_password
-  project_id             = var.project_id
   falkordb_version       = var.falkordb_version
-  backup_bucket_name     = module.tenant_group.backup_bucket_name
+  falkordb_memory        = var.falkordb_memory
   falkordb_cpu           = var.falkordb_cpu
-  persistence_size       = var.persistence_size
+  persistence_size       = local.tiers["tier-m1"].persistence_size
+  falkordb_replicas      = local.tiers["tier-m1"].replicas
+  cluster_endpoint       = module.tenant_group.cluster_endpoint
+  project_id             = var.project_id
+  backup_bucket_name     = module.tenant_group.backup_bucket_name
   tenant_name            = "${var.tenant_name}-mz"
   vpc_name               = module.tenant_group.vpc_name
-  falkordb_replicas      = 2
   cluster_ca_certificate = module.tenant_group.cluster_ca_certificate
   falkordb_replication_configuration = {
     enable     = true,

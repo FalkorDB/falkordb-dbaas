@@ -1,6 +1,10 @@
 variable "deployment_name" {
   type = string
 }
+variable "node_pool_name" {
+  type    = string
+  default = "default-pool"
+}
 variable "falkordb_version" {
   type    = string
   default = "v4.0.3"
@@ -53,4 +57,13 @@ variable "dns_ttl" {
 variable "storage_class_name" {
   type    = string
   default = "standard-rwo"
+}
+
+variable "service_type" {
+  type    = string
+  default = "LoadBalancer"
+  validation {
+    condition     = var.service_type == "LoadBalancer" || var.service_type == "NodePort"
+    error_message = "Service type must be either LoadBalancer or NodePort"
+  }
 }

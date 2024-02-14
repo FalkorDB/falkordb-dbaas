@@ -32,14 +32,89 @@ variable "cluster_deletion_protection" {
   default = true
 }
 
+variable "enable_private_nodes" {
+  type    = bool
+  default = true
+}
+
 variable "node_pools" {
   type = list(map(any))
 
-  default = [{
-    name         = "simple-pool"
-    machine_type = "e2-medium"
-    disk_size_gb = 20
-  }]
+  default = [
+    {
+      name            = "default-pool"
+      machine_type    = "e2-medium"
+      disk_size_gb    = 10
+      total_min_count = 0
+      total_max_count = 50
+    },
+    {
+      name               = "backup-pool"
+      machine_type       = "e2-medium"
+      disk_size_gb       = 10
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+      spot               = true
+    },
+    {
+      name               = "tier-m0"
+      machine_type       = "custom-0.25-1024"
+      disk_size_gb       = 10
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m1"
+      machine_type       = "custom-1-1024"
+      disk_size_gb       = 10
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m2"
+      machine_type       = "custom-2-2048"
+      disk_size_gb       = 10
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m4"
+      machine_type       = "custom-2-4096"
+      disk_size_gb       = 12
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m8"
+      machine_type       = "custom-4-8192"
+      disk_size_gb       = 24
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m16"
+      machine_type       = "custom-8-16384"
+      disk_size_gb       = 48
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+    {
+      name               = "tier-m32"
+      machine_type       = "custom-16-32768"
+      disk_size_gb       = 96
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+    },
+
+  ]
 }
 
 variable "tenant_provision_sa" {

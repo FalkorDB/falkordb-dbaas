@@ -27,7 +27,10 @@ variable "ip_address" {
 variable "tenant_name" {
   type = string
 }
-
+variable "node_pool_name" {
+  type     = string
+  nullable = true
+}
 variable "backup_bucket_name" {
   type = string
 }
@@ -66,8 +69,8 @@ variable "persistence_size" {
   type = string
 
   validation {
-    condition     = can(regex("^[0-9]+Gi$", var.persistence_size)) && parseint(regex("^[0-9]+", var.persistence_size), 10) >= 11
-    error_message = "Size must be equal or higher than 11Gi"
+    condition     = can(regex("^[0-9]+Gi$", var.persistence_size)) && parseint(regex("^[0-9]+", var.persistence_size), 10) >= 10
+    error_message = "Size must be equal or higher than 10Gi"
   }
 }
 

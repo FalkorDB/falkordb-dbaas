@@ -5,6 +5,10 @@ variable "replication_configuration" {
   })
 }
 
+variable "node_pool_name" {
+  type     = string
+  nullable = true
+}
 variable "falkordb_version" {
   type    = string
   default = "v4.0.3"

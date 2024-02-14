@@ -19,6 +19,7 @@ module "falkordb_deployment" {
   source = "./falkordb-deployment"
 
   replication_configuration = var.falkordb_replication_configuration
+  node_pool_name            = var.node_pool_name 
 
   falkordb_version  = var.falkordb_version
   falkordb_password = local.falkordb_password

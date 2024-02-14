@@ -13,6 +13,10 @@ variable "falkordb_replication_configuration" {
   })
 }
 
+variable "node_pool_name" {
+  type     = string
+  nullable = true
+}
 variable "falkordb_version" {
   type = string
 }
