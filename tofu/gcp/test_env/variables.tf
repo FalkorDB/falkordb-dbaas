@@ -1,5 +1,5 @@
 variable "tier_to_test" {
-  type = string
+  type    = string
   default = "tier-m1"
 }
 ###### PROJECT ######
