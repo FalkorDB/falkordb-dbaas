@@ -15,6 +15,7 @@ module "gke" {
   gce_pd_csi_driver                    = true
   network_policy                       = true
   monitoring_enable_managed_prometheus = true
+  enable_cost_allocation               = true
   horizontal_pod_autoscaling           = false
   filestore_csi_driver                 = false
   disable_legacy_metadata_endpoints    = false
@@ -27,6 +28,7 @@ module "gke" {
 
   node_pools = var.node_pools
 
+  labels = var.labels
 }
 
 # Create Health Check

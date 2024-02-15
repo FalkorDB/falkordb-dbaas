@@ -54,3 +54,8 @@ variable "enable_private_nodes" {
   type    = bool
   default = true
 }
+
+variable "labels" {
+  type    = map(string)
+  default = {}
+}

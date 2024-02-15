@@ -111,3 +111,17 @@ variable "monitoring_project_name" {
 variable "monitored_projects" {
   type = set(string)
 }
+
+
+###### SHARED RESOURCES: BILLING ######
+variable "billing_project_id" {
+  type = string
+  validation {
+    condition     = length(var.billing_project_id) < 22
+    error_message = "Project ID must be less than 22 characters"
+  }
+}
+
+variable "billing_project_name" {
+  type = string
+}

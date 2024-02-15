@@ -21,21 +21,20 @@ provider "registry.opentofu.org/hashicorp/google" {
 }
 
 provider "registry.opentofu.org/hashicorp/google-beta" {
-  version     = "5.13.0"
-  constraints = ">= 3.43.0, >= 3.50.0, >= 4.11.0, >= 4.28.0, >= 4.64.0, 5.13.0, < 6.0.0"
+  version     = "5.16.0"
+  constraints = ">= 3.43.0, >= 3.50.0, >= 3.64.0, >= 4.11.0, >= 4.28.0, >= 4.64.0, < 6.0.0"
   hashes = [
-    "h1:03DlQxVkSodAtPp3lBNUdkAjwatUpW7nuoXqyYjPSXA=",
-    "h1:PwcB5ApfQCN06W6jswYE/BjOzV2CdSW8Z89hz8v3zUo=",
-    "zh:028f288bdb2c697c73ba760f5861a88f672da3fe7f9d160d9662486ba5f537e5",
-    "zh:0fc3d7a064738056b04decc1fcbe9bad16be42a753a7e236f2c55aff1fb1900b",
-    "zh:34f3315d45eef7b2541fa3849d60be9e2fef67614f33ec497bb3072966085ca4",
-    "zh:429996d6ea92ebdfc81f9777a9ed8420ca2e649f50f4141ad0db37eae404c4eb",
-    "zh:7d433f8ae0a4bfd96eb18e117cc5d382ce16fd2a7ae0dd65a4ac2a3f08483038",
-    "zh:cbdf0bc2170d8721ab9a21d7a83fe8509bf47258daf547eea52d7b5569e0b84e",
-    "zh:d87c9eba01e0e97698e6d9673f7edfc8097e105a6260e765c8d6681590c83d1f",
-    "zh:e947aa1b2c2cb9eaf3f62dcdfb9b69abd2b73ffe2b3d2080d8b038f522f669a4",
-    "zh:f6d076053c13b806dc3fa8fd8a7259ee287fe6c054284b70542b3eb114132957",
-    "zh:fd18f0216931a68a641e480f1cf4a9176f6c4be3fc5183109a5429df7d618b9b",
+    "h1:9SI2UHUTzo0ALEpvgyA0NvK7YJs4xN78vmXAZaVAxkk=",
+    "zh:15dab6ba8d5ffa5bec04a16d773f0ca3f00e70bf48fa0b8f40cc9bd1a6369f60",
+    "zh:2edfea9e4d03f83d200ccd25f8bab4487fdc541160dc75233e1913b66498b0a1",
+    "zh:41f951233355a6162a9dbcf45d2d3738e3b7b513d1b3b1e1706b4af91b487c15",
+    "zh:59a4fe2826c4fbd54ed5821e6c947b5d454bfd8a4b19a659639e306c5ee8223f",
+    "zh:5f58dbf512e059c5ff3dcff772f689e41becfdf470c481c9791eeb8c6adaf676",
+    "zh:616bea3dd1b1f9bbcdd41099e8c63d9610c60b70bcea8394d5491d8c6fb2f2b5",
+    "zh:7e16f6d57fd4b07a6bfc99260a498ca2511dc5571346912e103a026326a3cee6",
+    "zh:8fa80f4137798fae7f51e6d4f9c8771a83fdf0ac64efd2e75fd338490da1ac01",
+    "zh:a62550f536aadd5b755ca1b43cbb835d418e6ed3dfdcbb578e36fcfd5c76bb2a",
+    "zh:cd266efa4d248e31df928d183a08bfe52928499c6df467c86cfe3bab73c253aa",
   ]
 }
 

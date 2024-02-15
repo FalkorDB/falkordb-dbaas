@@ -43,6 +43,9 @@ module "shared_resources" {
   monitoring_project_name = var.monitoring_project_name
   monitored_projects      = var.monitored_projects
 
+  billing_project_id   = "${var.billing_project_id}-${random_bytes.project_suffix.hex}"
+  billing_project_name = var.billing_project_name
+
   domains_to_allow = var.domains_to_allow
   enforce_policies = var.enforce_policies
 

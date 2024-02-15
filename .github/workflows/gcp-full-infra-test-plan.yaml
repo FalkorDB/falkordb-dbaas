@@ -65,10 +65,6 @@ jobs:
           TF_VAR_cluster_deletion_protection: ${{ vars.GCP_CLUSTER_DELETION_PROTECTION }}
           TF_VAR_tenant_name: ${{ env.tenant_name }}
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
-          TF_VAR_falkordb_cpu: ${{ vars.TF_VAR_FALKORDB_CPU }}
-          TF_VAR_falkordb_memory: ${{ vars.TF_VAR_FALKORDB_MEMORY }}
-          TF_VAR_persistence_size: ${{ vars.TF_VAR_PERSISTANCE_SIZE }}
-          TF_VAR_falkordb_replicas: ${{ vars.TF_VAR_FALKORDB_REPLICAS }}
           TF_VAR_backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
           TF_VAR_dns_domain: "${{ env.tenant_group_name }}.${{ vars.TF_VAR_DNS_DOMAIN }}"
         working-directory: ./tofu/gcp/test_env

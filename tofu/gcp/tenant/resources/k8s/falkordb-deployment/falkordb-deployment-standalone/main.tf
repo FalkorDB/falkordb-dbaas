@@ -1,24 +1,3 @@
-locals {
-  pod_affinity = {
-    "podAntiAffinity" : {
-      "requiredDuringSchedulingIgnoredDuringExecution" : [
-        # Place one pod per node
-        {
-          "weight" : 1,
-          "topologyKey" : "kubernetes.io/hostname",
-          "namespaceSelector" : {},
-          "labelSelector" : {
-            "matchLabels" : {
-              "app.kubernetes.io/instance" : var.deployment_name
-            }
-          }
-        },
-      ],
-    },
-  }
-
-}
-
 resource "helm_release" "falkordb" {
   name      = var.deployment_name
   namespace = var.deployment_namespace
@@ -69,14 +48,22 @@ resource "helm_release" "falkordb" {
     value = var.dns_ttl
     type  = "string"
   }
-  # set {
-  #   name  = "master.resources.requests.cpu"
-  #   value = var.falkordb_cpu
-  # }
-  # set {
-  #   name  = "master.resources.requests.memory"
-  #   value = var.falkordb_memory
-  # }
+  set {
+    name  = "master.resources.limits.cpu"
+    value = var.falkordb_cpu
+  }
+  set {
+    name  = "master.resources.limits.memory"
+    value = var.falkordb_memory
+  }
+  set {
+    name  = "master.resources.requests.cpu"
+    value = var.falkordb_min_cpu
+  }
+  set {
+    name  = "master.resources.requests.memory"
+    value = var.falkordb_min_memory
+  }
   set {
     name  = "master.persistence.size"
     value = var.persistence_size
@@ -113,10 +100,6 @@ resource "helm_release" "falkordb" {
   set {
     name  = "master.nodeSelector.cloud\\.google\\.com/gke-nodepool"
     value = var.node_pool_name
-  }
-  set {
-    name  = "master.affinity"
-    value = yamlencode(local.pod_affinity)
   }
 
   ###### METRICS ######

@@ -23,4 +23,6 @@ resource "google_storage_bucket" "backup_bucket" {
       age = 7
     }
   }
+
+  labels = var.labels
 }
