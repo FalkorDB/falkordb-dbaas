@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 
-export default function Providers() {
+export default function SinginProviders() {
     const searchParams = useSearchParams()
     const callbackUrl = searchParams.get('callbackUrl') ?? '/'
 
