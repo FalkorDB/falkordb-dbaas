@@ -2,6 +2,7 @@ locals {
   pod_affinity = {
     "podAffinity" : {
       "requiredDuringSchedulingIgnoredDuringExecution" : [
+        # Schedule in the same zone
         {
           "topologyKey" : "topology.kubernetes.io/zone",
           "labelSelector" : {
@@ -14,8 +15,8 @@ locals {
     },
 
     "podAntiAffinity" : {
-      "preferredDuringSchedulingIgnoredDuringExecution" : [
-        # Schedule in different nodes if possible
+      "requiredDuringSchedulingIgnoredDuringExecution" : [
+        # Schedule in different nodes
         {
           "weight" : 100,
           "podAffinityTerm" : {
