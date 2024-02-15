@@ -1,3 +1,7 @@
+variable "tier_to_test" {
+  type = string
+  default = "tier-m1"
+}
 ###### PROJECT ######
 variable "project_id" {
   type = string
