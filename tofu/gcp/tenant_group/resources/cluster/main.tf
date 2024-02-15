@@ -28,7 +28,7 @@ module "gke" {
 
   node_pools = var.node_pools
 
-  labels = var.labels
+  cluster_resource_labels = var.labels
 }
 
 # Create Health Check
