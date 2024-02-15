@@ -4,11 +4,12 @@ import Github from "@/components/icons/github";
 import Google from "@/components/icons/google";
 import { Button } from "@/components/ui/button";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 export default function SinginProviders() {
     const searchParams = useSearchParams()
-    const callbackUrl = searchParams.get('callbackUrl') ?? '/'
+    const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard'
 
     // If the user is redirected to this page because of a sign-in error,
     // the error query parameter will be set
@@ -17,6 +18,12 @@ export default function SinginProviders() {
     return (
         <div className="flex flex-col space-y-6 p-6 bg-white shadow-lg rounded-lg dark:bg-zinc-850 justify-between border border-gray-300">
             <h1 className="text-3xl font-bold">Sign in to your account</h1>
+            <p className="text-zinc-500 dark:text-zinc-400">
+                By logging in, you accept our
+                <Link className="text-blue-500 hover:text-blue-700" href="/terms"> terms </Link>
+                and
+                <Link className="text-blue-500 hover:text-blue-700" href="/policy"> privacy policy</Link>.
+            </p>
             <Button className='flex flex-row text-xl p-6 space-x-2' onClick={() => signIn('github', { callbackUrl })}>
                 <Github />
                 <p>Sign in with GitHub</p>
