@@ -56,6 +56,10 @@ resource "helm_release" "falkordb" {
     name  = "master.service.loadBalancerIP"
     value = var.dns_ip_address
   }
+  set_list {
+    name  = "master.extraFlags"
+    value = ["--loadmodule", "/FalkorDB/bin/src/falkordb.so"]
+  }
   set {
     name  = "master.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/hostname"
     value = var.dns_hostname

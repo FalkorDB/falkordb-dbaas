@@ -22,6 +22,7 @@ env:
   PLAN_WORKFLOW_NAME: gcp-full-infra-test-plan.yaml
   tenant_group_name: "workflow-pr-${{ github.event.pull_request.number }}"
   tenant_name: "t-1"
+  TF_VAR_falkordb_version: 'edge'
 
 jobs:
   apply:

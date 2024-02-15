@@ -93,6 +93,10 @@ resource "helm_release" "falkordb" {
     name  = "replica.replicaCount"
     value = var.falkordb_replicas
   }
+  set_list {
+    name  = "replica.extraFlags"
+    value = ["--loadmodule", "/FalkorDB/bin/src/falkordb.so"]
+  }
   # set {
   #   name  = "replica.resources.requests.cpu"
   #   value = var.falkordb_cpu
