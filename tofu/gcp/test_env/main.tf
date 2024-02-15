@@ -3,7 +3,7 @@ locals {
     "tier-m0" = {
       persistence_size = "10Gi",
       replicas         = 0
-      min_cpu          = "300m"
+      min_cpu          = "200m"
       max_cpu          = "250m"
       min_memory       = "200Mi"
       max_memory       = "1000Mi"
