@@ -59,63 +59,70 @@ variable "node_pools" {
       spot               = true
       node_metadata      = "GKE_METADATA"
     },
+
     {
       name               = "tier-m0"
-      machine_type       = "custom-0.25-1024"
+      machine_type       = "e2-micro"
       disk_size_gb       = 10
       total_min_count    = 0
       total_max_count    = 50
       initial_node_count = 0
+      node_metadata      = "GCE_METADATA"
     },
     {
       name               = "tier-m1"
-      machine_type       = "custom-1-1024"
+      machine_type       = "e2-custom-2-3072"
       disk_size_gb       = 10
       total_min_count    = 0
       total_max_count    = 50
       initial_node_count = 0
+      node_metadata      = "GCE_METADATA"
     },
     {
       name               = "tier-m2"
-      machine_type       = "custom-2-2048"
-      disk_size_gb       = 10
+      machine_type       = "e2-custom-4-6144"
+      disk_size_gb       = 20
       total_min_count    = 0
       total_max_count    = 50
       initial_node_count = 0
+      node_metadata      = "GCE_METADATA"
     },
     {
       name               = "tier-m4"
-      machine_type       = "custom-2-4096"
-      disk_size_gb       = 12
-      total_min_count    = 0
-      total_max_count    = 50
-      initial_node_count = 0
-    },
-    {
-      name               = "tier-m8"
-      machine_type       = "custom-4-8192"
+      machine_type       = "e2-custom-4-11264"
       disk_size_gb       = 24
       total_min_count    = 0
       total_max_count    = 50
       initial_node_count = 0
+      node_metadata      = "GCE_METADATA"
     },
     {
-      name               = "tier-m16"
-      machine_type       = "custom-8-16384"
+      name               = "tier-m8"
+      machine_type       = "e2-custom-8-19456"
       disk_size_gb       = 48
       total_min_count    = 0
       total_max_count    = 50
       initial_node_count = 0
+      node_metadata      = "GCE_METADATA"
     },
     {
-      name               = "tier-m32"
-      machine_type       = "custom-16-32768"
+      name               = "tier-m16"
+      machine_type       = "e2-custom-16-36864"
       disk_size_gb       = 96
       total_min_count    = 0
       total_max_count    = 50
       initial_node_count = 0
+      node_metadata      = "GCE_METADATA"
     },
-
+    {
+      name               = "tier-m32"
+      machine_type       = "e2-custom-32-71680"
+      disk_size_gb       = 192
+      total_min_count    = 0
+      total_max_count    = 50
+      initial_node_count = 0
+      node_metadata      = "GCE_METADATA"
+    },
   ]
 }
 

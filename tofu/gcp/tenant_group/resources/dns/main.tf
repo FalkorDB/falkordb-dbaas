@@ -6,6 +6,8 @@ resource "google_dns_managed_zone" "dns_zone" {
   dns_name      = "${var.tenant_group_name}.${var.dns_domain}."
   visibility    = "public"
   force_destroy = true
+
+  labels = var.labels
 }
 
 # Create DNS Service account

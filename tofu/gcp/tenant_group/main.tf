@@ -1,4 +1,8 @@
-
+locals {
+  labels = {
+    "tenant_group" = var.tenant_group_name
+  }
+}
 provider "google" {
   project = var.project_id
   region  = var.region
@@ -42,6 +46,8 @@ module "gke_cluster" {
 
   cluster_deletion_protection = var.cluster_deletion_protection
 
+  labels = local.labels
+
   depends_on = [module.networking]
 }
 
@@ -53,6 +59,8 @@ module "dns" {
   tenant_group_name = var.tenant_group_name
   dns_domain        = var.dns_domain
   dns_sa_name       = "${var.tenant_group_name}-dns-sa"
+  labels            = local.labels
+
 }
 
 module "backup" {
@@ -65,6 +73,8 @@ module "backup" {
   retention_policy_days = var.backup_retention_policy_days
 
   force_destroy_bucket = var.force_destroy_backup_bucket
+
+  labels = local.labels
 }
 
 

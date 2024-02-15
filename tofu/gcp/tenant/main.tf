@@ -72,6 +72,8 @@ module "k8s" {
   falkordb_password                  = var.falkordb_password
   falkordb_cpu                       = var.falkordb_cpu
   falkordb_memory                    = var.falkordb_memory
+  falkordb_min_cpu                   = var.falkordb_min_cpu
+  falkordb_min_memory                = var.falkordb_min_memory
   falkordb_replicas                  = var.falkordb_replicas
   persistence_size                   = var.persistence_size
 

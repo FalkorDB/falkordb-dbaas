@@ -28,7 +28,13 @@ variable "falkordb_cpu" {
 variable "falkordb_memory" {
   type = string
 }
+variable "falkordb_min_cpu" {
+  type = string
+}
 
+variable "falkordb_min_memory" {
+  type = string
+}
 variable "persistence_size" {
   type = string
 }

@@ -16,6 +16,17 @@ module "monitoring" {
 
 }
 
+module "billing" {
+  source = "./billing"
+
+  org_id             = var.org_id
+  project_id         = var.billing_project_id
+  project_name       = var.billing_project_name
+  project_parent_id  = google_folder.root_folder.id
+  billing_account_id = var.billing_account_id
+
+}
+
 module "policies" {
   source = "./policies"
 

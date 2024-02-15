@@ -21,14 +21,16 @@ module "falkordb_deployment" {
   replication_configuration = var.falkordb_replication_configuration
   node_pool_name            = var.node_pool_name
 
-  falkordb_version  = var.falkordb_version
-  falkordb_password = local.falkordb_password
-  falkordb_cpu      = var.falkordb_cpu
-  falkordb_memory   = var.falkordb_memory
-  persistence_size  = var.persistence_size
-  falkordb_replicas = var.falkordb_replicas
-  redis_port        = var.redis_port
-  sentinel_port     = var.sentinel_port
+  falkordb_version    = var.falkordb_version
+  falkordb_password   = local.falkordb_password
+  falkordb_cpu        = var.falkordb_cpu
+  falkordb_memory     = var.falkordb_memory
+  falkordb_min_cpu    = var.falkordb_min_cpu
+  falkordb_min_memory = var.falkordb_min_memory
+  persistence_size    = var.persistence_size
+  falkordb_replicas   = var.falkordb_replicas
+  redis_port          = var.redis_port
+  sentinel_port       = var.sentinel_port
 
   deployment_namespace = kubernetes_namespace.falkordb.metadata[0].name
 

@@ -24,3 +24,8 @@ variable "retention_policy_days" {
     error_message = "retention_policy_days must be less than or equal to 365"
   }
 }
+
+variable "labels" {
+  type    = map(string)
+  default = {}
+}

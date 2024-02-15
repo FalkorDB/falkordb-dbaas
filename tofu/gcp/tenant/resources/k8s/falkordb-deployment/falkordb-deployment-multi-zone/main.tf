@@ -2,18 +2,6 @@ locals {
   pod_affinity = {
     "podAntiAffinity" : {
       "requiredDuringSchedulingIgnoredDuringExecution" : [
-        # Place one pod per node
-        {
-          "weight" : 1,
-          "topologyKey" : "kubernetes.io/hostname",
-          "namespaceSelector" : {},
-          "labelSelector" : {
-            "matchLabels" : {
-              "app.kubernetes.io/instance" : var.deployment_name
-            }
-          }
-        },
-
         # Place one pod per zone
         {
           "weight" : 100,
@@ -27,7 +15,6 @@ locals {
       ]
     }
   }
-
 }
 
 resource "helm_release" "falkordb" {
@@ -97,14 +84,22 @@ resource "helm_release" "falkordb" {
     name  = "replica.extraFlags"
     value = ["--loadmodule", "/FalkorDB/bin/src/falkordb.so"]
   }
-  # set {
-  #   name  = "replica.resources.requests.cpu"
-  #   value = var.falkordb_cpu
-  # }
-  # set {
-  #   name  = "replica.resources.requests.memory"
-  #   value = var.falkordb_memory
-  # }
+  set {
+    name  = "replica.resources.limits.cpu"
+    value = var.falkordb_cpu
+  }
+  set {
+    name  = "replica.resources.limits.memory"
+    value = var.falkordb_memory
+  }
+  set {
+    name  = "replica.resources.requests.cpu"
+    value = var.falkordb_min_cpu
+  }
+  set {
+    name  = "replica.resources.requests.memory"
+    value = var.falkordb_min_memory
+  }
   set {
     name  = "replica.persistence.size"
     value = var.persistence_size

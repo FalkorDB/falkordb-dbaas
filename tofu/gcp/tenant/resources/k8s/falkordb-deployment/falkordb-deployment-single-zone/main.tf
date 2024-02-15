@@ -1,22 +1,8 @@
 locals {
   pod_affinity = {
-    "podAntiAffinity" : {
-      "requiredDuringSchedulingIgnoredDuringExecution" : [
-        # Place one pod per node
-        {
-          "weight" : 1,
-          "topologyKey" : "kubernetes.io/hostname",
-          "namespaceSelector" : {},
-          "labelSelector" : {
-            "matchLabels" : {
-              "app.kubernetes.io/instance" : var.deployment_name
-            }
-          }
-        },
-      ],
-    },
     "podAffinity" : {
       "requiredDuringSchedulingIgnoredDuringExecution" : [
+        # Schedule in the same zone
         {
           "topologyKey" : "topology.kubernetes.io/zone",
           "labelSelector" : {
@@ -26,9 +12,25 @@ locals {
           }
         }
       ]
+    },
+
+    "podAntiAffinity" : {
+      "requiredDuringSchedulingIgnoredDuringExecution" : [
+        # Schedule in different nodes
+        {
+          "weight" : 100,
+          "podAffinityTerm" : {
+            "topologyKey" : "kubernetes.io/hostname",
+            "labelSelector" : {
+              "matchLabels" : {
+                "app.kubernetes.io/instance" : var.deployment_name
+              }
+            }
+          }
+        }
+      ]
     }
   }
-
 }
 
 resource "helm_release" "falkordb" {
@@ -98,14 +100,22 @@ resource "helm_release" "falkordb" {
     name  = "replica.extraFlags"
     value = ["--loadmodule", "/FalkorDB/bin/src/falkordb.so"]
   }
-  # set {
-  #   name  = "replica.resources.requests.cpu"
-  #   value = var.falkordb_cpu
-  # }
-  # set {
-  #   name  = "replica.resources.requests.memory"
-  #   value = var.falkordb_memory
-  # }
+  set {
+    name  = "replica.resources.limits.cpu"
+    value = var.falkordb_cpu
+  }
+  set {
+    name  = "replica.resources.limits.memory"
+    value = var.falkordb_memory
+  }
+  set {
+    name  = "replica.resources.requests.cpu"
+    value = var.falkordb_min_cpu
+  }
+  set {
+    name  = "replica.resources.requests.memory"
+    value = var.falkordb_min_memory
+  }
   set {
     name  = "replica.persistence.size"
     value = var.persistence_size
