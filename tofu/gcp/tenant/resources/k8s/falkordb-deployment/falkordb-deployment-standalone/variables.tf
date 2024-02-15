@@ -1,13 +1,9 @@
-variable "replication_configuration" {
-  type = object({
-    enable     = bool
-    multi_zone = bool
-  })
+variable "deployment_name" {
+  type = string
 }
-
 variable "node_pool_name" {
-  type     = string
-  nullable = true
+  type    = string
+  default = "default-pool"
 }
 variable "falkordb_version" {
   type    = string
@@ -25,10 +21,6 @@ variable "falkordb_password" {
   sensitive = true
 }
 
-variable "falkordb_replicas" {
-  type = number
-}
-
 variable "falkordb_cpu" {
   type = string
 }
@@ -42,10 +34,6 @@ variable "persistence_size" {
 }
 
 variable "redis_port" {
-  type = number
-}
-
-variable "sentinel_port" {
   type = number
 }
 
@@ -69,4 +57,13 @@ variable "dns_ttl" {
 variable "storage_class_name" {
   type    = string
   default = "standard-rwo"
+}
+
+variable "service_type" {
+  type    = string
+  default = "LoadBalancer"
+  validation {
+    condition     = var.service_type == "LoadBalancer" || var.service_type == "NodePort"
+    error_message = "Service type must be either LoadBalancer or NodePort"
+  }
 }

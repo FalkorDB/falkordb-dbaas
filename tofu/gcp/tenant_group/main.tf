@@ -37,7 +37,8 @@ module "gke_cluster" {
   ip_range_pods     = "pods"
   ip_range_services = "services"
 
-  node_pools = var.node_pools
+  enable_private_nodes = var.enable_private_nodes
+  node_pools           = var.node_pools
 
   cluster_deletion_protection = var.cluster_deletion_protection
 
@@ -80,7 +81,7 @@ provider "kubernetes" {
       "container",
       "clusters",
       "get-credentials",
-      var.cluster_name,
+      module.gke_cluster.cluster_name,
       "--region",
       var.region,
       "--project",
@@ -103,7 +104,7 @@ provider "helm" {
         "container",
         "clusters",
         "get-credentials",
-        var.cluster_name,
+        module.gke_cluster.cluster_name,
         "--region",
         var.region,
         "--project",

@@ -1,13 +1,9 @@
-variable "replication_configuration" {
-  type = object({
-    enable     = bool
-    multi_zone = bool
-  })
+variable "deployment_name" {
+  type = string
 }
-
 variable "node_pool_name" {
-  type     = string
-  nullable = true
+  type    = string
+  default = "default-pool"
 }
 variable "falkordb_version" {
   type    = string
@@ -25,10 +21,6 @@ variable "falkordb_password" {
   sensitive = true
 }
 
-variable "falkordb_replicas" {
-  type = number
-}
-
 variable "falkordb_cpu" {
   type = string
 }
@@ -39,6 +31,11 @@ variable "falkordb_memory" {
 
 variable "persistence_size" {
   type = string
+}
+
+variable "falkordb_replicas" {
+  type    = number
+  default = 2
 }
 
 variable "redis_port" {

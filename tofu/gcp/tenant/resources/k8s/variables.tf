@@ -6,6 +6,17 @@ variable "tenant_name" {
   type = string
 }
 
+variable "falkordb_replication_configuration" {
+  type = object({
+    enable     = bool
+    multi_zone = bool
+  })
+}
+
+variable "node_pool_name" {
+  type     = string
+  nullable = true
+}
 variable "falkordb_version" {
   type = string
 }
@@ -24,7 +35,7 @@ variable "falkordb_memory" {
   type = string
 }
 
-variable "persistance_size" {
+variable "persistence_size" {
   type = string
 }
 

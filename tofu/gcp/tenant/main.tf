@@ -63,15 +63,17 @@ locals {
 module "k8s" {
   source = "./resources/k8s"
 
-  project_id  = var.project_id
-  tenant_name = var.tenant_name
+  project_id     = var.project_id
+  tenant_name    = var.tenant_name
+  node_pool_name = var.node_pool_name
 
-  falkordb_version  = var.falkordb_version
-  falkordb_password = var.falkordb_password
-  falkordb_cpu      = var.falkordb_cpu
-  falkordb_memory   = var.falkordb_memory
-  falkordb_replicas = var.falkordb_replicas
-  persistance_size  = var.persistance_size
+  falkordb_replication_configuration = var.falkordb_replication_configuration
+  falkordb_version                   = var.falkordb_version
+  falkordb_password                  = var.falkordb_password
+  falkordb_cpu                       = var.falkordb_cpu
+  falkordb_memory                    = var.falkordb_memory
+  falkordb_replicas                  = var.falkordb_replicas
+  persistence_size                   = var.persistence_size
 
   backup_bucket_name = var.backup_bucket_name
   backup_schedule    = var.backup_schedule
@@ -84,6 +86,9 @@ module "k8s" {
 
   multi_zone = var.multi_zone
   pod_zone   = var.pod_zone
+
+  # Required for test suite to wait for the tenant group to be ready
+  depends_on = [var.cluster_endpoint, var.cluster_ca_certificate]
 }
 
 # Wait 10 seconds for the NEGs to be created

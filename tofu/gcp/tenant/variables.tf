@@ -27,9 +27,24 @@ variable "ip_address" {
 variable "tenant_name" {
   type = string
 }
-
+variable "node_pool_name" {
+  type     = string
+  nullable = true
+}
 variable "backup_bucket_name" {
   type = string
+}
+
+variable "falkordb_replication_configuration" {
+  type = object({
+    enable     = bool
+    multi_zone = bool
+  })
+
+  default = {
+    enable     = false
+    multi_zone = false
+  }
 }
 
 variable "falkordb_version" {
@@ -50,12 +65,12 @@ variable "falkordb_memory" {
   type = string
 }
 
-variable "persistance_size" {
+variable "persistence_size" {
   type = string
 
   validation {
-    condition     = can(regex("^[0-9]+Gi$", var.persistance_size)) && parseint(regex("^[0-9]+", var.persistance_size), 10) >= 11
-    error_message = "Size must be equal or higher than 11Gi"
+    condition     = can(regex("^[0-9]+Gi$", var.persistence_size)) && parseint(regex("^[0-9]+", var.persistence_size), 10) >= 10
+    error_message = "Size must be equal or higher than 10Gi"
   }
 }
 

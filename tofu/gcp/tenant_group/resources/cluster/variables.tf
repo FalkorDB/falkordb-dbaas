@@ -44,3 +44,13 @@ variable "cluster_deletion_protection" {
   type    = bool
   default = true
 }
+
+variable "default_max_pods_per_node" {
+  type    = number
+  default = 20
+}
+
+variable "enable_private_nodes" {
+  type    = bool
+  default = true
+}

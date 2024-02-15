@@ -18,11 +18,14 @@ resource "kubernetes_namespace" "falkordb" {
 module "falkordb_deployment" {
   source = "./falkordb-deployment"
 
+  replication_configuration = var.falkordb_replication_configuration
+  node_pool_name            = var.node_pool_name
+
   falkordb_version  = var.falkordb_version
   falkordb_password = local.falkordb_password
   falkordb_cpu      = var.falkordb_cpu
   falkordb_memory   = var.falkordb_memory
-  persistance_size  = var.persistance_size
+  persistence_size  = var.persistence_size
   falkordb_replicas = var.falkordb_replicas
   redis_port        = var.redis_port
   sentinel_port     = var.sentinel_port
@@ -31,9 +34,6 @@ module "falkordb_deployment" {
 
   dns_ip_address = var.dns_ip_address
   dns_hostname   = local.dns_hostname
-
-  multi_zone = var.multi_zone
-  pod_zone   = var.pod_zone
 
 }
 

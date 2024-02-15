@@ -1,161 +1,66 @@
 locals {
-  deployment_name = "falkordb"
   pod_name_prefix = "falkordb-redis"
+  deployment_name = "falkordb"
   metrics_port    = 9121
-
-  pod_anti_affinity = {
-    "podAntiAffinity" : {
-      "preferredDuringSchedulingIgnoredDuringExecution" : [
-        {
-          "weight" : 100,
-          "podAffinityTerm" : {
-            "topologyKey" : "topology.kubernetes.io/zone",
-            "labelSelector" : {
-              "matchLabels" : {
-                "app.kubernetes.io/instance" : local.deployment_name
-              }
-            }
-          }
-        }
-      ]
-    }
-  }
-
 }
 
-resource "helm_release" "falkordb" {
-  name      = local.deployment_name
-  namespace = var.deployment_namespace
+module "standalone" {
+  count  = var.replication_configuration.enable == false ? 1 : 0
+  source = "./falkordb-deployment-standalone"
 
-  # Necessary so there's enough time to finish installing
-  timeout = 600
+  node_pool_name       = var.node_pool_name
+  deployment_name      = local.deployment_name
+  falkordb_version     = var.falkordb_version
+  falkordb_password    = var.falkordb_password
+  falkordb_cpu         = var.falkordb_cpu
+  falkordb_memory      = var.falkordb_memory
+  persistence_size     = var.persistence_size
+  redis_port           = var.redis_port
+  deployment_namespace = var.deployment_namespace
+  dns_ip_address       = var.dns_ip_address
+  dns_hostname         = var.dns_hostname
+  dns_ttl              = var.dns_ttl
+  storage_class_name   = var.storage_class_name
+}
 
-  chart   = "oci://registry-1.docker.io/bitnamicharts/redis"
-  version = "18.9.1"
+module "single_zone" {
+  count  = var.replication_configuration.enable == true && var.replication_configuration.multi_zone == false ? 1 : 0
+  source = "./falkordb-deployment-single-zone"
 
-  set {
-    name  = "global.redis.password"
-    value = var.falkordb_password
-  }
-  set {
-    name  = "image.repository"
-    value = "falkordb/falkordb"
-  }
-  set {
-    name  = "image.tag"
-    value = var.falkordb_version
-  }
+  node_pool_name       = var.node_pool_name
+  deployment_name      = local.deployment_name
+  falkordb_version     = var.falkordb_version
+  falkordb_password    = var.falkordb_password
+  falkordb_cpu         = var.falkordb_cpu
+  falkordb_memory      = var.falkordb_memory
+  persistence_size     = var.persistence_size
+  redis_port           = var.redis_port
+  sentinel_port        = var.sentinel_port
+  deployment_namespace = var.deployment_namespace
+  dns_ip_address       = var.dns_ip_address
+  dns_hostname         = var.dns_hostname
+  dns_ttl              = var.dns_ttl
+  storage_class_name   = var.storage_class_name
+}
 
-  ###### SENTINEL ######
-  set {
-    name  = "sentinel.enabled"
-    value = true
-  }
-  set {
-    name  = "sentinel.service.type"
-    value = "LoadBalancer"
-  }
-  set {
-    name  = "sentinel.service.loadBalancerIP"
-    value = var.dns_ip_address
-  }
-  set {
-    name  = "sentinel.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/hostname"
-    value = var.dns_hostname
-  }
-  set {
-    name  = "sentinel.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/ttl"
-    value = var.dns_ttl
-    type  = "string"
-  }
-  set {
-    name  = "sentinel.containerPorts.sentinel"
-    value = var.sentinel_port
-  }
-  set {
-    name  = "sentinel.service.ports.sentinel"
-    value = var.sentinel_port
-  }
-  set {
-    name  = "sentinel.service.ports.redis"
-    value = var.redis_port
-  }
 
-  ###### REPLICA ######
-  set {
-    name  = "replica.replicaCount"
-    value = var.falkordb_replicas
-  }
-  set_list {
-    name  = "replica.extraFlags"
-    value = ["--loadmodule", "/FalkorDB/bin/linux-x64-release/src/falkordb.so"]
-  }
-  set {
-    name  = "replica.resources.limits.cpu"
-    value = var.falkordb_cpu
-  }
-  set {
-    name  = "replica.resources.limits.memory"
-    value = var.falkordb_memory
-  }
-  set {
-    name  = "replica.persistence.size"
-    value = var.persistance_size
-  }
-  set {
-    name  = "replica.containerPorts.redis"
-    value = var.redis_port
-  }
-  set {
-    name  = "replica.service.ports.redis"
-    value = var.redis_port
-  }
-  set {
-    name  = "replica.persistence.enabled"
-    value = true
-  }
-  set {
-    name  = "replica.persistence.storageClass"
-    value = var.storage_class_name
-  }
-  set {
-    name  = "replica.persistentVolumeClaimRetentionPolicy.enabled"
-    value = true
-  }
-  set {
-    name  = "replica.persistentVolumeClaimRetentionPolicy.whenScaled"
-    value = "Delete"
-  }
-  set {
-    name  = "replica.persistentVolumeClaimRetentionPolicy.whenDeleted"
-    value = "Delete"
-  }
-  dynamic "set" {
-    for_each = var.multi_zone == true ? [1] : []
-    content {
-      name  = "replica.affinity"
-      value = yamlencode(local.pod_anti_affinity)
-    }
-  }
-  dynamic "set" {
-    for_each = var.multi_zone != true && var.pod_zone != null && var.pod_zone != "" ? [1] : []
-    content {
-      name  = "replica.nodeSelector.topology\\.kubernetes\\.io/zone"
-      value = var.pod_zone
-    }
-  }
+module "multi_zone" {
+  count  = var.replication_configuration.enable == true && var.replication_configuration.multi_zone == true ? 1 : 0
+  source = "./falkordb-deployment-multi-zone"
 
-  ###### METRICS ######
-  set {
-    name  = "metrics.enabled"
-    value = true
-  }
-  set {
-    name  = "metrics.extraArgs.redis\\.addr"
-    value = "redis://localhost:${var.redis_port}"
-  }
-  set {
-    name  = "metrics.podLabels.app\\.kubernetes\\.io/name"
-    value = "redis"
-  }
+  node_pool_name       = var.node_pool_name
+  deployment_name      = local.deployment_name
+  falkordb_version     = var.falkordb_version
+  falkordb_password    = var.falkordb_password
+  falkordb_replicas    = var.falkordb_replicas
+  falkordb_cpu         = var.falkordb_cpu
+  falkordb_memory      = var.falkordb_memory
+  persistence_size     = var.persistence_size
+  redis_port           = var.redis_port
+  sentinel_port        = var.sentinel_port
+  deployment_namespace = var.deployment_namespace
+  dns_ip_address       = var.dns_ip_address
+  dns_hostname         = var.dns_hostname
+  dns_ttl              = var.dns_ttl
+  storage_class_name   = var.storage_class_name
 }
