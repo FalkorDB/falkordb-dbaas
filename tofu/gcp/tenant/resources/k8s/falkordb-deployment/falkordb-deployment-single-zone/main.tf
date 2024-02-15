@@ -13,16 +13,16 @@ locals {
       ]
     },
 
-    "podAntiAffinity": {
-      "preferredDuringSchedulingIgnoredDuringExecution": [
-      # Schedule in different nodes if possible
+    "podAntiAffinity" : {
+      "preferredDuringSchedulingIgnoredDuringExecution" : [
+        # Schedule in different nodes if possible
         {
-          "weight": 100,
-          "podAffinityTerm": {
-            "topologyKey": "kubernetes.io/hostname",
-            "labelSelector": {
-              "matchLabels": {
-                "app.kubernetes.io/instance": var.deployment_name
+          "weight" : 100,
+          "podAffinityTerm" : {
+            "topologyKey" : "kubernetes.io/hostname",
+            "labelSelector" : {
+              "matchLabels" : {
+                "app.kubernetes.io/instance" : var.deployment_name
               }
             }
           }
