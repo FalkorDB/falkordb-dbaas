@@ -16,19 +16,19 @@ export default function SinginProviders() {
     const error = searchParams.get('error')
 
     return (
-        <div className="flex flex-col space-y-6 p-6 bg-white shadow-lg rounded-lg dark:bg-zinc-850 justify-between border border-gray-300">
+        <div className="flex flex-col space-y-6 p-6  bg-zinc-200 dark:bg-slate-900 shadow-lg rounded-lg dark:bg-zinc-850 justify-between border border-gray-300">
             <h1 className="text-3xl font-bold">Sign in to your account</h1>
-            <p className="text-zinc-500 dark:text-zinc-400">
+            <p className="">
                 By logging in, you accept our
-                <Link className="text-blue-500 hover:text-blue-700" href="/terms"> terms </Link>
+                <Link className="dark:text-blue-300 hover:dark:text-blue-500 text-blue-500 hover:text-blue-700" href="/terms"> terms </Link>
                 and
-                <Link className="text-blue-500 hover:text-blue-700" href="/policy"> privacy policy</Link>.
+                <Link className="dark:text-blue-300 hover:dark:text-blue-500 text-blue-500 hover:text-blue-700" href="/policy"> privacy policy</Link>.
             </p>
-            <Button className='flex flex-row text-xl p-6 space-x-2' onClick={() => signIn('github', { callbackUrl })}>
-                <Github />
+            <Button className='flex flex-row text-xl p-6 space-x-2 dark:text-white dark:bg-gray-800' onClick={() => signIn('github', { callbackUrl })}>
+                <Github darkMode/>
                 <p>Sign in with GitHub</p>
             </Button>
-            <Button className='flex flex-row text-xl p-6 space-x-2' onClick={() => signIn('google', { callbackUrl })}>
+            <Button className='flex flex-row text-xl p-6 space-x-2 dark:text-white dark:bg-gray-800' onClick={() => signIn('google', { callbackUrl })}>
                 <Google />
                 <p>Sign in with Google</p>
             </Button>{/*  */}
