@@ -25,11 +25,11 @@ export default function SinginProviders() {
                 <Link className="dark:text-blue-300 hover:dark:text-blue-500 text-blue-500 hover:text-blue-700" href="/policy"> privacy policy</Link>.
             </p>
             <Button className='flex flex-row text-xl p-6 space-x-2 dark:text-white dark:bg-gray-800' onClick={() => signIn('github', { callbackUrl })}>
-                <Github darkMode/>
+                <Github className="w-7 h-7" darkMode/>
                 <p>Sign in with GitHub</p>
             </Button>
             <Button className='flex flex-row text-xl p-6 space-x-2 dark:text-white dark:bg-gray-800' onClick={() => signIn('google', { callbackUrl })}>
-                <Google />
+                <Google className="w-7 h-7" />
                 <p>Sign in with Google</p>
             </Button>{/*  */}
             {error &&

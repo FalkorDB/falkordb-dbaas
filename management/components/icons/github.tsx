@@ -2,8 +2,8 @@ import { cn } from '@/lib/utils';
 import React, { useEffect, useState } from 'react';
 
 interface Props {
-    darkMode?: boolean | undefined, 
-    className?: string | undefined
+    darkMode: boolean, 
+    className: string
 }
 
 export default function Github({darkMode, className}: Props) {
