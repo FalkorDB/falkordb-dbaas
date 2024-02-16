@@ -75,6 +75,13 @@ resource "helm_release" "falkordb" {
     value = var.redis_port
   }
 
+  ###### MASTER ######
+  set {
+    name  = "master.containerPorts.redis"
+    value = var.redis_port
+  }
+
+
   ###### REPLICA ######
   set {
     name  = "replica.replicaCount"
