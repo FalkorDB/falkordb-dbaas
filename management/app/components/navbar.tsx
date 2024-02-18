@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "../../components/ui/switch";
 import { Label } from "../../components/ui/label";
 import Github from "../../components/icons/github";
+import AvatarButton from "./AvatarButton";
 
 export interface LinkDefinition {
   name: string,
@@ -60,9 +61,11 @@ export default function Navbar({ selector, links, collapsed, onExpand }: { selec
       }
       {status === "authenticated" &&
         <>
+          <AvatarButton collapsed={collapsed} />
           <Select onValueChange={selector.onSelect} defaultValue={selector.list[0]}>
             <SelectTrigger>
-              <SelectValue placeholder={selector.label} />
+              {selector.icon}
+              {!collapsed && <SelectValue placeholder={selector.label}  />}
             </SelectTrigger>
             <SelectContent>
               {
