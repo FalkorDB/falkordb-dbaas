@@ -3,19 +3,18 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
-const MACHINES = [
-    "m1.small",
-    "m1.medium",
-    "m1.large",
+const SAMMPLES = [
+    "Sample1",
+    "Sample2",
+    "Sample3",
 ]
 
 
 export default function Page() {
 
-    const databaseName = useRef<HTMLInputElement>(null);
-    const [machineType, setMachineType] = useState(MACHINES[0]);
+    const [sample, setSample] = useState(SAMMPLES[0]);
 
     const createDatabase = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -23,8 +22,7 @@ export default function Page() {
         fetch('/api/project/database', {
             method: 'POST',
             body: JSON.stringify({
-                name: databaseName.current?.value,
-                machineType
+                sample
             })
         }).then((res) => {
             if (res.ok) {
@@ -36,28 +34,24 @@ export default function Page() {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen py-2">
             <main className="flex flex-col items-center justify-center flex-1 px-20 text-center space-y-10">
-                <h1 className="text-8xl">Create a new Database</h1>
+                <h1 className="text-8xl">Loads sample data</h1>
                 <form className="flex flex-col space-y-10" onSubmit={createDatabase}>
                     <div className="flex flex-row space-x-4 items-center">
-                        <Label className="text-4xl p-2" htmlFor="databaseName">Database Name:</Label>
-                        <input className="text-4xl p-2 border-8" ref={databaseName} id="databaseName" type="text" required />
-                    </div>
-                    <div className="flex flex-row space-x-4 items-center">
-                        <Label className="text-4xl min-w-fit p-2 text-left" htmlFor="machineType">Machine Type:</Label>
-                        <Select onValueChange={setMachineType} defaultValue={MACHINES[0]}>
+                        <Label className="text-4xl min-w-fit p-2 text-left" htmlFor="machineType">Sample Data:</Label>
+                        <Select onValueChange={setSample} defaultValue={SAMMPLES[0]}>
                             <SelectTrigger id="machineType" className="text-4xl p-8 border-8" >
-                                <SelectValue placeholder="Machine type" />
+                                <SelectValue placeholder="Sample" />
                             </SelectTrigger>
                             <SelectContent>
                                 {
-                                    MACHINES.map((item) => (
+                                    SAMMPLES.map((item) => (
                                         <SelectItem className="text-4xl" key={item} value={item}>{item}</SelectItem>
                                     ))
                                 }
                             </SelectContent>
                         </Select>
                     </div>
-                    <Button className="p-8 text-4xl">Create</Button>
+                    <Button className="p-8 text-4xl">Load Sample</Button>
                 </form>
             </main>
         </div>
