@@ -2,8 +2,7 @@
 
 import Navbar from "@/app/components/navbar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { BookOpen, Database, Folder, LogOut, User } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { BookOpen, Database, Folder, User } from "lucide-react";
 import { useRef, useState } from "react";
 import { ImperativePanelHandle } from "react-resizable-panels";
 
@@ -22,12 +21,6 @@ const LINKS = [
         name: "Members",
         href: "/dashboard/members",
         icon: (<User className="h-6 w-6" />),
-    },
-    {
-        name: "Disconnect",
-        href: "",
-        icon: (<LogOut className="h-6 w-6" />),
-        onClick: () => { signOut({ callbackUrl: '/' }) }
     },
 ]
 
