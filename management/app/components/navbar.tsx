@@ -3,6 +3,7 @@ import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "../../components/ui/switch";
 import { Label } from "../../components/ui/label";
 import Github from "../../components/icons/github";
@@ -14,7 +15,14 @@ export interface LinkDefinition {
   onClick?: () => void
 }
 
-export default function Navbar({ links, collapsed, onExpand }: { links: LinkDefinition[], collapsed: boolean, onExpand: () => void }) {
+export interface SelectorDefinition {
+  label: string,
+  list: string[],
+  icon: JSX.Element,
+  onSelect?: (selected: string) => void
+}
+
+export default function Navbar({ selector, links, collapsed, onExpand }: { selector: SelectorDefinition, links: LinkDefinition[], collapsed: boolean, onExpand: () => void }) {
   const { status } = useSession()
   const { theme, setTheme, systemTheme } = useTheme()
 
@@ -51,18 +59,32 @@ export default function Navbar({ links, collapsed, onExpand }: { links: LinkDefi
         </div>
       }
       {status === "authenticated" &&
-        <ul className="space-y-4">
-          {
-            links.map((link, index) => (
-              // eslint-disable-next-line react/no-array-index-key
-              <li key={index} className="flex items-center space-x-2">
-                <Link title={link.name} className="underline underline-offset-2 flex space-x-2" href={link.href} onClick={link.onClick}>
-                  {link.icon} {!collapsed && (<p> {link.name}</p>)}
-                </Link>
-              </li>
-            ))
-          }
-        </ul>
+        <>
+          <Select onValueChange={selector.onSelect} defaultValue={selector.list[0]}>
+            <SelectTrigger>
+              <SelectValue placeholder={selector.label} />
+            </SelectTrigger>
+            <SelectContent>
+              {
+                selector.list.map((item) => (
+                  <SelectItem key={item} value={item}>{item}</SelectItem>
+                ))
+              }
+            </SelectContent>
+          </Select>
+          <ul className="space-y-4">
+            {
+              links.map((link, index) => (
+                // eslint-disable-next-line react/no-array-index-key
+                <li key={index} className="flex items-center space-x-2">
+                  <Link title={link.name} className="underline underline-offset-2 flex space-x-2" href={link.href} onClick={link.onClick}>
+                    {link.icon} {!collapsed && (<p> {link.name}</p>)}
+                  </Link>
+                </li>
+              ))
+            }
+          </ul>
+        </>
       }
       <footer className="flex flex-row items-center space-x-1 fixed bottom-1 text-xs">
         <a href="https://github.com/falkordb/falkordb-browser" title="Github repository" aria-label="Github repository">

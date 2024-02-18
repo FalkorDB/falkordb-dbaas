@@ -2,21 +2,26 @@
 
 import Navbar from "@/app/components/navbar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { Info, LogOut, Waypoints } from "lucide-react";
+import { BookOpen, Database, LogOut, User, Waypoints } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useRef, useState } from "react";
 import { ImperativePanelHandle } from "react-resizable-panels";
 
 const LINKS = [
     {
-        name: "Connection Details",
-        href: "/details",
-        icon: (<Info className="h-6 w-6" />),
+        name: "Databases",
+        href: "/dashboard/databases",
+        icon: (<Database className="h-6 w-6" />),
     },
     {
-        name: "Graph",
-        href: "/graph",
-        icon: (<Waypoints className="h-6 w-6" />),
+        name: "Documents",
+        href: "/dashboard/documents",
+        icon: (<BookOpen className="h-6 w-6" />),
+    },
+    {
+        name: "Members",
+        href: "/dashboard/members",
+        icon: (<User className="h-6 w-6" />),
     },
     {
         name: "Disconnect",
@@ -25,6 +30,13 @@ const LINKS = [
         onClick: () => { signOut({ callbackUrl: '/login' }) }
     },
 ]
+
+const SELECTOR = {
+    label: "Projects",
+    list: ["Proj1", "Proj2", "Proj3"],
+    icon: (<Waypoints className="h-6 w-6" />),
+    onSelect: (selected: string) => { console.log(selected) }
+}
 
 export default function RootLayout({
     children,
@@ -59,7 +71,7 @@ export default function RootLayout({
                 minSize={panelSize}
                 onCollapse={() => { setCollapsed(true) }}
                 onExpand={() => { setCollapsed(false) }}>
-                <Navbar links={LINKS} collapsed={isCollapsed} onExpand={onExpand} />
+                <Navbar selector={SELECTOR} links={LINKS} collapsed={isCollapsed} onExpand={onExpand} />
             </ResizablePanel>
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={100 - panelSize}>{children}</ResizablePanel>
