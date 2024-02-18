@@ -29,7 +29,9 @@ export default function Page() {
         }).then((res) => {
             if (res.ok) {
                 console.log('Database created')
-            }
+            } else {
+                console.error('Failed to create database')
+            }   
         })
     }
 

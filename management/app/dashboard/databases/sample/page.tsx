@@ -46,6 +46,8 @@ export default function Page() {
         }).then((res) => {
             if (res.ok) {
                 console.log('Sample loaded')
+            } else {
+                console.error('Failed to load sample')
             }
         })
     }
