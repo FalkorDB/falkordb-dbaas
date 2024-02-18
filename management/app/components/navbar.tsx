@@ -80,7 +80,7 @@ export default function Navbar({ selector, links, collapsed, onExpand }: { selec
               links.map((link, index) => (
                 // eslint-disable-next-line react/no-array-index-key
                 <li key={index} className="flex items-center space-x-2">
-                  <Link title={link.name} className="underline underline-offset-2 flex space-x-2 text-2xl" href={link.href} onClick={link.onClick}>
+                  <Link title={link.name} className="items-center underline underline-offset-2 flex space-x-2 text-2xl" href={link.href} onClick={link.onClick}>
                     {link.icon} {!collapsed && (<p> {link.name}</p>)}
                   </Link>
                 </li>

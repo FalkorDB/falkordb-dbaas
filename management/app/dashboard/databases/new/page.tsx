@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 const MACHINES = [
     "m1.small",
@@ -15,11 +15,26 @@ const MACHINES = [
 export default function Page() {
 
     const databaseName = useRef<HTMLInputElement>(null);
+    const [machineType, setMachineType] = useState(MACHINES[0]);
 
+    const project = "project1"
 
     const createDatabase = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
-        console.log(databaseName.current?.value)
+
+        fetch(`/api/project/${project}/database`, {
+            method: 'POST',
+            body: JSON.stringify({
+                name: databaseName.current?.value,
+                machineType
+            })
+        }).then((res) => {
+            if (res.ok) {
+                console.log('Database created')
+            } else {
+                console.error('Failed to create database')
+            }   
+        })
     }
 
     return (
@@ -33,7 +48,7 @@ export default function Page() {
                     </div>
                     <div className="flex flex-row space-x-4 items-center">
                         <Label className="text-4xl min-w-fit p-2 text-left" htmlFor="machineType">Machine Type:</Label>
-                        <Select defaultValue={MACHINES[0]}>
+                        <Select onValueChange={setMachineType} defaultValue={MACHINES[0]}>
                             <SelectTrigger id="machineType" className="text-4xl p-8 border-8" >
                                 <SelectValue placeholder="Machine type" />
                             </SelectTrigger>
