@@ -19,12 +19,10 @@ locals {
         # Schedule in different nodes
         {
           "weight" : 100,
-          "podAffinityTerm" : {
-            "topologyKey" : "kubernetes.io/hostname",
-            "labelSelector" : {
-              "matchLabels" : {
-                "app.kubernetes.io/instance" : var.deployment_name
-              }
+          "topologyKey" : "kubernetes.io/hostname",
+          "labelSelector" : {
+            "matchLabels" : {
+              "app.kubernetes.io/instance" : var.deployment_name
             }
           }
         }
