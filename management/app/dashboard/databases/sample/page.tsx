@@ -57,37 +57,37 @@ export default function Page() {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen py-2">
             <main className="flex flex-col items-center justify-center flex-1 px-20 text-center space-y-10">
-                <h1 className="text-8xl">Loads sample data</h1>
-                <form className="flex flex-col space-y-10" onSubmit={createDatabase}>
+                <h1 className="text-6xl">Loads sample data</h1>
+                <form className="flex flex-col space-y-5" onSubmit={createDatabase}>
                     <div className="flex flex-row space-x-4 items-center">
-                        <Label className="text-4xl min-w-fit p-2 text-left" htmlFor="machineType">Sample Data:</Label>
+                        <Label className="text-2xl min-w-fit p-2 text-left" htmlFor="machineType">Sample Data:</Label>
                         <Select onValueChange={setSample} defaultValue={SAMPLES[0].name}>
-                            <SelectTrigger id="machineType" className="text-4xl p-8 border-8" >
+                            <SelectTrigger id="machineType" className="text-2xl p-4 border-4" >
                                 <SelectValue placeholder="Sample" />
                             </SelectTrigger>
                             <SelectContent>
                                 {
                                     SAMPLES.map((item) => (
-                                        <SelectItem className="text-4xl" key={item.name} value={item.name}>{item.name}</SelectItem>
+                                        <SelectItem className="text-2xl" key={item.name} value={item.name}>{item.name}</SelectItem>
                                     ))
                                 }
                             </SelectContent>
                         </Select>
                     </div>
                     {sample &&
-                        <div>
-                            <div className="p-8 text-4xl flex flex-row items-center space-x-2">
+                        <div className="flex flex-col space-y-2">
+                            <div className="text-2xl flex flex-row items-center space-x-2">
                                 <Info />
                                 <div>{SAMPLES.find((s) => s.name === sample)?.description}</div>
                             </div>
-                            <div className="p-8 text-4xl flex flex-row items-center space-x-2">
+                            <div className="text-2xl flex flex-row items-center space-x-2">
                                 <Monitor />
                                 <div>{SAMPLES.find((s) => s.name === sample)?.machine}</div>
                             </div>
                         </div>
 
                     }
-                    <Button className="p-8 text-4xl">Load Sample</Button>
+                    <Button className="p-8 text-2xl">Load Sample</Button>
                 </form>
             </main>
         </div>

@@ -50,27 +50,27 @@ export default function Navbar({ selector, links, collapsed, onExpand }: { selec
         <Link href="" onClick={onExpand}>
           <Menu className="h-6 w-6" />
         </Link>
-        {!collapsed && (<span className="font-bold text-xl">FalkorDB Cloud</span>)}
+        {!collapsed && (<Link href="/" className="font-bold text-xl">Home</Link>)}
       </div>
       {
         mounted &&
         <div className="flex items-center space-x-2">
           <Switch id="dark-mode" checked={darkmode} onCheckedChange={setDarkMode} />
-          {!collapsed && (<Label className="text-2xl" htmlFor="dark-mode">{`${theme} mode`}</Label>)}
+          {!collapsed && (<Label className="text-lg" htmlFor="dark-mode">{`${theme} mode`}</Label>)}
         </div>
       }
       {status === "authenticated" &&
         <>
-          <AvatarButton collapsed={collapsed} classname="text-2xl" />
+          <AvatarButton collapsed={collapsed} classname="text-lg" />
           <Select onValueChange={selector.onSelect} defaultValue={selector.list[0]}>
-            <SelectTrigger  className="text-2xl" >
+            <SelectTrigger  className="text-xl" >
               {selector.icon}
               {!collapsed && <SelectValue placeholder={selector.label}  />}
             </SelectTrigger>
             <SelectContent>
               {
                 selector.list.map((item) => (
-                  <SelectItem className="text-2xl" key={item} value={item}>{item}</SelectItem>
+                  <SelectItem className="text-xl" key={item} value={item}>{item}</SelectItem>
                 ))
               }
             </SelectContent>
@@ -80,7 +80,7 @@ export default function Navbar({ selector, links, collapsed, onExpand }: { selec
               links.map((link, index) => (
                 // eslint-disable-next-line react/no-array-index-key
                 <li key={index} className="flex items-center space-x-2">
-                  <Link title={link.name} className="items-center underline underline-offset-2 flex space-x-2 text-2xl" href={link.href} onClick={link.onClick}>
+                  <Link title={link.name} className="items-center underline underline-offset-2 flex space-x-2 text-xl" href={link.href} onClick={link.onClick}>
                     {link.icon} {!collapsed && (<p> {link.name}</p>)}
                   </Link>
                 </li>
