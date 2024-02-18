@@ -22,7 +22,7 @@ env:
   PLAN_WORKFLOW_NAME: gcp-full-infra-test-plan.yaml
   tenant_group_name: "workflow-pr-${{ github.event.pull_request.number }}"
   tenant_name: "t-1"
-  TF_VAR_falkordb_version: 'edge'
+  TF_VAR_falkordb_version: "edge"
 
 jobs:
   apply:
@@ -108,7 +108,7 @@ jobs:
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r requirements.txt
-          pytest
+          pytest -s tofu/gcp/test_env/__tests__/read-write/main.py --hostname ${{ env.FALKORDB_HOST }} --port ${{ env.FALKORDB_PORT }} --password ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
 
       - name: Destroy GCP Test Environment
         if: always()
