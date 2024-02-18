@@ -1,1 +1,1 @@
-aws eks update-kubeconfig --name $1
+aws eks update-kubeconfig --name $1 --role-arn $2

@@ -1,9 +1,15 @@
 provider "aws" {
   region = var.region
+  assume_role {
+    role_arn = var.assume_role_arn
+  }
+}
+data "aws_caller_identity" "current" {
 }
 
-data "aws_caller_identity" "current" {}
-data "aws_availability_zones" "available" {}
+data "aws_availability_zones" "available" {
+}
+
 
 locals {
   vpc_cidr = "10.0.0.0/16"
@@ -12,8 +18,6 @@ locals {
   tags = {
     customer = var.name
   }
-
-  falkordb_s3_backup_location = "${module.falkordb_backup_s3_bucket.s3_bucket_id}/backups"
 }
 
 ################################################################################
@@ -28,6 +32,14 @@ module "eks" {
   cluster_version                = var.k8s_version
   cluster_endpoint_public_access = true
 
+  aws_auth_accounts = [
+    data.aws_caller_identity.current.account_id
+  ]
+
+  aws_auth_roles = [
+    var.eks_auth_role
+  ]
+
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
@@ -38,13 +50,11 @@ module "eks" {
       min_size     = var.k8s_node_min_count
       max_size     = var.k8s_node_max_count
       desired_size = var.k8s_node_count
-      network_interfaces = [{
-        associate_public_ip_address = true
-      }]
     }
   }
 
   tags = local.tags
+
 }
 
 ################################################################################
@@ -72,6 +82,7 @@ module "eks_blueprints_addons" {
   }
 
   tags = local.tags
+
 }
 
 data "aws_iam_policy_document" "assume_role" {
@@ -91,7 +102,7 @@ data "aws_iam_policy_document" "assume_role" {
 }
 
 resource "aws_iam_role" "falkordb_backup_role" {
-  name               = "eks-pod-identity-falkordb_backup_role"
+  name               = "${var.name}-falkordb_backup_role"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
 
@@ -176,56 +187,17 @@ module "falkordb_backup_s3_bucket" {
     }
   }
 
-  tags = local.tags
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "falkordb_backup_s3_bucket_lifecycle_configuration" {
-  bucket = module.falkordb_backup_s3_bucket.s3_bucket_id
-
-  rule {
-    id = "falkordb-rule"
-
-    filter {
-      prefix = "backups/"
-    }
-
-    expiration {
-      days = var.backup_retention_period
-    }
-    abort_incomplete_multipart_upload {
-      days_after_initiation = 3
-    }
-
-    status = "Enabled"
-  }
-}
-
-module "ebs_kms_key" {
-  source  = "terraform-aws-modules/kms/aws"
-  version = "~> 1.5"
-
-  description = "Customer managed key to encrypt EKS managed node group volumes"
-
-  # Policy
-  key_administrators = [data.aws_caller_identity.current.arn]
-  key_service_roles_for_autoscaling = [
-    # required for the ASG to manage encrypted volumes for nodes
-    "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling",
-    # required for the cluster / persistentvolume-controller to create encrypted PVCs
-    module.eks.cluster_iam_role_arn,
-  ]
-
-  # Aliases
-  aliases = ["eks/${var.name}/ebs"]
+  force_destroy = true
 
   tags = local.tags
+
 }
 
 module "ebs_csi_driver_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.20"
 
-  role_name_prefix = "${module.eks.cluster_name}-ebs-csi-driver-"
+  role_name_prefix = module.eks.cluster_name
 
   attach_ebs_csi_policy = true
 

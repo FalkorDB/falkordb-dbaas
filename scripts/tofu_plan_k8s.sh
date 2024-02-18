@@ -1,0 +1,1 @@
+cd ../tofu && tofu plan -target=module.k8s -out=local-k8s
