@@ -1,4 +1,3 @@
-/* eslint-disable jsx-a11y/anchor-is-valid */
 import { Menu } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
@@ -15,7 +14,7 @@ export interface LinkDefinition {
   onClick?: () => void
 }
 
-export default function Navbar({ links, collapsed, onExpand }: { links: LinkDefinition[], collapsed: boolean, onExpand:()=>void }) {
+export default function Navbar({ links, collapsed, onExpand }: { links: LinkDefinition[], collapsed: boolean, onExpand: () => void }) {
   const { status } = useSession()
   const { theme, setTheme, systemTheme } = useTheme()
 
@@ -38,6 +37,7 @@ export default function Navbar({ links, collapsed, onExpand }: { links: LinkDefi
   return (
     <nav className="w-full h-full bg-gray-100 dark:bg-gray-800 p-5 space-y-4 flex flex-col">
       <div className="flex items-center space-x-2">
+        {/* eslint-disable jsx-a11y/anchor-is-valid */}
         <Link href="" onClick={onExpand}>
           <Menu className="h-6 w-6" />
         </Link>
@@ -54,13 +54,13 @@ export default function Navbar({ links, collapsed, onExpand }: { links: LinkDefi
         <ul className="space-y-4">
           {
             links.map((link, index) => (
-                // eslint-disable-next-line react/no-array-index-key
-                <li key={index} className="flex items-center space-x-2">
-                  <Link title={link.name} className="underline underline-offset-2 flex space-x-2" href={link.href} onClick={link.onClick}>
-                    {link.icon} {!collapsed && (<p> {link.name}</p>)}
-                  </Link>
-                </li>
-              ))
+              // eslint-disable-next-line react/no-array-index-key
+              <li key={index} className="flex items-center space-x-2">
+                <Link title={link.name} className="underline underline-offset-2 flex space-x-2" href={link.href} onClick={link.onClick}>
+                  {link.icon} {!collapsed && (<p> {link.name}</p>)}
+                </Link>
+              </li>
+            ))
           }
         </ul>
       }

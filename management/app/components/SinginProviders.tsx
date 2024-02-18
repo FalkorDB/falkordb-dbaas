@@ -7,7 +7,7 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-export default function SinginProviders() {
+export default function SingInProviders() {
     const searchParams = useSearchParams()
     const callbackUrl = searchParams.get('callbackUrl') ?? '/dashboard'
 

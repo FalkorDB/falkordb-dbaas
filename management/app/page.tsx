@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import Spinning from "./components/spinning";
-import SinginProviders from "./components/SinginProviders";
+import SingInProviders from "./components/SinginProviders";
 
 export default function Home() {
 
@@ -27,7 +27,7 @@ export default function Home() {
     <div className="flex flex-col items-center justify-center min-h-screen py-2 bg-gray-400 dark:bg-gray-800">
       <main className="flex flex-col items-center justify-center flex-1 px-20 text-center">
         <Suspense>
-          <SinginProviders />
+          <SingInProviders />
         </Suspense>
       </main>
     </div>
