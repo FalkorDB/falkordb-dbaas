@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { HoverCard, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 // A function that takes a full name as a string and returns its initials as a string
 function getInitials(fullName: string): string {
@@ -31,7 +32,7 @@ function getInitials(fullName: string): string {
 }
 
 
-export default function AvatarButton({collapsed} : {collapsed: boolean}) {
+export default function AvatarButton({collapsed, classname} : {collapsed: boolean, classname:string}) {
   const { data: session, status } = useSession()
 
   if (status === "unauthenticated") {
@@ -52,12 +53,12 @@ export default function AvatarButton({collapsed} : {collapsed: boolean}) {
       <DropdownMenuTrigger>
         <HoverCard>
           <HoverCardTrigger>
-            <div className="flex items-center gap-3">
+            <div className={cn("flex items-center gap-3", classname)}>
               <Avatar className="h-9 w-9">
                 <AvatarImage alt="@shadcn" src={image} />
                 <AvatarFallback className="text-blue-600">{initials}</AvatarFallback>
               </Avatar>
-              {!collapsed && <div className="text-xs font-bold text-slate-50">{name}</div>}
+              {!collapsed && <div>{name}</div>}
             </div>
           </HoverCardTrigger>
           {/* <HoverCardContent className="w-80">
@@ -69,13 +70,13 @@ export default function AvatarButton({collapsed} : {collapsed: boolean}) {
         </HoverCard>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+        <DropdownMenuLabel className={classname}>My Account</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {/* <DropdownMenuItem>Profile</DropdownMenuItem>
         <DropdownMenuItem>Billing</DropdownMenuItem>
         <DropdownMenuItem>Team</DropdownMenuItem>
         <DropdownMenuItem>Subscription</DropdownMenuItem> */}
-        <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/' })}>Logout</DropdownMenuItem>
+        <DropdownMenuItem className={classname} onClick={() => signOut({ callbackUrl: '/' })}>Logout</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
