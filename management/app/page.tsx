@@ -1,12 +1,35 @@
-import { Button } from "@/components/ui/button";
-import Image from "next/image";
+"use client"
+
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import Spinning from "./components/spinning";
+import SingInProviders from "./components/SinginProviders";
 
 export default function Home() {
+
+  const { status } = useSession();
+  const router = useRouter();
+
+  // Redirect to home page if already signed in
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace('/dashboard');
+    }
+  }, [status, router]);
+
+  // Render a loading message while checking the session
+  if (status === 'loading') {
+    return <Spinning text="Loading..." />
+  }
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <Button>Sign up</Button>
-      </div>
-    </main>
+    <div className="flex flex-col items-center justify-center min-h-screen py-2 bg-gray-400 dark:bg-gray-800">
+      <main className="flex flex-col items-center justify-center flex-1 px-20 text-center">
+        <Suspense>
+          <SingInProviders />
+        </Suspense>
+      </main>
+    </div>
   );
 }
