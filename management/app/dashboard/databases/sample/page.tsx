@@ -35,10 +35,12 @@ export default function Page() {
 
     const [sample, setSample] = useState(SAMPLES[0].name);
 
+    const project = "project1"
+
     const createDatabase = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
 
-        fetch('/api/project/database', {
+        fetch(`/api/project/${project}/database`, {
             method: 'POST',
             body: JSON.stringify({
                 sample

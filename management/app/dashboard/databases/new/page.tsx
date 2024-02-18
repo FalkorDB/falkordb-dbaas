@@ -17,10 +17,12 @@ export default function Page() {
     const databaseName = useRef<HTMLInputElement>(null);
     const [machineType, setMachineType] = useState(MACHINES[0]);
 
+    const project = "project1"
+
     const createDatabase = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
 
-        fetch('/api/project/database', {
+        fetch(`/api/project/${project}/database`, {
             method: 'POST',
             body: JSON.stringify({
                 name: databaseName.current?.value,
