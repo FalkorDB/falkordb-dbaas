@@ -2,8 +2,7 @@
 
 import Navbar from "@/app/components/navbar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { BookOpen, Database, LogOut, User, Waypoints } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { BookOpen, Database, Folder, User } from "lucide-react";
 import { useRef, useState } from "react";
 import { ImperativePanelHandle } from "react-resizable-panels";
 
@@ -23,18 +22,12 @@ const LINKS = [
         href: "/dashboard/members",
         icon: (<User className="h-6 w-6" />),
     },
-    {
-        name: "Disconnect",
-        href: "",
-        icon: (<LogOut className="h-6 w-6" />),
-        onClick: () => { signOut({ callbackUrl: '/login' }) }
-    },
 ]
 
 const SELECTOR = {
     label: "Projects",
     list: ["Proj1", "Proj2", "Proj3"],
-    icon: (<Waypoints className="h-6 w-6" />),
+    icon: (<Folder className="h-6 w-6" />),
     onSelect: (selected: string) => { console.log(selected) }
 }
 
