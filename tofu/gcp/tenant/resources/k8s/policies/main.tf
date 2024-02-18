@@ -60,9 +60,6 @@ resource "kubernetes_network_policy" "allow_dns" {
   }
   spec {
     pod_selector {
-      match_labels = {
-        "app.kubernetes.io/instance" : var.deployment_name
-      }
     }
 
     policy_types = ["Egress"]
@@ -70,15 +67,20 @@ resource "kubernetes_network_policy" "allow_dns" {
     egress {
       to {
         namespace_selector {
+        }
+        pod_selector {
           match_labels = {
-            name = "kube-system"
+            "k8s-app" = "kube-dns"
           }
-
         }
       }
 
       ports {
         protocol = "UDP"
+        port     = 53
+      }
+      ports {
+        protocol = "TCP"
         port     = 53
       }
     }
@@ -142,6 +144,116 @@ resource "kubernetes_network_policy" "allow_pod_backup" {
 
   }
 }
+
+
+# Allow backup pod to connect to deployment
+resource "kubernetes_network_policy" "allow_labeler_falkordb" {
+  metadata {
+    name      = "allow-labeler-falkordb"
+    namespace = var.deployment_namespace
+  }
+
+  spec {
+    pod_selector {
+      match_labels = {
+        "app.kubernetes.io/name" : "labeler"
+      }
+    }
+
+    policy_types = ["Egress"]
+
+    egress {
+      to {
+        pod_selector {
+          match_labels = {
+            "app.kubernetes.io/instance" : var.deployment_name
+          }
+        }
+      }
+      dynamic "ports" {
+        for_each = var.allow_ports_pod
+        content {
+          protocol = "TCP"
+          port     = ports.value
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_network_policy" "allow_pod_labeler" {
+  metadata {
+    name      = "allow-pod-labeler"
+    namespace = var.deployment_namespace
+  }
+
+  spec {
+    pod_selector {
+      match_labels = {
+        "app.kubernetes.io/instance" : var.deployment_name
+      }
+    }
+
+    policy_types = ["Ingress"]
+
+    ingress {
+      from {
+        pod_selector {
+          match_labels = {
+            "app.kubernetes.io/name" : "labeler"
+          }
+        }
+      }
+      dynamic "ports" {
+        for_each = var.allow_ports_pod
+        content {
+          protocol = "TCP"
+          port     = ports.value
+        }
+      }
+
+    }
+
+  }
+}
+
+
+
+resource "kubernetes_network_policy" "allow_labeler_system" {
+  metadata {
+    name      = "allow-labeler-system"
+    namespace = var.deployment_namespace
+  }
+
+  spec {
+    pod_selector {
+      match_labels = {
+        "app.kubernetes.io/name" : "labeler"
+      }
+    }
+
+    policy_types = ["Egress"]
+
+    egress {
+      to {
+        ip_block {
+          cidr = "10.96.0.1/32"
+        }
+      }
+      to {
+        ip_block {
+          cidr = "10.0.0.2/32"
+        }
+      }
+      ports {
+        protocol = "TCP"
+        port     = 443
+      }
+    }
+
+  }
+}
+
 
 
 

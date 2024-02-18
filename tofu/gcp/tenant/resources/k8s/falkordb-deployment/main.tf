@@ -70,3 +70,13 @@ module "multi_zone" {
   dns_ttl              = var.dns_ttl
   storage_class_name   = var.storage_class_name
 }
+
+
+module "labeler" {
+  count  = var.replication_configuration.enable == true ? 1 : 0
+  source = "./labeler"
+
+  deployment_namespace = var.deployment_namespace
+  deployment_name      = local.deployment_name
+  sentinel_port        = var.sentinel_port
+}
