@@ -151,31 +151,31 @@ resource "helm_release" "velero" {
 }
 
 
-resource "kubernetes_manifest" "velero_pod_monitoring" {
-  manifest = {
-    apiVersion = "monitoring.googleapis.com/v1"
-    kind       = "PodMonitoring"
-    metadata = {
-      name      = "velero"
-      namespace = kubernetes_namespace.velero.metadata.0.name
-      labels = {
-        "app.kubernetes.io/name"    = "velero"
-        "app.kubernetes.io/part-of" = "google-cloud-managed-prometheus"
-      }
-    }
-    spec = {
-      selector = {
-        matchLabels = {
-          "app.kubernetes.io/name"     = "velero"
-          "app.kubernetes.io/instance" = "velero"
-        }
-      }
-      endpoints = [
-        {
-          port     = "http-monitoring"
-          interval = "30s"
-        }
-      ]
-    }
+
+resource "null_resource" "pod_monitoring" {
+  provisioner "local-exec" {
+    when    = create
+    command = <<EOF
+      kubectl apply -f - <<EOF2
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: velero
+  namespace: ${kubernetes_namespace.velero.metadata.0.name}
+  labels:
+    app.kubernetes.io/name: velero
+    app.kubernetes.io/part-of: google-cloud-managed-prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: velero
+      app.kubernetes.io/instance: velero
+  endpoints:
+  - port: http-monitoring
+    interval: 30s
+EOF2
+    EOF
   }
+
+  depends_on = [ helm_release.velero ]
 }
