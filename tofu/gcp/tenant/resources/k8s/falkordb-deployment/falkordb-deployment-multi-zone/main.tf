@@ -185,3 +185,23 @@ resource "kubernetes_service" "read_write_service" {
     }
   }
 }
+
+resource "kubernetes_service" "read_only_service" {
+  metadata {
+    name      = "${var.deployment_name}-read-only"
+    namespace = helm_release.falkordb.namespace
+  }
+
+  spec {
+    selector = {
+      "app.kubernetes.io/instance" : var.deployment_name
+      "cloud.falkordb.io/role" : "slave"
+    }
+
+    type             = "ClusterIP"
+    port {
+      port        = var.redis_read_only_port
+      target_port = var.redis_port
+    }
+  }
+}

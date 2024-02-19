@@ -82,8 +82,7 @@ resource "kubernetes_deployment" "labeler" {
 
         container {
           name              = "labeler"
-          image             = "dudizimber/redis-pod-labeler:latest@sha256:82904fd8ab2172ad8fa7a9dde432e085c648bbbac7308ce92e78e2eaebc2329f"
-          image_pull_policy = "Always"
+          image             = var.labeler_image
           args = [
             "./redis-labeler.py",
             "--namespace",

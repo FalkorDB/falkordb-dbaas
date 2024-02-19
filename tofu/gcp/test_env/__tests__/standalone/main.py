@@ -1,8 +1,9 @@
 from falkordb import FalkorDB
+import logging
 
 
 def test_connect(hostname, port, password):
-    print(f"Connecting to FalkorDB at {hostname}:{port}")
+    logging.debug(f"Connecting to FalkorDB at {hostname}:{port}")
 
     assert hostname is not None
     assert port is not None and port.isdigit()
@@ -17,7 +18,7 @@ def test_connect(hostname, port, password):
         assert res.result_set[0][0] == 1
 
     except Exception as e:
-        print(e)
+        logging.error(e)
         assert False
 
 
@@ -28,12 +29,12 @@ def test_read_write_delete(hostname, port, password):
         graph = db.select_graph("test")
 
         res = graph.query("CREATE (n:Person {name: 'John Doe'}) RETURN n")
-        
-        assert res.result_set[0][0].properties['name'] == "John Doe"
+
+        assert res.result_set[0][0].properties["name"] == "John Doe"
 
         res = graph.query("MATCH (n:Person) RETURN n")
 
-        assert res.result_set[0][0].properties['name'] == "John Doe"
+        assert res.result_set[0][0].properties["name"] == "John Doe"
 
         graph.query("MATCH (n:Person) DELETE n")
 
@@ -42,5 +43,5 @@ def test_read_write_delete(hostname, port, password):
         assert len(res.result_set) == 0
 
     except Exception as e:
-        print(e)
+        logging.error(e)
         assert False

@@ -19,3 +19,8 @@ variable "headless_name" {
 variable "sentinel_port" {
   type = number
 }
+
+variable "labeler_image" {
+  type    = string
+  default = "FalkorDB/redis-pod-labeler:latest"
+}

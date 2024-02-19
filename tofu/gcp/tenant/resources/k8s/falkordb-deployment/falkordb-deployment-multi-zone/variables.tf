@@ -54,6 +54,9 @@ variable "falkordb_replicas" {
 variable "redis_port" {
   type = number
 }
+variable "redis_read_only_port" {
+  type = number
+}
 
 variable "sentinel_port" {
   type = number

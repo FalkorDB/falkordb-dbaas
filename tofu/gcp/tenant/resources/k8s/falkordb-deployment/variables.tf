@@ -51,6 +51,9 @@ variable "persistence_size" {
 variable "redis_port" {
   type = number
 }
+variable "redis_read_only_port" {
+  type = number
+}
 
 variable "sentinel_port" {
   type = number
@@ -76,4 +79,8 @@ variable "dns_ttl" {
 variable "storage_class_name" {
   type    = string
   default = "standard-rwo"
+}
+
+variable "labeler_image" {
+  type    = string
 }

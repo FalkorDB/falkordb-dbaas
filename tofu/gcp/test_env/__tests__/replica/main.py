@@ -2,13 +2,14 @@ from falkordb import FalkorDB
 from kubernetes import client, config
 from kubernetes.stream import stream
 import subprocess
+import logging
 
 config.load_kube_config()
 k8s_api = client.CoreV1Api()
 
 
 def test_connect(hostname, port, password):
-    print(f"Connecting to FalkorDB at {hostname}:{port}")
+    logging.debug(f"Connecting to FalkorDB at {hostname}:{port}")
 
     assert hostname is not None
     assert port is not None and port.isdigit()
@@ -23,7 +24,7 @@ def test_connect(hostname, port, password):
         assert res.result_set[0][0] == 1
 
     except Exception as e:
-        print(e)
+        logging.error(e)
         assert False
 
 
@@ -48,7 +49,7 @@ def test_read_write_delete(hostname, port, password):
         assert len(res.result_set) == 0
 
     except Exception as e:
-        print(e)
+        logging.error(e)
         assert False
 
 
@@ -114,5 +115,5 @@ def test_read_write_delete_replica(hostname, port, password, namespace):
         assert "John Doe" not in resp2
 
     except Exception as e:
-        print(e)
+        logging.error(e)
         assert False

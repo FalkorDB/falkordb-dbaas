@@ -39,6 +39,7 @@ module "single_zone" {
   falkordb_min_memory  = var.falkordb_min_memory
   persistence_size     = var.persistence_size
   redis_port           = var.redis_port
+  redis_read_only_port = var.redis_read_only_port
   sentinel_port        = var.sentinel_port
   deployment_namespace = var.deployment_namespace
   dns_ip_address       = var.dns_ip_address
@@ -63,6 +64,7 @@ module "multi_zone" {
   falkordb_min_memory  = var.falkordb_min_memory
   persistence_size     = var.persistence_size
   redis_port           = var.redis_port
+  redis_read_only_port = var.redis_read_only_port
   sentinel_port        = var.sentinel_port
   deployment_namespace = var.deployment_namespace
   dns_ip_address       = var.dns_ip_address
@@ -79,4 +81,5 @@ module "labeler" {
   deployment_namespace = var.deployment_namespace
   deployment_name      = local.deployment_name
   sentinel_port        = var.sentinel_port
+  labeler_image        = var.labeler_image
 }

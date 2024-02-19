@@ -80,14 +80,17 @@ module "k8s" {
   backup_bucket_name = var.backup_bucket_name
   backup_schedule    = var.backup_schedule
 
-  redis_port    = var.redis_port
-  sentinel_port = var.sentinel_port
+  redis_port           = var.redis_port
+  redis_read_only_port = var.redis_read_only_port
+  sentinel_port        = var.sentinel_port
 
   dns_domain     = var.dns_domain
   dns_ip_address = var.ip_address
 
   multi_zone = var.multi_zone
   pod_zone   = var.pod_zone
+
+  labeler_image = var.labeler_image
 
   # Required for test suite to wait for the tenant group to be ready
   depends_on = [var.cluster_endpoint, var.cluster_ca_certificate]
