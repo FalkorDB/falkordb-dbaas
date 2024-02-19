@@ -198,7 +198,7 @@ resource "kubernetes_service" "read_only_service" {
       "cloud.falkordb.io/role" : "slave"
     }
 
-    type             = "ClusterIP"
+    type = "ClusterIP"
     port {
       port        = var.redis_read_only_port
       target_port = var.redis_port

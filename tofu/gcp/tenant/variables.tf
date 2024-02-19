@@ -129,5 +129,5 @@ variable "pod_zone" {
 }
 
 variable "labeler_image" {
-  type    = string
+  type = string
 }

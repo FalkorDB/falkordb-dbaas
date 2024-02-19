@@ -82,5 +82,5 @@ variable "storage_class_name" {
 }
 
 variable "labeler_image" {
-  type    = string
+  type = string
 }

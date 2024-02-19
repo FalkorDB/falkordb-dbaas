@@ -89,5 +89,5 @@ variable "cidr_blocks" {
 }
 
 variable "labeler_image" {
-  type    = string
+  type = string
 }

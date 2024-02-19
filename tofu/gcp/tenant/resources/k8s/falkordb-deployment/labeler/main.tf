@@ -81,8 +81,8 @@ resource "kubernetes_deployment" "labeler" {
         }
 
         container {
-          name              = "labeler"
-          image             = var.labeler_image
+          name  = "labeler"
+          image = var.labeler_image
           args = [
             "./redis-labeler.py",
             "--namespace",
