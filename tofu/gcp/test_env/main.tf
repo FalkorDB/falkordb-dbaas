@@ -82,6 +82,7 @@ module "standalone_tenant" {
   dns_domain             = var.dns_domain
   cluster_name           = module.tenant_group.cluster_name
   redis_port             = 30000
+  redis_read_only_port   = 30001
   sentinel_port          = 30001
   node_pool_name         = var.tier_to_test
   falkordb_password      = var.falkordb_password
@@ -102,6 +103,8 @@ module "standalone_tenant" {
     enable     = false,
     multi_zone = false
   }
+
+  labeler_image = "dudizimber/redis-pod-labeler:latest"
 }
 
 module "single_zone_tenant" {
@@ -111,6 +114,7 @@ module "single_zone_tenant" {
   dns_domain             = var.dns_domain
   cluster_name           = module.tenant_group.cluster_name
   redis_port             = 30002
+  redis_read_only_port   = 30003
   sentinel_port          = 30003
   node_pool_name         = var.tier_to_test
   falkordb_password      = var.falkordb_password
@@ -131,6 +135,8 @@ module "single_zone_tenant" {
     enable     = true,
     multi_zone = false
   }
+
+  labeler_image = "dudizimber/redis-pod-labeler:latest"
 }
 
 module "multi_zone_tenant" {
@@ -140,6 +146,7 @@ module "multi_zone_tenant" {
   dns_domain             = var.dns_domain
   cluster_name           = module.tenant_group.cluster_name
   redis_port             = 30004
+  redis_read_only_port   = 30004
   sentinel_port          = 30005
   node_pool_name         = var.tier_to_test
   falkordb_password      = var.falkordb_password
@@ -160,4 +167,5 @@ module "multi_zone_tenant" {
     enable     = true,
     multi_zone = true
   }
+  labeler_image = "dudizimber/redis-pod-labeler:latest"
 }
