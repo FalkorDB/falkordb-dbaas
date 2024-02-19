@@ -177,5 +177,5 @@ EOF2
     EOF
   }
 
-  depends_on = [ helm_release.velero ]
+  depends_on = [helm_release.velero]
 }
