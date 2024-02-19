@@ -47,3 +47,14 @@ module "falkordb_monitoring" {
   cluster_name = var.cluster_name
   region       = var.region
 }
+
+module "cluster_backup" {
+  source = "./backup"
+
+  project_id              = var.project_id
+  region                  = var.region
+  backup_bucket_name      = var.backup_bucket_name
+  velero_gcp_sa_email     = var.velero_gcp_sa_email
+  velero_gcp_sa_id        = var.velero_gcp_sa_id
+  cluster_backup_schedule = var.cluster_backup_schedule
+}
