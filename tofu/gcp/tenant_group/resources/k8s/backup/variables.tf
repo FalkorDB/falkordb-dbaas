@@ -19,6 +19,6 @@ variable "backup_bucket_name" {
 }
 
 variable "cluster_backup_schedule" {
-  type = string
+  type     = string
   nullable = true
 }

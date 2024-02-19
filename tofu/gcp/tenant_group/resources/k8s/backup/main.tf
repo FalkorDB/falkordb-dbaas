@@ -166,13 +166,13 @@ resource "kubernetes_manifest" "velero_pod_monitoring" {
     spec = {
       selector = {
         matchLabels = {
-          "app.kubernetes.io/name" = "velero"
+          "app.kubernetes.io/name"     = "velero"
           "app.kubernetes.io/instance" = "velero"
         }
       }
       endpoints = [
         {
-          port = "http-monitoring"
+          port     = "http-monitoring"
           interval = "30s"
         }
       ]
