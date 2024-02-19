@@ -70,15 +70,6 @@ variable "dns_ip_address" {
   type = string
 }
 
-variable "dns_hostname" {
-  type = string
-}
-
-variable "dns_ttl" {
-  type    = number
-  default = 15
-}
-
 variable "storage_class_name" {
   type    = string
   default = "standard-rwo"

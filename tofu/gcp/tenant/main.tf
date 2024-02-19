@@ -96,32 +96,6 @@ module "k8s" {
   depends_on = [var.cluster_endpoint, var.cluster_ca_certificate]
 }
 
-# Wait 10 seconds for the NEGs to be created
-# resource "time_sleep" "wait_30_seconds" {
-#   depends_on = [
-#     module.k8s.falkordb_deployment,
-#   ]
-
-#   create_duration = "30s"
-# }
-
-# module "networking" {
-#   source = "./resources/networking"
-
-#   project_id          = var.project_id
-#   region              = var.region
-#   tenant_name         = var.tenant_name
-#   vpc_name            = var.vpc_name
-#   deployment_neg_name = local.deployment_neg_name
-#   health_check_name   = var.health_check_name
-#   ip_address_name     = var.ip_address_name
-#   exposed_port        = var.exposed_port
-#   source_ip_ranges    = var.source_ip_ranges
-
-#   depends_on = [time_sleep.wait_30_seconds]
-# }
-
-
 module "backup" {
   source = "./resources/backup"
 
@@ -133,16 +107,3 @@ module "backup" {
 
   depends_on = [module.k8s]
 }
-
-# Required only for proxy LB
-# module "dns" {
-#   source = "./resources/dns"
-
-#   tenant_name   = var.tenant_name
-#   dns_zone_name = var.dns_zone_name
-#   dns_domain    = var.dns_domain
-
-#   ip_address = var.ip_address
-
-#   depends_on = [module.networking]
-# }

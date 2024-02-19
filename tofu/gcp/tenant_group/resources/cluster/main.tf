@@ -30,22 +30,3 @@ module "gke" {
 
   cluster_resource_labels = var.labels
 }
-
-# Create Health Check
-# Required only for proxy LB
-# resource "google_compute_region_health_check" "redis" {
-#   name                = "${var.tenant_group_name}-heatlh-check"
-#   check_interval_sec  = 5
-#   timeout_sec         = 5
-#   healthy_threshold   = 2
-#   unhealthy_threshold = 2
-#   region              = var.region
-#   log_config {
-#     enable = true
-#   }
-
-#   tcp_health_check {
-#     port_specification = "USE_SERVING_PORT"
-#   }
-# }
-

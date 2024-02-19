@@ -40,15 +40,6 @@ resource "helm_release" "falkordb" {
     value = ["--loadmodule", "/FalkorDB/bin/src/falkordb.so"]
   }
   set {
-    name  = "master.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/hostname"
-    value = var.dns_hostname
-  }
-  set {
-    name  = "master.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/ttl"
-    value = var.dns_ttl
-    type  = "string"
-  }
-  set {
     name  = "master.resources.limits.cpu"
     value = var.falkordb_cpu
   }

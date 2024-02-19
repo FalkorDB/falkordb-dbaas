@@ -36,7 +36,6 @@ module "falkordb_deployment" {
   deployment_namespace = kubernetes_namespace.falkordb.metadata[0].name
 
   dns_ip_address = var.dns_ip_address
-  dns_hostname   = local.dns_hostname
 
   labeler_image = var.labeler_image
 
