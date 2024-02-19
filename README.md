@@ -9,6 +9,7 @@ This repository contains OpenTofu templates to deploy FalkorDB on cloud.
 3. Helm
 4. AWS CLI
 5. GCloud CLI
+6. Velero CLI
 
 # Scripts
 
