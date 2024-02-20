@@ -34,6 +34,12 @@ output "dns_name" {
   value = module.tenant_group.dns_name
 }
 
+
+
+output "falkordb_standalone_tenant_namespace" {
+  value = module.standalone_tenant.tenant_namespace
+}
+
 output "falkordb_standalone_tenant_host" {
   value = module.standalone_tenant.falkordb_host
 }
@@ -42,24 +48,29 @@ output "falkordb_standalone_tenant_redis_port" {
   value = module.standalone_tenant.falkordb_redis_port
 }
 
+
+
+output "falkordb_single_zone_tenant_namespace" {
+  value = module.single_zone_tenant.tenant_namespace
+}
+
 output "falkordb_single_zone_tenant_host" {
   value = module.single_zone_tenant.falkordb_host
 }
 
-output "falkordb_single_zone_tenant_sentinel_port" {
-  value = module.single_zone_tenant.falkordb_sentinel_port
-}
 
 output "falkordb_single_zone_tenant_redis_port" {
   value = module.single_zone_tenant.falkordb_redis_port
 }
 
-output "falkordb_multi_zone_tenant_host" {
-  value = module.multi_zone_tenant.falkordb_host
+
+
+output "falkordb_multi_zone_tenant_namespace" {
+  value = module.multi_zone_tenant.tenant_namespace
 }
 
-output "falkordb_multi_zone_tenant_sentinel_port" {
-  value = module.multi_zone_tenant.falkordb_sentinel_port
+output "falkordb_multi_zone_tenant_host" {
+  value = module.multi_zone_tenant.falkordb_host
 }
 
 output "falkordb_multi_zone_tenant_redis_port" {

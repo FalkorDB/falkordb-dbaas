@@ -114,7 +114,7 @@ resource "kubernetes_cron_job_v1" "falkorbd_backup" {
             }
             container {
               name    = "backup"
-              image   = "dudizimber/gcloud-kubectl-redis:latest"
+              image   = "FalkorDB/gcloud-kubectl-falkordb:latest"
               command = ["/scripts/backup.sh"]
               volume_mount {
                 name       = kubernetes_config_map.backup_script.metadata.0.name

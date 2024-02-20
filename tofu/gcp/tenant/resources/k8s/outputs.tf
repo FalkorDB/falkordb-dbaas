@@ -10,10 +10,10 @@ output "falkordb_host" {
   value = local.dns_hostname
 }
 
-output "falkordb_sentinel_port" {
-  value = var.sentinel_port
-}
-
 output "falkordb_redis_port" {
   value = var.redis_port
+}
+
+output "tenant_namespace" {
+  value = kubernetes_namespace.falkordb.metadata[0].name
 }
