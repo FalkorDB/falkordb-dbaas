@@ -116,6 +116,7 @@ jobs:
         id: python_tests_standalone
         continue-on-error: true
         run: |
+          source .venv/bin/activate
           pytest -s tofu/gcp/test_env/__tests__/standalone/main.py --hostname ${{ env.FALKORDB_HOST }} --port ${{ env.FALKORDB_PORT }} --password ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
 
       - name: Run Replica tests
@@ -123,6 +124,7 @@ jobs:
         id: python_tests_replica
         continue-on-error: true
         run: |
+          source .venv/bin/activate
           pytest -s tofu/gcp/test_env/__tests__/replica/main.py --hostname ${{ env.FALKORDB_HOST }} --port ${{ env.FALKORDB_PORT }} --namespace ${{ env.FALKORDB_SINGLE_ZONE_TENANT_NAMESPACE }} --password ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
 
       - name: Destroy GCP Test Environment
@@ -155,6 +157,6 @@ jobs:
         if: always()
         run: |
           # Check if python tests conclusion is success
-          if [ ${{ steps.python_tests.outcome }} != 'success' ]; then
+          if [ ${{ steps.python_tests_standalone }} != 'success' ] || [ ${{ steps.python_tests_replica }} != 'success' ]; then
             exit 1
           fi
