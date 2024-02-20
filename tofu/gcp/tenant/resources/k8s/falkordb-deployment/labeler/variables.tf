@@ -22,5 +22,5 @@ variable "sentinel_port" {
 
 variable "labeler_image" {
   type    = string
-  default = "FalkorDB/falkordb-pod-labeler:latest"
+  default = "falkordb/falkordb-pod-labeler:latest"
 }
