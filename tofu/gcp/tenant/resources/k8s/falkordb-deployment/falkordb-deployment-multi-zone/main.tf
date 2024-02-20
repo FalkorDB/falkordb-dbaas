@@ -76,6 +76,7 @@ resource "helm_release" "falkordb" {
   }
 
   ###### MASTER ######
+  # Required since the config map uses the master pod to setup the sentinel
   set {
     name  = "master.containerPorts.redis"
     value = var.redis_port

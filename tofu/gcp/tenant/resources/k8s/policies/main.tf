@@ -146,7 +146,7 @@ resource "kubernetes_network_policy" "allow_pod_backup" {
 }
 
 
-# Allow backup pod to connect to deployment
+# Allow labeler pod to connect to deployment
 resource "kubernetes_network_policy" "allow_labeler_falkordb" {
   metadata {
     name      = "allow-labeler-falkordb"

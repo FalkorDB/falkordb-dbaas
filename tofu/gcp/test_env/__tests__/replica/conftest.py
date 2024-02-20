@@ -1,7 +1,6 @@
 def pytest_addoption(parser):
     parser.addoption("--hostname", default="localhost")
     parser.addoption("--port", default="6379")
-    parser.addoption("--sentinel_port", default="26379")
     parser.addoption("--password")
     parser.addoption("--namespace", default="default")
 
@@ -12,10 +11,6 @@ def pytest_generate_tests(metafunc):
     hostname = metafunc.config.option.hostname
     if 'hostname' in metafunc.fixturenames and hostname is not None:
         metafunc.parametrize("hostname", [hostname])
-    
-    sentinel_port = metafunc.config.option.sentinel_port
-    if 'sentinel_port' in metafunc.fixturenames and sentinel_port is not None:
-        metafunc.parametrize("sentinel_port", [sentinel_port])
     
     port = metafunc.config.option.port
     if 'port' in metafunc.fixturenames and port is not None:
