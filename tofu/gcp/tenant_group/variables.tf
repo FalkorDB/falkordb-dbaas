@@ -160,3 +160,21 @@ variable "cluster_backup_schedule" {
   nullable = true
   default  = null
 }
+
+variable "kubecost_token" {
+  type      = string
+  sensitive = true
+}
+
+
+variable "bigquery_billing_data_project" {
+  type = string
+}
+
+variable "bigquery_billing_data_dataset" {
+  type = string
+}
+
+variable "bigquery_billing_data_table" {
+  type = string
+}

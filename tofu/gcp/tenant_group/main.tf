@@ -150,6 +150,13 @@ module "k8s" {
   velero_gcp_sa_email     = module.cluster_backup.velero_sa_email
   cluster_backup_schedule = var.cluster_backup_schedule
 
+  kubecost_token                = var.kubecost_token
+  kubecost_gcp_sa_id            = module.gke_cluster.kubecost_gcp_sa_id
+  kubecost_gcp_sa_email         = module.gke_cluster.kubecost_gcp_sa_email
+  bigquery_billing_data_project = var.bigquery_billing_data_project
+  bigquery_billing_data_dataset = var.bigquery_billing_data_dataset
+  bigquery_billing_data_table   = var.bigquery_billing_data_table
+
   depends_on = [module.gke_cluster]
 }
 

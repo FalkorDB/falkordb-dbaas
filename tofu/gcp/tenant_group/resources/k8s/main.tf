@@ -58,3 +58,16 @@ module "cluster_backup" {
   velero_gcp_sa_id        = var.velero_gcp_sa_id
   cluster_backup_schedule = var.cluster_backup_schedule
 }
+
+module "cluster_cost_monitoring" {
+  source = "./cost-monitoring"
+
+  project_id                    = var.project_id
+  cluster_name                  = var.cluster_name
+  kubecost_gcp_sa_id            = var.kubecost_gcp_sa_id
+  kubecost_gcp_sa_email         = var.kubecost_gcp_sa_email
+  kubecost_token                = var.kubecost_token
+  bigquery_billing_data_project = var.bigquery_billing_data_project
+  bigquery_billing_data_dataset = var.bigquery_billing_data_dataset
+  bigquery_billing_data_table   = var.bigquery_billing_data_table
+}

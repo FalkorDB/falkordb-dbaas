@@ -21,7 +21,7 @@ env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
   tenant_group_name: "workflow-pr-${{ github.event.pull_request.number }}"
   tenant_name: "t-1"
-  TF_VAR_falkordb_version: 'edge'
+  TF_VAR_falkordb_version: "edge"
 
 jobs:
   plan:
@@ -67,6 +67,10 @@ jobs:
           TF_VAR_falkordb_password: ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
           TF_VAR_backup_schedule: ${{ vars.TF_VAR_BACKUP_SCHEDULE }}
           TF_VAR_dns_domain: "${{ env.tenant_group_name }}.${{ vars.TF_VAR_DNS_DOMAIN }}"
+          TF_VAR_kubecost_token: ${{ secrets.TF_VAR_KUBECOST_TOKEN }}
+          TF_VAR_bigquery_billing_data_project: ${{ secrets.TF_VAR_BIGQUERY_BILLING_DATA_PROJECT }}
+          TF_VAR_bigquery_billing_data_dataset: ${{ secrets.TF_VAR_BIGQUERY_BILLING_DATA_DATASET }}
+          TF_VAR_bigquery_billing_data_table: ${{ secrets.TF_VAR_BIGQUERY_BILLING_DATA_TABLE }}
         working-directory: ./tofu/gcp/test_env
         run: |
           mkdir -p ${GITHUB_WORKSPACE}/artifacts

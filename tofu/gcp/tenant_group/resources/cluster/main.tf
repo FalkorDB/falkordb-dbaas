@@ -30,3 +30,40 @@ module "gke" {
 
   cluster_resource_labels = var.labels
 }
+
+
+# Service account for cost monitoring
+resource "google_service_account" "kubecost" {
+  project    = var.project_id
+  account_id = "${var.tenant_group_name}-kubecost"
+}
+
+# Add roles to service account
+resource "google_project_iam_binding" "kubecost_bigquery_user" {
+  project = var.project_id
+  role    = "roles/bigquery.user"
+  members = [
+    "serviceAccount:${google_service_account.kubecost.email}",
+  ]
+}
+resource "google_project_iam_binding" "kubecost_bigquery_job_user" {
+  project = var.project_id
+  role    = "roles/bigquery.jobUser"
+  members = [
+    "serviceAccount:${google_service_account.kubecost.email}",
+  ]
+}
+resource "google_project_iam_binding" "kubecost_bigquery_data_viewer" {
+  project = var.project_id
+  role    = "roles/bigquery.dataViewer"
+  members = [
+    "serviceAccount:${google_service_account.kubecost.email}",
+  ]
+}
+resource "google_project_iam_binding" "kubecost_compute_viewer" {
+  project = var.project_id
+  role    = "roles/compute.viewer"
+  members = [
+    "serviceAccount:${google_service_account.kubecost.email}",
+  ]
+}
