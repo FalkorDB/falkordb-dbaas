@@ -95,11 +95,15 @@ jobs:
         continue-on-error: true
         working-directory: ./tofu/gcp/test_env
         run: |
-          echo "FALKORDB_SINGLE_ZONE_TENANT_NAMESPACE=$(tofu output -json | jq -r '.falkordb_single_zone_tenant_namespace.value')" >> $GITHUB_ENV
-          
+        
           # echo "FALKORDB_HOST=$(tofu output -json | jq -r '.falkordb_host.value')" >> $GITHUB_ENV
-          echo "FALKORDB_HOST=$(tofu output -json | jq -r '.ip_address.value')" >> $GITHUB_ENV
-          echo "FALKORDB_PORT=$(tofu output -json | jq -r '.falkordb_standalone_tenant_redis_port.value')" >> $GITHUB_ENV
+          echo "FALKORDB_STANDALONE_HOST=$(tofu output -json | jq -r '.ip_address.value')" >> $GITHUB_ENV
+          echo "FALKORDB_STANDALONE_PORT=$(tofu output -json | jq -r '.falkordb_standalone_tenant_redis_port.value')" >> $GITHUB_ENV
+          
+          echo "FALKORDB_SINGLE_ZONE_HOST=$(tofu output -json | jq -r '.ip_address.value')" >> $GITHUB_ENV
+          echo "FALKORDB_SINGLE_ZONE_PORT=$(tofu output -json | jq -r '.falkordb_single_zone_tenant_redis_port.value')" >> $GITHUB_ENV
+          echo "FALKORDB_SINGLE_ZONE_TENANT_NAMESPACE=$(tofu output -json | jq -r '.falkordb_single_zone_tenant_namespace.value')" >> $GITHUB_ENV
+
           echo "FALKORDB_PASSWORD=${{ secrets.TF_VAR_FALKORDB_PASSWORD }}" >> $GITHUB_ENV
 
       - name: Setup Python environment
@@ -117,7 +121,7 @@ jobs:
         continue-on-error: true
         run: |
           source .venv/bin/activate
-          pytest -s tofu/gcp/test_env/__tests__/standalone/main.py --hostname ${{ env.FALKORDB_HOST }} --port ${{ env.FALKORDB_PORT }} --password ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
+          pytest -s tofu/gcp/test_env/__tests__/standalone/main.py --hostname ${{ env.FALKORDB_STANDALONE_HOST }} --port ${{ env.FALKORDB_STANDALONE_PORT }} --password ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
 
       - name: Run Replica tests
         if: steps.apply_tenant_group.outcome == 'success' && steps.setup_python.outcome == 'success'
@@ -125,7 +129,7 @@ jobs:
         continue-on-error: true
         run: |
           source .venv/bin/activate
-          pytest -s tofu/gcp/test_env/__tests__/replica/main.py --hostname ${{ env.FALKORDB_HOST }} --port ${{ env.FALKORDB_PORT }} --namespace ${{ env.FALKORDB_SINGLE_ZONE_TENANT_NAMESPACE }} --password ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
+          pytest -s tofu/gcp/test_env/__tests__/replica/main.py --hostname ${{ env.FALKORDB_SINGLE_ZONE_HOST }} --port ${{ env.FALKORDB_SINGLE_ZONE_PORT }} --namespace ${{ env.FALKORDB_SINGLE_ZONE_TENANT_NAMESPACE }} --password ${{ secrets.TF_VAR_FALKORDB_PASSWORD }}
 
       - name: Destroy GCP Test Environment
         if: always()
