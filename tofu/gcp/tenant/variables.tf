@@ -89,6 +89,13 @@ variable "redis_port" {
     error_message = "Port must be between 30000 and 32767"
   }
 }
+variable "redis_read_only_port" {
+  type = number
+  validation {
+    condition     = var.redis_read_only_port >= 30000 && var.redis_read_only_port <= 32767
+    error_message = "Port must be between 30000 and 32767"
+  }
+}
 variable "sentinel_port" {
   type = number
   validation {
@@ -119,4 +126,8 @@ variable "pod_zone" {
   nullable    = true
   description = "The zone in which the pods will be deployed. Ignored if multi_zone is true."
   default     = null
+}
+
+variable "labeler_image" {
+  type = string
 }

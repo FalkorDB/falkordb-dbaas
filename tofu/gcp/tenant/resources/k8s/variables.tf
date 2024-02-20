@@ -51,6 +51,9 @@ variable "falkordb_replicas" {
 variable "redis_port" {
   type = number
 }
+variable "redis_read_only_port" {
+  type = number
+}
 variable "sentinel_port" {
   type = number
 }
@@ -83,4 +86,8 @@ variable "pod_zone" {
 variable "cidr_blocks" {
   type    = list(string)
   default = []
+}
+
+variable "labeler_image" {
+  type = string
 }

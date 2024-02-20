@@ -45,23 +45,23 @@ resource "helm_release" "falkordb" {
     name  = "sentinel.enabled"
     value = true
   }
-  set {
-    name  = "sentinel.service.type"
-    value = "LoadBalancer"
-  }
-  set {
-    name  = "sentinel.service.loadBalancerIP"
-    value = var.dns_ip_address
-  }
-  set {
-    name  = "sentinel.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/hostname"
-    value = var.dns_hostname
-  }
-  set {
-    name  = "sentinel.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/ttl"
-    value = var.dns_ttl
-    type  = "string"
-  }
+  # set {
+  #   name  = "sentinel.service.type"
+  #   value = "LoadBalancer"
+  # }
+  # set {
+  #   name  = "sentinel.service.loadBalancerIP"
+  #   value = var.dns_ip_address
+  # }
+  # set {
+  #   name  = "sentinel.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/hostname"
+  #   value = var.dns_hostname
+  # }
+  # set {
+  #   name  = "sentinel.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/ttl"
+  #   value = var.dns_ttl
+  #   type  = "string"
+  # }
   set {
     name  = "sentinel.containerPorts.sentinel"
     value = var.sentinel_port
@@ -74,6 +74,14 @@ resource "helm_release" "falkordb" {
     name  = "sentinel.service.ports.redis"
     value = var.redis_port
   }
+
+  ###### MASTER ######
+  # Required since the config map uses the master pod to setup the sentinel
+  set {
+    name  = "master.containerPorts.redis"
+    value = var.redis_port
+  }
+
 
   ###### REPLICA ######
   set {
@@ -154,5 +162,47 @@ resource "helm_release" "falkordb" {
   set {
     name  = "metrics.podLabels.app\\.kubernetes\\.io/name"
     value = "redis"
+  }
+}
+
+resource "kubernetes_service" "read_write_service" {
+  metadata {
+    name      = "${var.deployment_name}-read-write"
+    namespace = helm_release.falkordb.namespace
+  }
+
+  spec {
+    selector = {
+      "app.kubernetes.io/instance" : var.deployment_name
+      "cloud.falkordb.io/role" : "master"
+    }
+
+    type             = "LoadBalancer"
+    load_balancer_ip = var.dns_ip_address
+
+    port {
+      port        = var.redis_port
+      target_port = var.redis_port
+    }
+  }
+}
+
+resource "kubernetes_service" "read_only_service" {
+  metadata {
+    name      = "${var.deployment_name}-read-only"
+    namespace = helm_release.falkordb.namespace
+  }
+
+  spec {
+    selector = {
+      "app.kubernetes.io/instance" : var.deployment_name
+      "cloud.falkordb.io/role" : "slave"
+    }
+
+    type = "ClusterIP"
+    port {
+      port        = var.redis_read_only_port
+      target_port = var.redis_port
+    }
   }
 }
