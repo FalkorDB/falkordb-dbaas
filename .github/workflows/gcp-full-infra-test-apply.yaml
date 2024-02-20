@@ -161,6 +161,6 @@ jobs:
         if: always()
         run: |
           # Check if python tests conclusion is success
-          if [ ${{ steps.python_tests_standalone }} != 'success' ] || [ ${{ steps.python_tests_replica }} != 'success' ]; then
+          if [ ${{ steps.python_tests_standalone.outcome }} != 'success' ] || [ ${{ steps.python_tests_replica.outcome }} != 'success' ]; then
             exit 1
           fi
