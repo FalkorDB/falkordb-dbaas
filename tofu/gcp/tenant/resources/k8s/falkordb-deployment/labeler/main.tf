@@ -84,19 +84,19 @@ resource "kubernetes_deployment" "labeler" {
           name  = "labeler"
           image = var.labeler_image
           args = [
-            "./redis-labeler.py",
+            "./falkordb-labeler.py",
             "--namespace",
             var.deployment_namespace,
             "--pod-selector",
             "app.kubernetes.io/instance=${var.deployment_name}",
-            "--redis-cluster-name",
+            "--falkordb-cluster-name",
             "mymaster",
-            "--redis-headless-svc-name",
+            "--falkordb-headless-svc-name",
             var.headless_name,
-            "--redis-sentinel_port",
+            "--falkordb-sentinel_port",
             var.sentinel_port,
-            "--redis-password-name",
-            "REDIS_MASTER_PASSWORD",
+            "--falkordb-password-name",
+            "FALKORDB_MASTER_PASSWORD",
             "--cluster-domain",
             "cluster.local",
             "--company-domain",
@@ -107,7 +107,7 @@ resource "kubernetes_deployment" "labeler" {
             "${var.label_update_frequency}",
           ]
           env {
-            name = "REDIS_MASTER_PASSWORD"
+            name = "FALKORDB_MASTER_PASSWORD"
             value_from {
               secret_key_ref {
                 name = "falkordb-redis"

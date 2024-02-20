@@ -104,7 +104,7 @@ module "standalone_tenant" {
     multi_zone = false
   }
 
-  labeler_image = "dudizimber/redis-pod-labeler:latest"
+  labeler_image = "FalkorDB/falkordb-pod-labeler:latest"
 }
 
 module "single_zone_tenant" {
@@ -136,7 +136,7 @@ module "single_zone_tenant" {
     multi_zone = false
   }
 
-  labeler_image = "dudizimber/redis-pod-labeler:latest"
+  labeler_image = "FalkorDB/falkordb-pod-labeler:latest"
 }
 
 module "multi_zone_tenant" {
@@ -167,5 +167,5 @@ module "multi_zone_tenant" {
     enable     = true,
     multi_zone = true
   }
-  labeler_image = "dudizimber/redis-pod-labeler:latest"
+  labeler_image = "FalkorDB/falkordb-pod-labeler:latest"
 }
