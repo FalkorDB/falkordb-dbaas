@@ -11,7 +11,7 @@ output "cluster_ca_certificate" {
 }
 
 output "kubecost_gcp_sa_id" {
-  value = google_service_account.kubecost.id 
+  value = google_service_account.kubecost.id
 }
 
 output "kubecost_gcp_sa_email" {
