@@ -149,3 +149,14 @@ variable "backup_retention_policy_days" {
   type    = number
   default = 0
 }
+
+variable "cluster_backup_retention_policy_days" {
+  type    = number
+  default = 0
+}
+
+variable "cluster_backup_schedule" {
+  type     = string
+  nullable = true
+  default  = null
+}

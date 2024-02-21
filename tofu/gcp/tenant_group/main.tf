@@ -62,14 +62,28 @@ module "dns" {
 
 }
 
-module "backup" {
-  source = "./resources/backup"
+module "deployment_backup" {
+  source = "./resources/deployment-backup"
 
   project_id        = var.project_id
   region            = var.region
   tenant_group_name = var.tenant_group_name
 
   retention_policy_days = var.backup_retention_policy_days
+
+  force_destroy_bucket = var.force_destroy_backup_bucket
+
+  labels = local.labels
+}
+
+module "cluster_backup" {
+  source = "./resources/cluster-backup"
+
+  project_id        = var.project_id
+  region            = var.region
+  tenant_group_name = var.tenant_group_name
+
+  retention_policy_days = var.cluster_backup_retention_policy_days
 
   force_destroy_bucket = var.force_destroy_backup_bucket
 
@@ -126,11 +140,15 @@ provider "helm" {
 module "k8s" {
   source = "./resources/k8s"
 
-  project_id          = var.project_id
-  tenant_provision_sa = var.tenant_provision_sa
-  dns_domain          = module.dns.dns_name
-  cluster_name        = module.gke_cluster.cluster_name
-  region              = var.region
+  project_id              = var.project_id
+  tenant_provision_sa     = var.tenant_provision_sa
+  dns_domain              = module.dns.dns_name
+  cluster_name            = module.gke_cluster.cluster_name
+  region                  = var.region
+  backup_bucket_name      = module.cluster_backup.backup_bucket_name
+  velero_gcp_sa_id        = module.cluster_backup.velero_sa_id
+  velero_gcp_sa_email     = module.cluster_backup.velero_sa_email
+  cluster_backup_schedule = var.cluster_backup_schedule
 
   depends_on = [module.gke_cluster]
 }
