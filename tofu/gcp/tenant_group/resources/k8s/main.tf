@@ -47,12 +47,3 @@ module "falkordb_monitoring" {
   cluster_name = var.cluster_name
   region       = var.region
 }
-
-
-module "external_dns" {
-  source = "./external_dns"
-
-  project_id      = var.project_id
-  external_dns_sa = var.external_dns_sa
-  dns_domain      = var.dns_domain
-}

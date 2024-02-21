@@ -34,29 +34,6 @@ module "vpc" {
     }],
   }
 
-  # Required only for proxy LB
-  # ingress_rules = [
-  #   {
-  #     name = "deployments-tcp-${var.tenant_group_name}"
-
-  #     allow = [
-  #       {
-  #         protocol = "tcp"
-  #         ports    = ["${var.deployment_port}"]
-  #       }
-  #     ]
-
-  #     # How to block unknown customers?
-  #     source_ranges = ["0.0.0.0/0"]
-
-  #     target_tags = ["allow-tenant-deployments"]
-  #     log_config = {
-  #       metadata = "INCLUDE_ALL_METADATA"
-  #     }
-  #   }
-  # ]
-
-
 }
 
 # Reserve premium IP Address for the Load Balancer

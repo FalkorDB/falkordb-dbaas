@@ -20,8 +20,6 @@ module "standalone" {
   redis_port           = var.redis_port
   deployment_namespace = var.deployment_namespace
   dns_ip_address       = var.dns_ip_address
-  dns_hostname         = var.dns_hostname
-  dns_ttl              = var.dns_ttl
   storage_class_name   = var.storage_class_name
 }
 
@@ -43,8 +41,6 @@ module "single_zone" {
   sentinel_port        = var.sentinel_port
   deployment_namespace = var.deployment_namespace
   dns_ip_address       = var.dns_ip_address
-  dns_hostname         = var.dns_hostname
-  dns_ttl              = var.dns_ttl
   storage_class_name   = var.storage_class_name
 }
 
@@ -68,8 +64,6 @@ module "multi_zone" {
   sentinel_port        = var.sentinel_port
   deployment_namespace = var.deployment_namespace
   dns_ip_address       = var.dns_ip_address
-  dns_hostname         = var.dns_hostname
-  dns_ttl              = var.dns_ttl
   storage_class_name   = var.storage_class_name
 }
 

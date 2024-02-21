@@ -59,23 +59,6 @@ resource "helm_release" "falkordb" {
     name  = "sentinel.enabled"
     value = true
   }
-  # set {
-  #   name  = "sentinel.service.type"
-  #   value = "LoadBalancer"
-  # }
-  # set {
-  #   name  = "sentinel.service.loadBalancerIP"
-  #   value = var.dns_ip_address
-  # }
-  # set {
-  #   name  = "sentinel.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/hostname"
-  #   value = var.dns_hostname
-  # }
-  # set {
-  #   name  = "sentinel.service.annotations.external-dns\\.alpha\\.kubernetes\\.io/ttl"
-  #   value = var.dns_ttl
-  #   type  = "string"
-  # }
   set {
     name  = "sentinel.containerPorts.sentinel"
     value = var.sentinel_port
