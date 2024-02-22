@@ -73,11 +73,11 @@ resource "google_billing_budget" "budgets" {
     }
   }
 
-  dynamic "threshold_rule" {
+  dynamic "threshold_rules" {
     for_each = each.value.thresholds
     content {
       threshold_percent = threshold_rule.value.percentage
-      spend_threshold   = threshold_rule.value.amount
+      spend_basis       = threshold_rule.value.amount
     }
   }
 

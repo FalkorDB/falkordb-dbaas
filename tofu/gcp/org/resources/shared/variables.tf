@@ -29,6 +29,10 @@ variable "monitored_projects" {
   type = set(string)
 }
 
+variable "alert_email_addresses" {
+  type = set(string)
+}
+
 ###### BILLING ######
 
 variable "billing_project_id" {
