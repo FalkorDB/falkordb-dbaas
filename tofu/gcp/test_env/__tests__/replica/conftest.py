@@ -3,6 +3,7 @@ def pytest_addoption(parser):
     parser.addoption("--port", default="6379")
     parser.addoption("--password")
     parser.addoption("--namespace", default="default")
+    parser.addoption("--backup_bucket")
 
 
 def pytest_generate_tests(metafunc):
@@ -23,3 +24,7 @@ def pytest_generate_tests(metafunc):
     namespace = metafunc.config.option.namespace
     if 'namespace' in metafunc.fixturenames and namespace is not None:
         metafunc.parametrize("namespace", [namespace])
+
+    backup_bucket = metafunc.config.option.backup_bucket
+    if 'backup_bucket' in metafunc.fixturenames and backup_bucket is not None:
+        metafunc.parametrize("backup_bucket", [backup_bucket])
