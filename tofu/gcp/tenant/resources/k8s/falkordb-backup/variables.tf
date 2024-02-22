@@ -32,6 +32,25 @@ variable "falkordb_password" {
   sensitive = true
 }
 
+variable "container_name" {
+  type    = string
+  default = "redis"
+}
+
 variable "port" {
   type = number
+}
+
+variable "persistence_size" {
+  type = string
+}
+
+variable "backup_volume_size_overhead_pctg" {
+  type    = number
+  default = 0.2
+}
+
+variable "storage_class_name" {
+  type    = string
+  default = "standard-rwo"
 }

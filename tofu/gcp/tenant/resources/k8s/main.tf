@@ -52,6 +52,7 @@ module "falkordb_backup" {
   backup_schedule      = var.backup_schedule
   falkordb_password    = local.falkordb_password
   port                 = var.redis_port
+  persistence_size     = var.persistence_size
 }
 
 
