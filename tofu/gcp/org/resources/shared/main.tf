@@ -26,7 +26,8 @@ module "billing" {
   project_parent_id  = google_folder.root_folder.id
   billing_account_id = var.billing_account_id
 
-  budgets = []
+  budgets = [
+  ]
 
 }
 
