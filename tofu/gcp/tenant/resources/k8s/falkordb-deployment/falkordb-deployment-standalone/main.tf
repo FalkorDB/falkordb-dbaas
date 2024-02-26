@@ -1,6 +1,6 @@
 locals {
-  falkordb_memory_amount = regex("([0-9])+", var.falkordb_memory)
-  falkordb_memory_unit   = regex("([A-Za-z]+)", var.falkordb_memory)
+  falkordb_memory_amount = regex("([0-9])+", var.falkordb_memory)[0]
+  falkordb_memory_unit   = regex("([A-Za-z]+)", var.falkordb_memory)[0]
   max_memory_factor      = local.falkordb_memory_unit == "Gi" ? pow(1024, 3) : local.falkordb_memory_unit == "Mi" ? pow(1024, 2) : pow(1024, 1)
   max_memory_bytes       = floor(local.falkordb_memory_amount * local.max_memory_factor)
 }
