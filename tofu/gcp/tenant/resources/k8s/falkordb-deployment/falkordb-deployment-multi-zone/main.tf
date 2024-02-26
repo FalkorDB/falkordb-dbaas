@@ -15,6 +15,11 @@ locals {
       ]
     }
   }
+
+  falkordb_memory_amount = regex("([0-9])+", var.falkordb_memory)
+  falkordb_memory_unit   = regex("([A-Za-z]+)", var.falkordb_memory)
+  max_memory_factor      = local.falkordb_memory_unit == "Gi" ? pow(1024, 3) : local.falkordb_memory_unit == "Mi" ? pow(1024, 2) : pow(1024, 1)
+  max_memory_bytes       = floor(local.falkordb_memory_amount * local.max_memory_factor)
 }
 
 resource "helm_release" "falkordb" {
@@ -145,6 +150,19 @@ resource "helm_release" "falkordb" {
   set {
     name  = "metrics.podLabels.app\\.kubernetes\\.io/name"
     value = "redis"
+  }
+
+  set {
+    name  = "commonConfiguration"
+    value = <<EOF
+# Enable AOF https://redis.io/topics/persistence#append-only-file
+appendonly yes
+# Disable RDB persistence, AOF persistence already enabled.
+save ""
+
+# Set max memory
+maxmemory ${local.max_memory_bytes}
+    EOF
   }
 }
 
