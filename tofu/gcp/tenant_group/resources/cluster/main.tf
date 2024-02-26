@@ -41,5 +41,8 @@ module "gke" {
     "STATEFULSET"
   ]
 
+  security_posture_mode   = "BASIC"
+  security_posture_vulnerability_mode = "VULNERABILITY_BASIC"  
+
   cluster_resource_labels = var.labels
 }
