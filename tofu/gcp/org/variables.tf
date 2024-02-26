@@ -112,6 +112,10 @@ variable "monitored_projects" {
   type = set(string)
 }
 
+variable "alert_email_addresses" {
+  type = set(string)
+}
+
 
 ###### SHARED RESOURCES: BILLING ######
 variable "billing_project_id" {

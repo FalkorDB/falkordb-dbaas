@@ -25,3 +25,7 @@ variable "billing_account_id" {
 variable "monitored_projects" {
   type = set(string)
 }
+
+variable "alert_email_addresses" {
+  type = set(string)
+}

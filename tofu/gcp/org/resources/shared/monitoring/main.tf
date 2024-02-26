@@ -30,3 +30,13 @@ module "project" {
 #   metrics_scope = "locations/global/metricsScopes/${module.project.project_number}"
 #   name          = each.value
 # }
+
+
+module "alerts" {
+  source = "./alerts"
+
+  project_id         = module.project.project_id
+  monitored_projects = var.monitored_projects
+  email_addresses    = var.alert_email_addresses
+
+}
