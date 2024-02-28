@@ -48,16 +48,14 @@ resource "google_bigquery_dataset_iam_member" "log_writer" {
   member     = google_logging_billing_account_sink.billing_sink.writer_identity
 }
 
-data "google_billing_account" "billing_account" {
-  billing_account = var.billing_account_id
-}
-
 locals {
   budgets = var.budgets
 }
 # Define budgets
 resource "google_billing_budget" "budgets" {
-  for_each = local.budgets
+  for_each = {
+    for budget in local.budgets : budget.name => budget
+  }
 
   billing_account = var.billing_account_id
   display_name    = each.value.name
@@ -65,19 +63,21 @@ resource "google_billing_budget" "budgets" {
   dynamic "amount" {
     for_each = each.value.amounts
     content {
-      specified_amount {
-        currency_code = data.google_billing_account.billing_account.currency
-        units         = amount.value.specified_amount
+      dynamic "specified_amount" {
+        for_each = amount.value.specified_amount != null ? [amount.value.specified_amount] : []
+        content {
+          units = specified_amount.value
+        }
       }
       last_period_amount = amount.value.last_period_amount
     }
   }
 
-  dynamic "threshold_rule" {
+  dynamic "threshold_rules" {
     for_each = each.value.thresholds
     content {
-      threshold_percent = threshold_rule.value.percentage
-      spend_threshold   = threshold_rule.value.amount
+      threshold_percent = threshold_rules.value.percentage
+      spend_basis       = threshold_rules.value.spend_basis
     }
   }
 
