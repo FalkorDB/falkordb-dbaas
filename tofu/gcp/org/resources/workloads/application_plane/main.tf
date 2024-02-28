@@ -21,6 +21,7 @@ module "project" {
     "storage.googleapis.com",
     "cloudkms.googleapis.com",
     "dns.googleapis.com",
+    "containersecurity.googleapis.com",
   ]
 }
 
