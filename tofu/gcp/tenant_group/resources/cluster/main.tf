@@ -28,5 +28,21 @@ module "gke" {
 
   node_pools = var.node_pools
 
+  monitoring_enabled_components = [
+    "SYSTEM_COMPONENTS",
+    "APISERVER",
+    "SCHEDULER",
+    "CONTROLLER_MANAGER",
+    "STORAGE",
+    "HPA",
+    "POD",
+    "DAEMONSET",
+    "DEPLOYMENT",
+    "STATEFULSET"
+  ]
+
+  security_posture_mode               = "BASIC"
+  security_posture_vulnerability_mode = "VULNERABILITY_BASIC"
+
   cluster_resource_labels = var.labels
 }

@@ -24,18 +24,18 @@ variable "budgets" {
   type = set(object({
     name = string
     amounts = list(object({
-      last_period_amount = bool
-      specified_amount   = number
+      last_period_amount = optional(bool)
+      specified_amount   = optional(number)
     }))
     thresholds = list(object({
-      percentage = number
-      amount     = number
+      percentage  = number
+      spend_basis = optional(string, "CURRENT_SPEND")
     }))
-    filters = list(object({
+    filters = optional(list(object({
       credit_types = list(string)
       services     = list(string)
       projects     = list(string)
       labels       = list(string)
-    }))
+    })), [])
   }))
 }

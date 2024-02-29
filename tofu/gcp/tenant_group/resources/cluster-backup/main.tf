@@ -34,32 +34,9 @@ resource "google_service_account" "velero" {
   account_id = "${var.tenant_group_name}-velero"
 }
 
-resource "google_project_iam_custom_role" "velero_role" {
-  role_id     = "velero"
-  project     = var.project_id
-  title       = "Velero"
-  description = "Velero custom role"
-  permissions = [
-    "compute.disks.get",
-    "compute.disks.create",
-    "compute.disks.createSnapshot",
-    "compute.projects.get",
-    "compute.snapshots.get",
-    "compute.snapshots.create",
-    "compute.snapshots.useReadOnly",
-    "compute.snapshots.delete",
-    "compute.zones.get",
-    "storage.objects.create",
-    "storage.objects.delete",
-    "storage.objects.get",
-    "storage.objects.list",
-    "iam.serviceAccounts.signBlob",
-  ]
-}
-
 resource "google_project_iam_binding" "velero" {
   project = var.project_id
-  role    = google_project_iam_custom_role.velero_role.id
+  role    = "projects/${var.project_id}/roles/velero"
   members = [
     "serviceAccount:${google_service_account.velero.email}",
   ]

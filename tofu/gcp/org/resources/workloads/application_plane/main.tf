@@ -21,6 +21,7 @@ module "project" {
     "storage.googleapis.com",
     "cloudkms.googleapis.com",
     "dns.googleapis.com",
+    "containersecurity.googleapis.com",
   ]
 }
 
@@ -42,4 +43,28 @@ resource "google_project_iam_member" "provisioning_sa_service_usage" {
   member  = "serviceAccount:${var.provisioning_sa}"
 
   depends_on = [module.project]
+}
+
+# Velero role for cluster backup
+resource "google_project_iam_custom_role" "velero_role" {
+  role_id     = "velero"
+  project     = var.project_id
+  title       = "Velero"
+  description = "Velero custom role"
+  permissions = [
+    "compute.disks.get",
+    "compute.disks.create",
+    "compute.disks.createSnapshot",
+    "compute.projects.get",
+    "compute.snapshots.get",
+    "compute.snapshots.create",
+    "compute.snapshots.useReadOnly",
+    "compute.snapshots.delete",
+    "compute.zones.get",
+    "storage.objects.create",
+    "storage.objects.delete",
+    "storage.objects.get",
+    "storage.objects.list",
+    "iam.serviceAccounts.signBlob",
+  ]
 }
