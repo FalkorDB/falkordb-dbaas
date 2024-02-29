@@ -10,4 +10,9 @@ __pycache__
 backend.conf
 
 .env
+.env.test
+!.env.example
 .secrets
+
+
+node_modules
