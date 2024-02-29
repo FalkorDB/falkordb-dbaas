@@ -1,7 +1,7 @@
 import { FastifyBaseLogger } from 'fastify';
 import { ITenantGroupRepository } from './ITenantGroupsRepository';
 import { MongoClient } from 'mongodb';
-import { TenantGroupSchemaType } from '../../schemas/tenantGroup';
+import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '../../schemas/tenantGroup';
 import { ApiError } from '../../errors/ApiError';
 
 export class TenantGroupsMongoDB implements ITenantGroupRepository {
@@ -87,9 +87,15 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
     }
   }
 
-  async query(params: { id?: string }): Promise<TenantGroupSchemaType[]> {
+  async query(params: { status?: TenantGroupStatusSchemaType }): Promise<TenantGroupSchemaType[]> {
     try {
-      const response = await this.collection.find(params).toArray();
+      const query: { [key: string]: unknown } = {};
+
+      if (params.status) {
+        query.status = params.status;
+      }
+
+      const response = await this.collection.find(query).toArray();
 
       return response.map((item) => {
         return {

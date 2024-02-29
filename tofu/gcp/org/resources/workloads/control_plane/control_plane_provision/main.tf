@@ -41,3 +41,30 @@ resource "google_service_account_iam_member" "provisioning_sa_admin_itself" {
 
   member = "serviceAccount:${google_service_account.provisioning_sa.email}"
 }
+
+
+
+
+
+# cloud-builds pubsub topic
+resource "google_pubsub_topic" "cloud_builds" {
+  project = var.project_id
+  name    = "cloud-builds"
+}
+
+# cloud-builds pubsub subscription
+resource "google_pubsub_subscription" "cloud_builds_provisioner" {
+  count = var.cloud_build_push_endpoint != null ? 1 : 0
+
+  project              = var.project_id
+  name                 = "cloud-builds-provisioner"
+  topic                = google_pubsub_topic.cloud_builds.name
+  ack_deadline_seconds = 60
+
+  push_config {
+    push_endpoint = var.cloud_build_push_endpoint
+    oidc_token {
+      service_account_email = google_service_account.provisioning_sa.email
+    }
+  }
+}

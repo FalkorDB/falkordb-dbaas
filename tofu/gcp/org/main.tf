@@ -16,11 +16,12 @@ module "workloads_resources" {
   application_plane_project_id   = "${var.application_plane_project_id}-${random_bytes.project_suffix.hex}"
   application_plane_project_name = var.application_plane_project_name
 
-  control_plane_project_id             = "${var.control_plane_project_id}-${random_bytes.project_suffix.hex}"
-  control_plane_project_name           = var.control_plane_project_name
-  state_bucket_name                    = var.state_bucket_name
-  control_plane_public_network_name    = var.control_plane_public_network_name
-  control_plane_public_network_subnets = var.control_plane_public_network_subnets
+  control_plane_project_id                = "${var.control_plane_project_id}-${random_bytes.project_suffix.hex}"
+  control_plane_project_name              = var.control_plane_project_name
+  state_bucket_name                       = var.state_bucket_name
+  control_plane_public_network_name       = var.control_plane_public_network_name
+  control_plane_public_network_subnets    = var.control_plane_public_network_subnets
+  control_plane_cloud_build_push_endpoint = var.control_plane_cloud_build_push_endpoint
 
   create_pipelines_development       = var.create_pipelines_development
   pipelines_development_project_id   = "${var.pipelines_development_project_id}-${random_bytes.project_suffix.hex}"

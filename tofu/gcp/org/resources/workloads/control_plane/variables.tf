@@ -40,3 +40,15 @@ variable "public_network_subnets" {
     })
   )
 }
+
+###### PROVISIONER ######
+
+variable "cloud_build_push_endpoint" {
+  type     = string
+  nullable = true
+}
+
+variable "artifact_registry_region" {
+  type = string
+  default = "europe-west1"
+}

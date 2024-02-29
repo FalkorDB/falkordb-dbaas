@@ -20,6 +20,9 @@ module "project" {
     "serviceusage.googleapis.com",
     "storage.googleapis.com",
     "cloudbuild.googleapis.com",
+    "pubsub.googleapis.com",
+    "run.googleapis.com",
+    "secretmanager.googleapis.com",
   ]
 }
 
@@ -43,5 +46,52 @@ module "tenant_provision" {
   project_id        = var.project_id
   state_bucket_name = var.state_bucket_name
 
+  cloud_build_push_endpoint = var.cloud_build_push_endpoint
+
   depends_on = [module.project]
+}
+
+
+resource "google_artifact_registry_repository" "backend_services" {
+  project       = var.project_id
+  location      = var.artifact_registry_region
+  repository_id = "backend"
+  format        = "DOCKER"
+  description   = "Backend services container images"
+}
+
+
+resource "google_secret_manager_secret" "mongodb_uri" {
+  project = var.project_id
+  replication {
+    auto {
+    }
+  }
+
+  secret_id = "MONGODB_URI"
+
+  depends_on = [ module.project ]
+}
+
+resource "google_service_account" "backend_sa" {
+  project      = var.project_id
+  account_id   = "backend-sa"
+  display_name = "Backend SA"
+}
+
+resource "google_secret_manager_secret_iam_binding" "backend_sa" {
+  secret_id = google_secret_manager_secret.mongodb_uri.id
+  role      = "roles/secretmanager.secretAccessor"
+
+  members = [
+    "serviceAccount:${google_service_account.backend_sa.email}",
+  ]
+}
+
+# Add SA user role to the service account for the provisioning SA
+resource "google_service_account_iam_member" "provisioning_sa_user" {
+  service_account_id = google_service_account.backend_sa.id
+  role               = "roles/iam.serviceAccountUser"
+
+  member = "serviceAccount:${module.tenant_provision.provisioning_sa_email}"
 }

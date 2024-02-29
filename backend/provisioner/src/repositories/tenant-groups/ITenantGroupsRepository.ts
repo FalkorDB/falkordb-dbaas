@@ -1,4 +1,8 @@
-import { TenantGroupCreateSchemaType, TenantGroupSchemaType } from '../../schemas/tenantGroup';
+import {
+  TenantGroupCreateSchemaType,
+  TenantGroupSchemaType,
+  TenantGroupStatusSchemaType,
+} from '../../schemas/tenantGroup';
 
 export abstract class ITenantGroupRepository {
   create(params: TenantGroupCreateSchemaType): Promise<TenantGroupSchemaType> {
@@ -20,7 +24,7 @@ export abstract class ITenantGroupRepository {
     throw new Error('Not implemented');
   }
 
-  query(params: { id?: string }): Promise<TenantGroupSchemaType[]> {
+  query(params: { status?: TenantGroupStatusSchemaType }): Promise<TenantGroupSchemaType[]> {
     throw new Error('Not implemented');
   }
 }
