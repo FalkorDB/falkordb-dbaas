@@ -49,6 +49,6 @@ variable "cloud_build_push_endpoint" {
 }
 
 variable "artifact_registry_region" {
-  type = string
+  type    = string
   default = "europe-west1"
 }

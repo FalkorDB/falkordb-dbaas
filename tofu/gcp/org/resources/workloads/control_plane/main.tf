@@ -70,7 +70,7 @@ resource "google_secret_manager_secret" "mongodb_uri" {
 
   secret_id = "MONGODB_URI"
 
-  depends_on = [ module.project ]
+  depends_on = [module.project]
 }
 
 resource "google_service_account" "backend_sa" {
