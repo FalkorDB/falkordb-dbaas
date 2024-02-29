@@ -13,10 +13,10 @@ export abstract class ITenantGroupRepository {
     throw new Error('Not implemented');
   }
 
-  runTransaction<T>(
+  runTransaction<TenantGroupSchemaType>(
     id: string,
-    fn: (tenantGroup: TenantGroupSchemaType, commit: (tenantGroup: TenantGroupSchemaType) => void) => Promise<T>,
-  ): Promise<T> {
+    fn: (tenantGroup: TenantGroupSchemaType) => Promise<TenantGroupSchemaType>,
+  ): Promise<TenantGroupSchemaType> {
     throw new Error('Not implemented');
   }
 

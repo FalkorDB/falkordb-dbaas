@@ -4,7 +4,7 @@ import { IOperationsRepository } from '../../../repositories/operations/IOperati
 import { OperationProviderSchemaType } from '../../../schemas/operation';
 import { TenantGroupGCPProvisioner } from '../provisioners/TenantGroupGCPProvisioner';
 import { FastifyBaseLogger } from 'fastify';
-import { TenantGroupSchemaType } from '../../../schemas/tenantGroup';
+import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '../../../schemas/tenantGroup';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
 import { TenantGroupDeprovisionResponseSchemaType } from '../schemas/deprovision';
 
@@ -41,6 +41,8 @@ export class TenantGroupDeprovisionService {
       throw ApiError.badRequest('Tenant group has tenants', 'TENANT_GROUP_HAS_TENANTS');
     }
 
+    await this._updateTenantGroupStatus(tenantGroupId, 'deprovisioning');
+
     let operationParams: {
       operationProvider: OperationProviderSchemaType;
       operationProviderId: string;
@@ -62,38 +64,43 @@ export class TenantGroupDeprovisionService {
     operationProvider: OperationProviderSchemaType;
     operationProviderId: string;
   }> {
-    const cloudProvisionConfig = await this._cloudProvisionConfigsRepository
-      .query({
-        cloudProvider: 'gcp',
-        deploymentConfigVersion: tenantGroup.clusterDeploymentVersion,
-      })
-      .then((configs) => {
-        if (configs.length === 0) {
-          throw ApiError.notFound('Cloud provision config not found', 'CLOUD_PROVISION_CONFIG_NOT_FOUND');
-        }
+    try {
+      const cloudProvisionConfig = await this._cloudProvisionConfigsRepository
+        .query({
+          cloudProvider: 'gcp',
+          deploymentConfigVersion: tenantGroup.clusterDeploymentVersion,
+        })
+        .then((configs) => {
+          if (configs.length === 0) {
+            throw ApiError.notFound('Cloud provision config not found', 'CLOUD_PROVISION_CONFIG_NOT_FOUND');
+          }
 
-        // Sort by date desc
-        configs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-        return configs[0];
-      })
-      .catch((err) => {
-        this._opts.logger.error(err);
-        throw ApiError.internalServerError(
-          'Failed to query cloud provision config',
-          'FAILED_TO_QUERY_CLOUD_PROVISION_CONFIG',
-        );
-      });
+          // Sort by date desc
+          configs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+          return configs[0];
+        })
+        .catch((err) => {
+          this._opts.logger.error(err);
+          throw ApiError.internalServerError(
+            'Failed to query cloud provision config',
+            'FAILED_TO_QUERY_CLOUD_PROVISION_CONFIG',
+          );
+        });
 
-    const provisioner = new TenantGroupGCPProvisioner();
+      const provisioner = new TenantGroupGCPProvisioner();
 
-    switch (tenantGroup.clusterDeploymentVersion) {
-      case 1:
-        return await provisioner.deprovision(tenantGroup.id, tenantGroup.region, cloudProvisionConfig);
-      default:
-        throw ApiError.unprocessableEntity(
-          'Unsupported clusterDeploymentVersion',
-          'UNSUPPORTED_CLUSTER_DEPLOYMENT_VERSION',
-        );
+      switch (tenantGroup.clusterDeploymentVersion) {
+        case 1:
+          return await provisioner.deprovision(tenantGroup.id, tenantGroup.region, cloudProvisionConfig);
+        default:
+          throw ApiError.unprocessableEntity(
+            'Unsupported clusterDeploymentVersion',
+            'UNSUPPORTED_CLUSTER_DEPLOYMENT_VERSION',
+          );
+      }
+    } catch (error) {
+      await this._updateTenantGroupStatus(tenantGroup.id, 'deprovisioning-failed');
+      throw error;
     }
   }
 
@@ -112,5 +119,16 @@ export class TenantGroupDeprovisionService {
       resourceType: 'tenant-group',
       resourceId,
     });
+  }
+
+  private async _updateTenantGroupStatus(tenantGroupId: string, status: TenantGroupStatusSchemaType): Promise<void> {
+    try {
+      await this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(tenantGroupId, async (tg) => {
+        tg.status = status;
+        return tg;
+      });
+    } catch (error) {
+      this._opts.logger.error(error);
+    }
   }
 }

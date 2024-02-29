@@ -109,7 +109,7 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
           },
           {
             id: `Apply Tofu Plan`,
-            name: 'oowy/opentofu',
+            name: 'falkordb/gcloud-kubectl-falkordb-tofu',
             script: `set -eo pipefail; tofu apply -auto-approve tfplan -no-color || (tofu destroy -auto-approve ${tofuVars} -no-color; exit 1)
 `,
           },
@@ -169,7 +169,7 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
           },
           {
             id: `Destroy Tofu`,
-            name: 'oowy/opentofu',
+            name: 'falkordb/gcloud-kubectl-falkordb-tofu',
             script: `set -eo pipefail; tofu destroy -auto-approve ${tofuVars} -no-color || exit 1`,
           },
         ],

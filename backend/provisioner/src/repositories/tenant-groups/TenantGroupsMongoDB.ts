@@ -16,7 +16,7 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
 
   async create(params: TenantGroupSchemaType): Promise<TenantGroupSchemaType> {
     try {
-      const existingTenantGroup = await this.get(params.id);
+      const existingTenantGroup = await this.get(params.id).catch(() => null);
 
       if (existingTenantGroup) {
         throw ApiError.conflict('Tenant group already exists', 'TENANT_GROUP_ALREADY_EXISTS');
@@ -28,11 +28,10 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
         updatedAt: new Date().toISOString(),
       };
 
-      const response = await this.collection.insertOne(insert);
+      await this.collection.insertOne(insert);
 
       return {
         ...insert,
-        id: response.insertedId.toHexString(),
         tenantCount: 0,
         tenants: [],
       };
@@ -48,7 +47,7 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
 
   async delete(id: string): Promise<void> {
     try {
-      await this.collection.findOneAndDelete({ _id: new MongoClient(id) }, {});
+      await this.collection.findOneAndDelete({ id }, {});
     } catch (error) {
       this._opts.logger.error(error);
       throw ApiError.internalServerError('Failed to delete tenant group', 'FAILED_TO_DELETE_TENANT_GROUP');
@@ -57,14 +56,14 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
 
   async get(id: string): Promise<TenantGroupSchemaType> {
     try {
-      const response = await this.collection.findOne({ _id: new MongoClient(id) });
+      const response = await this.collection.findOne({ id });
 
       if (!response) {
         throw ApiError.notFound('Tenant group not found', 'TENANT_GROUP_NOT_FOUND');
       }
 
       return {
-        id: response._id.toHexString(),
+        id: response.id,
         createdAt: response.createdAt,
         updatedAt: response.updatedAt,
         status: response.status,
@@ -94,7 +93,7 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
 
       return response.map((item) => {
         return {
-          id: item._id.toHexString(),
+          id: item.id,
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
           status: item.status,
@@ -115,26 +114,32 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
     }
   }
 
-  runTransaction<T>(
+  runTransaction<TenantGroupSchemaType>(
     id: string,
-    fn: (tenantGroup: TenantGroupSchemaType, commit: (tenantGroup: TenantGroupSchemaType) => void) => Promise<T>,
-  ): Promise<T> {
-    return this._client.withSession(async (session) => {
-      return await session.withTransaction(async () => {
-        const tenantGroup = await this.get(id);
-        return await fn(tenantGroup[0], async (updatedTenantGroup) => {
-          await this.collection.updateOne(
-            { _id: new MongoClient(id) },
-            {
-              $set: {
-                ...updatedTenantGroup,
-                updatedAt: new Date().toISOString(),
+    fn: (tenantGroup: TenantGroupSchemaType) => Promise<TenantGroupSchemaType>,
+  ): Promise<TenantGroupSchemaType> {
+    return new Promise<TenantGroupSchemaType>((resolve, reject) => {
+      return this._client
+        .withSession((session) => {
+          return session.withTransaction(async () => {
+            const tenantGroup = (await this.get(id)) as TenantGroupSchemaType;
+            const result = await fn(tenantGroup);
+            await this.collection.findOneAndUpdate(
+              { id },
+              {
+                $set: {
+                  ...result,
+                  updatedAt: new Date().toISOString(),
+                },
               },
-            },
-            { session },
-          );
+            );
+            resolve(result);
+          });
+        })
+        .catch((error) => {
+          this._opts.logger.error(error);
+          reject(ApiError.internalServerError('Failed to run transaction', 'FAILED_TO_RUN_TRANSACTION'));
         });
-      });
     });
   }
 }

@@ -3,11 +3,15 @@ import { SupportedCloudProviderSchema, SupportedRegionsSchema } from './global';
 
 export const TenantGroupStatusSchema = Type.Union([
   Type.Literal('provisioning'),
+  Type.Literal('deprovisioning'),
   Type.Literal('upgrading'),
   Type.Literal('provisioning-failed'),
+  Type.Literal('deprovisioning-failed'),
   Type.Literal('upgrading-failed'),
   Type.Literal('ready'),
 ]);
+
+export type TenantGroupStatusSchemaType = Static<typeof TenantGroupStatusSchema>;
 
 export const TenantGroupSchema = Type.Object({
   id: Type.String(),

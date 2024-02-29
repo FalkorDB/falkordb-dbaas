@@ -5,6 +5,8 @@ import {
   type TenantGroupProvisionBodySchemaType,
 } from './schemas/provision';
 import { tenantGroupProvisionHandler } from './handlers/provision';
+import { TenantGroupDeprovisionParamsSchema } from './schemas/deprovision';
+import { tenantGroupDeprovisionHandler } from './handlers/deprovision';
 
 export default fp(
   async function provision(fastify, opts) {
@@ -13,12 +15,19 @@ export default fp(
       {
         schema: {
           body: TenantGroupProvisionBodySchema,
-          response: {
-            // 200: TenantGroupProvisionResponseSuccessSchema,
-          },
         },
       },
       tenantGroupProvisionHandler,
+    );
+
+    fastify.post(
+      '/:id/deprovision',
+      {
+        schema: {
+          params: TenantGroupDeprovisionParamsSchema,
+        },
+      },
+      tenantGroupDeprovisionHandler,
     );
   },
   {
