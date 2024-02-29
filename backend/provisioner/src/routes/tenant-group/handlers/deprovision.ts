@@ -1,21 +1,21 @@
 import { RouteHandlerMethod } from 'fastify';
-import { TenantGroupProvisionBodySchemaType } from '../schemas/provision';
-import { TenantGroupProvisionService } from '../services/TenantGroupProvisionService';
 import { ApiError } from '../../../errors/ApiError';
 import { OperationsMongoDB } from '../../../repositories/operations/OperationsMongoDB';
 import { CloudProvisionConfigsMongoDB } from '../../../repositories/cloud-provision-configs/CloudProvisionConfigsMongoDB';
 import { TenantGroupsMongoDB } from '../../../repositories/tenant-groups/TenantGroupsMongoDB';
+import { TenantGroupDeprovisionService } from '../services/TenantGroupDeprovisionService';
+import { TenantGroupDeprovisionParamsSchemaType } from '../schemas/deprovision';
 
-export const tenantGroupProvisionHandler: RouteHandlerMethod<
+export const tenantGroupDeprovisionHandler: RouteHandlerMethod<
   undefined,
   undefined,
   undefined,
   {
-    Body: TenantGroupProvisionBodySchemaType;
+    Params: TenantGroupDeprovisionParamsSchemaType;
   }
 > = async (request) => {
   const opts = { logger: request.log };
-  const service = new TenantGroupProvisionService(
+  const service = new TenantGroupDeprovisionService(
     opts,
     new OperationsMongoDB(opts, request.server.mongo.client),
     new CloudProvisionConfigsMongoDB(opts, request.server.mongo.client),
@@ -23,7 +23,7 @@ export const tenantGroupProvisionHandler: RouteHandlerMethod<
   );
 
   try {
-    return await service.provisionTenantGroup(request.body);
+    return await service.deprovisionTenantGroup(request.params.id);
   } catch (error) {
     if (error instanceof ApiError) {
       throw error.toFastify(request.server);

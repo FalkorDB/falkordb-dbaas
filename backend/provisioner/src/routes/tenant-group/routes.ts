@@ -1,5 +1,9 @@
 import fp from 'fastify-plugin';
-import { TenantGroupProvisionBodySchema, type TenantGroupProvisionBodySchemaType } from './schemas/provision';
+import {
+  TenantGroupProvisionBodySchema,
+  TenantGroupProvisionResponseSchema,
+  type TenantGroupProvisionBodySchemaType,
+} from './schemas/provision';
 import { tenantGroupProvisionHandler } from './handlers/provision';
 
 export default fp(
@@ -9,6 +13,9 @@ export default fp(
       {
         schema: {
           body: TenantGroupProvisionBodySchema,
+          response: {
+            // 200: TenantGroupProvisionResponseSuccessSchema,
+          },
         },
       },
       tenantGroupProvisionHandler,

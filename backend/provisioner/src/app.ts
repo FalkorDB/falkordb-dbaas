@@ -5,6 +5,8 @@ import Env from '@fastify/env';
 import Cors from '@fastify/cors';
 import { join } from 'path';
 import { EnvSchema } from './schemas/dotenv';
+import MongoDB from '@fastify/mongodb';
+import fastifyRequestContextPlugin from '@fastify/request-context';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   await fastify.register(Env, {
@@ -30,12 +32,19 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   await fastify.register(AutoLoad, {
     dir: join(__dirname, 'routes'),
     indexPattern: /.*routes(\.js|\.cjs)$/i,
-    ignorePattern: /.*\.js/,
+    ignorePattern: /spec\.ts$/,
     autoHooksPattern: /.*hooks(\.js|\.cjs|\.ts)$/i,
     autoHooks: true,
     cascadeHooks: true,
     options: Object.assign({}, opts),
   });
+
+  await fastify.register(MongoDB, {
+    forceClose: true,
+    url: fastify.config.MONGODB_URI,
+  });
+
+  fastify.register(fastifyRequestContextPlugin);
 
   if (fastify.config.NODE_ENV === 'development') {
     console.log('CURRENT ROUTES:');

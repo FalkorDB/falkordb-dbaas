@@ -1,15 +1,15 @@
 {
-  "compilerOptions":
-    {
-      "target": "es2018",
-      "module": "commonjs",
-      "outDir": "dist",
-      "sourceMap": true,
-    },
-  "include": ["src/**/*.ts"],
+  "compilerOptions": {
+    "target": "es2018",
+    "module": "commonjs",
+    "outDir": "dist",
+    "sourceMap": true,
+    "types": ["node", "jest"]
+  },
+  "include": ["src/**/*"],
   "exclude": ["node_modules"],
   "ts-node": {
     "files": true
   },
-  "typeRoots": ["./src/types"]
+  "typeRoots": ["./src/types", "node_modules/@types"]
 }

@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import App from './app';
 
-async function start(): Promise<void> {
+export async function start() {
   const fastify = Fastify({
     logger: true,
   });
@@ -12,6 +12,8 @@ async function start(): Promise<void> {
   await fastify.listen({
     port: PORT,
   });
+
+  return fastify;
 }
 
 start().catch((err) => {
