@@ -3,6 +3,15 @@ locals {
   backup_write_sa_name = "${var.tenant_name}-backup-write-sa"
 
   backup_volume_size = "${ceil(regex("^[0-9]+", var.persistence_size) * (1 + var.backup_volume_size_overhead_pctg))}Gi"
+
+  affinity_labels = var.replication ? {
+    "cloud.falkordb.io/role" : "slave"
+    "app.kubernetes.io/instance" : var.deployment_name
+    } : {
+    "app.kubernetes.io/instance" : var.deployment_name
+  }
+
+  get_pod_name_command = var.replication ? "kubectl get pods -l cloud.falkordb.io/role=slave -n ${var.deployment_namespace} -o jsonpath='{.items[0].metadata.name}'" : "kubectl get pods -l app.kubernetes.io/instance=${var.deployment_name} -n ${var.deployment_namespace} -o jsonpath='{.items[0].metadata.name}'"
 }
 
 resource "kubernetes_service_account" "backup_write_sa" {
@@ -78,8 +87,9 @@ resource "kubernetes_config_map" "backup_script" {
     "backup.sh" = <<EOF
 #!/bin/bash
 
-# TODO: Choose pod according to zone
-POD_NAME="${var.deployment_name}-node-0"
+# Get pod name
+POD_NAME=(${local.get_pod_name_command})
+
 
 # Check if the BGSAVE is in progress
 IS_IN_BACKUP=$(kubectl exec $POD_NAME -c ${var.container_name} -n ${var.deployment_namespace} -- redis-cli --no-auth-warning -p ${var.port} -a '${var.falkordb_password}' INFO PERSISTENCE | grep rdb_bgsave_in_progress | awk -F: '{print $2}')
@@ -132,6 +142,20 @@ resource "kubernetes_cron_job_v1" "falkorbd_backup" {
               "iam.gke.io/gke-metadata-server-enabled" : "true"
               "cloud.google.com/gke-nodepool" : var.node_pool_name
             }
+            # There is currently an issue where in multi zone deployments, if the slave pod changes region, the job won't be able to
+            # be scheduled in the new region, as the Volume will still exist in the old region.
+            # Issue: https://github.com/kubernetes/kubernetes/issues/120756
+            # affinity {
+            #   pod_affinity {
+            #     # Schedule in the same zone as role=slave
+            #     required_during_scheduling_ignored_during_execution {
+            #       label_selector {
+            #         match_labels = local.affinity_labels
+            #       }
+            #       topology_key = "topology.kubernetes.io/zone"
+            #     }
+            #   }
+            # }
             container {
               name    = "backup"
               image   = "falkordb/gcloud-kubectl-falkordb:latest"

@@ -1,3 +1,5 @@
-FalkorDB==1.0.1
+FalkorDB
 pytest==6.2.4
 kubernetes
+git+https://github.com/falkordb/falkordb-bulk-loader.git@master
+google-cloud-storage

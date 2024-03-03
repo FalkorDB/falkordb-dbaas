@@ -54,3 +54,8 @@ variable "storage_class_name" {
   type    = string
   default = "standard-rwo"
 }
+
+variable "replication" {
+  type    = bool
+  default = false
+}
