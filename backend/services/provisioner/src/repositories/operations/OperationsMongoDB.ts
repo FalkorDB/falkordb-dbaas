@@ -1,9 +1,13 @@
 import { FastifyBaseLogger } from 'fastify';
 import { IOperationsRepository } from './IOperationsRepository';
 
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import { ApiError } from '../../errors/ApiError';
-import { CreateOperationParamsSchemaType, OperationSchemaType } from '../../schemas/operation';
+import {
+  CreateOperationParamsSchemaType,
+  OperationSchemaType,
+  OperationStatusSchemaType,
+} from '../../schemas/operation';
 
 export class OperationsMongoDB implements IOperationsRepository {
   collection = this._client.db().collection('operations');
@@ -23,10 +27,10 @@ export class OperationsMongoDB implements IOperationsRepository {
         updatedAt: new Date().toISOString(),
       };
 
-      const response = await this.collection.insertOne(insert);
+      await this.collection.insertOne(insert);
 
       return {
-        id: response.insertedId.toHexString(),
+        id: insert.id,
         createdAt: insert.createdAt,
         updatedAt: insert.updatedAt,
         status: insert.status,
@@ -34,12 +38,61 @@ export class OperationsMongoDB implements IOperationsRepository {
         resourceType: insert.resourceType,
         resourceId: insert.resourceId,
         operationProvider: insert.operationProvider,
-        operationProviderId: insert.operationProviderId,
         payload: insert.payload,
       };
     } catch (error) {
       this._opts.logger.error(error);
       throw ApiError.internalServerError('Failed to create operation', 'FAILED_TO_CREATE_OPERATION');
+    }
+  }
+
+  async get(id: string): Promise<OperationSchemaType | null> {
+    try {
+      const response = await this.collection.findOne({ id });
+
+      if (!response) {
+        return null;
+      }
+
+      return {
+        id: response.id,
+        createdAt: response.createdAt,
+        updatedAt: response.updatedAt,
+        status: response.status,
+        type: response.type,
+        resourceType: response.resourceType,
+        resourceId: response.resourceId,
+        operationProvider: response.operationProvider,
+        payload: response.payload,
+      };
+    } catch (error) {
+      this._opts.logger.error(error);
+      throw ApiError.internalServerError('Failed to get operation', 'FAILED_TO_GET_OPERATION');
+    }
+  }
+
+  async updateStatus(id: string, status: OperationStatusSchemaType): Promise<OperationSchemaType> {
+    try {
+      const response = await this.collection.findOneAndUpdate(
+        { id },
+        { $set: { status, updatedAt: new Date().toISOString() } },
+        { returnDocument: 'after' },
+      );
+
+      return {
+        id: response.id,
+        createdAt: response.createdAt,
+        updatedAt: response.updatedAt,
+        status: response.status,
+        type: response.type,
+        resourceType: response.resourceType,
+        resourceId: response.resourceId,
+        operationProvider: response.operationProvider,
+        payload: response.payload,
+      };
+    } catch (error) {
+      this._opts.logger.error(error, 'Failed to update operation', id);
+      throw ApiError.internalServerError('Failed to update operation', 'FAILED_TO_UPDATE_OPERATION');
     }
   }
 }

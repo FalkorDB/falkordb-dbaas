@@ -48,22 +48,22 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
   };
 
   async provision(
+    operationId: string,
     tenantGroupId: string,
     region: SupportedRegionsSchemaType,
     cloudProvisionConfig: CloudProvisionGCPConfigSchemaType,
   ): Promise<{
     operationProvider: OperationProviderSchemaType;
-    operationProviderId: string;
   }> {
     const tofuVars = this._getTenantGroupVars(tenantGroupId, region, cloudProvisionConfig).join(' ');
 
-    const buildResponse = await cloudbuild.createBuild({
+    await cloudbuild.createBuild({
       projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
       build: {
         options: {
           logging: 'CLOUD_LOGGING_ONLY',
         },
-        tags: ['tenant-group', tenantGroupId, `action-provision`],
+        tags: ['tenant-group', tenantGroupId, `action-provision`, `operationId-${operationId}`],
         serviceAccount: cloudProvisionConfig.cloudProviderConfig.runnerServiceAccount,
         timeout: { seconds: cloudProvisionConfig.cloudProviderConfig.timeout || 1800 },
         source: {
@@ -119,27 +119,26 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
 
     return {
       operationProvider: 'cloudbuild',
-      operationProviderId: buildResponse[1].name,
     };
   }
 
   async deprovision(
+    operationId: string,
     tenantGroupId: string,
     region: SupportedRegionsSchemaType,
     cloudProvisionConfig: CloudProvisionGCPConfigSchemaType,
   ): Promise<{
     operationProvider: OperationProviderSchemaType;
-    operationProviderId: string;
   }> {
     const tofuVars = this._getTenantGroupVars(tenantGroupId, region, cloudProvisionConfig).join(' ');
 
-    const buildResponse = await cloudbuild.createBuild({
+    await cloudbuild.createBuild({
       projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
       build: {
         options: {
           logging: 'CLOUD_LOGGING_ONLY',
         },
-        tags: ['tenant-group', tenantGroupId, `action-deprovision`],
+        tags: ['tenant-group', tenantGroupId, `action-deprovision`, `operationId-${operationId}`],
         serviceAccount: cloudProvisionConfig.cloudProviderConfig.runnerServiceAccount,
         timeout: { seconds: cloudProvisionConfig.cloudProviderConfig.timeout || 1800 },
         source: {
@@ -178,7 +177,6 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
 
     return {
       operationProvider: 'cloudbuild',
-      operationProviderId: buildResponse[1].name,
     };
   }
 }

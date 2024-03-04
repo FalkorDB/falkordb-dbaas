@@ -1,9 +1,23 @@
 import Fastify from 'fastify';
 import App from './app';
 
+const envToLogger = {
+  development: {
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        translateTime: 'HH:MM:ss Z',
+        ignore: 'pid,hostname',
+      },
+    },
+  },
+  production: true,
+  test: false,
+};
+
 export async function start() {
   const fastify = Fastify({
-    logger: true,
+    logger: envToLogger[process.env.NODE_ENV || 'development'],
     trustProxy: true,
   });
 
@@ -11,7 +25,7 @@ export async function start() {
 
   const IS_GOOGLE_CLOUD_RUN = process.env.K_SERVICE !== undefined;
   const port = fastify.config?.PORT || parseInt(process.env.PORT, 10) || 3000;
-  const host = IS_GOOGLE_CLOUD_RUN ? '0.0.0.0' : undefined;
+  const host = IS_GOOGLE_CLOUD_RUN ? '0.0.0.0' : '127.0.0.1';
 
   await fastify.listen({
     host,
@@ -21,11 +35,7 @@ export async function start() {
   return fastify;
 }
 
-start()
-  .then((fastify) => {
-    fastify.log.info(`Server listening on ${fastify.server.address()}`);
-  })
-  .catch((error) => {
-    console.error('Failed to start server', error);
-    process.exit(1);
-  });
+start().catch((error) => {
+  console.error('Failed to start server', error);
+  process.exit(1);
+});

@@ -7,6 +7,8 @@ export const OperationStatusSchema = Type.Union([
   Type.Literal('completed'),
 ]);
 
+export type OperationStatusSchemaType = Static<typeof OperationStatusSchema>;
+
 export const OperationProviderSchema = Type.Union([Type.Literal('cloudbuild')]);
 
 export type OperationProviderSchemaType = Static<typeof OperationProviderSchema>;
@@ -22,7 +24,6 @@ export const OperationSchema = Type.Object({
   resourceId: Type.String(),
 
   operationProvider: OperationProviderSchema,
-  operationProviderId: Type.String(),
 
   payload: Type.Optional(Type.Any()),
 });
@@ -30,11 +31,11 @@ export const OperationSchema = Type.Object({
 export type OperationSchemaType = Static<typeof OperationSchema>;
 
 export const CreateOperationParamsSchema = Type.Object({
+  id: Type.String(),
   type: Type.Union([Type.Literal('create'), Type.Literal('update'), Type.Literal('delete')]),
   resourceType: Type.Union([Type.Literal('tenant'), Type.Literal('tenant-group')]),
   resourceId: Type.String(),
   operationProvider: OperationProviderSchema,
-  operationProviderId: Type.String(),
   status: OperationStatusSchema,
   payload: Type.Optional(Type.Any()),
 });

@@ -32,34 +32,37 @@ export class TenantGroupProvisionService {
   ): Promise<TenantGroupProvisionResponseSchemaType> {
     let operationParams: {
       operationProvider: OperationProviderSchemaType;
-      operationProviderId: string;
     };
 
     const tenantGroupId = `tg-${new ShortUniqueId({
       dictionary: 'alphanum_lower',
     }).randomUUID(8)}`;
 
+    const operationId = `op-${new ShortUniqueId({
+      dictionary: 'alphanum_lower',
+    }).randomUUID(16)}`;
+
     await this._createTenantGroup(tenantGroupId, params);
 
     switch (params.cloudProvider) {
       case 'gcp':
-        operationParams = await this._provisionTenantGroupGcp(tenantGroupId, params);
+        operationParams = await this._provisionTenantGroupGcp(operationId, tenantGroupId, params);
         break;
       default:
         throw ApiError.unprocessableEntity('Unsupported cloudProvider', 'UNSUPPORTED_CLOUD_PROVIDER');
     }
 
-    const operation = await this._saveOperation(tenantGroupId, operationParams);
+    const operation = await this._saveOperation(operationId, tenantGroupId, operationParams);
 
     return operation;
   }
 
   private async _provisionTenantGroupGcp(
+    operationId: string,
     tenantGroupId: string,
     params: TenantGroupProvisionBodySchemaType,
   ): Promise<{
     operationProvider: OperationProviderSchemaType;
-    operationProviderId: string;
   }> {
     try {
       const cloudProvisionConfig = await this._cloudProvisionConfigsRepository
@@ -88,7 +91,7 @@ export class TenantGroupProvisionService {
 
       switch (params.clusterDeploymentVersion) {
         case 1:
-          return await provisioner.provision(tenantGroupId, params.region, cloudProvisionConfig);
+          return await provisioner.provision(operationId, tenantGroupId, params.region, cloudProvisionConfig);
         default:
           throw ApiError.unprocessableEntity(
             'Unsupported clusterDeploymentVersion',
@@ -102,16 +105,15 @@ export class TenantGroupProvisionService {
   }
 
   private async _saveOperation(
+    operationId: string,
     resourceId: string,
     operationParams: {
       operationProvider: OperationProviderSchemaType;
-      operationProviderId: string;
     },
   ): Promise<TenantGroupProvisionResponseSchemaType> {
     return await this._operationsRepository.create({
+      id: operationId,
       operationProvider: operationParams.operationProvider,
-      operationProviderId: operationParams.operationProviderId,
-
       status: 'pending',
       type: 'create',
       resourceType: 'tenant-group',

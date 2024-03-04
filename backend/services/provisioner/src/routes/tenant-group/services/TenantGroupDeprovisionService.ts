@@ -7,6 +7,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '../../../schemas/tenantGroup';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
 import { TenantGroupDeprovisionResponseSchemaType } from '../schemas/deprovision';
+import ShortUniqueId from 'short-unique-id';
 
 export class TenantGroupDeprovisionService {
   private _operationsRepository: IOperationsRepository;
@@ -43,26 +44,31 @@ export class TenantGroupDeprovisionService {
 
     await this._updateTenantGroupStatus(tenantGroupId, 'deprovisioning');
 
+    const operationId = `op-${new ShortUniqueId({
+      dictionary: 'alphanum_lower',
+    }).randomUUID(16)}`;
+
     let operationParams: {
       operationProvider: OperationProviderSchemaType;
-      operationProviderId: string;
     };
     switch (tenantGroup.cloudProvider) {
       case 'gcp':
-        operationParams = await this._deprovisionTenantGroupGcp(tenantGroup);
+        operationParams = await this._deprovisionTenantGroupGcp(operationId, tenantGroup);
         break;
       default:
         throw ApiError.unprocessableEntity('Unsupported cloudProvider', 'UNSUPPORTED_CLOUD_PROVIDER');
     }
 
-    const operation = await this._saveOperation(tenantGroupId, operationParams);
+    const operation = await this._saveOperation(operationId, tenantGroupId, operationParams);
 
     return operation;
   }
 
-  private async _deprovisionTenantGroupGcp(tenantGroup: TenantGroupSchemaType): Promise<{
+  private async _deprovisionTenantGroupGcp(
+    operationId: string,
+    tenantGroup: TenantGroupSchemaType,
+  ): Promise<{
     operationProvider: OperationProviderSchemaType;
-    operationProviderId: string;
   }> {
     try {
       const cloudProvisionConfig = await this._cloudProvisionConfigsRepository
@@ -91,7 +97,7 @@ export class TenantGroupDeprovisionService {
 
       switch (tenantGroup.clusterDeploymentVersion) {
         case 1:
-          return await provisioner.deprovision(tenantGroup.id, tenantGroup.region, cloudProvisionConfig);
+          return await provisioner.deprovision(operationId, tenantGroup.id, tenantGroup.region, cloudProvisionConfig);
         default:
           throw ApiError.unprocessableEntity(
             'Unsupported clusterDeploymentVersion',
@@ -105,15 +111,15 @@ export class TenantGroupDeprovisionService {
   }
 
   private async _saveOperation(
+    operationId: string,
     resourceId: string,
     operationParams: {
       operationProvider: OperationProviderSchemaType;
-      operationProviderId: string;
     },
   ): Promise<TenantGroupDeprovisionResponseSchemaType> {
     return await this._operationsRepository.create({
+      id: operationId,
       operationProvider: operationParams.operationProvider,
-      operationProviderId: operationParams.operationProviderId,
       status: 'pending',
       type: 'delete',
       resourceType: 'tenant-group',

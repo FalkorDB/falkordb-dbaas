@@ -11,16 +11,17 @@ export class TenantGroupGCPProvisioner {
   };
 
   provision(
+    operationId: string,
     tenantGroupId: string,
     region: SupportedRegionsSchemaType,
     cloudProvisionConfig: CloudProvisionGCPConfigSchemaType,
   ): Promise<{
     operationProvider: OperationProviderSchemaType;
-    operationProviderId: string;
   }> {
     switch (cloudProvisionConfig.deploymentConfigVersion) {
       case 1:
         return new TenantGroupGCPProvisioner.provisionerVersions[1]().provision(
+          operationId,
           tenantGroupId,
           region,
           cloudProvisionConfig,
@@ -34,16 +35,17 @@ export class TenantGroupGCPProvisioner {
   }
 
   deprovision(
+    operationId: string,
     tenantGroupId: string,
     region: SupportedRegionsSchemaType,
     cloudProvisionConfig: CloudProvisionGCPConfigSchemaType,
   ): Promise<{
     operationProvider: OperationProviderSchemaType;
-    operationProviderId: string;
   }> {
     switch (cloudProvisionConfig.deploymentConfigVersion) {
       case 1:
         return new TenantGroupGCPProvisioner.provisionerVersions[1]().deprovision(
+          operationId,
           tenantGroupId,
           region,
           cloudProvisionConfig,
