@@ -20,11 +20,11 @@ export const cloudBuildOperationsCallbackHandler: RouteHandlerMethod = async (re
   const service = new CloudBuildOperationCallback(opts, operationsRepository, tenantGroupRepository);
 
   try {
-    const data = request.server.pubsubDecode<CloudBuildOperationsCallbackBodySchemaType>(
+    const message = request.server.pubsubDecode<CloudBuildOperationsCallbackBodySchemaType>(
       request,
       CloudBuildOperationsCallbackBodySchema,
     );
-    return await service.handleCallback(data);
+    return await service.handleCallback(message);
   } catch (error) {
     console.error('cloudBuildOperationsCallbackHandler', error);
     throw request.server.httpErrors.createError(500, error?.message ?? 'Internal Server Error', { error });

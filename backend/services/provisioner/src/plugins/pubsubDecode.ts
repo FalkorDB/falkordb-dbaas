@@ -6,7 +6,8 @@ import { Value } from '@sinclair/typebox/value';
 
 export default fp(async function pubsubDecodePlugin(fastify, opts) {
   fastify.decorate('pubsubDecode', function pubsubDecode(request: FastifyRequest, schema?: TObject) {
-    const pubsubMessage = typeof request.body === 'object' && 'message' in request.body ? request.body.message : null;
+    const pubsubMessage =
+      typeof request.body === 'object' && 'message' in request.body ? (request.body.message as object) : null;
     if (!pubsubMessage) {
       throw ApiError.badRequest('Invalid pubsub message', 'INVALID_PUBSUB_MESSAGE');
     }
@@ -17,13 +18,12 @@ export default fp(async function pubsubDecodePlugin(fastify, opts) {
       throw ApiError.badRequest('Invalid pubsub message: missing data attribute', 'INVALID_PUBSUB_MESSAGE');
     }
     const data = Buffer.from(base64, 'base64').toString('utf-8');
-    const parsed = JSON.parse(data);
-    console.log('parsed', parsed);
+    pubsubMessage['data'] = JSON.parse(data);
 
-    if (schema && !Value.Check(schema, parsed)) {
-      console.log(Array.from(Value.Errors(schema, parsed)));
+    if (schema && !Value.Check(schema, pubsubMessage)) {
+      console.log(Array.from(Value.Errors(schema, pubsubMessage)));
       throw ApiError.badRequest('Invalid pubsub message: invalid data', 'INVALID_PUBSUB_MESSAGE');
     }
-    return parsed;
+    return pubsubMessage;
   });
 });

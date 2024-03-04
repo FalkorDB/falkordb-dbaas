@@ -19,4 +19,8 @@ export abstract class IOperationsRepository {
   updateStatus(id: string, status: OperationStatusSchemaType, payload?: object): Promise<OperationSchemaType> {
     throw new Error('Not implemented');
   }
+
+  async lastPublishTimeTransaction(id: string, lastPublishTime: string): Promise<OperationSchemaType> {
+    throw new Error('Not implemented');
+  }
 }

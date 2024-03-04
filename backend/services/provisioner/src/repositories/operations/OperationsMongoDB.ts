@@ -102,4 +102,45 @@ export class OperationsMongoDB implements IOperationsRepository {
       throw ApiError.internalServerError('Failed to update operation', 'FAILED_TO_UPDATE_OPERATION');
     }
   }
+
+  async lastPublishTimeTransaction(id: string, lastPublishTime: string): Promise<OperationSchemaType> {
+    const session = this._client.startSession();
+
+    try {
+      return await session.withTransaction(async () => {
+        const operation = await this.collection.findOne({ id }, { session });
+
+        if (!operation) {
+          throw new Error(`Operation ${id} not found`);
+        }
+
+        if (!operation.payload?.lastPublishTime || operation.payload?.lastPublishTime < lastPublishTime) {
+          return await this.collection
+            .findOneAndUpdate(
+              { id },
+              { $set: { 'payload.lastPublishTime': lastPublishTime } },
+              { returnDocument: 'after', session },
+            )
+            .then((doc) => ({
+              id: doc.id,
+              createdAt: doc.createdAt,
+              updatedAt: doc.updatedAt,
+              status: doc.status,
+              type: doc.type,
+              resourceType: doc.resourceType,
+              resourceId: doc.resourceId,
+              operationProvider: doc.operationProvider,
+              payload: doc.payload,
+            }));
+        } else {
+          return null;
+        }
+      });
+    } catch (error) {
+      this._opts.logger.error(error, 'Failed to update last publish time', id);
+      throw ApiError.internalServerError('Failed to update last publish time', 'FAILED_TO_UPDATE_LAST_PUBLISH_TIME');
+    } finally {
+      session.endSession();
+    }
+  }
 }

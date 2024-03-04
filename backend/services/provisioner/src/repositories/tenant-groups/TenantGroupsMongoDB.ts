@@ -130,7 +130,7 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
           return session.withTransaction(async () => {
             const tenantGroup = (await this.get(id)) as TenantGroupSchemaType;
             const result = await fn(tenantGroup);
-            await this.collection.findOneAndUpdate(
+            const after = await this.collection.findOneAndUpdate(
               { id },
               {
                 $set: {
@@ -138,8 +138,14 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
                   updatedAt: new Date().toISOString(),
                 },
               },
+              {
+                returnDocument: 'after',
+              },
             );
-            resolve(result);
+            resolve({
+              ...after,
+              id: after.id,
+            } as TenantGroupSchemaType);
           });
         })
         .catch((error) => {

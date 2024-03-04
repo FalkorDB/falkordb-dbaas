@@ -39,7 +39,6 @@ interface IOperation {
         new Date().getTime() - 1000 * 60 * 60 * 24
       ).toISOString()}"`,
     })) {
-      const operationId = build.id;
       const status = build.status;
       const startTime = !build.startTime?.seconds
         ? undefined
@@ -61,14 +60,14 @@ interface IOperation {
         tags,
       };
 
-      provisionerCallback(operation);
+      provisionerCallback(operation, new Date().toISOString());
     }
 
     await new Promise((resolve) => setTimeout(resolve, 1000 * 5));
   }
 })();
 
-const provisionerCallback = async (operation: IOperation) => {
+const provisionerCallback = async (operation: IOperation, publishTime: string) => {
   try {
     if (cache.has(operation.id)) {
       const cachedOperation = cache.get(operation.id);
@@ -81,6 +80,7 @@ const provisionerCallback = async (operation: IOperation) => {
 
     const body = {
       message: {
+        publishTime,
         data: Buffer.from(JSON.stringify(operation)).toString("base64"),
       },
     };
