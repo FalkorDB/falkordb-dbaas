@@ -6,6 +6,8 @@ import {
 } from '../../schemas/operation';
 
 export abstract class IOperationsRepository {
+  static repositoryName = 'OperationsRepository';
+
   create(params: CreateOperationParamsSchemaType): Promise<OperationSchemaType> {
     throw new Error('Not implemented');
   }

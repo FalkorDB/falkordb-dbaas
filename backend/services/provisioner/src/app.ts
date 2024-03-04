@@ -7,6 +7,8 @@ import { join } from 'path';
 import { EnvSchema } from './schemas/dotenv';
 import MongoDB from '@fastify/mongodb';
 import fastifyRequestContextPlugin from '@fastify/request-context';
+import { fastifyAwilixPlugin } from '@fastify/awilix';
+import { setupContainer } from './container';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   await fastify.register(Env, {
@@ -44,7 +46,18 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     url: fastify.config.MONGODB_URI,
   });
 
+  fastify.register(fastifyAwilixPlugin, {
+    disposeOnClose: true,
+    disposeOnResponse: true,
+    strictBooleanEnforced: true,
+  });
+
   fastify.register(fastifyRequestContextPlugin);
+
+  fastify.addHook('onRequest', (request, _, done) => {
+    setupContainer(request);
+    done();
+  });
 
   if (fastify.config.NODE_ENV === 'development') {
     console.log('CURRENT ROUTES:');

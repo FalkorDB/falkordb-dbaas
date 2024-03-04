@@ -13,8 +13,8 @@ export class CloudBuildOperationCallback {
     private _opts: {
       logger: FastifyBaseLogger;
     },
-    operationsRepository?: IOperationsRepository,
-    tenantGroupRepository?: ITenantGroupRepository,
+    operationsRepository: IOperationsRepository,
+    tenantGroupRepository: ITenantGroupRepository,
   ) {
     this._operationsRepository = operationsRepository;
     this._tenantGroupRepository = tenantGroupRepository;

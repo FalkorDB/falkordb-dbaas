@@ -1,7 +1,11 @@
 import { RouteHandlerMethod } from 'fastify';
-import { CloudProvisionConfigCreateBodySchemaType, CloudProvisionConfigCreateResponseSuccessSchemaType } from '../schemas/create';
+import {
+  CloudProvisionConfigCreateBodySchemaType,
+  CloudProvisionConfigCreateResponseSuccessSchemaType,
+} from '../schemas/create';
 import { CloudProvisionConfigsMongoDB } from '../../../repositories/cloud-provision-configs/CloudProvisionConfigsMongoDB';
 import { ApiError } from '../../../errors/ApiError';
+import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 
 export const cloudProvisionConfigCreateHandler: RouteHandlerMethod<
   undefined,
@@ -12,8 +16,9 @@ export const cloudProvisionConfigCreateHandler: RouteHandlerMethod<
     Reply: CloudProvisionConfigCreateResponseSuccessSchemaType;
   }
 > = async (request) => {
-  const opts = { logger: request.log };
-  const repository = new CloudProvisionConfigsMongoDB(opts, request.server.mongo.client);
+  const repository = request.diScope.resolve<ICloudProvisionConfigsRepository>(
+    ICloudProvisionConfigsRepository.repositoryName,
+  );
 
   try {
     const response = await repository.create(request.body);

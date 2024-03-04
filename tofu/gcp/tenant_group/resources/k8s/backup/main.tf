@@ -126,6 +126,14 @@ resource "helm_release" "velero" {
     value = "true"
     type  = "string"
   }
+  set {
+    name  = "resources.requests.cpu"
+    value = "250m"
+  }
+  set {
+    name  = "resources.requests.memory"
+    value = "128Mi"
+  }
 
   # Scheduled backup
   dynamic "set" {

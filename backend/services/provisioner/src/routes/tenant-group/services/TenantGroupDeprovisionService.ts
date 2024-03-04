@@ -18,9 +18,9 @@ export class TenantGroupDeprovisionService {
     private _opts: {
       logger: FastifyBaseLogger;
     },
-    operationsRepository?: IOperationsRepository,
-    cloudProvisionConfigsRepository?: ICloudProvisionConfigsRepository,
-    tenantGroupRepository?: ITenantGroupRepository,
+    operationsRepository: IOperationsRepository,
+    cloudProvisionConfigsRepository: ICloudProvisionConfigsRepository,
+    tenantGroupRepository: ITenantGroupRepository,
   ) {
     this._operationsRepository = operationsRepository;
     this._cloudProvisionConfigsRepository = cloudProvisionConfigsRepository;

@@ -5,6 +5,9 @@ import { CloudProvisionConfigsMongoDB } from '../../../repositories/cloud-provis
 import { TenantGroupsMongoDB } from '../../../repositories/tenant-groups/TenantGroupsMongoDB';
 import { TenantGroupDeprovisionService } from '../services/TenantGroupDeprovisionService';
 import { TenantGroupDeprovisionParamsSchemaType } from '../schemas/deprovision';
+import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
+import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
+import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
 
 export const tenantGroupDeprovisionHandler: RouteHandlerMethod<
   undefined,
@@ -15,11 +18,18 @@ export const tenantGroupDeprovisionHandler: RouteHandlerMethod<
   }
 > = async (request) => {
   const opts = { logger: request.log };
+
+  const operationsRepository = request.diScope.resolve<IOperationsRepository>(IOperationsRepository.repositoryName);
+  const cloudProvisionConfigsRepository = request.diScope.resolve<ICloudProvisionConfigsRepository>(
+    ICloudProvisionConfigsRepository.repositoryName,
+  );
+  const tenantGroupsRepository = request.diScope.resolve<ITenantGroupRepository>(ITenantGroupRepository.repositoryName);
+
   const service = new TenantGroupDeprovisionService(
     opts,
-    new OperationsMongoDB(opts, request.server.mongo.client),
-    new CloudProvisionConfigsMongoDB(opts, request.server.mongo.client),
-    new TenantGroupsMongoDB(opts, request.server.mongo.client),
+    operationsRepository,
+    cloudProvisionConfigsRepository,
+    tenantGroupsRepository,
   );
 
   try {

@@ -5,6 +5,8 @@ import {
 import { SupportedCloudProviderSchemaType } from '../../schemas/global';
 
 export abstract class ICloudProvisionConfigsRepository {
+  static repositoryName = 'CloudProvisionConfigsRepository';
+
   create(params: CreateCloudProvisionConfigParamsSchemaType): Promise<CloudProvisionConfigSchemaType> {
     throw new Error('Not implemented');
   }

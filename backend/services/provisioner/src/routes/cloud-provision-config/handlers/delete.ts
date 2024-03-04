@@ -2,6 +2,7 @@ import { RouteHandlerMethod } from 'fastify';
 import { CloudProvisionConfigsMongoDB } from '../../../repositories/cloud-provision-configs/CloudProvisionConfigsMongoDB';
 import { ApiError } from '../../../errors/ApiError';
 import { CloudProvisionConfigDeleteBodySchemaType } from '../schemas/delete';
+import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 
 export const cloudProvisionConfigDeleteHandler: RouteHandlerMethod<
   undefined,
@@ -11,8 +12,9 @@ export const cloudProvisionConfigDeleteHandler: RouteHandlerMethod<
     Params: CloudProvisionConfigDeleteBodySchemaType;
   }
 > = async (request) => {
-  const opts = { logger: request.log };
-  const repository = new CloudProvisionConfigsMongoDB(opts, request.server.mongo.client);
+  const repository = request.diScope.resolve<ICloudProvisionConfigsRepository>(
+    ICloudProvisionConfigsRepository.repositoryName,
+  );
 
   try {
     const response = await repository.delete(request.params.id);

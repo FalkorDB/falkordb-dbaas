@@ -5,6 +5,8 @@ import {
 } from '../../schemas/tenantGroup';
 
 export abstract class ITenantGroupRepository {
+  static repositoryName = 'TenantGroupRepository';
+
   create(params: TenantGroupCreateSchemaType): Promise<TenantGroupSchemaType> {
     throw new Error('Not implemented');
   }
