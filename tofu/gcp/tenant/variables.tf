@@ -119,6 +119,6 @@ variable "multi_zone" {
 }
 
 variable "labeler_image" {
-  type = string
+  type    = string
   default = "falkordb/falkordb-pod-labeler:latest"
 }
