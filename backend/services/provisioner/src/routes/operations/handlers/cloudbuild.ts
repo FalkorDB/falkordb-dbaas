@@ -3,11 +3,10 @@ import {
   CloudBuildOperationsCallbackBodySchema,
   CloudBuildOperationsCallbackBodySchemaType,
 } from '../schemas/cloudbuild';
-import { OperationsMongoDB } from '../../../repositories/operations/OperationsMongoDB';
 import { CloudBuildOperationCallback } from '../services/CloudBuildOperationCallback';
-import { TenantGroupsMongoDB } from '../../../repositories/tenant-groups/TenantGroupsMongoDB';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
+import { ITenantsRepository } from '../../../repositories/tenants/ITenantRepository';
 
 export const cloudBuildOperationsCallbackHandler: RouteHandlerMethod = async (request) => {
   const opts = {
@@ -16,8 +15,9 @@ export const cloudBuildOperationsCallbackHandler: RouteHandlerMethod = async (re
 
   const operationsRepository = request.diScope.resolve<IOperationsRepository>(IOperationsRepository.repositoryName);
   const tenantGroupRepository = request.diScope.resolve<ITenantGroupRepository>(ITenantGroupRepository.repositoryName);
+  const tenantsRepository = request.diScope.resolve<ITenantsRepository>(ITenantsRepository.repositoryName);
 
-  const service = new CloudBuildOperationCallback(opts, operationsRepository, tenantGroupRepository);
+  const service = new CloudBuildOperationCallback(opts, operationsRepository, tenantGroupRepository, tenantsRepository);
 
   try {
     const message = request.server.pubsubDecode<CloudBuildOperationsCallbackBodySchemaType>(

@@ -3,6 +3,7 @@ import { ITenantGroupRepository } from './ITenantGroupsRepository';
 import { MongoClient } from 'mongodb';
 import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '../../schemas/tenantGroup';
 import { ApiError } from '../../errors/ApiError';
+import { SupportedCloudProviderSchemaType, SupportedRegionsSchemaType } from '../../schemas/global';
 
 export class TenantGroupsMongoDB implements ITenantGroupRepository {
   collection = this._client.db().collection('tenantGroups');
@@ -76,6 +77,7 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
         schemaVersion: response.schemaVersion,
         tenantCount: response.tenantCount,
         tenants: response.tenants,
+        maxTenants: response.maxTenants,
       };
     } catch (error) {
       if (error instanceof ApiError) {
@@ -87,12 +89,24 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
     }
   }
 
-  async query(params: { status?: TenantGroupStatusSchemaType }): Promise<TenantGroupSchemaType[]> {
+  async query(params: {
+    status?: TenantGroupStatusSchemaType[];
+    cloudProvider?: SupportedCloudProviderSchemaType;
+    region?: SupportedRegionsSchemaType;
+  }): Promise<TenantGroupSchemaType[]> {
     try {
       const query: { [key: string]: unknown } = {};
 
       if (params.status) {
-        query.status = params.status;
+        query.status = { $in: params.status };
+      }
+
+      if (params.cloudProvider) {
+        query.cloudProvider = params.cloudProvider;
+      }
+
+      if (params.region) {
+        query.region = params.region;
       }
 
       const response = await this.collection.find(query).toArray();
@@ -112,6 +126,12 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
           schemaVersion: item.schemaVersion,
           tenantCount: item.tenantCount,
           tenants: item.tenants,
+          maxTenants: item.maxTenants,
+          backupBucketName: item.backupBucketName,
+          clusterCaCertificate: item.clusterCaCertificate,
+          clusterEndpoint: item.clusterEndpoint,
+          ipAddress: item.ipAddress,
+          vpcName: item.vpcName,
         };
       });
     } catch (error) {
@@ -151,6 +171,155 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
         .catch((error) => {
           this._opts.logger.error(error);
           reject(ApiError.internalServerError('Failed to run transaction', 'FAILED_TO_RUN_TRANSACTION'));
+        });
+    });
+  }
+
+  addTenantTransaction(
+    tenant: { id: string; name: string },
+    cloudProvider: SupportedCloudProviderSchemaType,
+    region: SupportedRegionsSchemaType,
+  ): Promise<TenantGroupSchemaType> {
+    return new Promise<TenantGroupSchemaType>((resolve, reject) => {
+      return this._client
+        .withSession((session) => {
+          return session.withTransaction(async () => {
+            const tenantGroups = await this.query({
+              status: ['ready', 'refreshing', 'upgrading', 'refreshing-failed', 'upgrading-failed'],
+              cloudProvider,
+              region,
+            });
+
+            if (tenantGroups.length === 0) {
+              throw ApiError.notFound('Tenant group not found', 'TENANT_GROUP_NOT_FOUND');
+            }
+
+            for (const tenantGroup of tenantGroups) {
+              if (tenantGroup.tenantCount >= tenantGroup.maxTenants) continue;
+
+              const _findFirstAvailablePosition = (tenants: { position: number }[]) => {
+                const positions = tenants.map((tenant) => tenant.position).sort((a, b) => a - b);
+                for (let i = 0; i < positions.length; i++) {
+                  if (positions[i] !== i) return i;
+                }
+                return positions.length;
+              };
+
+              const position = _findFirstAvailablePosition(tenantGroup.tenants);
+
+              tenantGroup.tenantCount += 1;
+              tenantGroup.tenants.push({
+                id: tenant.id,
+                name: tenant.name,
+                position,
+              });
+              const after = await this.collection.findOneAndUpdate(
+                { id: tenantGroup.id },
+                {
+                  $set: {
+                    ...tenantGroup,
+                    updatedAt: new Date().toISOString(),
+                  },
+                },
+                {
+                  returnDocument: 'after',
+                },
+              );
+              resolve({
+                id: after.id,
+                createdAt: after.createdAt,
+                updatedAt: after.updatedAt,
+                status: after.status,
+                cloudProvider: after.cloudProvider,
+                clusterDeploymentVersion: after.clusterDeploymentVersion,
+                cloudProvisionConfigId: after.cloudProvisionConfigId,
+                clusterDomain: after.clusterDomain,
+                region: after.region,
+                clusterName: after.clusterName,
+                schemaVersion: after.schemaVersion,
+                tenantCount: after.tenantCount,
+                tenants: after.tenants,
+                maxTenants: after.maxTenants,
+                backupBucketName: after.backupBucketName,
+                clusterCaCertificate: after.clusterCaCertificate,
+                clusterEndpoint: after.clusterEndpoint,
+                ipAddress: after.ipAddress,
+                vpcName: after.vpcName,
+              });
+            }
+          });
+        })
+        .catch((error) => {
+          this._opts.logger.error(error);
+          reject(
+            ApiError.internalServerError(
+              'Failed to add tenant to tenant group',
+              'FAILED_TO_ADD_TENANT_TO_TENANT_GROUP',
+            ),
+          );
+        });
+    });
+  }
+
+  removeTenantTransaction(tenantId: string): Promise<TenantGroupSchemaType> {
+    return new Promise<TenantGroupSchemaType>((resolve, reject) => {
+      return this._client
+        .withSession((session) => {
+          return session.withTransaction(async () => {
+            const tenantGroups = await this.query({
+              status: ['ready', 'refreshing', 'upgrading', 'refreshing-failed', 'upgrading-failed'],
+            });
+
+            for (const tenantGroup of tenantGroups) {
+              const tenantIndex = tenantGroup.tenants.findIndex((tenant) => tenant.id === tenantId);
+              if (tenantIndex === -1) continue;
+
+              tenantGroup.tenantCount -= 1;
+              tenantGroup.tenants.splice(tenantIndex, 1);
+              const after = await this.collection.findOneAndUpdate(
+                { id: tenantGroup.id },
+                {
+                  $set: {
+                    ...tenantGroup,
+                    updatedAt: new Date().toISOString(),
+                  },
+                },
+                {
+                  returnDocument: 'after',
+                },
+              );
+              resolve({
+                id: after.id,
+                createdAt: after.createdAt,
+                updatedAt: after.updatedAt,
+                status: after.status,
+                cloudProvider: after.cloudProvider,
+                clusterDeploymentVersion: after.clusterDeploymentVersion,
+                cloudProvisionConfigId: after.cloudProvisionConfigId,
+                clusterDomain: after.clusterDomain,
+                region: after.region,
+                clusterName: after.clusterName,
+                schemaVersion: after.schemaVersion,
+                tenantCount: after.tenantCount,
+                tenants: after.tenants,
+                maxTenants: after.maxTenants,
+                backupBucketName: after.backupBucketName,
+                clusterCaCertificate: after.clusterCaCertificate,
+                clusterEndpoint: after.clusterEndpoint,
+                ipAddress: after.ipAddress,
+                vpcName: after.vpcName,
+              });
+            }
+          });
+        })
+        .catch((error) => {
+          this._opts.logger.error(error);
+          reject(
+            ApiError.internalServerError(
+              'Failed to remove tenant from tenant group',
+              'FAILED_TO_REMOVE_TENANT_FROM_TENANT_GROUP',
+            ),
+          );
         });
     });
   }

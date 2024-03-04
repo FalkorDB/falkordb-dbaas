@@ -1,3 +1,4 @@
+import { SupportedCloudProviderSchemaType, SupportedRegionsSchemaType } from '../../schemas/global';
 import {
   TenantGroupCreateSchemaType,
   TenantGroupSchemaType,
@@ -26,7 +27,27 @@ export abstract class ITenantGroupRepository {
     throw new Error('Not implemented');
   }
 
-  query(params: { status?: TenantGroupStatusSchemaType }): Promise<TenantGroupSchemaType[]> {
+  query(params: {
+    status?: TenantGroupStatusSchemaType[];
+    cloudProvider?: SupportedCloudProviderSchemaType;
+    region?: SupportedRegionsSchemaType;
+  }): Promise<TenantGroupSchemaType[]> {
+    throw new Error('Not implemented');
+  }
+
+  addTenantTransaction(
+    tenant: { id: string; name: string },
+    cloudProvider: SupportedCloudProviderSchemaType,
+    region: SupportedRegionsSchemaType,
+  ): Promise<TenantGroupSchemaType> {
+    throw new Error('Not implemented');
+  }
+
+  removeTenantTransaction(
+    tenantId: string,
+    cloudProvider: SupportedCloudProviderSchemaType,
+    region: SupportedRegionsSchemaType,
+  ): Promise<TenantGroupSchemaType> {
     throw new Error('Not implemented');
   }
 }

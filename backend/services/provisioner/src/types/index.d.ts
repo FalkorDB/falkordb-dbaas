@@ -12,5 +12,8 @@ declare module 'fastify' {
 }
 
 declare module '@fastify/request-context' {
-  interface RequestContextData {}
+  interface RequestContextData {
+    organizationId: string;
+    userId: string;
+  }
 }

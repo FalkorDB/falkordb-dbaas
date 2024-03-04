@@ -3,6 +3,7 @@ import App from './app';
 
 const envToLogger = {
   development: {
+    level: 'debug',
     transport: {
       target: 'pino-pretty',
       options: {

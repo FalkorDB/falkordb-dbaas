@@ -32,13 +32,24 @@ interface IOperation {
 (async () => {
   while (true) {
     console.log("Listening to CloudBuild events...");
-
-    for await (const build of client.listBuildsAsync({
+    const [builds] = await client.listBuilds({
       projectId: process.env.GOOGLE_PROJECT_ID,
       filter: `create_time>="${new Date(
-        new Date().getTime() - 1000 * 60 * 60 * 24
+        new Date().getTime() - 1000 * 60 * 50
       ).toISOString()}"`,
-    })) {
+      pageSize: 20,
+    });
+
+    builds.sort((a, b) => {
+      return (
+        // startTime asc
+        parseInt(`${a.createTime?.seconds}`, 10) -
+        parseInt(`${b.createTime?.seconds}`, 10)
+        
+      );
+    });    
+
+    for (const build of builds) {
       const status = build.status;
       const startTime = !build.startTime?.seconds
         ? undefined
@@ -60,14 +71,17 @@ interface IOperation {
         tags,
       };
 
-      provisionerCallback(operation, new Date().toISOString());
+      await provisionerCallback(operation, new Date().toISOString());
     }
 
     await new Promise((resolve) => setTimeout(resolve, 1000 * 5));
   }
 })();
 
-const provisionerCallback = async (operation: IOperation, publishTime: string) => {
+const provisionerCallback = async (
+  operation: IOperation,
+  publishTime: string
+) => {
   try {
     if (cache.has(operation.id)) {
       const cachedOperation = cache.get(operation.id);

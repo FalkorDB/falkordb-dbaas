@@ -8,6 +8,14 @@ import { TenantGroupGCPProvisioner } from './TenantGroupGCPProvisioner';
 const cloudbuild = new CloudBuildClient();
 
 export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
+  private _getTags = (
+    tenantGroupId: string,
+    operationId: string,
+    action: 'provision' | 'refresh' | 'deprovision',
+  ): string[] => {
+    return ['resource-tenant-group', `resourceId-${tenantGroupId}`, `action-${action}`, `operationId-${operationId}`];
+  };
+
   private _lookupSubnetCidr = (
     region: SupportedRegionsSchemaType,
   ): {
@@ -63,14 +71,14 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
         options: {
           logging: 'CLOUD_LOGGING_ONLY',
         },
-        tags: ['tenant-group', tenantGroupId, `action-provision`, `operationId-${operationId}`],
+        tags: this._getTags(tenantGroupId, operationId, 'provision'),
         serviceAccount: cloudProvisionConfig.cloudProviderConfig.runnerServiceAccount,
         timeout: { seconds: cloudProvisionConfig.cloudProviderConfig.timeout || 1800 },
         source: {
           gitSource: {
-            url: cloudProvisionConfig.source.url,
-            dir: cloudProvisionConfig.source.dir,
-            revision: cloudProvisionConfig.source.revision,
+            url: cloudProvisionConfig.tenantGroupConfig.source.url,
+            dir: cloudProvisionConfig.tenantGroupConfig.source.dir,
+            revision: cloudProvisionConfig.tenantGroupConfig.source.revision,
           },
         },
         steps: [
@@ -127,7 +135,7 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
               'output.json',
               `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/output.json`,
             ],
-          }
+          },
         ],
       },
     });
@@ -153,14 +161,14 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
         options: {
           logging: 'CLOUD_LOGGING_ONLY',
         },
-        tags: ['tenant-group', tenantGroupId, `action-deprovision`, `operationId-${operationId}`],
+        tags: this._getTags(tenantGroupId, operationId, 'deprovision'),
         serviceAccount: cloudProvisionConfig.cloudProviderConfig.runnerServiceAccount,
         timeout: { seconds: cloudProvisionConfig.cloudProviderConfig.timeout || 1800 },
         source: {
           gitSource: {
-            url: cloudProvisionConfig.source.url,
-            dir: cloudProvisionConfig.source.dir,
-            revision: cloudProvisionConfig.source.revision,
+            url: cloudProvisionConfig.tenantGroupConfig.source.url,
+            dir: cloudProvisionConfig.tenantGroupConfig.source.dir,
+            revision: cloudProvisionConfig.tenantGroupConfig.source.revision,
           },
         },
         steps: [
@@ -211,14 +219,14 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
         options: {
           logging: 'CLOUD_LOGGING_ONLY',
         },
-        tags: ['tenant-group', tenantGroupId, `action-refresh`, `operationId-${operationId}`],
+        tags: this._getTags(tenantGroupId, operationId, 'refresh'),
         serviceAccount: cloudProvisionConfig.cloudProviderConfig.runnerServiceAccount,
         timeout: { seconds: cloudProvisionConfig.cloudProviderConfig.timeout || 1800 },
         source: {
           gitSource: {
-            url: cloudProvisionConfig.source.url,
-            dir: cloudProvisionConfig.source.dir,
-            revision: cloudProvisionConfig.source.revision,
+            url: cloudProvisionConfig.tenantGroupConfig.source.url,
+            dir: cloudProvisionConfig.tenantGroupConfig.source.dir,
+            revision: cloudProvisionConfig.tenantGroupConfig.source.revision,
           },
         },
         steps: [
@@ -275,7 +283,7 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
               'output.json',
               `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/output.json`,
             ],
-          }
+          },
         ],
       },
     });

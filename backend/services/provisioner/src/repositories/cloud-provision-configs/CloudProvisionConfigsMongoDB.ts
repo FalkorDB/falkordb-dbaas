@@ -95,8 +95,8 @@ export class CloudProvisionConfigsMongoDB implements ICloudProvisionConfigsRepos
           cloudProvider: config.cloudProvider,
           cloudProviderConfig: config.cloudProviderConfig,
 
-          source: config.source,
           tenantGroupConfig: config.tenantGroupConfig,
+          tenantConfig: config.tenantConfig,
         };
       });
     } catch (error) {
@@ -125,8 +125,8 @@ export class CloudProvisionConfigsMongoDB implements ICloudProvisionConfigsRepos
         cloudProvider: response.cloudProvider,
         cloudProviderConfig: response.cloudProviderConfig,
 
-        source: response.source,
         tenantGroupConfig: response.tenantGroupConfig,
+        tenantConfig: response.tenantConfig,
       };
     } catch (error) {
       if (error instanceof ApiError) {

@@ -34,14 +34,21 @@ export const TenantGroupSchema = Type.Object({
   cloudProvisionConfigId: Type.Optional(Type.String()),
   clusterName: Type.Optional(Type.String()),
   clusterDomain: Type.Optional(Type.String()),
+  vpcName: Type.Optional(Type.String()),
+  clusterEndpoint: Type.Optional(Type.String()),
+  clusterCaCertificate: Type.Optional(Type.String()),
+  ipAddress: Type.Optional(Type.String()),
+  backupBucketName: Type.Optional(Type.String()),
 
   tenantCount: Type.Number(),
   tenants: Type.Array(
     Type.Object({
       id: Type.String(),
       position: Type.Number(),
+      name: Type.String(),
     }),
   ),
+  maxTenants: Type.Number(),
 });
 
 export type TenantGroupSchemaType = Static<typeof TenantGroupSchema>;

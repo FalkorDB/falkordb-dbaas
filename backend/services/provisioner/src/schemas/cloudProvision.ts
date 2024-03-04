@@ -1,6 +1,7 @@
 import { type Static, Type } from '@sinclair/typebox';
 import { SupportedCloudProviderSchema } from './global';
 import { OperationProviderSchema } from './operation';
+import { TierIdSchema } from './tenant';
 
 export const CloudProvisionConfigSchema = Type.Object({
   id: Type.String(),
@@ -11,16 +12,34 @@ export const CloudProvisionConfigSchema = Type.Object({
   cloudProvider: SupportedCloudProviderSchema,
   cloudProviderConfig: Type.Any(),
 
-  source: Type.Object({
-    url: Type.String(),
-    dir: Type.String(),
-    revision: Type.String(),
-  }),
-
   tenantGroupConfig: Type.Object({
     dnsDomain: Type.String(),
     forceDestroyBackupBucket: Type.Boolean(),
     clusterDeletionProtection: Type.Boolean(),
+    source: Type.Object({
+      url: Type.String(),
+      dir: Type.String(),
+      revision: Type.String(),
+    }),
+  }),
+
+  tenantConfig: Type.Object({
+    source: Type.Object({
+      url: Type.String(),
+      dir: Type.String(),
+      revision: Type.String(),
+    }),
+    falkordbVersion: Type.String(),
+    tiers: Type.Record(
+      TierIdSchema,
+      Type.Object({
+        falkordbCpu: Type.String(),
+        falkordbMinCpu: Type.String(),
+        falkordbMemory: Type.String(),
+        falkordbMinMemory: Type.String(),
+        persistenceSize: Type.String(),
+      }),
+    ),
   }),
 });
 
@@ -43,16 +62,35 @@ export const CloudProvisionGCPConfigSchema = Type.Object({
     operationProvider: OperationProviderSchema,
   }),
 
-  source: Type.Object({
-    url: Type.String(),
-    dir: Type.String(),
-    revision: Type.String(),
-  }),
-
   tenantGroupConfig: Type.Object({
     dnsDomain: Type.String(),
     forceDestroyBackupBucket: Type.Boolean(),
     clusterDeletionProtection: Type.Boolean(),
+
+    source: Type.Object({
+      url: Type.String(),
+      dir: Type.String(),
+      revision: Type.String(),
+    }),
+  }),
+
+  tenantConfig: Type.Object({
+    source: Type.Object({
+      url: Type.String(),
+      dir: Type.String(),
+      revision: Type.String(),
+    }),
+    falkordbVersion: Type.String(),
+    tiers: Type.Record(
+      TierIdSchema,
+      Type.Object({
+        falkordbCpu: Type.String(),
+        falkordbMinCpu: Type.String(),
+        falkordbMemory: Type.String(),
+        falkordbMinMemory: Type.String(),
+        persistenceSize: Type.String(),
+      }),
+    ),
   }),
 });
 
@@ -70,17 +108,34 @@ export const CreateCloudProvisionConfigParamsSchema = Type.Object({
     deploymentProjectId: Type.String(),
     deploymentProvisionServiceAccount: Type.String(),
   }),
-
-  source: Type.Object({
-    url: Type.String(),
-    dir: Type.String(),
-    revision: Type.String(),
-  }),
-
   tenantGroupConfig: Type.Object({
     dnsDomain: Type.String(),
     forceDestroyBackupBucket: Type.Boolean(),
     clusterDeletionProtection: Type.Boolean(),
+
+    source: Type.Object({
+      url: Type.String(),
+      dir: Type.String(),
+      revision: Type.String(),
+    }),
+  }),
+  tenantConfig: Type.Object({
+    source: Type.Object({
+      url: Type.String(),
+      dir: Type.String(),
+      revision: Type.String(),
+    }),
+    falkordbVersion: Type.String(),
+    tiers: Type.Record(
+      TierIdSchema,
+      Type.Object({
+        falkordbCpu: Type.String(),
+        falkordbMinCpu: Type.String(),
+        falkordbMemory: Type.String(),
+        falkordbMinMemory: Type.String(),
+        persistenceSize: Type.String(),
+      }),
+    ),
   }),
 });
 

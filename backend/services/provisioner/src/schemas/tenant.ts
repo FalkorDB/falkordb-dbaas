@@ -15,21 +15,42 @@ export type TierIdSchemaType = Static<typeof TierIdSchema>;
 
 export const TenantStatusSchema = Type.Union([
   Type.Literal('provisioning'),
+  Type.Literal('provisioning-failed'),
   Type.Literal('ready'),
   Type.Literal('deleting'),
   Type.Literal('deleted'),
+  Type.Literal('deleting-failed'),
   Type.Literal('upgrading'),
-  Type.Literal('failed'),
+  Type.Literal('upgrading-failed'),
 ]);
 
 export type TenantStatusSchemaType = Static<typeof TenantStatusSchema>;
+
+export const TenantReplicationConfigurationSchema = Type.Object(
+  {
+    enabled: Type.Boolean(),
+    multiZone: Type.Boolean(),
+    replicas: Type.Number({
+      default: 2,
+    }),
+  },
+  {
+    default: {
+      enabled: true,
+      multiZone: false,
+      replicas: 2,
+    },
+  },
+);
+
+export type TenantReplicationConfigurationSchemaType = Static<typeof TenantReplicationConfigurationSchema>;
 
 export const TenantSchema = Type.Object({
   id: Type.String(),
   createdAt: Type.String(),
   updatedAt: Type.String(),
-  schemaVersion: Type.Number(),
 
+  name: Type.String(),
   tenantGroupId: Type.String(),
   cloudProvider: Type.Union(SUPPORTED_CLOUD_PROVIDERS.map((provider) => Type.Literal(provider))),
   region: Type.Union(
@@ -40,12 +61,10 @@ export const TenantSchema = Type.Object({
   clusterName: Type.String(),
 
   tierId: TierIdSchema,
-  domain: Type.String(),
+  domain: Type.Optional(Type.String()),
 
-  replicationConfiguration: Type.Object({
-    enabled: Type.Boolean(),
-    multiZone: Type.Boolean(),
-  }),
+  replicationConfiguration: TenantReplicationConfigurationSchema,
+  backupSchedule: Type.String({ default: '0 0 * * *' }),
 
   organizationId: Type.String(),
   creatorUserId: Type.String(),
@@ -72,18 +91,26 @@ export const TenantConnectionDetailsSchema = Type.Object({
 });
 
 export const CreateTenantSchema = Type.Object({
+  name: Type.String(),
+  tenantGroupId: Type.String(),
   cloudProvider: Type.Union(SUPPORTED_CLOUD_PROVIDERS.map((provider) => Type.Literal(provider))),
   region: Type.Union(
     Object.values(SUPPORTED_REGIONS)
       .flat()
       .map((region) => Type.Literal(region)),
   ),
-  tierId: TierIdSchema,
-  replicationConfiguration: Type.Object({
-    enabled: Type.Boolean(),
-    multiZone: Type.Boolean(),
-  }),
-});
+  clusterName: Type.String(),
 
+  tierId: TierIdSchema,
+
+  replicationConfiguration: TenantReplicationConfigurationSchema,
+  backupSchedule: Type.String({ default: '0 0 * * *' }),
+
+  organizationId: Type.String(),
+  creatorUserId: Type.String(),
+  billingAccountId: Type.Optional(Type.String()),
+
+  status: TenantStatusSchema,
+});
 
 export type CreateTenantSchemaType = Static<typeof CreateTenantSchema>;

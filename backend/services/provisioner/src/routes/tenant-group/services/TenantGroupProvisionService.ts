@@ -180,6 +180,7 @@ export class TenantGroupProvisionService {
         cloudProvisionConfigId: params.cloudProvisionConfigId,
         region: params.region,
         schemaVersion: 1,
+        maxTenants: parseInt(`${process.env.DEFAULT_MAX_TENANTS_PER_TENANT_GROUP ?? 20}`, 10),
       });
     } catch (error) {
       if (error instanceof ApiError) {

@@ -12,6 +12,7 @@ import { tenantGroupRefreshHandler } from './handlers/refresh';
 
 export default fp(
   async function provision(fastify, opts) {
+
     fastify.post<{ Body: TenantGroupProvisionBodySchemaType }>(
       '/provision',
       {
