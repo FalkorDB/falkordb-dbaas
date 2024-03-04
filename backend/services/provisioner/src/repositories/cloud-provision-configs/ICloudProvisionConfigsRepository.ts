@@ -21,4 +21,8 @@ export abstract class ICloudProvisionConfigsRepository {
   }): Promise<CloudProvisionConfigSchemaType[]> {
     throw new Error('Not implemented');
   }
+
+  get(id: string): Promise<CloudProvisionConfigSchemaType> {
+    throw new Error('Not implemented');
+  }
 }

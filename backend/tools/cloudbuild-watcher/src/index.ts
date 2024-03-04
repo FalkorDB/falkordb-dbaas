@@ -31,7 +31,7 @@ interface IOperation {
 
 (async () => {
   while (true) {
-    console.log("Starting listening to CloudBuild events...");
+    console.log("Listening to CloudBuild events...");
 
     for await (const build of client.listBuildsAsync({
       projectId: process.env.GOOGLE_PROJECT_ID,
@@ -52,7 +52,7 @@ interface IOperation {
             parseInt(`${build.finishTime.seconds}`, 10) * 1000
           ).toISOString();
       const tags = build.tags ?? [];
-
+      
       const operation: IOperation = {
         operationId,
         status,
@@ -70,7 +70,6 @@ interface IOperation {
 
 const provisionerCallback = async (operation: IOperation) => {
   try {
-
     if (cache.has(operation.operationId)) {
       const cachedOperation = cache.get(operation.operationId);
       if (cachedOperation?.status === operation.status) {
@@ -89,8 +88,7 @@ const provisionerCallback = async (operation: IOperation) => {
     );
     console.log(
       "Callback sent to provisioner",
-      operation.tags
-        .find((tag) => tag.startsWith("operationId-")),
+      operation.tags.find((tag) => tag.startsWith("operationId-")),
       operation.status,
       response.status,
       response.data

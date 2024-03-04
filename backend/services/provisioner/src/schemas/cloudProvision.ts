@@ -1,5 +1,6 @@
 import { type Static, Type } from '@sinclair/typebox';
 import { SupportedCloudProviderSchema } from './global';
+import { OperationProviderSchema } from './operation';
 
 export const CloudProvisionConfigSchema = Type.Object({
   id: Type.String(),
@@ -39,6 +40,7 @@ export const CloudProvisionGCPConfigSchema = Type.Object({
     stateBucket: Type.String(),
     deploymentProjectId: Type.String(),
     deploymentProvisionServiceAccount: Type.String(),
+    operationProvider: OperationProviderSchema,
   }),
 
   source: Type.Object({

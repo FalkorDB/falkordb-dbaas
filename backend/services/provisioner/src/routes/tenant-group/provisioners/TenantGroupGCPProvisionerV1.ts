@@ -113,6 +113,21 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
             script: `set -eo pipefail; tofu apply -auto-approve tfplan -no-color || (tofu destroy -auto-approve ${tofuVars} -no-color; exit 1)
 `,
           },
+          {
+            id: `Save output json`,
+            name: 'falkordb/gcloud-kubectl-falkordb-tofu',
+            script: `tofu output -json > output.json`,
+          },
+          {
+            id: 'Copy output to storage',
+            name: 'gcr.io/cloud-builders/gsutil',
+            entrypoint: 'gsutil',
+            args: [
+              'cp',
+              'output.json',
+              `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/output.json`,
+            ],
+          }
         ],
       },
     });
@@ -171,6 +186,96 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
             name: 'falkordb/gcloud-kubectl-falkordb-tofu',
             script: `set -eo pipefail; tofu destroy -auto-approve ${tofuVars} -no-color || exit 1`,
           },
+        ],
+      },
+    });
+
+    return {
+      operationProvider: 'cloudbuild',
+    };
+  }
+
+  async refresh(
+    operationId: string,
+    tenantGroupId: string,
+    region: SupportedRegionsSchemaType,
+    cloudProvisionConfig: CloudProvisionGCPConfigSchemaType,
+  ): Promise<{
+    operationProvider: OperationProviderSchemaType;
+  }> {
+    const tofuVars = this._getTenantGroupVars(tenantGroupId, region, cloudProvisionConfig).join(' ');
+
+    await cloudbuild.createBuild({
+      projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
+      build: {
+        options: {
+          logging: 'CLOUD_LOGGING_ONLY',
+        },
+        tags: ['tenant-group', tenantGroupId, `action-refresh`, `operationId-${operationId}`],
+        serviceAccount: cloudProvisionConfig.cloudProviderConfig.runnerServiceAccount,
+        timeout: { seconds: cloudProvisionConfig.cloudProviderConfig.timeout || 1800 },
+        source: {
+          gitSource: {
+            url: cloudProvisionConfig.source.url,
+            dir: cloudProvisionConfig.source.dir,
+            revision: cloudProvisionConfig.source.revision,
+          },
+        },
+        steps: [
+          {
+            id: 'Set Permissions',
+            name: 'gcr.io/cloud-builders/git',
+            entrypoint: 'chmod',
+            args: ['-v', '-R', 'a+rw', '.'],
+          },
+          {
+            id: 'Init Tofu',
+            name: 'oowy/opentofu',
+            entrypoint: 'tofu',
+            args: [
+              'init',
+              `-backend-config=bucket=${cloudProvisionConfig.cloudProviderConfig.stateBucket}`,
+              `-backend-config=prefix=tenant-group/${tenantGroupId}`,
+              '-no-color',
+            ],
+          },
+          {
+            id: `Plan Tofu`,
+            name: 'oowy/opentofu',
+            script: `set -eo pipefail; tofu plan ${tofuVars} -out=tfplan -no-color || exit 1`,
+          },
+          // Push plan to storage
+          {
+            id: `Push Tofu Plan`,
+            name: 'gcr.io/cloud-builders/gsutil',
+            entrypoint: 'gsutil',
+            args: [
+              'cp',
+              'tfplan',
+              `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/tfplan`,
+            ],
+          },
+          {
+            id: `Apply Tofu Plan`,
+            name: 'falkordb/gcloud-kubectl-falkordb-tofu',
+            script: `set -eo pipefail; tofu apply -auto-approve tfplan -no-color
+`,
+          },
+          {
+            id: `Save output json`,
+            name: 'falkordb/gcloud-kubectl-falkordb-tofu',
+            script: `tofu output -json > output.json`,
+          },
+          {
+            id: 'Copy output to storage',
+            name: 'gcr.io/cloud-builders/gsutil',
+            entrypoint: 'gsutil',
+            args: [
+              'cp',
+              'output.json',
+              `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/output.json`,
+            ],
+          }
         ],
       },
     });

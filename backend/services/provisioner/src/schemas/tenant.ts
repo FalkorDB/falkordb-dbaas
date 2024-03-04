@@ -1,6 +1,18 @@
 import { type Static, Type } from '@sinclair/typebox';
 import { SUPPORTED_CLOUD_PROVIDERS, SUPPORTED_REGIONS } from '../constants';
 
+export const TierIdSchema = Type.Union([
+  Type.Literal('m0'),
+  Type.Literal('m1'),
+  Type.Literal('m2'),
+  Type.Literal('m4'),
+  Type.Literal('m8'),
+  Type.Literal('m16'),
+  Type.Literal('m32'),
+]);
+
+export type TierIdSchemaType = Static<typeof TierIdSchema>;
+
 export const TenantStatusSchema = Type.Union([
   Type.Literal('provisioning'),
   Type.Literal('ready'),
@@ -27,7 +39,7 @@ export const TenantSchema = Type.Object({
   ),
   clusterName: Type.String(),
 
-  tierId: Type.String(),
+  tierId: TierIdSchema,
   domain: Type.String(),
 
   replicationConfiguration: Type.Object({
@@ -37,7 +49,7 @@ export const TenantSchema = Type.Object({
 
   organizationId: Type.String(),
   creatorUserId: Type.String(),
-  billingAccountId: Type.String(),
+  billingAccountId: Type.Optional(Type.String()),
 
   status: TenantStatusSchema,
 });
@@ -58,3 +70,20 @@ export const TenantConnectionDetailsSchema = Type.Object({
     }),
   ),
 });
+
+export const CreateTenantSchema = Type.Object({
+  cloudProvider: Type.Union(SUPPORTED_CLOUD_PROVIDERS.map((provider) => Type.Literal(provider))),
+  region: Type.Union(
+    Object.values(SUPPORTED_REGIONS)
+      .flat()
+      .map((region) => Type.Literal(region)),
+  ),
+  tierId: TierIdSchema,
+  replicationConfiguration: Type.Object({
+    enabled: Type.Boolean(),
+    multiZone: Type.Boolean(),
+  }),
+});
+
+
+export type CreateTenantSchemaType = Static<typeof CreateTenantSchema>;

@@ -7,6 +7,8 @@ import {
 import { tenantGroupProvisionHandler } from './handlers/provision';
 import { TenantGroupDeprovisionParamsSchema } from './schemas/deprovision';
 import { tenantGroupDeprovisionHandler } from './handlers/deprovision';
+import { TenantGroupRefreshParamsSchema } from './schemas/refresh';
+import { tenantGroupRefreshHandler } from './handlers/refresh';
 
 export default fp(
   async function provision(fastify, opts) {
@@ -18,6 +20,16 @@ export default fp(
         },
       },
       tenantGroupProvisionHandler,
+    );
+
+    fastify.post(
+      '/:id/refresh',
+      {
+        schema: {
+          params: TenantGroupRefreshParamsSchema,
+        },
+      },
+      tenantGroupRefreshHandler,
     );
 
     fastify.post(

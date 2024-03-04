@@ -5,9 +5,11 @@ export const TenantGroupStatusSchema = Type.Union([
   Type.Literal('provisioning'),
   Type.Literal('deprovisioning'),
   Type.Literal('upgrading'),
+  Type.Literal('refreshing'),
   Type.Literal('provisioning-failed'),
   Type.Literal('deprovisioning-failed'),
   Type.Literal('upgrading-failed'),
+  Type.Literal('refreshing-failed'),
   Type.Literal('ready'),
 ]);
 
@@ -46,7 +48,6 @@ export type TenantGroupSchemaType = Static<typeof TenantGroupSchema>;
 export const TenantGroupCreateSchema = Type.Omit(TenantGroupSchema, [
   'createdAt',
   'updatedAt',
-  'cloudProvisionConfigId',
   'clusterName',
   'clusterDomain',
   'tenantCount',

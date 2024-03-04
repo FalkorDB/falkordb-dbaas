@@ -7,7 +7,10 @@ import { TenantGroupProvisionBodySchemaType, TenantGroupProvisionResponseSchemaT
 import ShortUniqueId from 'short-unique-id';
 import { FastifyBaseLogger, FastifyLogFn } from 'fastify';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
-import { TenantGroupSchemaType } from '../../../schemas/tenantGroup';
+import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '../../../schemas/tenantGroup';
+import { SupportedCloudProviderSchemaType } from '../../../schemas/global';
+import { CloudProvisionConfigSchemaType } from '../../../schemas/cloudProvision';
+import { TenantGroupRefreshParamsSchemaType, TenantGroupRefreshResponseSchemaType } from '../schemas/refresh';
 
 export class TenantGroupProvisionService {
   private _operationsRepository: IOperationsRepository;
@@ -30,9 +33,10 @@ export class TenantGroupProvisionService {
   async provisionTenantGroup(
     params: TenantGroupProvisionBodySchemaType,
   ): Promise<TenantGroupProvisionResponseSchemaType> {
-    let operationParams: {
-      operationProvider: OperationProviderSchemaType;
-    };
+    const cloudProvisionConfig = await this._getCloudProvisionConfig(
+      params.cloudProvider,
+      params.clusterDeploymentVersion,
+    );
 
     const tenantGroupId = `tg-${new ShortUniqueId({
       dictionary: 'alphanum_lower',
@@ -42,56 +46,64 @@ export class TenantGroupProvisionService {
       dictionary: 'alphanum_lower',
     }).randomUUID(16)}`;
 
-    await this._createTenantGroup(tenantGroupId, params);
+    await this._createTenantGroup(tenantGroupId, { ...params, cloudProvisionConfigId: cloudProvisionConfig.id });
 
     switch (params.cloudProvider) {
       case 'gcp':
-        operationParams = await this._provisionTenantGroupGcp(operationId, tenantGroupId, params);
+        await this._provisionTenantGroupGcp(operationId, tenantGroupId, cloudProvisionConfig, params);
         break;
       default:
         throw ApiError.unprocessableEntity('Unsupported cloudProvider', 'UNSUPPORTED_CLOUD_PROVIDER');
     }
 
-    const operation = await this._saveOperation(operationId, tenantGroupId, operationParams);
+    const operation = await this._saveOperation(operationId, tenantGroupId, {
+      operationProvider: cloudProvisionConfig.cloudProviderConfig.operationProvider,
+      type: 'create',
+    });
 
     return operation;
+  }
+
+  private async _getCloudProvisionConfig(
+    cloudProvider: SupportedCloudProviderSchemaType,
+    deploymentConfigVersion: number,
+  ): Promise<CloudProvisionConfigSchemaType> {
+    try {
+      const configs = await this._cloudProvisionConfigsRepository.query({
+        cloudProvider,
+        deploymentConfigVersion,
+      });
+      if (configs.length === 0) {
+        throw ApiError.notFound('Cloud provision config not found', 'CLOUD_PROVISION_CONFIG_NOT_FOUND');
+      }
+
+      // Sort by date desc
+      configs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      return configs[0];
+    } catch (err) {
+      this._opts.logger.error(err);
+      throw ApiError.internalServerError(
+        'Failed to query cloud provision config',
+        'FAILED_TO_QUERY_CLOUD_PROVISION_CONFIG',
+      );
+    }
   }
 
   private async _provisionTenantGroupGcp(
     operationId: string,
     tenantGroupId: string,
+    cloudProvisionConfig: CloudProvisionConfigSchemaType,
     params: TenantGroupProvisionBodySchemaType,
-  ): Promise<{
-    operationProvider: OperationProviderSchemaType;
-  }> {
+  ): Promise<void> {
     try {
-      const cloudProvisionConfig = await this._cloudProvisionConfigsRepository
-        .query({
-          cloudProvider: 'gcp',
-          deploymentConfigVersion: params.clusterDeploymentVersion,
-        })
-        .then((configs) => {
-          if (configs.length === 0) {
-            throw ApiError.notFound('Cloud provision config not found', 'CLOUD_PROVISION_CONFIG_NOT_FOUND');
-          }
-
-          // Sort by date desc
-          configs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-          return configs[0];
-        })
-        .catch((err) => {
-          this._opts.logger.error(err);
-          throw ApiError.internalServerError(
-            'Failed to query cloud provision config',
-            'FAILED_TO_QUERY_CLOUD_PROVISION_CONFIG',
-          );
-        });
-
       const provisioner = new TenantGroupGCPProvisioner();
 
-      switch (params.clusterDeploymentVersion) {
+      switch (cloudProvisionConfig.deploymentConfigVersion) {
         case 1:
-          return await provisioner.provision(operationId, tenantGroupId, params.region, cloudProvisionConfig);
+          await provisioner
+            .provision(operationId, tenantGroupId, params.region, cloudProvisionConfig)
+            .then((op) => op.operationProvider);
+          break;
         default:
           throw ApiError.unprocessableEntity(
             'Unsupported clusterDeploymentVersion',
@@ -104,10 +116,37 @@ export class TenantGroupProvisionService {
     }
   }
 
+  private async _refreshTenantGroupGcp(
+    operationId: string,
+    tenantGroup: TenantGroupSchemaType,
+    cloudProvisionConfig: CloudProvisionConfigSchemaType,
+  ): Promise<void> {
+    try {
+      const provisioner = new TenantGroupGCPProvisioner();
+
+      switch (cloudProvisionConfig.deploymentConfigVersion) {
+        case 1:
+          await provisioner
+            .refresh(operationId, tenantGroup.id, tenantGroup.region, cloudProvisionConfig)
+            .then((op) => op.operationProvider);
+          break;
+        default:
+          throw ApiError.unprocessableEntity(
+            'Unsupported clusterDeploymentVersion',
+            'UNSUPPORTED_CLUSTER_DEPLOYMENT_VERSION',
+          );
+      }
+    } catch (error) {
+      this._failTenantGroupRefresh(tenantGroup.id);
+      throw error;
+    }
+  }
+
   private async _saveOperation(
     operationId: string,
     resourceId: string,
     operationParams: {
+      type: 'create' | 'update';
       operationProvider: OperationProviderSchemaType;
     },
   ): Promise<TenantGroupProvisionResponseSchemaType> {
@@ -115,19 +154,23 @@ export class TenantGroupProvisionService {
       id: operationId,
       operationProvider: operationParams.operationProvider,
       status: 'pending',
-      type: 'create',
+      type: operationParams.type,
       resourceType: 'tenant-group',
       resourceId,
     });
   }
 
-  private async _createTenantGroup(tenantGroupId: string, params: TenantGroupProvisionBodySchemaType): Promise<void> {
+  private async _createTenantGroup(
+    tenantGroupId: string,
+    params: TenantGroupProvisionBodySchemaType & { cloudProvisionConfigId: string },
+  ): Promise<void> {
     try {
       await this._tenantGroupRepository.create({
         id: tenantGroupId,
         status: 'provisioning',
         cloudProvider: params.cloudProvider,
         clusterDeploymentVersion: params.clusterDeploymentVersion,
+        cloudProvisionConfigId: params.cloudProvisionConfigId,
         region: params.region,
         schemaVersion: 1,
       });
@@ -142,13 +185,58 @@ export class TenantGroupProvisionService {
   }
 
   private async _failTenantGroupProvisioning(tenantGroupId: string): Promise<void> {
+    return this._updateTenantGroupStatus(tenantGroupId, 'provisioning-failed');
+  }
+
+  private async _failTenantGroupRefresh(tenantGroupId: string): Promise<void> {
+    return this._updateTenantGroupStatus(tenantGroupId, 'refreshing-failed');
+  }
+
+  private async _updateTenantGroupStatus(tenantGroupId: string, status: TenantGroupStatusSchemaType): Promise<void> {
     try {
       await this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(tenantGroupId, async (tg) => {
-        tg.status = 'provisioning-failed';
+        tg.status = status;
         return tg;
       });
     } catch (error) {
       this._opts.logger.error(error);
     }
+  }
+
+  async refreshTenantGroup(params: TenantGroupRefreshParamsSchemaType): Promise<TenantGroupRefreshResponseSchemaType> {
+    const tenantGroup = await this._tenantGroupRepository.get(params.id);
+
+    if (!tenantGroup) {
+      throw ApiError.notFound('Tenant group not found', 'TENANT_GROUP_NOT_FOUND');
+    }
+
+    if (tenantGroup.status !== 'ready') {
+      throw ApiError.unprocessableEntity('Tenant group must be in ready status', 'TENANT_GROUP_NOT_READY');
+    }
+
+    const cloudProvisionConfig = await this._cloudProvisionConfigsRepository.get(tenantGroup.cloudProvisionConfigId);
+
+    if (!cloudProvisionConfig) {
+      throw ApiError.notFound('Cloud provision config not found', 'CLOUD_PROVISION_CONFIG_NOT_FOUND');
+    }
+
+    const operationId = `op-${new ShortUniqueId({
+      dictionary: 'alphanum_lower',
+    }).randomUUID(16)}`;
+
+    switch (tenantGroup.cloudProvider) {
+      case 'gcp':
+        await this._refreshTenantGroupGcp(operationId, tenantGroup, cloudProvisionConfig);
+        break;
+      default:
+        throw ApiError.unprocessableEntity('Unsupported cloudProvider', 'UNSUPPORTED_CLOUD_PROVIDER');
+    }
+
+    const operation = await this._saveOperation(operationId, tenantGroup.id, {
+      operationProvider: cloudProvisionConfig.cloudProviderConfig.operationProvider,
+      type: 'update',
+    });
+
+    return operation;
   }
 }

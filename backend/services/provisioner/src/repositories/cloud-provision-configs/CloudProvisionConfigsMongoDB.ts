@@ -107,4 +107,37 @@ export class CloudProvisionConfigsMongoDB implements ICloudProvisionConfigsRepos
       );
     }
   }
+
+  async get(id: string): Promise<CloudProvisionConfigSchemaType> {
+    try {
+      const response = await this.collection.findOne({ _id: new ObjectId(id) });
+
+      if (!response) {
+        throw ApiError.notFound('Cloud provision config not found', 'CLOUD_PROVISION_CONFIG_NOT_FOUND');
+      }
+
+      return {
+        id: response._id.toHexString(),
+        createdAt: response.createdAt,
+        updatedAt: response.updatedAt,
+        deploymentConfigVersion: response.deploymentConfigVersion,
+
+        cloudProvider: response.cloudProvider,
+        cloudProviderConfig: response.cloudProviderConfig,
+
+        source: response.source,
+        tenantGroupConfig: response.tenantGroupConfig,
+      };
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      this._opts.logger.error(error);
+      throw ApiError.internalServerError(
+        'Failed to get cloud provision config',
+        'FAILED_TO_GET_CLOUD_PROVISION_CONFIG',
+      );
+    }
+  }
 }
