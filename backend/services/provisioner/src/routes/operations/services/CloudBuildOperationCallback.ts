@@ -46,6 +46,9 @@ export class CloudBuildOperationCallback {
     if (body.tags.includes('action-refresh')) {
       return this._handleTenantGroupCallbackRefresh(body);
     }
+    if (body.tags.includes('action-deprovision')) {
+      return this._handleTenantGroupCallbackDeprovision(body);
+    }
     return;
   }
 
@@ -67,7 +70,12 @@ export class CloudBuildOperationCallback {
     return operation;
   }
 
-  private async _getOutput(operation: OperationSchemaType): Promise<object | null> {
+  private async _getOutput(
+    buildId: string,
+    operation: OperationSchemaType,
+  ): Promise<{
+    [key: string]: { value: string };
+  } | null> {
     try {
       if (!operation.payload?.stateBucket) {
         this._opts.logger.error('CloudBuildOperationCallback._getOutput: State bucket not found', operation);
@@ -77,13 +85,14 @@ export class CloudBuildOperationCallback {
       const storage = new Storage();
       const bucket = storage.bucket(operation.payload.stateBucket);
 
-      const filePath = `builds/${operation.id}/output.json`;
+      const filePath = `builds/${buildId}/output.json`;
       const file = bucket.file(filePath);
 
-      const exists = await file.exists();
+      const [exists] = await file.exists();
 
-      if (!exists[0]) {
-        this._opts.logger.error('CloudBuildOperationCallback._getOutput: Output file not found', operation);
+      if (!exists) {
+        console.log('CloudBuildOperationCallback._getOutput: Output file not found', filePath);
+        this._opts.logger.error(`CloudBuildOperationCallback._getOutput: Output file not found`, operation);
         return null;
       }
 
@@ -129,7 +138,7 @@ export class CloudBuildOperationCallback {
     operation: OperationSchemaType,
   ): Promise<void> {
     this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackProvisionPending', body);
-    await this._operationsRepository.updateStatus(operation.id, 'pending');
+    await this._operationsRepository.updateStatus(operation.id, 'pending', { buildId: body.id });
     return;
   }
 
@@ -138,7 +147,7 @@ export class CloudBuildOperationCallback {
     operation: OperationSchemaType,
   ): Promise<void> {
     this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackProvisionWorking', body);
-    await this._operationsRepository.updateStatus(operation.id, 'in-progress');
+    await this._operationsRepository.updateStatus(operation.id, 'in-progress', { buildId: body.id });
     return;
   }
 
@@ -146,34 +155,50 @@ export class CloudBuildOperationCallback {
     body: CloudBuildOperationsCallbackBodySchemaType,
     operation: OperationSchemaType,
   ): Promise<void> {
-    this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackProvisionSuccess', body);
+    try {
+      this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackProvisionSuccess', body);
 
-    const buildOutput = await this._getOutput(operation);
+      const buildOutput = await this._getOutput(body.id, operation);
 
-    const response = await Promise.allSettled([
-      this._operationsRepository.updateStatus(operation.id, 'completed'),
-      this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
-        const clusterName =
-          !!buildOutput && 'cluster_name' in buildOutput ? (buildOutput.cluster_name as string) : null;
-        const clusterDomain = !!buildOutput && 'dns_name' in buildOutput ? (buildOutput.dns_name as string) : null;
-        tg.status = 'ready';
-        tg.tenantCount = tg.tenantCount ?? 0;
-        tg.tenants = tg.tenants ?? [];
-        tg.clusterName = clusterName;
-        tg.clusterDomain = clusterDomain?.substring(0, clusterDomain.length - 1);
-        return tg;
-      }),
-    ]);
+      const response = await Promise.allSettled([
+        this._operationsRepository.updateStatus(operation.id, 'completed', { buildId: body.id }),
+        this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
+          const clusterName = !!buildOutput && 'cluster_name' in buildOutput ? buildOutput.cluster_name?.value : null;
+          const clusterDomain = !!buildOutput && 'dns_name' in buildOutput ? buildOutput.dns_name?.value : null;
+          tg.status = 'ready';
+          tg.tenantCount = tg.tenantCount ?? 0;
+          tg.tenants = tg.tenants ?? [];
+          tg.clusterName = clusterName;
+          tg.clusterDomain = clusterDomain?.substring(0, clusterDomain.length - 1);
+          return tg;
+        }),
+      ]);
 
-    if (response.some((r) => r.status === 'rejected')) {
-      this._opts.logger.error(
-        'CloudBuildOperationCallback._handleTenantGroupCallbackProvisionSuccess: Failed to update operation or tenant group',
-        body,
-        response,
-      );
+      if (response.some((r) => r.status === 'rejected')) {
+        this._opts.logger.error(
+          'CloudBuildOperationCallback._handleTenantGroupCallbackProvisionSuccess: Failed to update operation or tenant group',
+          body,
+          response,
+        );
+      }
+
+      return;
+    } catch (error) {
+      this._opts.logger.error('CloudBuildOperationCallback._handleTenantGroupCallbackProvisionSuccess', error);
+      await Promise.allSettled([
+        this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.id }),
+        this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
+          tg.status = 'provisioning-failed';
+          return tg;
+        }),
+      ]).catch((error) => {
+        this._opts.logger.error(
+          'CloudBuildOperationCallback._handleTenantGroupCallbackProvisionSuccess: Failed to update operation or tenant group',
+          body,
+          error,
+        );
+      });
     }
-
-    return;
   }
 
   private async _handleTenantGroupCallbackProvisionFailure(
@@ -183,7 +208,7 @@ export class CloudBuildOperationCallback {
     this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackProvisionFailure', body);
 
     const response = await Promise.allSettled([
-      this._operationsRepository.updateStatus(operation.id, 'failed'),
+      this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.id }),
       this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
         tg.status = 'provisioning-failed';
         return tg;
@@ -233,7 +258,7 @@ export class CloudBuildOperationCallback {
     operation: OperationSchemaType,
   ): Promise<void> {
     this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackRefreshPending', body);
-    await this._operationsRepository.updateStatus(operation.id, 'pending');
+    await this._operationsRepository.updateStatus(operation.id, 'pending', { buildId: body.id });
     return;
   }
 
@@ -242,7 +267,7 @@ export class CloudBuildOperationCallback {
     operation: OperationSchemaType,
   ): Promise<void> {
     this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackRefreshWorking', body);
-    await this._operationsRepository.updateStatus(operation.id, 'in-progress');
+    await this._operationsRepository.updateStatus(operation.id, 'in-progress', { buildId: body.id });
     return;
   }
 
@@ -250,27 +275,51 @@ export class CloudBuildOperationCallback {
     body: CloudBuildOperationsCallbackBodySchemaType,
     operation: OperationSchemaType,
   ): Promise<void> {
-    this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackRefreshSuccess', body);
+    try {
+      this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackRefreshSuccess', body);
 
-    const response = await Promise.allSettled([
-      this._operationsRepository.updateStatus(operation.id, 'completed'),
-      this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
-        tg.status = 'ready';
-        tg.tenantCount = tg.tenantCount ?? 0;
-        tg.tenants = tg.tenants ?? [];
-        return tg;
-      }),
-    ]);
+      const buildOutput = await this._getOutput(body.id, operation);
 
-    if (response.some((r) => r.status === 'rejected')) {
-      this._opts.logger.error(
-        'CloudBuildOperationCallback._handleTenantGroupCallbackRefreshSuccess: Failed to update operation or tenant group',
-        body,
-        response,
-      );
+      const response = await Promise.allSettled([
+        this._operationsRepository.updateStatus(operation.id, 'completed', { buildId: body.id }),
+        this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
+          const clusterName = !!buildOutput && 'cluster_name' in buildOutput ? buildOutput.cluster_name?.value : null;
+          const clusterDomain = !!buildOutput && 'dns_name' in buildOutput ? buildOutput.dns_name?.value : null;
+          tg.status = 'ready';
+          tg.tenantCount = tg.tenantCount ?? 0;
+          tg.tenants = tg.tenants ?? [];
+          tg.clusterName = clusterName;
+          tg.clusterDomain = clusterDomain?.substring(0, clusterDomain.length - 1);
+
+          return tg;
+        }),
+      ]);
+
+      if (response.some((r) => r.status === 'rejected')) {
+        this._opts.logger.error(
+          'CloudBuildOperationCallback._handleTenantGroupCallbackRefreshSuccess: Failed to update operation or tenant group',
+          body,
+          response,
+        );
+      }
+
+      return;
+    } catch (error) {
+      this._opts.logger.error('CloudBuildOperationCallback._handleTenantGroupCallbackRefreshSuccess', error);
+      await Promise.allSettled([
+        this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.id }),
+        this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
+          tg.status = 'refreshing-failed';
+          return tg;
+        }),
+      ]).catch((error) => {
+        this._opts.logger.error(
+          'CloudBuildOperationCallback._handleTenantGroupCallbackProvisionSuccess: Failed to update operation or tenant group',
+          body,
+          error,
+        );
+      });
     }
-
-    return;
   }
 
   private async _handleTenantGroupCallbackRefreshFailure(
@@ -280,7 +329,7 @@ export class CloudBuildOperationCallback {
     this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackRefreshFailure', body);
 
     const response = await Promise.allSettled([
-      this._operationsRepository.updateStatus(operation.id, 'failed'),
+      this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.id }),
       this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
         tg.status = 'refreshing-failed';
         return tg;
@@ -295,5 +344,133 @@ export class CloudBuildOperationCallback {
       );
     }
     return;
+  }
+
+  private async _handleTenantGroupCallbackDeprovision(body: CloudBuildOperationsCallbackBodySchemaType): Promise<void> {
+    const operation = await this._getOperation(body);
+
+    switch (body.status) {
+      case 'QUEUED':
+      case 'PENDING':
+        return this._handleTenantGroupCallbackDeprovisionPending(body, operation);
+      case 'WORKING':
+        return this._handleTenantGroupCallbackDeprovisionWorking(body, operation);
+      case 'SUCCESS':
+        return this._handleTenantGroupCallbackDeprovisionSuccess(body, operation);
+      case 'FAILURE':
+      case 'INTERNAL_ERROR':
+      case 'TIMEOUT':
+      case 'CANCELLED':
+      case 'EXPIRED':
+        return this._handleTenantGroupCallbackDeprovisionFailure(body, operation);
+      default:
+        this._opts.logger.error(
+          'CloudBuildOperationCallback._handleTenantGroupCallbackDeprovision: Unsupported status',
+          body,
+        );
+        break;
+    }
+
+    return;
+  }
+
+  private async _handleTenantGroupCallbackDeprovisionPending(
+    body: CloudBuildOperationsCallbackBodySchemaType,
+    operation: OperationSchemaType,
+  ): Promise<void> {
+    this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackDeprovisionPending', body);
+    await this._operationsRepository.updateStatus(operation.id, 'pending', { buildId: body.id });
+    return;
+  }
+
+  private async _handleTenantGroupCallbackDeprovisionWorking(
+    body: CloudBuildOperationsCallbackBodySchemaType,
+    operation: OperationSchemaType,
+  ): Promise<void> {
+    this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackDeprovisionWorking', body);
+    await this._operationsRepository.updateStatus(operation.id, 'in-progress', { buildId: body.id });
+    return;
+  }
+
+  private async _handleTenantGroupCallbackDeprovisionSuccess(
+    body: CloudBuildOperationsCallbackBodySchemaType,
+    operation: OperationSchemaType,
+  ): Promise<void> {
+    try {
+      this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackDeprovisionSuccess', body);
+
+      const response = await Promise.allSettled([
+        this._operationsRepository.updateStatus(operation.id, 'completed', { buildId: body.id }),
+        this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
+          tg.status = 'deprovisioned';
+          return tg;
+        }),
+      ]);
+
+      if (response.some((r) => r.status === 'rejected')) {
+        this._opts.logger.error(
+          'CloudBuildOperationCallback._handleTenantGroupCallbackDeprovisionSuccess: Failed to update operation or tenant group',
+          body,
+          response,
+        );
+      }
+      return;
+    } catch (error) {
+      this._opts.logger.error('CloudBuildOperationCallback._handleTenantGroupCallbackDeprovisionSuccess', error);
+      await Promise.allSettled([
+        this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.id }),
+        this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
+          tg.status = 'deprovisioning-failed';
+          return tg;
+        }),
+      ]).catch((error) => {
+        this._opts.logger.error(
+          'CloudBuildOperationCallback._handleTenantGroupCallbackDeprovisionSuccess: Failed to update operation or tenant group',
+          body,
+          error,
+        );
+      });
+    }
+  }
+
+  private async _handleTenantGroupCallbackDeprovisionFailure(
+    body: CloudBuildOperationsCallbackBodySchemaType,
+    operation: OperationSchemaType,
+  ): Promise<void> {
+    try {
+      this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackDeprovisionFailure', body);
+
+      const response = await Promise.allSettled([
+        this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.id }),
+        this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
+          tg.status = 'deprovisioning-failed';
+          return tg;
+        }),
+      ]);
+
+      if (response.some((r) => r.status === 'rejected')) {
+        this._opts.logger.error(
+          'CloudBuildOperationCallback._handleTenantGroupCallbackDeprovisionFailure: Failed to update operation or tenant group',
+          body,
+          response,
+        );
+      }
+      return;
+    } catch (error) {
+      this._opts.logger.error('CloudBuildOperationCallback._handleTenantGroupCallbackDeprovisionFailure', error);
+      await Promise.allSettled([
+        this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.id }),
+        this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
+          tg.status = 'deprovisioning-failed';
+          return tg;
+        }),
+      ]).catch((error) => {
+        this._opts.logger.error(
+          'CloudBuildOperationCallback._handleTenantGroupCallbackDeprovisionSuccess: Failed to update operation or tenant group',
+          body,
+          error,
+        );
+      });
+    }
   }
 }

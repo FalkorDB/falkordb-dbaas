@@ -1,6 +1,7 @@
 import { type Static, Type } from '@sinclair/typebox';
 
 export const CloudBuildOperationsCallbackBodySchema = Type.Object({
+  id: Type.String(),
   status: Type.Union([
     Type.Literal('STATUS_UNKNOWN'),
     Type.Literal('PENDING'),
@@ -13,12 +14,8 @@ export const CloudBuildOperationsCallbackBodySchema = Type.Object({
     Type.Literal('CANCELLED'),
     Type.Literal('EXPIRED'),
   ]),
-  startTime: Type.String({
-    format: 'date-time',
-  }),
-  finishTime: Type.Optional(Type.String({
-    format: 'date-time',
-  })),
+  startTime: Type.String(),
+  finishTime: Type.Optional(Type.String()),
   tags: Type.Array(Type.String()),
 });
 

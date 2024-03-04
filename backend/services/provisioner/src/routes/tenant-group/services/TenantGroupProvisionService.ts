@@ -59,6 +59,9 @@ export class TenantGroupProvisionService {
     const operation = await this._saveOperation(operationId, tenantGroupId, {
       operationProvider: cloudProvisionConfig.cloudProviderConfig.operationProvider,
       type: 'create',
+      payload: {
+        stateBucket: cloudProvisionConfig.cloudProviderConfig.stateBucket,
+      },
     });
 
     return operation;
@@ -148,6 +151,9 @@ export class TenantGroupProvisionService {
     operationParams: {
       type: 'create' | 'update';
       operationProvider: OperationProviderSchemaType;
+      payload: {
+        stateBucket: string;
+      };
     },
   ): Promise<TenantGroupProvisionResponseSchemaType> {
     return await this._operationsRepository.create({
@@ -157,6 +163,7 @@ export class TenantGroupProvisionService {
       type: operationParams.type,
       resourceType: 'tenant-group',
       resourceId,
+      payload: operationParams.payload,
     });
   }
 
@@ -224,6 +231,8 @@ export class TenantGroupProvisionService {
       dictionary: 'alphanum_lower',
     }).randomUUID(16)}`;
 
+    await this._updateTenantGroupStatus(tenantGroup.id, 'refreshing');
+
     switch (tenantGroup.cloudProvider) {
       case 'gcp':
         await this._refreshTenantGroupGcp(operationId, tenantGroup, cloudProvisionConfig);
@@ -235,6 +244,9 @@ export class TenantGroupProvisionService {
     const operation = await this._saveOperation(operationId, tenantGroup.id, {
       operationProvider: cloudProvisionConfig.cloudProviderConfig.operationProvider,
       type: 'update',
+      payload: {
+        stateBucket: cloudProvisionConfig.cloudProviderConfig.stateBucket,
+      },
     });
 
     return operation;

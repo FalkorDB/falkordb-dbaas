@@ -11,6 +11,7 @@ export const TenantGroupStatusSchema = Type.Union([
   Type.Literal('upgrading-failed'),
   Type.Literal('refreshing-failed'),
   Type.Literal('ready'),
+  Type.Literal('deprovisioned'),
 ]);
 
 export type TenantGroupStatusSchemaType = Static<typeof TenantGroupStatusSchema>;

@@ -7,7 +7,7 @@ export default fp<FastifyDynamicSwaggerOptions>(async (fastify, opts) => {
     openapi: {
       info: {
         title: 'Favmov',
-        description: 'API Endpoints for favmov',
+        description: 'API Endpoints for FalkorDB Provisioner',
         version: '0.1.0',
       },
       servers: [

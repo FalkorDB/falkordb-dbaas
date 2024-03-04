@@ -16,7 +16,7 @@ export abstract class IOperationsRepository {
     throw new Error('Not implemented');
   }
 
-  updateStatus(id: string, status: OperationStatusSchemaType): Promise<OperationSchemaType> {
+  updateStatus(id: string, status: OperationStatusSchemaType, payload?: object): Promise<OperationSchemaType> {
     throw new Error('Not implemented');
   }
 }

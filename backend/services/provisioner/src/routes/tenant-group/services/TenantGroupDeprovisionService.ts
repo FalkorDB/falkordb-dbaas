@@ -34,7 +34,11 @@ export class TenantGroupDeprovisionService {
       throw ApiError.notFound('Tenant group not found', 'TENANT_GROUP_NOT_FOUND');
     }
 
-    if (tenantGroup.status !== 'ready' && tenantGroup.status !== 'provisioning-failed') {
+    if (
+      tenantGroup.status !== 'ready' &&
+      tenantGroup.status !== 'provisioning-failed' &&
+      tenantGroup.status !== 'deprovisioning-failed'
+    ) {
       throw ApiError.badRequest('Tenant group is not ready', 'TENANT_GROUP_NOT_READY');
     }
 

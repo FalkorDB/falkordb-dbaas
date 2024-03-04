@@ -11,7 +11,7 @@ const client = new CloudBuildClient();
 const cache = new Map<string, IOperation>();
 
 interface IOperation {
-  operationId: string;
+  id: string;
   status:
     | "STATUS_UNKNOWN"
     | "PENDING"
@@ -52,9 +52,9 @@ interface IOperation {
             parseInt(`${build.finishTime.seconds}`, 10) * 1000
           ).toISOString();
       const tags = build.tags ?? [];
-      
+
       const operation: IOperation = {
-        operationId,
+        id: build.id,
         status,
         startTime,
         finishTime,
@@ -70,22 +70,24 @@ interface IOperation {
 
 const provisionerCallback = async (operation: IOperation) => {
   try {
-    if (cache.has(operation.operationId)) {
-      const cachedOperation = cache.get(operation.operationId);
+    if (cache.has(operation.id)) {
+      const cachedOperation = cache.get(operation.id);
       if (cachedOperation?.status === operation.status) {
         return;
       }
     }
 
-    cache.set(operation.operationId, operation);
+    cache.set(operation.id, operation);
 
-    const response = await axios.post(
-      "/operations/cloudbuild/callback",
-      operation,
-      {
-        baseURL: process.env.PROVISIONER_URL,
-      }
-    );
+    const body = {
+      message: {
+        data: Buffer.from(JSON.stringify(operation)).toString("base64"),
+      },
+    };
+
+    const response = await axios.post("/operations/cloudbuild/callback", body, {
+      baseURL: process.env.PROVISIONER_URL,
+    });
     console.log(
       "Callback sent to provisioner",
       operation.tags.find((tag) => tag.startsWith("operationId-")),

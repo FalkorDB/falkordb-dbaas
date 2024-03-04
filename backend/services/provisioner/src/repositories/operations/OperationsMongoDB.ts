@@ -71,13 +71,20 @@ export class OperationsMongoDB implements IOperationsRepository {
     }
   }
 
-  async updateStatus(id: string, status: OperationStatusSchemaType): Promise<OperationSchemaType> {
+  async updateStatus(id: string, status: OperationStatusSchemaType, payload?: object): Promise<OperationSchemaType> {
     try {
-      const response = await this.collection.findOneAndUpdate(
-        { id },
-        { $set: { status, updatedAt: new Date().toISOString() } },
-        { returnDocument: 'after' },
-      );
+      const setObject = {
+        status,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (payload) {
+        for (const keys of Object.keys(payload)) {
+          setObject[`payload.${keys}`] = payload[keys];
+        }
+      }
+
+      const response = await this.collection.findOneAndUpdate({ id }, { $set: setObject }, { returnDocument: 'after' });
 
       return {
         id: response.id,
