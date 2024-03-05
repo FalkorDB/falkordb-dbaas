@@ -3,6 +3,8 @@ locals {
   falkordb_memory_unit   = regex("([A-Za-z]+)", var.falkordb_memory)[0]
   max_memory_factor      = local.falkordb_memory_unit == "Gi" ? pow(1024, 3) : local.falkordb_memory_unit == "Mi" ? pow(1024, 2) : pow(1024, 1)
   max_memory_bytes       = floor(local.falkordb_memory_amount * local.max_memory_factor)
+
+  timout = var.node_pool_name == "tier-m0" ? 1200 : 600
 }
 
 resource "helm_release" "falkordb" {
@@ -10,7 +12,7 @@ resource "helm_release" "falkordb" {
   namespace = var.deployment_namespace
 
   # Necessary so there's enough time to finish installing
-  timeout = 600
+  timeout = local.timout
 
   chart   = "oci://registry-1.docker.io/bitnamicharts/redis"
   version = "18.9.1"

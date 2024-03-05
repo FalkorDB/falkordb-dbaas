@@ -68,6 +68,8 @@ variable "node_pools" {
       total_max_count    = 50
       initial_node_count = 0
       node_metadata      = "GCE_METADATA"
+      enable_gcfs        = true
+      image_type         = "COS_CONTAINERD"
     },
     {
       name               = "tier-m1"
