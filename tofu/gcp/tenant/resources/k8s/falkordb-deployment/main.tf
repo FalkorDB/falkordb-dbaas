@@ -77,5 +77,5 @@ module "labeler" {
   sentinel_port        = var.sentinel_port
   labeler_image        = var.labeler_image
 
-  depends_on = [ module.multi_zone, module.single_zone, module.standalone ]
+  depends_on = [module.multi_zone, module.single_zone, module.standalone]
 }

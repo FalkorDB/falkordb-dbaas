@@ -30,15 +30,13 @@ export const TenantReplicationConfigurationSchema = Type.Object(
   {
     enabled: Type.Boolean(),
     multiZone: Type.Boolean(),
-    replicas: Type.Number({
-      default: 2,
-    }),
+    replicas: Type.Number(),
   },
   {
     default: {
-      enabled: true,
+      enabled: false,
       multiZone: false,
-      replicas: 2,
+      replicas: 0,
     },
   },
 );
@@ -62,6 +60,7 @@ export const TenantSchema = Type.Object({
 
   tierId: TierIdSchema,
   domain: Type.Optional(Type.String()),
+  port: Type.Optional(Type.String()),
 
   replicationConfiguration: TenantReplicationConfigurationSchema,
   backupSchedule: Type.String({ default: '0 0 * * *' }),

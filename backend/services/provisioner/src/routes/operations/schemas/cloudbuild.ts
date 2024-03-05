@@ -16,7 +16,7 @@ export const CloudBuildOperationsCallbackBodySchema = Type.Object({
       Type.Literal('CANCELLED'),
       Type.Literal('EXPIRED'),
     ]),
-    startTime: Type.String(),
+    startTime: Type.Optional(Type.String()),
     finishTime: Type.Optional(Type.String()),
     tags: Type.Array(Type.String()),
   }),

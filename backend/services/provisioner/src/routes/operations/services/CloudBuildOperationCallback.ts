@@ -7,6 +7,7 @@ import { TenantGroupSchemaType } from '../../../schemas/tenantGroup';
 import { Storage, Bucket } from '@google-cloud/storage';
 import { CloudBuildOperationCallbackTenantGroup } from './CloudBuildOperationCallbackTenantGroup';
 import { ITenantsRepository } from '../../../repositories/tenants/ITenantRepository';
+import { CloudBuildOperationCallbackTenant } from './CloudBuildOperationCallbackTenant';
 
 export class CloudBuildOperationCallback {
   private _operationsRepository: IOperationsRepository;
@@ -67,13 +68,13 @@ export class CloudBuildOperationCallback {
     }
 
     if (body.data.tags.includes('resource-tenant')) {
-      // const service = new CloudBuildOperationCallbackTenant(
-      //   this._opts,
-      //   this._operationsRepository,
-      //   this._tenantRepository,
-      // );
-      // await service.handleCallback(body, operation);
-      // return;
+      const service = new CloudBuildOperationCallbackTenant(
+        this._opts,
+        this._operationsRepository,
+        this._tenantRepository,
+      );
+      await service.handleCallback(body, operation);
+      return;
     }
 
     return;

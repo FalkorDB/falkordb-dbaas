@@ -58,6 +58,7 @@ export class TenantGCPProvisionerV1 implements TenantGCPProvisioner {
       `-var=falkordb_memory=${cloudProvisionConfig.tenantConfig.tiers[params.tierId].falkordbMemory}`,
       `-var=falkordb_min_memory=${cloudProvisionConfig.tenantConfig.tiers[params.tierId].falkordbMinMemory}`,
       `-var=persistence_size=${cloudProvisionConfig.tenantConfig.tiers[params.tierId].persistenceSize}`,
+      `-var=falkordb_password=null`,
       //
       `-var=redis_port=${ports.redis}`,
       `-var=redis_read_only_port=${ports.redisReadOnly}`,

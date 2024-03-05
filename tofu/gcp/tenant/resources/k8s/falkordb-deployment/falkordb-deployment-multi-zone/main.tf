@@ -155,12 +155,8 @@ resource "helm_release" "falkordb" {
   set {
     name  = "commonConfiguration"
     value = <<EOF
-# Enable AOF https://redis.io/topics/persistence#append-only-file
 appendonly yes
-# Disable RDB persistence, AOF persistence already enabled.
 save ""
-
-# Set max memory
 maxmemory ${local.max_memory_bytes}
     EOF
   }
