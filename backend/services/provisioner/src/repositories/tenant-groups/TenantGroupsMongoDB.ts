@@ -78,6 +78,11 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
         tenantCount: response.tenantCount,
         tenants: response.tenants,
         maxTenants: response.maxTenants,
+        backupBucketName: response.backupBucketName,
+        clusterCaCertificate: response.clusterCaCertificate,
+        clusterEndpoint: response.clusterEndpoint,
+        ipAddress: response.ipAddress,
+        vpcName: response.vpcName,
       };
     } catch (error) {
       if (error instanceof ApiError) {

@@ -190,7 +190,7 @@ export class TenantGCPProvisionerV1 implements TenantGCPProvisioner {
         options: {
           logging: 'CLOUD_LOGGING_ONLY',
         },
-        tags: this._getTags(tenantGroup.id, operationId, 'deprovision'),
+        tags: this._getTags(tenant.id, operationId, 'deprovision'),
         serviceAccount: cloudProvisionConfig.cloudProviderConfig.runnerServiceAccount,
         timeout: { seconds: cloudProvisionConfig.cloudProviderConfig.timeout || 1800 },
         source: {

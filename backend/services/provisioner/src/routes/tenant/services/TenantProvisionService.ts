@@ -11,6 +11,7 @@ import { TenantGroupSchemaType } from '../../../schemas/tenantGroup';
 import { CloudProvisionConfigSchemaType } from '../../../schemas/cloudProvision';
 import { TenantSchemaType, TenantStatusSchemaType } from '../../../schemas/tenant';
 import { TenantGCPProvisioner } from '../provisioners/TenantGCPProvisioner';
+import { TenantRefreshParamsSchemaType, TenantRefreshResponseSchemaType } from '../schemas/refresh';
 
 export class TenantProvisionService {
   private _operationsRepository: IOperationsRepository;
@@ -113,8 +114,39 @@ export class TenantProvisionService {
     }
   }
 
+  private async _refreshTenantGcp(
+    operationId: string,
+    tenant: TenantSchemaType,
+    tenantGroup: TenantGroupSchemaType,
+    cloudProvisionConfig: CloudProvisionConfigSchemaType,
+  ): Promise<void> {
+    try {
+      const provisioner = new TenantGCPProvisioner();
+
+      switch (cloudProvisionConfig.deploymentConfigVersion) {
+        case 1:
+          await provisioner
+            .refresh(operationId, tenant, tenantGroup, cloudProvisionConfig)
+            .then((op) => op.operationProvider);
+          break;
+        default:
+          throw ApiError.unprocessableEntity(
+            'Unsupported clusterDeploymentVersion',
+            'UNSUPPORTED_CLUSTER_DEPLOYMENT_VERSION',
+          );
+      }
+    } catch (error) {
+      this._failTenantRefresh(tenantGroup.id);
+      throw error;
+    }
+  }
+
   private async _failTenantProvisioning(tenantId: string): Promise<void> {
     return this._updateTenantStatus(tenantId, 'provisioning-failed');
+  }
+
+  private async _failTenantRefresh(tenantGroupId: string): Promise<void> {
+    return this._updateTenantStatus(tenantGroupId, 'ready');
   }
 
   private async _updateTenantStatus(tenantId: string, status: TenantStatusSchemaType): Promise<void> {
@@ -169,5 +201,53 @@ export class TenantProvisionService {
       billingAccountId: params.billingAccountId,
       backupSchedule: params.backupSchedule,
     });
+  }
+
+  async refreshTenant(params: TenantRefreshParamsSchemaType): Promise<TenantRefreshResponseSchemaType> {
+    const tenant = await this._tenantRepository.get(params.id);
+
+    if (!tenant) {
+      throw ApiError.notFound('Tenant not found', 'TENANT_NOT_FOUND');
+    }
+
+    if (tenant.status !== 'ready') {
+      throw ApiError.unprocessableEntity('Tenant must be in ready status', 'TENANT_NOT_READY');
+    }
+
+    const tenantGroup = await this._tenantGroupRepository.get(tenant.tenantGroupId);
+
+    if (!tenantGroup) {
+      throw ApiError.notFound('Tenant group not found', 'TENANT_GROUP_NOT_FOUND');
+    }
+
+    const cloudProvisionConfig = await this._cloudProvisionConfigsRepository.get(tenantGroup.cloudProvisionConfigId);
+
+    if (!cloudProvisionConfig) {
+      throw ApiError.notFound('Cloud provision config not found', 'CLOUD_PROVISION_CONFIG_NOT_FOUND');
+    }
+
+    const operationId = `op-${new ShortUniqueId({
+      dictionary: 'alphanum_lower',
+    }).randomUUID(16)}`;
+
+    await this._updateTenantStatus(tenant.id, 'refreshing');
+
+    switch (tenant.cloudProvider) {
+      case 'gcp':
+        await this._refreshTenantGcp(operationId, tenant, tenantGroup, cloudProvisionConfig);
+        break;
+      default:
+        throw ApiError.unprocessableEntity('Unsupported cloudProvider', 'UNSUPPORTED_CLOUD_PROVIDER');
+    }
+
+    const operation = await this._saveOperation(operationId, tenant.id, {
+      operationProvider: cloudProvisionConfig.cloudProviderConfig.operationProvider,
+      type: 'update',
+      payload: {
+        stateBucket: cloudProvisionConfig.cloudProviderConfig.stateBucket,
+      },
+    });
+
+    return operation;
   }
 }

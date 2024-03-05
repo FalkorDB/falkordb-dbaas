@@ -1,6 +1,14 @@
 import fp from 'fastify-plugin';
-import { TenantProvisionBodySchema, TenantProvisionHeadersSchema, type TenantProvisionBodySchemaType } from './schemas/provision';
+import {
+  TenantProvisionBodySchema,
+  TenantProvisionHeadersSchema,
+  type TenantProvisionBodySchemaType,
+} from './schemas/provision';
 import { tenantProvisionHandler } from './handlers/provision';
+import { TenantRefreshParamsSchema, TenantRefreshParamsSchemaType } from './schemas/refresh';
+import { tenantRefreshHandler } from './handlers/refresh';
+import { TenantDeprovisionParamsSchema } from './schemas/deprovision';
+import { tenantDeprovisionHandler } from './handlers/deprovision';
 
 export default fp(
   async function provision(fastify, opts) {
@@ -15,25 +23,25 @@ export default fp(
       tenantProvisionHandler,
     );
 
-    // fastify.post(
-    //   '/:id/refresh',
-    //   {
-    //     schema: {
-    //       params: TenantRefreshParamsSchema,
-    //     },
-    //   },
-    //   tenantRefreshHandler,
-    // );
+    fastify.post<{ Params: TenantRefreshParamsSchemaType }>(
+      '/:id/refresh',
+      {
+        schema: {
+          params: TenantRefreshParamsSchema,
+        },
+      },
+      tenantRefreshHandler,
+    );
 
-    // fastify.post(
-    //   '/:id/deprovision',
-    //   {
-    //     schema: {
-    //       params: TenantDeprovisionParamsSchema,
-    //     },
-    //   },
-    //   tenantDeprovisionHandler,
-    // );
+    fastify.post<{ Params: TenantRefreshParamsSchemaType }>(
+      '/:id/deprovision',
+      {
+        schema: {
+          params: TenantDeprovisionParamsSchema,
+        },
+      },
+      tenantDeprovisionHandler,
+    );
   },
   {
     name: 'tenant-provisioning-routes',

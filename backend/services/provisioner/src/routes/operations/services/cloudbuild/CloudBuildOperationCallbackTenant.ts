@@ -372,6 +372,27 @@ export class CloudBuildOperationCallbackTenant {
     operation: OperationSchemaType,
   ): Promise<void> {
     this._opts.logger.info('CloudBuildOperationCallback._handleTenantCallbackRefreshFailure', body);
-    await this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.data.id });
+    try {
+      const response = await Promise.allSettled([
+        this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.data.id }),
+        this._tenantsRepository.runTransaction<TenantSchemaType>(operation.resourceId, async (tg) => {
+          tg.status = 'ready';
+          return tg;
+        }),
+      ]);
+
+      if (response.some((r) => r.status === 'rejected')) {
+        this._opts.logger.error(
+          'CloudBuildOperationCallback._handleTenantCallbackRefreshSuccess: Failed to update operation or tenant group',
+          body,
+          response,
+        );
+      }
+
+      return;
+    } catch (error) {
+      this._opts.logger.error('CloudBuildOperationCallback._handleTenantCallbackRefreshSuccess', error);
+      await this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.data.id });
+    }
   }
 }

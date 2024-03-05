@@ -22,6 +22,7 @@ export const TenantStatusSchema = Type.Union([
   Type.Literal('deleting-failed'),
   Type.Literal('upgrading'),
   Type.Literal('upgrading-failed'),
+  Type.Literal('refreshing'),
 ]);
 
 export type TenantStatusSchemaType = Static<typeof TenantStatusSchema>;
