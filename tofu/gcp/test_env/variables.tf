@@ -40,6 +40,11 @@ variable "tenant_provision_sa" {
   }
 }
 
+variable "cluster_backup_schedule" {
+  type    = string
+  default = "0 0 * * *"
+}
+
 variable "force_destroy_backup_bucket" {
   type    = bool
   default = false

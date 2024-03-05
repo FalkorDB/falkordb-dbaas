@@ -60,7 +60,7 @@ locals {
 }
 
 module "tenant_group" {
-  source = "../tenant_group"
+  source = "../tenant_group/infra"
 
   project_id                   = var.project_id
   region                       = var.region
@@ -73,6 +73,21 @@ module "tenant_group" {
   force_destroy_backup_bucket  = var.force_destroy_backup_bucket
   dns_domain                   = var.dns_domain
   backup_retention_policy_days = var.backup_retention_policy_days
+}
+
+module "tenant_group_k8s" {
+  source = "../tenant_group/k8s"
+
+  project_id              = var.project_id
+  region                  = var.region
+  cluster_name            = module.tenant_group.cluster_name
+  cluster_endpoint        = module.tenant_group.cluster_endpoint
+  cluster_ca_certificate  = module.tenant_group.cluster_ca_certificate
+  cluster_backup_schedule = var.cluster_backup_schedule
+  backup_bucket_name      = module.tenant_group.backup_bucket_name
+  tenant_provision_sa     = var.tenant_provision_sa
+  velero_gcp_sa_id        = module.tenant_group.velero_gcp_sa_id
+  velero_gcp_sa_email     = module.tenant_group.velero_gcp_sa_email
 }
 
 module "standalone_tenant" {
