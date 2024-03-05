@@ -88,14 +88,6 @@ resource "kubernetes_cluster_role_binding" "tenant_provision_sa_role_binding" {
   }
 }
 
-module "falkordb_monitoring" {
-  source = "./resources/monitoring"
-
-  project_id   = var.project_id
-  cluster_name = var.cluster_name
-  region       = var.region
-}
-
 module "cluster_backup" {
   source = "./resources/backup"
 
@@ -106,4 +98,15 @@ module "cluster_backup" {
   velero_gcp_sa_email     = var.velero_gcp_sa_email
   velero_gcp_sa_id        = var.velero_gcp_sa_id
   cluster_backup_schedule = var.cluster_backup_schedule
+}
+
+module "falkordb_monitoring" {
+  source = "./resources/monitoring"
+
+  project_id   = var.project_id
+  cluster_name = var.cluster_name
+  region       = var.region
+
+  # Requires the local-exec creds from the cluster_backup module
+  depends_on = [module.cluster_backup]
 }
