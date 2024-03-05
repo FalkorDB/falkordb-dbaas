@@ -52,6 +52,7 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
       `-var=force_destroy_backup_bucket=${cloudProvisionConfig.tenantGroupConfig.forceDestroyBackupBucket}`,
       `-var=dns_domain=${cloudProvisionConfig.tenantGroupConfig.dnsDomain}`,
       `-var=cluster_deletion_protection=${cloudProvisionConfig.tenantGroupConfig.clusterDeletionProtection}`,
+      `-var=velero_role_id=${cloudProvisionConfig.tenantGroupConfig.veleroRoleId}`,
     ];
   };
 

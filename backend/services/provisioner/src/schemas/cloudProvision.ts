@@ -21,6 +21,7 @@ export const CloudProvisionConfigSchema = Type.Object({
       dir: Type.String(),
       revision: Type.String(),
     }),
+    veleroRoleId: Type.String(),
   }),
 
   tenantConfig: Type.Object({
@@ -66,12 +67,12 @@ export const CloudProvisionGCPConfigSchema = Type.Object({
     dnsDomain: Type.String(),
     forceDestroyBackupBucket: Type.Boolean(),
     clusterDeletionProtection: Type.Boolean(),
-
     source: Type.Object({
       url: Type.String(),
       dir: Type.String(),
       revision: Type.String(),
     }),
+    veleroRoleId: Type.String(),
   }),
 
   tenantConfig: Type.Object({
@@ -112,12 +113,12 @@ export const CreateCloudProvisionConfigParamsSchema = Type.Object({
     dnsDomain: Type.String(),
     forceDestroyBackupBucket: Type.Boolean(),
     clusterDeletionProtection: Type.Boolean(),
-
     source: Type.Object({
       url: Type.String(),
       dir: Type.String(),
       revision: Type.String(),
     }),
+    veleroRoleId: Type.String(),
   }),
   tenantConfig: Type.Object({
     source: Type.Object({
