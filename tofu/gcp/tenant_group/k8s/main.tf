@@ -108,5 +108,5 @@ module "falkordb_monitoring" {
   region       = var.region
 
   # Requires the local-exec creds from the cluster_backup module
-  depends_on   = [module.cluster_backup]
+  depends_on = [module.cluster_backup]
 }
