@@ -121,7 +121,7 @@ module "standalone_tenant" {
 
   labeler_image = "falkordb/falkordb-pod-labeler:latest"
 
-  depends_on = [ module.tenant_group_k8s ]
+  depends_on = [module.tenant_group_k8s]
 }
 
 module "single_zone_tenant" {
@@ -155,7 +155,7 @@ module "single_zone_tenant" {
 
   labeler_image = "falkordb/falkordb-pod-labeler:latest"
 
-  depends_on = [ module.tenant_group_k8s ]
+  depends_on = [module.tenant_group_k8s]
 }
 
 module "multi_zone_tenant" {
@@ -188,5 +188,5 @@ module "multi_zone_tenant" {
   }
   labeler_image = "falkordb/falkordb-pod-labeler:latest"
 
-  depends_on = [ module.tenant_group_k8s ]
+  depends_on = [module.tenant_group_k8s]
 }
