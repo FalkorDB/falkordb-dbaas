@@ -3,7 +3,7 @@ import {
   CloudBuildOperationsCallbackBodySchema,
   CloudBuildOperationsCallbackBodySchemaType,
 } from '../schemas/cloudbuild';
-import { CloudBuildOperationCallback } from '../services/CloudBuildOperationCallback';
+import { CloudBuildOperationCallback } from '../services/cloudbuild/CloudBuildOperationCallback';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
 import { ITenantsRepository } from '../../../repositories/tenants/ITenantRepository';

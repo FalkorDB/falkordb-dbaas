@@ -1,8 +1,16 @@
+resource "random_string" "cluster_suffix" {
+  keepers = {
+    tenant_group_name = var.tenant_group_name
+  }
+
+  length = 6
+}
+
 module "gke" {
   source                               = "terraform-google-modules/kubernetes-engine/google//modules/private-cluster"
   version                              = "~> 29.0.0"
   project_id                           = var.project_id
-  name                                 = "${var.tenant_group_name}-cluster"
+  name                                 = "${var.tenant_group_name}-${random_string.cluster_suffix.result}"
   region                               = var.region
   zones                                = var.zones
   network                              = var.vpc_name
