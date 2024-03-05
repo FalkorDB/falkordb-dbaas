@@ -65,6 +65,67 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
   }> {
     const tofuVars = this._getTenantGroupVars(tenantGroupId, region, cloudProvisionConfig).join(' ');
 
+    const initPlanApplySteps = (folder: 'infra' | 'k8s') => {
+      return [
+        {
+          id: `${folder} - Init Tofu`,
+          name: 'oowy/opentofu',
+          entrypoint: 'tofu',
+          dir: `${folder}`,
+          args: [
+            'init',
+            `-backend-config=bucket=${cloudProvisionConfig.cloudProviderConfig.stateBucket}`,
+            `-backend-config=prefix=tenant-group/${folder}/${tenantGroupId}`,
+            '-no-color',
+          ],
+        },
+        {
+          id: `${folder} - Plan Tofu`,
+          name: 'oowy/opentofu',
+          dir: '${folder}',
+          script: `set -eo pipefail; tofu plan ${tofuVars} -out=${folder}.tfplan -no-color || exit 1`,
+        },
+        // Push plan to storage
+        {
+          id: `${folder} - Push Tofu Plan`,
+          name: 'gcr.io/cloud-builders/gsutil',
+          entrypoint: 'gsutil',
+          dir: `${folder}`,
+          args: [
+            'cp',
+            '${folder}.tfplan',
+            `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/${folder}.tfplan`,
+          ],
+        },
+        {
+          id: `${folder} - Apply Tofu Plan`,
+          name: 'falkordb/gcloud-kubectl-falkordb-tofu',
+          dir: `${folder}`,
+          script:
+            folder === 'infra'
+              ? `set -eo pipefail; tofu apply -auto-approve ${folder}.tfplan -no-color || (tofu destroy -auto-approve ${tofuVars} -no-color; exit 1)`
+              : `set -eo pipefail; tofu apply -auto-approve ${folder}.tfplan -no-color || (tofu destroy -auto-approve ${tofuVars} -no-color; cd ../infra && tofu destroy -auto-approve ${tofuVars} -no-color; exit 1)`,
+        },
+        {
+          id: `${folder} - Save output json`,
+          name: 'falkordb/gcloud-kubectl-falkordb-tofu',
+          dir: `${folder}`,
+          script: `tofu output -json > ${folder}.output.json`,
+        },
+        {
+          id: `${folder} - Copy output to storage`,
+          name: 'gcr.io/cloud-builders/gsutil',
+          entrypoint: 'gsutil',
+          dir: `${folder}`,
+          args: [
+            'cp',
+            `${folder}.output.json`,
+            `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/${folder}.output.json`,
+          ],
+        },
+      ];
+    };
+
     await cloudbuild.createBuild({
       projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
       build: {
@@ -88,54 +149,8 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
             entrypoint: 'chmod',
             args: ['-v', '-R', 'a+rw', '.'],
           },
-          {
-            id: 'Init Tofu',
-            name: 'oowy/opentofu',
-            entrypoint: 'tofu',
-            args: [
-              'init',
-              `-backend-config=bucket=${cloudProvisionConfig.cloudProviderConfig.stateBucket}`,
-              `-backend-config=prefix=tenant-group/${tenantGroupId}`,
-              '-no-color',
-            ],
-          },
-          {
-            id: `Plan Tofu`,
-            name: 'oowy/opentofu',
-            script: `set -eo pipefail; tofu plan ${tofuVars} -out=tfplan -no-color || exit 1`,
-          },
-          // Push plan to storage
-          {
-            id: `Push Tofu Plan`,
-            name: 'gcr.io/cloud-builders/gsutil',
-            entrypoint: 'gsutil',
-            args: [
-              'cp',
-              'tfplan',
-              `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/tfplan`,
-            ],
-          },
-          {
-            id: `Apply Tofu Plan`,
-            name: 'falkordb/gcloud-kubectl-falkordb-tofu',
-            script: `set -eo pipefail; tofu apply -auto-approve tfplan -no-color || (tofu destroy -auto-approve ${tofuVars} -no-color; exit 1)
-`,
-          },
-          {
-            id: `Save output json`,
-            name: 'falkordb/gcloud-kubectl-falkordb-tofu',
-            script: `tofu output -json > output.json`,
-          },
-          {
-            id: 'Copy output to storage',
-            name: 'gcr.io/cloud-builders/gsutil',
-            entrypoint: 'gsutil',
-            args: [
-              'cp',
-              'output.json',
-              `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/output.json`,
-            ],
-          },
+          ...initPlanApplySteps('infra'),
+          ...initPlanApplySteps('k8s'),
         ],
       },
     });
@@ -155,6 +170,28 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
   }> {
     const tofuVars = this._getTenantGroupVars(tenantGroupId, region, cloudProvisionConfig).join(' ');
 
+    const initDestroySteps = (folder: 'infra' | 'k8s') => {
+      return [
+        {
+          id: '${folder} - Init Tofu',
+          name: 'oowy/opentofu',
+          entrypoint: 'tofu',
+          dir: `${folder}`,
+          args: [
+            'init',
+            `-backend-config=bucket=${cloudProvisionConfig.cloudProviderConfig.stateBucket}`,
+            `-backend-config=prefix=tenant-group/${folder}/${tenantGroupId}`,
+            '-no-color',
+          ],
+        },
+        {
+          id: `${folder} - Destroy Tofu`,
+          name: 'falkordb/gcloud-kubectl-falkordb-tofu',
+          dir: `${folder}`,
+          script: `set -eo pipefail; tofu destroy -auto-approve ${tofuVars} -no-color || exit 1`,
+        },
+      ];
+    };
     await cloudbuild.createBuild({
       projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
       build: {
@@ -178,22 +215,8 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
             entrypoint: 'chmod',
             args: ['-v', '-R', 'a+rw', '.'],
           },
-          {
-            id: 'Init Tofu',
-            name: 'oowy/opentofu',
-            entrypoint: 'tofu',
-            args: [
-              'init',
-              `-backend-config=bucket=${cloudProvisionConfig.cloudProviderConfig.stateBucket}`,
-              `-backend-config=prefix=tenant-group/${tenantGroupId}`,
-              '-no-color',
-            ],
-          },
-          {
-            id: `Destroy Tofu`,
-            name: 'falkordb/gcloud-kubectl-falkordb-tofu',
-            script: `set -eo pipefail; tofu destroy -auto-approve ${tofuVars} -no-color || exit 1`,
-          },
+          ...initDestroySteps('k8s'),
+          ...initDestroySteps('infra'),
         ],
       },
     });
@@ -212,6 +235,65 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
     operationProvider: OperationProviderSchemaType;
   }> {
     const tofuVars = this._getTenantGroupVars(tenantGroupId, region, cloudProvisionConfig).join(' ');
+
+    const initPlanApplySteps = (folder: 'infra' | 'k8s') => {
+      return [
+        {
+          id: `${folder} - Init Tofu`,
+          name: 'oowy/opentofu',
+          entrypoint: 'tofu',
+          dir: `${folder}`,
+          args: [
+            'init',
+            `-backend-config=bucket=${cloudProvisionConfig.cloudProviderConfig.stateBucket}`,
+            `-backend-config=prefix=tenant-group/${folder}/${tenantGroupId}`,
+            '-no-color',
+          ],
+        },
+        {
+          id: `${folder} - Plan Tofu`,
+          name: 'oowy/opentofu',
+          dir: `${folder}`,
+          script: `set -eo pipefail; tofu plan ${tofuVars} -out=${folder}.tfplan -no-color || exit 1`,
+        },
+        // Push plan to storage
+        {
+          id: `${folder} - Push Tofu Plan`,
+          name: 'gcr.io/cloud-builders/gsutil',
+          entrypoint: 'gsutil',
+          dir: `${folder}`,
+          args: [
+            'cp',
+            `${folder}.tfplan`,
+            `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/${folder}.tfplan`,
+          ],
+        },
+        {
+          id: `${folder} - Apply Tofu Plan`,
+          name: 'falkordb/gcloud-kubectl-falkordb-tofu',
+          dir: `${folder}`,
+          script: `set -eo pipefail; tofu apply -auto-approve ${folder}.tfplan -no-color
+`,
+        },
+        {
+          id: `${folder} - Save output json`,
+          name: 'falkordb/gcloud-kubectl-falkordb-tofu',
+          dir: `${folder}`,
+          script: `tofu output -json > ${folder}.output.json`,
+        },
+        {
+          id: `${folder} - Copy output to storage`,
+          name: 'gcr.io/cloud-builders/gsutil',
+          entrypoint: 'gsutil',
+          dir: `${folder}`,
+          args: [
+            'cp',
+            `${folder}.output.json`,
+            `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/${folder}.output.json`,
+          ],
+        },
+      ];
+    };
 
     await cloudbuild.createBuild({
       projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
@@ -236,54 +318,8 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
             entrypoint: 'chmod',
             args: ['-v', '-R', 'a+rw', '.'],
           },
-          {
-            id: 'Init Tofu',
-            name: 'oowy/opentofu',
-            entrypoint: 'tofu',
-            args: [
-              'init',
-              `-backend-config=bucket=${cloudProvisionConfig.cloudProviderConfig.stateBucket}`,
-              `-backend-config=prefix=tenant-group/${tenantGroupId}`,
-              '-no-color',
-            ],
-          },
-          {
-            id: `Plan Tofu`,
-            name: 'oowy/opentofu',
-            script: `set -eo pipefail; tofu plan ${tofuVars} -out=tfplan -no-color || exit 1`,
-          },
-          // Push plan to storage
-          {
-            id: `Push Tofu Plan`,
-            name: 'gcr.io/cloud-builders/gsutil',
-            entrypoint: 'gsutil',
-            args: [
-              'cp',
-              'tfplan',
-              `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/tfplan`,
-            ],
-          },
-          {
-            id: `Apply Tofu Plan`,
-            name: 'falkordb/gcloud-kubectl-falkordb-tofu',
-            script: `set -eo pipefail; tofu apply -auto-approve tfplan -no-color
-`,
-          },
-          {
-            id: `Save output json`,
-            name: 'falkordb/gcloud-kubectl-falkordb-tofu',
-            script: `tofu output -json > output.json`,
-          },
-          {
-            id: 'Copy output to storage',
-            name: 'gcr.io/cloud-builders/gsutil',
-            entrypoint: 'gsutil',
-            args: [
-              'cp',
-              'output.json',
-              `gs://${cloudProvisionConfig.cloudProviderConfig.stateBucket}/builds/$BUILD_ID/output.json`,
-            ],
-          },
+          ...initPlanApplySteps('infra'),
+          ...initPlanApplySteps('k8s'),
         ],
       },
     });
