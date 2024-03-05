@@ -44,7 +44,7 @@ variable "node_pools" {
     {
       name            = "default-pool"
       machine_type    = "e2-medium"
-      disk_size_gb    = 10
+      disk_size_gb    = 30
       total_min_count = 0
       total_max_count = 50
       node_metadata   = "GKE_METADATA"
