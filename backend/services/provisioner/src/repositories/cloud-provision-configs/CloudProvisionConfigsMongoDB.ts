@@ -73,8 +73,13 @@ export class CloudProvisionConfigsMongoDB implements ICloudProvisionConfigsRepos
   async query(params: {
     cloudProvider?: string;
     deploymentConfigVersion?: number;
+    page?: number;
+    pageSize?: number;
   }): Promise<CloudProvisionConfigSchemaType[]> {
     try {
+      const page = params.page || 1;
+      const pageSize = params.pageSize || 10;
+
       const query: { [key: string]: unknown } = {};
       if (params.cloudProvider) {
         query.cloudProvider = params.cloudProvider;
@@ -83,7 +88,12 @@ export class CloudProvisionConfigsMongoDB implements ICloudProvisionConfigsRepos
         query.deploymentConfigVersion = params.deploymentConfigVersion;
       }
 
-      const response = await this.collection.find(query).toArray();
+      const response = await this.collection
+        .find(query, {
+          limit: pageSize,
+          skip: page > 0 ? (page - 1) * pageSize : 0,
+        })
+        .toArray();
 
       return response.map((config) => {
         return {

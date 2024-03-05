@@ -7,6 +7,8 @@ import {
 import { cloudProvisionConfigCreateHandler } from './handlers/create';
 import { CloudProvisionConfigDeleteParamsSchema } from './schemas/delete';
 import { cloudProvisionConfigDeleteHandler } from './handlers/delete';
+import { CloudProvisionConfigListQuerySchema, CloudProvisionConfigListQuerySchemaType } from './schemas/list';
+import { cloudProvisionConfigListHandler } from './handlers/list';
 
 export default fp(
   async function provision(fastify, opts) {
@@ -21,6 +23,16 @@ export default fp(
         },
       },
       cloudProvisionConfigCreateHandler,
+    );
+
+    fastify.get<{ Querystring: CloudProvisionConfigListQuerySchemaType }>(
+      '/',
+      {
+        schema: {
+          querystring: CloudProvisionConfigListQuerySchema,
+        },
+      },
+      cloudProvisionConfigListHandler,
     );
 
     fastify.delete(

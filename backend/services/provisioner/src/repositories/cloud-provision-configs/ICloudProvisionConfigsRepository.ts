@@ -18,6 +18,8 @@ export abstract class ICloudProvisionConfigsRepository {
   query(params: {
     cloudProvider?: SupportedCloudProviderSchemaType;
     deploymentConfigVersion?: number;
+    page?: number;
+    pageSize?: number;
   }): Promise<CloudProvisionConfigSchemaType[]> {
     throw new Error('Not implemented');
   }
