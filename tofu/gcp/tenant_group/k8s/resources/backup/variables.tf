@@ -6,6 +6,10 @@ variable "region" {
   type = string
 }
 
+variable "cluster_name" {
+  type = string
+}
+
 variable "velero_gcp_sa_id" {
   type = string
 }

@@ -101,6 +101,7 @@ module "cluster_backup" {
 
   project_id              = var.project_id
   region                  = var.region
+  cluster_name            = var.cluster_name
   backup_bucket_name      = var.backup_bucket_name
   velero_gcp_sa_email     = var.velero_gcp_sa_email
   velero_gcp_sa_id        = var.velero_gcp_sa_id
