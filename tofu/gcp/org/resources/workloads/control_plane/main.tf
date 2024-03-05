@@ -20,6 +20,9 @@ module "project" {
     "serviceusage.googleapis.com",
     "storage.googleapis.com",
     "cloudbuild.googleapis.com",
+    "pubsub.googleapis.com",
+    "run.googleapis.com",
+    "secretmanager.googleapis.com",
   ]
 }
 

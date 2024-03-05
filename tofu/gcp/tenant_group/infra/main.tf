@@ -82,6 +82,7 @@ module "cluster_backup" {
   project_id        = var.project_id
   region            = var.region
   tenant_group_name = var.tenant_group_name
+  velero_role_id    = var.velero_role_id
 
   retention_policy_days = var.cluster_backup_retention_policy_days
 

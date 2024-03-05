@@ -20,7 +20,10 @@ variable "billing_account_id" {
   type = string
 }
 
-
 variable "repo_name" {
   type = string
+}
+
+variable "velero_role_id" {
+  type = string  
 }

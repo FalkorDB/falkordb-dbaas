@@ -92,3 +92,27 @@ module "gh_oidc" {
     }
   }
 }
+
+# Velero role for cluster backup
+resource "google_project_iam_custom_role" "velero_role" {
+  role_id     = var.velero_role_id
+  project     = var.project_id
+  title       = "Velero"
+  description = "Velero custom role"
+  permissions = [
+    "compute.disks.get",
+    "compute.disks.create",
+    "compute.disks.createSnapshot",
+    "compute.projects.get",
+    "compute.snapshots.get",
+    "compute.snapshots.create",
+    "compute.snapshots.useReadOnly",
+    "compute.snapshots.delete",
+    "compute.zones.get",
+    "storage.objects.create",
+    "storage.objects.delete",
+    "storage.objects.get",
+    "storage.objects.list",
+    "iam.serviceAccounts.signBlob",
+  ]
+}

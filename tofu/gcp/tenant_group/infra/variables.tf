@@ -160,3 +160,7 @@ variable "cluster_backup_schedule" {
   nullable = true
   default  = null
 }
+
+variable "velero_role_id" {
+  type = string
+}

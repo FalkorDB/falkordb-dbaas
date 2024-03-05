@@ -13,3 +13,7 @@ output "pipelines_development_worload_identity_provider" {
 output "pipelines_development_tenant_provision_sa" {
   value = module.pipelines_development[0].tenant_provision_sa
 }
+
+output "velero_role_id" {
+  value = local.velero_role_id
+}
