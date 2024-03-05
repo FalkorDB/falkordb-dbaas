@@ -47,7 +47,7 @@ resource "google_project_iam_member" "provisioning_sa_service_usage" {
 
 # Velero role for cluster backup
 resource "google_project_iam_custom_role" "velero_role" {
-  role_id     = "velero"
+  role_id     = var.velero_role_id
   project     = var.project_id
   title       = "Velero"
   description = "Velero custom role"

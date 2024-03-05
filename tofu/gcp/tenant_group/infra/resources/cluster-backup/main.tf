@@ -36,7 +36,7 @@ resource "google_service_account" "velero" {
 
 resource "google_project_iam_binding" "velero" {
   project = var.project_id
-  role    = "projects/${var.project_id}/roles/velero"
+  role    = "projects/${var.project_id}/roles/${var.velero_role_id}"
   members = [
     "serviceAccount:${google_service_account.velero.email}",
   ]

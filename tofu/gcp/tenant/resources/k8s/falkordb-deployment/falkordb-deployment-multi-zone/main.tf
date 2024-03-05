@@ -158,7 +158,7 @@ resource "helm_release" "falkordb" {
 appendonly yes
 save ""
 maxmemory ${local.max_memory_bytes}
-    EOF
+EOF
   }
 }
 

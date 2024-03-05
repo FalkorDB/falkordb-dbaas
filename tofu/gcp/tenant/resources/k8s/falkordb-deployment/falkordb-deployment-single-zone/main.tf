@@ -166,14 +166,13 @@ resource "helm_release" "falkordb" {
     value = "redis"
   }
 
-
   set {
     name  = "commonConfiguration"
     value = <<EOF
 appendonly yes
 save ""
 maxmemory ${local.max_memory_bytes}
-    EOF
+EOF
   }
 }
 

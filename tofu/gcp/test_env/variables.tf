@@ -79,3 +79,8 @@ variable "backup_schedule" {
   type    = string
   default = "0 0 * * *"
 }
+
+variable "velero_role_id" {
+  type    = string
+  default = "velero_4c540708"
+}

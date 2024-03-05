@@ -73,6 +73,7 @@ module "tenant_group" {
   force_destroy_backup_bucket  = var.force_destroy_backup_bucket
   dns_domain                   = var.dns_domain
   backup_retention_policy_days = var.backup_retention_policy_days
+  velero_role_id               = var.velero_role_id
 }
 
 module "tenant_group_k8s" {

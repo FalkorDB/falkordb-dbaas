@@ -116,7 +116,6 @@ resource "helm_release" "falkordb" {
     value = "redis"
   }
 
-
   set {
     name  = "commonConfiguration"
     value = <<EOF
