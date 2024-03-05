@@ -76,4 +76,6 @@ module "labeler" {
   deployment_name      = local.deployment_name
   sentinel_port        = var.sentinel_port
   labeler_image        = var.labeler_image
+
+  depends_on = [module.standalone, module.single_zone, module.multi_zone]
 }
