@@ -25,5 +25,5 @@ variable "repo_name" {
 }
 
 variable "velero_role_id" {
-  type = string  
+  type = string
 }
