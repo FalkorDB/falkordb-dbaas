@@ -164,6 +164,7 @@ resource "null_resource" "pod_monitoring" {
   provisioner "local-exec" {
     when    = create
     command = <<EOF
+      gcloud container clusters get-credentials ${var.cluster_name} --region ${var.region} --project ${var.project_id}
       kubectl apply -f - <<EOF2
 apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
