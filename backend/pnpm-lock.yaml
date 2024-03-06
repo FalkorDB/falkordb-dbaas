@@ -20,9 +20,6 @@ importers:
       '@falkordb/errors':
         specifier: workspace:*
         version: link:../errors
-      '@hapi/boom':
-        specifier: ^10.0.1
-        version: 10.0.1
 
   services/provisioner:
     dependencies:
@@ -92,6 +89,9 @@ importers:
       tap:
         specifier: ^18.7.0
         version: 18.7.0(@types/node@20.11.24)(react-dom@18.2.0)(react@18.2.0)(typescript@5.3.3)
+      unique-names-generator:
+        specifier: ^4.7.1
+        version: 4.7.1
       zod:
         specifier: ^3.22.4
         version: 3.22.4
@@ -144,6 +144,12 @@ importers:
 
   services/users:
     dependencies:
+      '@falkordb/errors':
+        specifier: workspace:^
+        version: link:../../libs/errors
+      '@falkordb/plugins':
+        specifier: workspace:*
+        version: link:../../libs/plugins
       '@fastify/autoload':
         specifier: ^5.8.0
         version: 5.8.0
@@ -985,21 +991,11 @@ packages:
       yargs: 17.7.2
     dev: false
 
-  /@hapi/boom@10.0.1:
-    resolution: {integrity: sha512-ERcCZaEjdH3OgSJlyjVk8pHIFeus91CjKP3v+MpgBNp5IvGzP2l/bRiD78nqYcKPaZdbKkK5vDBVPd2ohHBlsA==}
-    dependencies:
-      '@hapi/hoek': 11.0.4
-    dev: false
-
   /@hapi/boom@8.0.1:
     resolution: {integrity: sha512-SnBM2GzEYEA6AGFKXBqNLWXR3uNBui0bkmklYXX1gYtevVhDTy2uakwkSauxvIWMtlANGRhzChYg95If3FWCwA==}
     deprecated: This version has been deprecated and is no longer supported or maintained
     dependencies:
       '@hapi/hoek': 8.5.1
-    dev: false
-
-  /@hapi/hoek@11.0.4:
-    resolution: {integrity: sha512-PnsP5d4q7289pS2T2EgGz147BFJ2Jpb4yrEdkpz2IhgEUzos1S7HTl7ezWh1yfYzYlj89KzLdCRkqsP6SIryeQ==}
     dev: false
 
   /@hapi/hoek@8.5.1:

@@ -17,6 +17,8 @@
   "author": "",
   "license": "SSPL",
   "dependencies": {
+    "@falkordb/errors": "workspace:^",
+    "@falkordb/plugins": "workspace:^",
     "@fastify/autoload": "^5.8.0",
     "@fastify/awilix": "^5.1.0",
     "@fastify/cors": "^9.0.1",
