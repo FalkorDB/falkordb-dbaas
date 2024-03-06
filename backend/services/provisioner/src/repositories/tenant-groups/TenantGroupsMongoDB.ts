@@ -277,52 +277,67 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
       return this._client
         .withSession((session) => {
           return session.withTransaction(async () => {
-            const tenantGroups = await this.query({
-              status: ['ready', 'refreshing', 'upgrading', 'refreshing-failed', 'upgrading-failed'],
-            });
-
-            for (const tenantGroup of tenantGroups) {
-              const tenantIndex = tenantGroup.tenants.findIndex((tenant) => tenant.id === tenantId);
-              if (tenantIndex === -1) continue;
-
-              tenantGroup.tenantCount -= 1;
-              tenantGroup.tenants.splice(tenantIndex, 1);
-              const after = await this.collection.findOneAndUpdate(
-                { id: tenantGroup.id },
-                {
-                  $set: {
-                    ...tenantGroup,
-                    updatedAt: new Date().toISOString(),
+            const tenantGroup = await this.collection
+              .aggregate(
+                [
+                  {
+                    $match: {
+                      tenants: {
+                        $elemMatch: {
+                          id: tenantId,
+                        },
+                      },
+                    },
                   },
-                },
-                {
-                  returnDocument: 'after',
-                },
-              );
-              resolve({
-                id: after.id,
-                createdAt: after.createdAt,
-                updatedAt: after.updatedAt,
-                status: after.status,
-                cloudProvider: after.cloudProvider,
-                clusterDeploymentVersion: after.clusterDeploymentVersion,
-                cloudProvisionConfigId: after.cloudProvisionConfigId,
-                clusterDomain: after.clusterDomain,
-                region: after.region,
-                clusterName: after.clusterName,
-                schemaVersion: after.schemaVersion,
-                tenantCount: after.tenantCount,
-                tenants: after.tenants,
-                maxTenants: after.maxTenants,
-                backupBucketName: after.backupBucketName,
-                clusterCaCertificate: after.clusterCaCertificate,
-                clusterEndpoint: after.clusterEndpoint,
-                ipAddress: after.ipAddress,
-                vpcName: after.vpcName,
-                veleroGcpSaId: after.veleroGcpSaId,
-                veleroGcpSaEmail: after.veleroGcpSaEmail,
-              });
+                ],
+                { session },
+              )
+              .next();
+
+            if (!tenantGroup) {
+              throw ApiError.notFound('Tenant group not found', 'TENANT_GROUP_NOT_FOUND');
             }
+
+            tenantGroup.tenantCount -= 1;
+            tenantGroup.tenants = (tenantGroup.tenants ?? []).filter((tenant) => tenant.id !== tenantId);
+
+            const after = await this.collection.findOneAndUpdate(
+              { id: tenantGroup.id },
+              {
+                $set: {
+                  ...tenantGroup,
+                  updatedAt: new Date().toISOString(),
+                },
+              },
+              {
+                returnDocument: 'after',
+                session,
+              },
+            );
+
+            resolve({
+              id: after.id,
+              createdAt: after.createdAt,
+              updatedAt: after.updatedAt,
+              status: after.status,
+              cloudProvider: after.cloudProvider,
+              clusterDeploymentVersion: after.clusterDeploymentVersion,
+              cloudProvisionConfigId: after.cloudProvisionConfigId,
+              clusterDomain: after.clusterDomain,
+              region: after.region,
+              clusterName: after.clusterName,
+              schemaVersion: after.schemaVersion,
+              tenantCount: after.tenantCount,
+              tenants: after.tenants,
+              maxTenants: after.maxTenants,
+              backupBucketName: after.backupBucketName,
+              clusterCaCertificate: after.clusterCaCertificate,
+              clusterEndpoint: after.clusterEndpoint,
+              ipAddress: after.ipAddress,
+              vpcName: after.vpcName,
+              veleroGcpSaId: after.veleroGcpSaId,
+              veleroGcpSaEmail: after.veleroGcpSaEmail,
+            });
           });
         })
         .catch((error) => {
