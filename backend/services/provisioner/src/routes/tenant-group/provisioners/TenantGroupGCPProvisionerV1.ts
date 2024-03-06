@@ -140,7 +140,8 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
           script:
             folder === 'infra'
               ? `set -eo pipefail; tofu apply -auto-approve ${folder}.tfplan -no-color || (tofu destroy -auto-approve ${tofuVars} -no-color; exit 1)`
-              : `
+              : ` 
+              apk add jq
               TF_VAR_cluster_name=$(cat ../infra/infra.output.json | jq -r '.cluster_name.value')
               TF_VAR_cluster_endpoint=$(cat ../infra/infra.output.json | jq -r '.cluster_endpoint.value')
               TF_VAR_cluster_ca_certificate=$(cat ../infra/infra.output.json | jq -r '.cluster_ca_certificate.value')
@@ -239,14 +240,15 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
           script:
             folder === 'infra'
               ? `set -eo pipefail; tofu destroy -auto-approve ${tofuVars} -no-color || exit 1`
-              : `
-          TF_VAR_cluster_name=${tenantGroup.clusterName}
-          TF_VAR_cluster_endpoint=${tenantGroup.clusterEndpoint}
-          TF_VAR_cluster_ca_certificate=${tenantGroup.clusterCaCertificate}
-          TF_VAR_backup_bucket_name=${tenantGroup.backupBucketName}
-          TF_VAR_velero_gcp_sa_id=${tenantGroup.veleroGcpSaId}
-          TF_VAR_velero_gcp_sa_email=${tenantGroup.veleroGcpSaEmail}
-          set -eo pipefail; tofu destroy -auto-approve ${tofuVars} -no-color || exit 1
+              : ` 
+              apk add jq
+              TF_VAR_cluster_name=${tenantGroup.clusterName}
+              TF_VAR_cluster_endpoint=${tenantGroup.clusterEndpoint}
+              TF_VAR_cluster_ca_certificate=${tenantGroup.clusterCaCertificate}
+              TF_VAR_backup_bucket_name=${tenantGroup.backupBucketName}
+              TF_VAR_velero_gcp_sa_id=${tenantGroup.veleroGcpSaId}
+              TF_VAR_velero_gcp_sa_email=${tenantGroup.veleroGcpSaEmail}
+              set -eo pipefail; tofu destroy -auto-approve ${tofuVars} -no-color || exit 1
           `,
         },
       ];
