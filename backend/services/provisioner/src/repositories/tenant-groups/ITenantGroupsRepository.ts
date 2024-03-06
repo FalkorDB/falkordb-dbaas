@@ -45,8 +45,6 @@ export abstract class ITenantGroupRepository {
 
   removeTenantTransaction(
     tenantId: string,
-    cloudProvider: SupportedCloudProviderSchemaType,
-    region: SupportedRegionsSchemaType,
   ): Promise<TenantGroupSchemaType> {
     throw new Error('Not implemented');
   }

@@ -69,6 +69,7 @@ export class CloudBuildOperationCallback {
         this._opts,
         this._operationsRepository,
         this._tenantRepository,
+        this._tenantGroupRepository,
       );
       await service.handleCallback(body, operation);
       return;
