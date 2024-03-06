@@ -3,6 +3,8 @@ resource "random_string" "cluster_suffix" {
     tenant_group_name = var.tenant_group_name
   }
 
+  upper = false
+
   length = 4
 }
 
@@ -19,7 +21,7 @@ module "gke" {
   ip_range_services                    = var.ip_range_services
   regional                             = true
   create_service_account               = true
-  service_account_name                 = "${substr(var.tenant_group_name, 0, min(16, length(var.tenant_group_name)))}-${random_string.cluster_suffix.result}-sa"
+  service_account_name                 = "${substr(var.tenant_group_name, 0, min(30, length(var.tenant_group_name)))}-${random_string.cluster_suffix.result}-sa"
   remove_default_node_pool             = true
   gce_pd_csi_driver                    = true
   network_policy                       = true
