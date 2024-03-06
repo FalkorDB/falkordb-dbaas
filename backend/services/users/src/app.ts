@@ -24,7 +24,28 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     origin: true,
   });
 
-  fastify.register(swaggerPlugin);
+  fastify.register(swaggerPlugin, {
+    swagger: {
+      tags: [
+        {
+          name: 'me',
+          description: 'Me operations',
+        },
+        {
+          name: 'users',
+          description: 'User operations',
+        },
+        {
+          name: 'invitations',
+          description: 'User invitations operations',
+        },
+        {
+          name: 'memberships',
+          description: 'User memberships operations',
+        },
+      ],
+    },
+  });
   fastify.register(pubsubDecodePlugin);
 
   await fastify.register(AutoLoad, {

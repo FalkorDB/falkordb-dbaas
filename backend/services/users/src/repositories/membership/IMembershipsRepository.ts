@@ -6,4 +6,8 @@ export abstract class IMembershipsRepository {
   query(params: { userId?: string; page?: number; pageSize?: number }): Promise<UserMembershipItemType[]> {
     throw new Error('Method not implemented.');
   }
+
+  delete(userId: string, membershipId: string): Promise<void> {
+    throw new Error('Method not implemented.');
+  }
 }

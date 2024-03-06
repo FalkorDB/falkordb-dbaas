@@ -7,4 +7,8 @@ export class MembershipsRepositoryMock implements IMembershipsRepository {
   query(params: { userId?: string; page?: number; pageSize?: number }): Promise<UserMembershipItemType[]> {
     return Promise.resolve([]);
   }
+
+  delete(userId: string, membershipId: string): Promise<void> {
+    return Promise.resolve();
+  }
 }

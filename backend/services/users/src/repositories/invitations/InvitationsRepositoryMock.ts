@@ -7,4 +7,12 @@ export class InvitationsRepositoryMock implements IInvitationsRepository {
   query(params: { userId?: string; page?: number; pageSize?: number }): Promise<InvitationSchemaType[]> {
     return Promise.resolve([]);
   }
+
+  accept(id: string): Promise<void> {
+    return Promise.resolve();
+  }
+
+  reject(id: string): Promise<void> {
+    return Promise.resolve();
+  }
 }
