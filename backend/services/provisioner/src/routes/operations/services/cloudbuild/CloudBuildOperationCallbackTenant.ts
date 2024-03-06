@@ -5,10 +5,12 @@ import { OperationSchemaType } from '../../../../schemas/operation';
 import { Storage, Bucket } from '@google-cloud/storage';
 import { ITenantsRepository } from '../../../../repositories/tenants/ITenantRepository';
 import { TenantSchemaType } from '../../../../schemas/tenant';
+import { ITenantGroupRepository } from '../../../../repositories/tenant-groups/ITenantGroupsRepository';
 
 export class CloudBuildOperationCallbackTenant {
   private _operationsRepository: IOperationsRepository;
   private _tenantsRepository: ITenantsRepository;
+  private _tenantGroupRepository: ITenantGroupRepository;
 
   constructor(
     private _opts: {
@@ -16,9 +18,11 @@ export class CloudBuildOperationCallbackTenant {
     },
     operationsRepository: IOperationsRepository,
     tenantsRepository: ITenantsRepository,
+    tenantGroupsRepository: ITenantGroupRepository,
   ) {
     this._operationsRepository = operationsRepository;
     this._tenantsRepository = tenantsRepository;
+    this._tenantGroupRepository = tenantGroupsRepository;
   }
 
   async handleCallback(
@@ -250,6 +254,7 @@ export class CloudBuildOperationCallbackTenant {
     const response = await Promise.allSettled([
       this._operationsRepository.updateStatus(operation.id, 'completed', { buildId: body.data.id }),
       this._tenantsRepository.delete(operation.resourceId),
+      this._tenantGroupRepository.removeTenantTransaction(operation.resourceId),
     ]);
 
     if (response.some((r) => r.status === 'rejected')) {
