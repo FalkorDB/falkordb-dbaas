@@ -101,7 +101,7 @@ export class TenantGroupDeprovisionService {
 
       switch (tenantGroup.clusterDeploymentVersion) {
         case 1:
-          return await provisioner.deprovision(operationId, tenantGroup.id, tenantGroup.region, cloudProvisionConfig);
+          return await provisioner.deprovision(operationId, tenantGroup, tenantGroup.region, cloudProvisionConfig);
         default:
           throw ApiError.unprocessableEntity(
             'Unsupported clusterDeploymentVersion',

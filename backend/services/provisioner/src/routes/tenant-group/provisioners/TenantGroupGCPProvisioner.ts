@@ -2,6 +2,7 @@ import { ApiError } from '@falkordb/errors';
 import { CloudProvisionGCPConfigSchemaType } from '../../../schemas/cloudProvision';
 import { SupportedRegionsSchemaType } from '../../../schemas/global';
 import { OperationProviderSchemaType } from '../../../schemas/operation';
+import { TenantGroupSchemaType } from '../../../schemas/tenantGroup';
 import { TenantGroupGCPProvisionerV1 } from './TenantGroupGCPProvisionerV1';
 
 export class TenantGroupGCPProvisioner {
@@ -35,7 +36,7 @@ export class TenantGroupGCPProvisioner {
 
   deprovision(
     operationId: string,
-    tenantGroupId: string,
+    tenantGroup: TenantGroupSchemaType,
     region: SupportedRegionsSchemaType,
     cloudProvisionConfig: CloudProvisionGCPConfigSchemaType,
   ): Promise<{
@@ -45,7 +46,7 @@ export class TenantGroupGCPProvisioner {
       case 1:
         return new TenantGroupGCPProvisioner.provisionerVersions[1]().deprovision(
           operationId,
-          tenantGroupId,
+          tenantGroup,
           region,
           cloudProvisionConfig,
         );

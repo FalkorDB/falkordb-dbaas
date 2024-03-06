@@ -42,6 +42,7 @@ export class CloudBuildOperationCallbackTenantGroup {
   private async _getOutput(
     buildId: string,
     operation: OperationSchemaType,
+    folder: 'infra' | 'k8s',
   ): Promise<{
     [key: string]: { value: string };
   } | null> {
@@ -54,7 +55,7 @@ export class CloudBuildOperationCallbackTenantGroup {
       const storage = new Storage();
       const bucket = storage.bucket(operation.payload.stateBucket);
 
-      const filePath = `builds/${buildId}/output.json`;
+      const filePath = `builds/${buildId}/${folder}.output.json`;
       const file = bucket.file(filePath);
 
       const [exists] = await file.exists();
@@ -128,21 +129,25 @@ export class CloudBuildOperationCallbackTenantGroup {
     try {
       this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackProvisionSuccess', body);
 
-      const buildOutput = await this._getOutput(body.data.id, operation);
+      const [infraOutput] = await Promise.all([this._getOutput(body.data.id, operation, 'infra')]);
 
       const response = await Promise.allSettled([
         this._operationsRepository.updateStatus(operation.id, 'completed', { buildId: body.data.id }),
         this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
-          const clusterName = !!buildOutput && 'cluster_name' in buildOutput ? buildOutput.cluster_name?.value : null;
-          const clusterDomain = !!buildOutput && 'dns_name' in buildOutput ? buildOutput.dns_name?.value : null;
-          const vpcName = !!buildOutput && 'vpc_name' in buildOutput ? buildOutput.vpc_name?.value : null;
+          const clusterName = !!infraOutput && 'cluster_name' in infraOutput ? infraOutput.cluster_name?.value : null;
+          const clusterDomain = !!infraOutput && 'dns_name' in infraOutput ? infraOutput.dns_name?.value : null;
+          const vpcName = !!infraOutput && 'vpc_name' in infraOutput ? infraOutput.vpc_name?.value : null;
           const clusterEndpoint =
-            !!buildOutput && 'cluster_endpoint' in buildOutput ? buildOutput.cluster_endpoint?.value : null;
+            !!infraOutput && 'cluster_endpoint' in infraOutput ? infraOutput.cluster_endpoint?.value : null;
           const clusterCaCertificate =
-            !!buildOutput && 'cluster_ca_certificate' in buildOutput ? buildOutput.cluster_ca_certificate?.value : null;
-          const ipAddress = !!buildOutput && 'ip_address' in buildOutput ? buildOutput.ip_address?.value : null;
+            !!infraOutput && 'cluster_ca_certificate' in infraOutput ? infraOutput.cluster_ca_certificate?.value : null;
+          const ipAddress = !!infraOutput && 'ip_address' in infraOutput ? infraOutput.ip_address?.value : null;
           const backupBucketName =
-            !!buildOutput && 'backup_bucket_name' in buildOutput ? buildOutput.backup_bucket_name?.value : null;
+            !!infraOutput && 'backup_bucket_name' in infraOutput ? infraOutput.backup_bucket_name?.value : null;
+          const veleroGcpSaId =
+            !!infraOutput && 'velero_gcp_sa_id' in infraOutput ? infraOutput.velero_gcp_sa_id?.value : null;
+          const veleroGcpSaEmail =
+            !!infraOutput && 'velero_gcp_sa_email' in infraOutput ? infraOutput.velero_gcp_sa_email?.value : null;
           tg.status = 'ready';
           tg.tenantCount = tg.tenantCount ?? 0;
           tg.tenants = tg.tenants ?? [];
@@ -153,6 +158,8 @@ export class CloudBuildOperationCallbackTenantGroup {
           tg.clusterCaCertificate = clusterCaCertificate;
           tg.ipAddress = ipAddress;
           tg.backupBucketName = backupBucketName;
+          tg.veleroGcpSaId = veleroGcpSaId;
+          tg.veleroGcpSaEmail = veleroGcpSaEmail;
           return tg;
         }),
       ]);
@@ -262,21 +269,25 @@ export class CloudBuildOperationCallbackTenantGroup {
     try {
       this._opts.logger.info('CloudBuildOperationCallback._handleTenantGroupCallbackRefreshSuccess', body);
 
-      const buildOutput = await this._getOutput(body.data.id, operation);
+      const [infraOutput] = await Promise.all([this._getOutput(body.data.id, operation, 'infra')]);
 
       const response = await Promise.allSettled([
         this._operationsRepository.updateStatus(operation.id, 'completed', { buildId: body.data.id }),
         this._tenantGroupRepository.runTransaction<TenantGroupSchemaType>(operation.resourceId, async (tg) => {
-          const clusterName = !!buildOutput && 'cluster_name' in buildOutput ? buildOutput.cluster_name?.value : null;
-          const clusterDomain = !!buildOutput && 'dns_name' in buildOutput ? buildOutput.dns_name?.value : null;
-          const vpcName = !!buildOutput && 'vpc_name' in buildOutput ? buildOutput.vpc_name?.value : null;
+          const clusterName = !!infraOutput && 'cluster_name' in infraOutput ? infraOutput.cluster_name?.value : null;
+          const clusterDomain = !!infraOutput && 'dns_name' in infraOutput ? infraOutput.dns_name?.value : null;
+          const vpcName = !!infraOutput && 'vpc_name' in infraOutput ? infraOutput.vpc_name?.value : null;
           const clusterEndpoint =
-            !!buildOutput && 'cluster_endpoint' in buildOutput ? buildOutput.cluster_endpoint?.value : null;
+            !!infraOutput && 'cluster_endpoint' in infraOutput ? infraOutput.cluster_endpoint?.value : null;
           const clusterCaCertificate =
-            !!buildOutput && 'cluster_ca_certificate' in buildOutput ? buildOutput.cluster_ca_certificate?.value : null;
-          const ipAddress = !!buildOutput && 'ip_address' in buildOutput ? buildOutput.ip_address?.value : null;
+            !!infraOutput && 'cluster_ca_certificate' in infraOutput ? infraOutput.cluster_ca_certificate?.value : null;
+          const ipAddress = !!infraOutput && 'ip_address' in infraOutput ? infraOutput.ip_address?.value : null;
           const backupBucketName =
-            !!buildOutput && 'backup_bucket_name' in buildOutput ? buildOutput.backup_bucket_name?.value : null;
+            !!infraOutput && 'backup_bucket_name' in infraOutput ? infraOutput.backup_bucket_name?.value : null;
+          const veleroGcpSaId =
+            !!infraOutput && 'velero_gcp_sa_id' in infraOutput ? infraOutput.velero_gcp_sa_id?.value : null;
+          const veleroGcpSaEmail =
+            !!infraOutput && 'velero_gcp_sa_email' in infraOutput ? infraOutput.velero_gcp_sa_email?.value : null;
           tg.status = 'ready';
           tg.tenantCount = tg.tenantCount ?? 0;
           tg.tenants = tg.tenants ?? [];
@@ -287,7 +298,8 @@ export class CloudBuildOperationCallbackTenantGroup {
           tg.clusterCaCertificate = clusterCaCertificate;
           tg.ipAddress = ipAddress;
           tg.backupBucketName = backupBucketName;
-
+          tg.veleroGcpSaId = veleroGcpSaId;
+          tg.veleroGcpSaEmail = veleroGcpSaEmail;
           return tg;
         }),
       ]);

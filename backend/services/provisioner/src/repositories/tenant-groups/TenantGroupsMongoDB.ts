@@ -83,6 +83,8 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
         clusterEndpoint: response.clusterEndpoint,
         ipAddress: response.ipAddress,
         vpcName: response.vpcName,
+        veleroGcpSaId: response.veleroGcpSaId,
+        veleroGcpSaEmail: response.veleroGcpSaEmail,
       };
     } catch (error) {
       if (error instanceof ApiError) {
@@ -137,6 +139,8 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
           clusterEndpoint: item.clusterEndpoint,
           ipAddress: item.ipAddress,
           vpcName: item.vpcName,
+          veleroGcpSaId: item.veleroGcpSaId,
+          veleroGcpSaEmail: item.veleroGcpSaEmail,
         };
       });
     } catch (error) {
@@ -250,6 +254,8 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
                 clusterEndpoint: after.clusterEndpoint,
                 ipAddress: after.ipAddress,
                 vpcName: after.vpcName,
+                veleroGcpSaId: after.veleroGcpSaId,
+                veleroGcpSaEmail: after.veleroGcpSaEmail,
               });
             }
           });
@@ -313,6 +319,8 @@ export class TenantGroupsMongoDB implements ITenantGroupRepository {
                 clusterEndpoint: after.clusterEndpoint,
                 ipAddress: after.ipAddress,
                 vpcName: after.vpcName,
+                veleroGcpSaId: after.veleroGcpSaId,
+                veleroGcpSaEmail: after.veleroGcpSaEmail,
               });
             }
           });

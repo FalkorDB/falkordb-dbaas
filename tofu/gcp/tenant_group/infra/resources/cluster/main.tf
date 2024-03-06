@@ -6,8 +6,8 @@ resource "random_string" "cluster_suffix" {
   upper   = false
   special = false
   lower   = true
-  
-  length  = 4
+
+  length = 4
 }
 
 module "gke" {
