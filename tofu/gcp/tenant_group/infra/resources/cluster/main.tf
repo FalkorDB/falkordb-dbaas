@@ -3,9 +3,11 @@ resource "random_string" "cluster_suffix" {
     tenant_group_name = var.tenant_group_name
   }
 
-  upper = false
-
-  length = 4
+  upper   = false
+  special = false
+  lower   = true
+  
+  length  = 4
 }
 
 module "gke" {
