@@ -16,6 +16,7 @@ export default fp(
       '/provision',
       {
         schema: {
+          tags: ['tenant'],
           headers: TenantProvisionHeadersSchema,
           body: TenantProvisionBodySchema,
         },
@@ -27,6 +28,7 @@ export default fp(
       '/:id/refresh',
       {
         schema: {
+          tags: ['tenant'],
           params: TenantRefreshParamsSchema,
         },
       },
@@ -37,6 +39,7 @@ export default fp(
       '/:id/deprovision',
       {
         schema: {
+          tags: ['tenant'],
           params: TenantDeprovisionParamsSchema,
         },
       },

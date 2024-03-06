@@ -17,6 +17,7 @@ export default fp(
       '/provision',
       {
         schema: {
+          tags: ['tenant-group'],
           body: TenantGroupProvisionBodySchema,
         },
       },
@@ -27,6 +28,7 @@ export default fp(
       '/:id/refresh',
       {
         schema: {
+          tags: ['tenant-group'],
           params: TenantGroupRefreshParamsSchema,
         },
       },
@@ -37,6 +39,7 @@ export default fp(
       '/:id/deprovision',
       {
         schema: {
+          tags: ['tenant-group'],
           params: TenantGroupDeprovisionParamsSchema,
         },
       },

@@ -24,7 +24,28 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     origin: true,
   });
 
-  fastify.register(swaggerPlugin);
+  fastify.register(swaggerPlugin, {
+    swagger: {
+      tags: [
+        {
+          name: 'tenant-group',
+          description: 'Tenant group operations',
+        },
+        {
+          name: 'tenant',
+          description: 'Tenant operations',
+        },
+        {
+          name: 'operations',
+          description: 'Operations',
+        },
+        {
+          name: 'cloud-provision-config',
+          description: 'Cloud provision config operations',
+        },
+      ],
+    },
+  });
   fastify.register(pubsubDecodePlugin);
 
   await fastify.register(AutoLoad, {
