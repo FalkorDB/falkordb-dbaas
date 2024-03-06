@@ -1,7 +1,7 @@
 import { RouteHandlerMethod } from 'fastify';
 import { TenantProvisionBodySchemaType, TenantProvisionHeadersSchemaType } from '../schemas/provision';
 import { TenantProvisionService } from '../services/TenantProvisionService';
-import { ApiError } from '../../../errors/ApiError';
+import { ApiError } from '@falkordb/errors';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 import { ITenantsRepository } from '../../../repositories/tenants/ITenantRepository';

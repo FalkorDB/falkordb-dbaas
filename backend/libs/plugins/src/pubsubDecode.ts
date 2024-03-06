@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin';
 import type { FastifyRequest } from 'fastify/types/request';
-import { ApiError } from '../errors/ApiError';
+import { ApiError } from '@falkordb/errors';
 import { TObject } from '@sinclair/typebox';
 import { Value } from '@sinclair/typebox/value';
 

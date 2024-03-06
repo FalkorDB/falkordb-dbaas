@@ -1,4 +1,4 @@
-import { ApiError } from '../../../errors/ApiError';
+import { ApiError } from '@falkordb/errors';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
 import ShortUniqueId from 'short-unique-id';

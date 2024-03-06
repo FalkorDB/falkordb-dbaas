@@ -4,7 +4,7 @@ import {
   CloudProvisionConfigCreateResponseSuccessSchemaType,
 } from '../schemas/create';
 import { CloudProvisionConfigsMongoDB } from '../../../repositories/cloud-provision-configs/CloudProvisionConfigsMongoDB';
-import { ApiError } from '../../../errors/ApiError';
+import { ApiError } from '@falkordb/errors';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 
 export const cloudProvisionConfigCreateHandler: RouteHandlerMethod<
