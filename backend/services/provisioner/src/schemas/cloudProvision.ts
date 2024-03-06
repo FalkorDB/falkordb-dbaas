@@ -22,6 +22,9 @@ export const CloudProvisionConfigSchema = Type.Object({
       revision: Type.String(),
     }),
     veleroRoleId: Type.String(),
+    clusterBackupSchedule: Type.String({
+      default: '0 0 * * *',
+    }),
   }),
 
   tenantConfig: Type.Object({
@@ -73,6 +76,9 @@ export const CloudProvisionGCPConfigSchema = Type.Object({
       revision: Type.String(),
     }),
     veleroRoleId: Type.String(),
+    clusterBackupSchedule: Type.String({
+      default: '0 0 * * *',
+    }),
   }),
 
   tenantConfig: Type.Object({
@@ -119,6 +125,9 @@ export const CreateCloudProvisionConfigParamsSchema = Type.Object({
       revision: Type.String(),
     }),
     veleroRoleId: Type.String(),
+    clusterBackupSchedule: Type.String({
+      default: '0 0 * * *',
+    }),
   }),
   tenantConfig: Type.Object({
     source: Type.Object({

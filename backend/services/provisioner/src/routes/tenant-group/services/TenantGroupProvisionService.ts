@@ -11,6 +11,7 @@ import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '../../../sch
 import { SupportedCloudProviderSchemaType } from '../../../schemas/global';
 import { CloudProvisionConfigSchemaType } from '../../../schemas/cloudProvision';
 import { TenantGroupRefreshParamsSchemaType, TenantGroupRefreshResponseSchemaType } from '../schemas/refresh';
+import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
 
 export class TenantGroupProvisionService {
   private _operationsRepository: IOperationsRepository;
@@ -38,9 +39,12 @@ export class TenantGroupProvisionService {
       params.clusterDeploymentVersion,
     );
 
-    const tenantGroupId = `tg-${new ShortUniqueId({
-      dictionary: 'alphanum_lower',
-    }).randomUUID(8)}`;
+    const tenantGroupId = `${uniqueNamesGenerator({
+      dictionaries: [['tg'], adjectives, animals],
+      separator: '-',
+      style: 'lowerCase',
+      length: 3,
+    })}`;
 
     const operationId = `op-${new ShortUniqueId({
       dictionary: 'alphanum_lower',

@@ -39,6 +39,8 @@ export const TenantGroupSchema = Type.Object({
   clusterCaCertificate: Type.Optional(Type.String()),
   ipAddress: Type.Optional(Type.String()),
   backupBucketName: Type.Optional(Type.String()),
+  veleroGcpSaId: Type.Optional(Type.String()),
+  veleroGcpSaEmail: Type.Optional(Type.String()),
 
   tenantCount: Type.Number(),
   tenants: Type.Array(
