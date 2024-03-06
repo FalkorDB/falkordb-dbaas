@@ -27,9 +27,15 @@ output "cluster_ca_certificate" {
 output "backup_bucket_name" {
   value = module.deployment_backup.backup_bucket_name
 }
-output "dns_zone_name" {
-  value = module.dns.dns_zone_name
-}
+
 output "dns_name" {
   value = module.dns.dns_name
+}
+
+output "velero_gcp_sa_id" {
+  value = module.cluster_backup.velero_sa_id
+}
+
+output "velero_gcp_sa_email" {
+  value = module.cluster_backup.velero_sa_email
 }

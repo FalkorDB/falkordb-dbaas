@@ -1,3 +1,11 @@
+resource "random_id" "velero_role_suffix" {
+  byte_length = 4
+}
+
+locals {
+  velero_role_id = "velero_${random_id.velero_role_suffix.hex}"
+}
+
 resource "google_folder" "root_folder" {
   display_name = var.workloads_folder_name
   parent       = "folders/${var.parent_folder_id}"
@@ -30,6 +38,8 @@ module "application_plane" {
 
   provisioning_sa = module.control_plane.provisioning_sa_email
 
+  velero_role_id = local.velero_role_id
+
 }
 
 module "pipelines_development" {
@@ -44,5 +54,7 @@ module "pipelines_development" {
   billing_account_id = var.billing_account_id
 
   repo_name = var.pipelines_development_repo_name
+
+  velero_role_id = local.velero_role_id
 
 }

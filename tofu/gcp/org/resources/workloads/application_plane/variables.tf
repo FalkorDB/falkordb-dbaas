@@ -22,3 +22,7 @@ variable "billing_account_id" {
 variable "provisioning_sa" {
   type = string
 }
+
+variable "velero_role_id" {
+  type = string
+}

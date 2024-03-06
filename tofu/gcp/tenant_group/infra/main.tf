@@ -82,6 +82,7 @@ module "cluster_backup" {
   project_id        = var.project_id
   region            = var.region
   tenant_group_name = var.tenant_group_name
+  velero_role_id    = var.velero_role_id
 
   retention_policy_days = var.cluster_backup_retention_policy_days
 
@@ -89,67 +90,3 @@ module "cluster_backup" {
 
   labels = local.labels
 }
-
-
-data "google_client_config" "default" {}
-
-provider "kubernetes" {
-  host                   = "https://${module.gke_cluster.cluster_endpoint}"
-  token                  = data.google_client_config.default.access_token
-  cluster_ca_certificate = base64decode(module.gke_cluster.cluster_ca_certificate)
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "gcloud"
-    args = [
-      "container",
-      "clusters",
-      "get-credentials",
-      module.gke_cluster.cluster_name,
-      "--region",
-      var.region,
-      "--project",
-      var.project_id,
-    ]
-  }
-}
-
-provider "helm" {
-  debug = true
-
-  kubernetes {
-    host                   = "https://${module.gke_cluster.cluster_endpoint}"
-    token                  = data.google_client_config.default.access_token
-    cluster_ca_certificate = base64decode(module.gke_cluster.cluster_ca_certificate)
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "gcloud"
-      args = [
-        "container",
-        "clusters",
-        "get-credentials",
-        module.gke_cluster.cluster_name,
-        "--region",
-        var.region,
-        "--project",
-        var.project_id,
-      ]
-    }
-  }
-}
-
-module "k8s" {
-  source = "./resources/k8s"
-
-  project_id              = var.project_id
-  tenant_provision_sa     = var.tenant_provision_sa
-  dns_domain              = module.dns.dns_name
-  cluster_name            = module.gke_cluster.cluster_name
-  region                  = var.region
-  backup_bucket_name      = module.cluster_backup.backup_bucket_name
-  velero_gcp_sa_id        = module.cluster_backup.velero_sa_id
-  velero_gcp_sa_email     = module.cluster_backup.velero_sa_email
-  cluster_backup_schedule = var.cluster_backup_schedule
-
-  depends_on = [module.gke_cluster]
-}
-

@@ -27,9 +27,6 @@ output "cluster_ca_certificate" {
 output "backup_bucket_name" {
   value = module.tenant_group.backup_bucket_name
 }
-output "dns_zone_name" {
-  value = module.tenant_group.dns_zone_name
-}
 output "dns_name" {
   value = module.tenant_group.dns_name
 }

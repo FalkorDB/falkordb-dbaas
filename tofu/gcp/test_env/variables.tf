@@ -40,6 +40,11 @@ variable "tenant_provision_sa" {
   }
 }
 
+variable "cluster_backup_schedule" {
+  type    = string
+  default = "0 0 * * *"
+}
+
 variable "force_destroy_backup_bucket" {
   type    = bool
   default = false
@@ -77,4 +82,9 @@ variable "backup_schedule" {
 variable "source_ip_ranges" {
   type    = list(string)
   default = []
+}
+
+variable "velero_role_id" {
+  type    = string
+  default = "velero_4c540708"
 }

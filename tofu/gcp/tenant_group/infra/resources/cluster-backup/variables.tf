@@ -29,3 +29,7 @@ variable "labels" {
   type    = map(string)
   default = {}
 }
+
+variable "velero_role_id" {
+  type = string
+}
