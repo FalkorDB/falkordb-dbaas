@@ -20,6 +20,7 @@ export const InvitationSchema = Type.Object({
 
   organizationId: Type.String(),
   role: RoleSchema,
+  expireAt: Type.String(),
 
   status: InvitationStatus,
 
@@ -27,16 +28,27 @@ export const InvitationSchema = Type.Object({
   inviterName: Type.String(),
 });
 
-export type InvitationSchemaType = Static<typeof InvitationSchema>;
+export type InvitationType = Static<typeof InvitationSchema>;
 
 export const CreateInvitationSchema = Type.Object({
   email: Type.String(),
+  userId: Type.Optional(Type.String()),
+
   organizationId: Type.String(),
   role: RoleSchema,
+  expireAt: Type.String(),
+
+  status: InvitationStatus,
+
+  inviterId: Type.String(),
+  inviterName: Type.String(),
 });
 
 export type CreateInvitationType = Static<typeof CreateInvitationSchema>;
 
 export const UpdateInvitationSchema = Type.Object({
   status: InvitationStatus,
+  expireAt: Type.String(),
 });
+
+export type UpdateInvitationType = Static<typeof UpdateInvitationSchema>;

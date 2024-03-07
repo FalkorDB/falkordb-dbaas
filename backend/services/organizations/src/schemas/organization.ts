@@ -6,6 +6,7 @@ export const OrganizationSchema = Type.Object({
   updatedAt: Type.String(),
 
   name: Type.String(),
+  creatorUserId: Type.String(),
 });
 
 export type OrganizationType = Static<typeof OrganizationSchema>;
