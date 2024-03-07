@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "start": "pnpm --filter './services/**' run start",
-    "test": "pnpm run test"
+    "test": "pnpm run test",
+    "deploy:dev": "pnpm --filter './services/*' run deploy:dev"
   },
   "keywords": [],
   "author": "",
