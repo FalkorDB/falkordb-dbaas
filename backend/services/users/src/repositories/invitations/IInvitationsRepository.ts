@@ -3,15 +3,9 @@ import { InvitationSchemaType } from '../../schemas/invitation';
 export abstract class IInvitationsRepository {
   static repositoryName = 'InvitationsRepository';
 
-  query(params: { email?: string; page?: number; pageSize?: number }): Promise<InvitationSchemaType[]> {
-    throw new Error('Method not implemented.');
-  }
+  abstract query(params: { email?: string; page?: number; pageSize?: number }): Promise<InvitationSchemaType[]> ;
 
-  accept(id: string): Promise<void> {
-    throw new Error('Method not implemented.');
-  }
+  abstract accept(id: string): Promise<void> ;
 
-  reject(id: string): Promise<void> {
-    throw new Error('Method not implemented.');
-  }
+  abstract reject(id: string): Promise<void> ;
 }

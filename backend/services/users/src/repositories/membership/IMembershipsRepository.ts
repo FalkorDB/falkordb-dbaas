@@ -3,11 +3,7 @@ import { UserMembershipItemType } from '../../schemas/membership';
 export abstract class IMembershipsRepository {
   static repositoryName = 'MembershipsRepository';
 
-  query(params: { userId?: string; page?: number; pageSize?: number }): Promise<UserMembershipItemType[]> {
-    throw new Error('Method not implemented.');
-  }
+  abstract query(params: { userId?: string; page?: number; pageSize?: number }): Promise<UserMembershipItemType[]> ;
 
-  delete(userId: string, membershipId: string): Promise<void> {
-    throw new Error('Method not implemented.');
-  }
+  abstract delete(userId: string, membershipId: string): Promise<void> ;
 }
