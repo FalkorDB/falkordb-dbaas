@@ -10,8 +10,9 @@ import { OperationProviderSchemaType } from '../../../schemas/operation';
 import { TenantGroupSchemaType } from '../../../schemas/tenantGroup';
 import { CloudProvisionConfigSchemaType } from '../../../schemas/cloudProvision';
 import { TenantSchemaType, TenantStatusSchemaType } from '../../../schemas/tenant';
-import { TenantGCPProvisioner } from '../provisioners/TenantGCPProvisioner';
+import { TenantGCPProvisioner } from '../provisioners/gcp/TenantGCPProvisioner';
 import { TenantRefreshParamsSchemaType, TenantRefreshResponseSchemaType } from '../schemas/refresh';
+import { TenantProvisionerFactory } from '../provisioners/TenantProvisioner';
 
 export class TenantProvisionService {
   private _operationsRepository: IOperationsRepository;
@@ -66,12 +67,13 @@ export class TenantProvisionService {
 
     await this._createTenant(tenantId, tenantGroup, params);
 
-    switch (params.cloudProvider) {
-      case 'gcp':
-        await this._provisionTenantGcp(operationId, tenantId, tenantIdx, tenantGroup, cloudProvisionConfig, params);
-        break;
-      default:
-        throw ApiError.unprocessableEntity('Unsupported cloudProvider', 'UNSUPPORTED_CLOUD_PROVIDER');
+    const provisioner = TenantProvisionerFactory.get(params.cloudProvider);
+
+    try {
+      await provisioner.provision(operationId, tenantId, tenantIdx, tenantGroup, params, cloudProvisionConfig);
+    } catch (error) {
+      this._failTenantProvisioning(tenantId);
+      throw error;
     }
 
     const operation = await this._saveOperation(operationId, tenantId, {
@@ -83,62 +85,6 @@ export class TenantProvisionService {
     });
 
     return operation;
-  }
-
-  private async _provisionTenantGcp(
-    operationId: string,
-    tenantId: string,
-    tenantIdx: number,
-    tenantGroup: TenantGroupSchemaType,
-    cloudProvisionConfig: CloudProvisionConfigSchemaType,
-    params: TenantProvisionBodySchemaType,
-  ): Promise<void> {
-    try {
-      const provisioner = new TenantGCPProvisioner();
-
-      switch (cloudProvisionConfig.deploymentConfigVersion) {
-        case 1:
-          await provisioner
-            .provision(operationId, tenantId, tenantIdx, tenantGroup, params, cloudProvisionConfig)
-            .then((op) => op.operationProvider);
-          break;
-        default:
-          throw ApiError.unprocessableEntity(
-            'Unsupported clusterDeploymentVersion',
-            'UNSUPPORTED_CLUSTER_DEPLOYMENT_VERSION',
-          );
-      }
-    } catch (error) {
-      this._failTenantProvisioning(tenantId);
-      throw error;
-    }
-  }
-
-  private async _refreshTenantGcp(
-    operationId: string,
-    tenant: TenantSchemaType,
-    tenantGroup: TenantGroupSchemaType,
-    cloudProvisionConfig: CloudProvisionConfigSchemaType,
-  ): Promise<void> {
-    try {
-      const provisioner = new TenantGCPProvisioner();
-
-      switch (cloudProvisionConfig.deploymentConfigVersion) {
-        case 1:
-          await provisioner
-            .refresh(operationId, tenant, tenantGroup, cloudProvisionConfig)
-            .then((op) => op.operationProvider);
-          break;
-        default:
-          throw ApiError.unprocessableEntity(
-            'Unsupported clusterDeploymentVersion',
-            'UNSUPPORTED_CLUSTER_DEPLOYMENT_VERSION',
-          );
-      }
-    } catch (error) {
-      this._failTenantRefresh(tenantGroup.id);
-      throw error;
-    }
   }
 
   private async _failTenantProvisioning(tenantId: string): Promise<void> {
@@ -232,12 +178,13 @@ export class TenantProvisionService {
 
     await this._updateTenantStatus(tenant.id, 'refreshing');
 
-    switch (tenant.cloudProvider) {
-      case 'gcp':
-        await this._refreshTenantGcp(operationId, tenant, tenantGroup, cloudProvisionConfig);
-        break;
-      default:
-        throw ApiError.unprocessableEntity('Unsupported cloudProvider', 'UNSUPPORTED_CLOUD_PROVIDER');
+    const provisioner = TenantProvisionerFactory.get(tenant.cloudProvider);
+
+    try {
+      await provisioner.refresh(operationId, tenant, tenantGroup, cloudProvisionConfig);
+    } catch (error) {
+      this._failTenantRefresh(tenant.id);
+      throw error;
     }
 
     const operation = await this._saveOperation(operationId, tenant.id, {

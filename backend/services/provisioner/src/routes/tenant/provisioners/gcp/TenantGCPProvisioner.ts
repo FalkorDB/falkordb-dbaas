@@ -1,29 +1,35 @@
 import { ApiError } from '@falkordb/errors';
-import { CloudProvisionGCPConfigSchemaType } from '../../../schemas/cloudProvision';
-import { SupportedRegionsSchemaType } from '../../../schemas/global';
-import { OperationProviderSchemaType } from '../../../schemas/operation';
-import { TenantGroupSchemaType } from '../../../schemas/tenantGroup';
-import { TenantGroupGCPProvisionerV1 } from './TenantGroupGCPProvisionerV1';
+import { CloudProvisionGCPConfigSchemaType } from '../../../../schemas/cloudProvision';
+import { OperationProviderSchemaType } from '../../../../schemas/operation';
+import { TenantSchemaType } from '../../../../schemas/tenant';
+import { TenantGroupSchemaType } from '../../../../schemas/tenantGroup';
+import { TenantProvisionBodySchemaType } from '../../schemas/provision';
+import { TenantProvisioner } from '../TenantProvisioner';
+import { TenantGCPProvisionerV1 } from './TenantGCPProvisionerV1';
 
-export class TenantGroupGCPProvisioner {
+export class TenantGCPProvisioner implements TenantProvisioner {
   static provisionerVersions = {
-    1: TenantGroupGCPProvisionerV1,
+    1: TenantGCPProvisionerV1,
   };
 
   provision(
     operationId: string,
-    tenantGroupId: string,
-    region: SupportedRegionsSchemaType,
+    tenantId: string,
+    tenantIdx: number,
+    tenantGroup: TenantGroupSchemaType,
+    params: TenantProvisionBodySchemaType,
     cloudProvisionConfig: CloudProvisionGCPConfigSchemaType,
   ): Promise<{
     operationProvider: OperationProviderSchemaType;
   }> {
     switch (cloudProvisionConfig.deploymentConfigVersion) {
       case 1:
-        return new TenantGroupGCPProvisioner.provisionerVersions[1]().provision(
+        return new TenantGCPProvisioner.provisionerVersions[1]().provision(
           operationId,
-          tenantGroupId,
-          region,
+          tenantId,
+          tenantIdx,
+          tenantGroup,
+          params,
           cloudProvisionConfig,
         );
       default:
@@ -36,18 +42,18 @@ export class TenantGroupGCPProvisioner {
 
   deprovision(
     operationId: string,
+    tenant: TenantSchemaType,
     tenantGroup: TenantGroupSchemaType,
-    region: SupportedRegionsSchemaType,
     cloudProvisionConfig: CloudProvisionGCPConfigSchemaType,
   ): Promise<{
     operationProvider: OperationProviderSchemaType;
   }> {
     switch (cloudProvisionConfig.deploymentConfigVersion) {
       case 1:
-        return new TenantGroupGCPProvisioner.provisionerVersions[1]().deprovision(
+        return new TenantGCPProvisioner.provisionerVersions[1]().deprovision(
           operationId,
+          tenant,
           tenantGroup,
-          region,
           cloudProvisionConfig,
         );
       default:
@@ -60,18 +66,18 @@ export class TenantGroupGCPProvisioner {
 
   refresh(
     operationId: string,
-    tenantGroupId: string,
-    region: SupportedRegionsSchemaType,
+    tenant: TenantSchemaType,
+    tenantGroup: TenantGroupSchemaType,
     cloudProvisionConfig: CloudProvisionGCPConfigSchemaType,
   ): Promise<{
     operationProvider: OperationProviderSchemaType;
   }> {
     switch (cloudProvisionConfig.deploymentConfigVersion) {
       case 1:
-        return new TenantGroupGCPProvisioner.provisionerVersions[1]().refresh(
+        return new TenantGCPProvisioner.provisionerVersions[1]().refresh(
           operationId,
-          tenantGroupId,
-          region,
+          tenant,
+          tenantGroup,
           cloudProvisionConfig,
         );
       default:

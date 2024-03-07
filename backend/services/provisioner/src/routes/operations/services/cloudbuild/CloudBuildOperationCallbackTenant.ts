@@ -339,35 +339,34 @@ export class CloudBuildOperationCallbackTenant {
     body: CloudBuildOperationsCallbackBodySchemaType,
     operation: OperationSchemaType,
   ): Promise<void> {
+    this._opts.logger.info('CloudBuildOperationCallback._handleTenantCallbackRefreshSuccess', body);
+    let buildOutput: { [key: string]: { value: string } } | null = null;
     try {
-      this._opts.logger.info('CloudBuildOperationCallback._handleTenantCallbackRefreshSuccess', body);
-
-      const buildOutput = await this._getOutput(body.data.id, operation);
-
-      const response = await Promise.allSettled([
-        this._operationsRepository.updateStatus(operation.id, 'completed', { buildId: body.data.id }),
-        this._tenantsRepository.runTransaction<TenantSchemaType>(operation.resourceId, async (tg) => {
-          const domain = !!buildOutput && 'falkordb_host' in buildOutput ? buildOutput.falkordb_host?.value : null;
-          const port =
-            !!buildOutput && 'falkordb_redis_port' in buildOutput ? buildOutput.falkordb_redis_port?.value : null;
-          tg.status = 'ready';
-          tg.domain = domain;
-          tg.port = port;
-          return tg;
-        }),
-      ]);
-
-      if (response.some((r) => r.status === 'rejected')) {
-        this._opts.logger.error(
-          'CloudBuildOperationCallback._handleTenantCallbackRefreshSuccess: Failed to update operation or tenant group',
-          body,
-          response,
-        );
-      }
-
-      return;
+      buildOutput = await this._getOutput(body.data.id, operation);
     } catch (error) {
       this._opts.logger.error('CloudBuildOperationCallback._handleTenantCallbackRefreshSuccess', error);
+      await this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.data.id });
+    }
+
+    const response = await Promise.allSettled([
+      this._operationsRepository.updateStatus(operation.id, 'completed', { buildId: body.data.id }),
+      this._tenantsRepository.runTransaction<TenantSchemaType>(operation.resourceId, async (tg) => {
+        const domain = !!buildOutput && 'falkordb_host' in buildOutput ? buildOutput.falkordb_host?.value : null;
+        const port =
+          !!buildOutput && 'falkordb_redis_port' in buildOutput ? buildOutput.falkordb_redis_port?.value : null;
+        tg.status = 'ready';
+        tg.domain = domain;
+        tg.port = port;
+        return tg;
+      }),
+    ]);
+
+    if (response.some((r) => r.status === 'rejected')) {
+      this._opts.logger.error(
+        'CloudBuildOperationCallback._handleTenantCallbackRefreshSuccess: Failed to update operation or tenant group',
+        body,
+        response,
+      );
       await this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.data.id });
     }
   }
@@ -377,27 +376,23 @@ export class CloudBuildOperationCallbackTenant {
     operation: OperationSchemaType,
   ): Promise<void> {
     this._opts.logger.info('CloudBuildOperationCallback._handleTenantCallbackRefreshFailure', body);
-    try {
-      const response = await Promise.allSettled([
-        this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.data.id }),
-        this._tenantsRepository.runTransaction<TenantSchemaType>(operation.resourceId, async (tg) => {
-          tg.status = 'ready';
-          return tg;
-        }),
-      ]);
+    const response = await Promise.allSettled([
+      this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.data.id }),
+      this._tenantsRepository.runTransaction<TenantSchemaType>(operation.resourceId, async (tg) => {
+        tg.status = 'ready';
+        return tg;
+      }),
+    ]);
 
-      if (response.some((r) => r.status === 'rejected')) {
-        this._opts.logger.error(
-          'CloudBuildOperationCallback._handleTenantCallbackRefreshSuccess: Failed to update operation or tenant group',
-          body,
-          response,
-        );
+    if (response.some((r) => r.status === 'rejected')) {
+      this._opts.logger.error(
+        'CloudBuildOperationCallback._handleTenantCallbackRefreshFailure: Failed to update operation or tenant group',
+        body,
+        response,
+      );
+      if (response[0].status !== 'fulfilled') {
+        await this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.data.id });
       }
-
-      return;
-    } catch (error) {
-      this._opts.logger.error('CloudBuildOperationCallback._handleTenantCallbackRefreshSuccess', error);
-      await this._operationsRepository.updateStatus(operation.id, 'failed', { buildId: body.data.id });
     }
   }
 }

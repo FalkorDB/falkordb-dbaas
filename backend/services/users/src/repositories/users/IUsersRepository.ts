@@ -3,19 +3,11 @@ import { UserCreateSchemaType, UserSchemaType, UserUpdateSchemaType } from '../.
 export abstract class IUsersRepository {
   static repositoryName = 'UsersRepository';
 
-  create(params: UserCreateSchemaType): Promise<UserSchemaType> {
-    throw new Error('Method not implemented.');
-  }
+  abstract create(params: UserCreateSchemaType): Promise<UserSchemaType> ;
 
-  get(id: string): Promise<UserSchemaType> {
-    throw new Error('Method not implemented.');
-  }
+  abstract get(id: string): Promise<UserSchemaType> ;
 
-  update(id: string, params: UserUpdateSchemaType): Promise<UserSchemaType> {
-    throw new Error('Method not implemented.');
-  }
+  abstract update(id: string, params: UserUpdateSchemaType): Promise<UserSchemaType> ;
 
-  delete(id: string): Promise<void> {
-    throw new Error('Method not implemented.');
-  }
+  abstract delete(id: string): Promise<void> ;
 }

@@ -2,12 +2,13 @@ import { ApiError } from '@falkordb/errors';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
 import { OperationProviderSchemaType } from '../../../schemas/operation';
-import { TenantGroupGCPProvisioner } from '../provisioners/TenantGroupGCPProvisioner';
+import { TenantGroupGCPProvisioner } from '../provisioners/gcp/TenantGroupGCPProvisioner';
 import { FastifyBaseLogger } from 'fastify';
 import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '../../../schemas/tenantGroup';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
 import { TenantGroupDeprovisionResponseSchemaType } from '../schemas/deprovision';
 import ShortUniqueId from 'short-unique-id';
+import { TenantGroupProvisionerFactory } from '../provisioners/TenantGroupProvisioner';
 
 export class TenantGroupDeprovisionService {
   private _operationsRepository: IOperationsRepository;
@@ -46,72 +47,31 @@ export class TenantGroupDeprovisionService {
       throw ApiError.badRequest('Tenant group has tenants', 'TENANT_GROUP_HAS_TENANTS');
     }
 
+    const cloudProvisionConfig = await this._cloudProvisionConfigsRepository.get(tenantGroup.cloudProvisionConfigId);
+
+    if (!cloudProvisionConfig) {
+      throw ApiError.notFound('Cloud provision config not found', 'CLOUD_PROVISION_CONFIG_NOT_FOUND');
+    }
+
     await this._updateTenantGroupStatus(tenantGroupId, 'deprovisioning');
 
     const operationId = `op-${new ShortUniqueId({
       dictionary: 'alphanum_lower',
     }).randomUUID(16)}`;
 
-    let operationParams: {
-      operationProvider: OperationProviderSchemaType;
-    };
-    switch (tenantGroup.cloudProvider) {
-      case 'gcp':
-        operationParams = await this._deprovisionTenantGroupGcp(operationId, tenantGroup);
-        break;
-      default:
-        throw ApiError.unprocessableEntity('Unsupported cloudProvider', 'UNSUPPORTED_CLOUD_PROVIDER');
-    }
-
-    const operation = await this._saveOperation(operationId, tenantGroupId, operationParams);
-
-    return operation;
-  }
-
-  private async _deprovisionTenantGroupGcp(
-    operationId: string,
-    tenantGroup: TenantGroupSchemaType,
-  ): Promise<{
-    operationProvider: OperationProviderSchemaType;
-  }> {
+    const provisioner = TenantGroupProvisionerFactory.get(tenantGroup.cloudProvider);
     try {
-      const cloudProvisionConfig = await this._cloudProvisionConfigsRepository
-        .query({
-          cloudProvider: 'gcp',
-          deploymentConfigVersion: tenantGroup.clusterDeploymentVersion,
-        })
-        .then((configs) => {
-          if (configs.length === 0) {
-            throw ApiError.notFound('Cloud provision config not found', 'CLOUD_PROVISION_CONFIG_NOT_FOUND');
-          }
-
-          // Sort by date desc
-          configs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-          return configs[0];
-        })
-        .catch((err) => {
-          this._opts.logger.error(err);
-          throw ApiError.internalServerError(
-            'Failed to query cloud provision config',
-            'FAILED_TO_QUERY_CLOUD_PROVISION_CONFIG',
-          );
-        });
-
-      const provisioner = new TenantGroupGCPProvisioner();
-
-      switch (tenantGroup.clusterDeploymentVersion) {
-        case 1:
-          return await provisioner.deprovision(operationId, tenantGroup, tenantGroup.region, cloudProvisionConfig);
-        default:
-          throw ApiError.unprocessableEntity(
-            'Unsupported clusterDeploymentVersion',
-            'UNSUPPORTED_CLUSTER_DEPLOYMENT_VERSION',
-          );
-      }
+      await provisioner.deprovision(operationId, tenantGroup, tenantGroup.region, cloudProvisionConfig);
     } catch (error) {
       await this._updateTenantGroupStatus(tenantGroup.id, 'deprovisioning-failed');
       throw error;
     }
+
+    const operation = await this._saveOperation(operationId, tenantGroupId, {
+      operationProvider: cloudProvisionConfig.cloudProviderConfig.operationProvider,
+    });
+
+    return operation;
   }
 
   private async _saveOperation(

@@ -3,26 +3,16 @@ import { CreateTenantSchemaType, TenantSchemaType, TenantStatusSchemaType } from
 export abstract class ITenantsRepository {
   static repositoryName = 'TenantsRepository';
 
-  create(id: string, params: CreateTenantSchemaType): Promise<TenantSchemaType> {
-    throw new Error('Not implemented');
-  }
+  abstract create(id: string, params: CreateTenantSchemaType): Promise<TenantSchemaType>;
 
-  delete(id: string): Promise<void> {
-    throw new Error('Not implemented');
-  }
+  abstract delete(id: string): Promise<void>;
 
-  get(id: string): Promise<TenantSchemaType> {
-    throw new Error('Not implemented');
-  }
+  abstract get(id: string): Promise<TenantSchemaType>;
 
-  runTransaction<TenantSchemaType>(
+  abstract runTransaction<TenantSchemaType>(
     id: string,
     fn: (tenant: TenantSchemaType) => Promise<TenantSchemaType>,
-  ): Promise<TenantSchemaType> {
-    throw new Error('Not implemented');
-  }
+  ): Promise<TenantSchemaType>;
 
-  query(params: { status?: TenantStatusSchemaType }): Promise<TenantSchemaType[]> {
-    throw new Error('Not implemented');
-  }
+  abstract query(params: { status?: TenantStatusSchemaType }): Promise<TenantSchemaType[]>;
 }
