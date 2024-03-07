@@ -6,9 +6,10 @@ import { CloudBuildClient } from '@google-cloud/cloudbuild';
 import { TenantGroupGCPProvisioner } from './TenantGroupGCPProvisioner';
 import { TenantGroupSchemaType } from '../../../../schemas/tenantGroup';
 
-const cloudbuild = new CloudBuildClient();
 
 export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
+  _cloudbuild = new CloudBuildClient();
+  
   private _getTags = (
     tenantGroupId: string,
     operationId: string,
@@ -170,7 +171,7 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
       ];
     };
 
-    await cloudbuild.createBuild({
+    await this._cloudbuild.createBuild({
       projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
       build: {
         options: {
@@ -253,7 +254,7 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
         },
       ];
     };
-    await cloudbuild.createBuild({
+    await this._cloudbuild.createBuild({
       projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
       build: {
         options: {
@@ -371,7 +372,7 @@ export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {
       ];
     };
 
-    await cloudbuild.createBuild({
+    await this._cloudbuild.createBuild({
       projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
       build: {
         options: {

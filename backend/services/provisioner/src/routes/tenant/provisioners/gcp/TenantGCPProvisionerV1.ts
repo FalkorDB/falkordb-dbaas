@@ -6,9 +6,9 @@ import { TenantGroupSchemaType } from '../../../../schemas/tenantGroup';
 import { TenantProvisionBodySchemaType } from '../../schemas/provision';
 import { TenantSchemaType } from '../../../../schemas/tenant';
 
-const cloudbuild = new CloudBuildClient();
-
 export class TenantGCPProvisionerV1 implements TenantGCPProvisioner {
+  private _cloudbuild = new CloudBuildClient();
+
   private _getTags = (
     tenantId: string,
     operationId: string,
@@ -79,7 +79,7 @@ export class TenantGCPProvisionerV1 implements TenantGCPProvisioner {
   }> {
     const tofuVars = this._getTenantVars(tenantId, tenantIdx, tenantGroup, params, cloudProvisionConfig).join(' ');
 
-    await cloudbuild.createBuild({
+    await this._cloudbuild.createBuild({
       projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
       build: {
         options: {
@@ -184,7 +184,7 @@ export class TenantGCPProvisionerV1 implements TenantGCPProvisioner {
       cloudProvisionConfig,
     ).join(' ');
 
-    await cloudbuild.createBuild({
+    await this._cloudbuild.createBuild({
       projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
       build: {
         options: {
@@ -257,7 +257,7 @@ export class TenantGCPProvisionerV1 implements TenantGCPProvisioner {
       cloudProvisionConfig,
     ).join(' ');
 
-    await cloudbuild.createBuild({
+    await this._cloudbuild.createBuild({
       projectId: cloudProvisionConfig.cloudProviderConfig.runnerProjectId,
       build: {
         options: {
