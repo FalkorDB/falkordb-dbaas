@@ -68,6 +68,12 @@ variable "control_plane_public_network_subnets" {
   )
 }
 
+variable "control_plane_cloud_build_push_endpoint" {
+  type     = string
+  nullable = true
+  default  = null
+}
+
 ###### WORKLOADS: CONTROL PLANE ######
 variable "create_pipelines_development" {
   type    = bool

@@ -1,0 +1,50 @@
+steps:
+  - id: Build image
+    name: 'gcr.io/cloud-builders/docker'
+    env:
+      - 'DOCKER_BUILDKIT=1'
+    args:
+      - 'build'
+      - '-t'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+
+  - id: Push to Artifact Registry
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+
+  - id: Deploy to Cloud Run
+    name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - 'europe-west1'
+      - '--set-env-vars'
+      - 'NODE_ENV=${_NODE_ENV}'
+      - '--set-secrets'
+      - 'MONGODB_URI=projects/${_PROJECT_NUMBER}/secrets/MONGODB_URI/versions/latest'
+      - '--service-account'
+      - 'backend-sa@${_PROJECT_ID}.iam.gserviceaccount.com'
+
+tags:
+  - backend
+  - service-provisioner
+  - env-${_NODE_ENV}
+
+substitutions:
+  _PROJECT_ID: 'ctrl-plane-dev-f7a2434f'
+  _PROJECT_NUMBER: '425012726186'
+  _REPOSITORY: 'backend'
+  _IMAGE_NAME: 'provisioner'
+  _SERVICE_NAME: 'provisioner'
+  _NODE_ENV: 'development'

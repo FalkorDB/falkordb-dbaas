@@ -54,6 +54,10 @@ variable "control_plane_public_network_subnets" {
   )
 }
 
+variable "control_plane_cloud_build_push_endpoint" {
+  type     = string
+  nullable = true
+}
 
 ###### PIPELINES DEVELOPMENT ######
 variable "create_pipelines_development" {

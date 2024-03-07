@@ -35,6 +35,8 @@ resource "helm_release" "velero" {
   chart      = "velero"
   skip_crds  = false
 
+  timeout = 600
+
   set {
     name  = "initContainers[0].name"
     value = "velero-plugin-for-gcp"

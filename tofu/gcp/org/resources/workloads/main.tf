@@ -24,6 +24,8 @@ module "control_plane" {
 
   public_network_name    = var.control_plane_public_network_name
   public_network_subnets = var.control_plane_public_network_subnets
+
+  cloud_build_push_endpoint = var.control_plane_cloud_build_push_endpoint
 }
 
 

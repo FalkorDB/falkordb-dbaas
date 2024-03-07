@@ -8,3 +8,8 @@ variable "project_id" {
 variable "state_bucket_name" {
   type = string
 }
+
+variable "cloud_build_push_endpoint" {
+  type     = string
+  nullable = true
+}

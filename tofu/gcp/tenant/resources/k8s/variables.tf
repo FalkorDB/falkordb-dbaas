@@ -71,18 +71,6 @@ variable "backup_schedule" {
   default = "0 0 * * *"
 }
 
-variable "multi_zone" {
-  type     = bool
-  nullable = true
-  default  = false
-}
-
-variable "pod_zone" {
-  type        = string
-  nullable    = true
-  description = "The zone in which the pods will be deployed. Ignored if multi_zone is true."
-}
-
 variable "cidr_blocks" {
   type    = list(string)
   default = []

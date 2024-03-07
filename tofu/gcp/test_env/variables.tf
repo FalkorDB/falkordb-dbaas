@@ -79,10 +79,6 @@ variable "backup_schedule" {
   type    = string
   default = "0 0 * * *"
 }
-variable "source_ip_ranges" {
-  type    = list(string)
-  default = []
-}
 
 variable "velero_role_id" {
   type    = string

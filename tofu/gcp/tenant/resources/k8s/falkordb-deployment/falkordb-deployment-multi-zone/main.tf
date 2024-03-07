@@ -27,7 +27,7 @@ resource "helm_release" "falkordb" {
   namespace = var.deployment_namespace
 
   # Necessary so there's enough time to finish installing
-  timeout = 900
+  timeout = 1200
 
   chart   = "oci://registry-1.docker.io/bitnamicharts/redis"
   version = "18.9.1"
