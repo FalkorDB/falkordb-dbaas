@@ -16,6 +16,7 @@ export default fp(
       '/',
       {
         schema: {
+          tags: ['cloud-provision-config'],
           body: CloudProvisionConfigCreateBodySchema,
           response: {
             200: CloudProvisionConfigCreateResponseSuccessSchema,
@@ -29,6 +30,7 @@ export default fp(
       '/',
       {
         schema: {
+          tags: ['cloud-provision-config'],
           querystring: CloudProvisionConfigListQuerySchema,
         },
       },
@@ -39,6 +41,7 @@ export default fp(
       '/:id',
       {
         schema: {
+          tags: ['cloud-provision-config'],
           params: CloudProvisionConfigDeleteParamsSchema,
         },
       },

@@ -1,6 +1,6 @@
 import { RouteHandlerMethod } from 'fastify';
 import { CloudProvisionConfigsMongoDB } from '../../../repositories/cloud-provision-configs/CloudProvisionConfigsMongoDB';
-import { ApiError } from '../../../errors/ApiError';
+import { ApiError } from '@falkordb/errors';
 import { CloudProvisionConfigDeleteBodySchemaType } from '../schemas/delete';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 import { CloudProvisionConfigListQuerySchemaType } from '../schemas/list';

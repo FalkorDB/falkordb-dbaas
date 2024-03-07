@@ -9,6 +9,7 @@ import MongoDB from '@fastify/mongodb';
 import fastifyRequestContextPlugin from '@fastify/request-context';
 import { fastifyAwilixPlugin } from '@fastify/awilix';
 import { setupContainer } from './container';
+import { swaggerPlugin, pubsubDecodePlugin } from '@falkordb/plugins';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   await fastify.register(Env, {
@@ -23,13 +24,29 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     origin: true,
   });
 
-  await fastify.register(AutoLoad, {
-    dir: join(__dirname, '.', 'plugins'),
-    dirNameRoutePrefix: false,
-    ignorePattern: /.*.no-load\.js/,
-    indexPattern: /^no$/i,
-    options: Object.assign({}, opts),
+  fastify.register(swaggerPlugin, {
+    swagger: {
+      tags: [
+        {
+          name: 'tenant-group',
+          description: 'Tenant group operations',
+        },
+        {
+          name: 'tenant',
+          description: 'Tenant operations',
+        },
+        {
+          name: 'operations',
+          description: 'Operations',
+        },
+        {
+          name: 'cloud-provision-config',
+          description: 'Cloud provision config operations',
+        },
+      ],
+    },
   });
+  fastify.register(pubsubDecodePlugin);
 
   await fastify.register(AutoLoad, {
     dir: join(__dirname, 'routes'),

@@ -1,0 +1,18 @@
+{
+  "name": "falkordb-backend",
+  "version": "",
+  "description": "",
+  "private": true,
+  "scripts": {
+    "start": "pnpm --filter './services/**' run start",
+    "test": "pnpm run test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "SSPL",
+  "resolutions": {
+    "@falkordb/plugins": "workspace:*",
+    "@falkordb/tools": "workspace:*",
+    "@falkordb/errors": "workspace:*"
+  }
+}

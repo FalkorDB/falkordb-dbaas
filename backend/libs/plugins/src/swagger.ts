@@ -1,6 +1,12 @@
-import fp from 'fastify-plugin'
-import SwaggerUI from '@fastify/swagger-ui'
-import Swagger, { type FastifyDynamicSwaggerOptions } from '@fastify/swagger'
+import fp from 'fastify-plugin';
+import SwaggerUI from '@fastify/swagger-ui';
+import Swagger, { type FastifyDynamicSwaggerOptions } from '@fastify/swagger';
+import {
+  type RawServerDefault,
+  type FastifyPluginAsync,
+  type FastifyTypeProviderDefault,
+  type FastifyBaseLogger,
+} from 'fastify';
 
 export default fp<FastifyDynamicSwaggerOptions>(async (fastify, opts) => {
   await fastify.register(Swagger, {
@@ -12,9 +18,10 @@ export default fp<FastifyDynamicSwaggerOptions>(async (fastify, opts) => {
       },
       servers: [
         {
-          url: `http://0.0.0.0:${fastify.config.PORT}`,
+          url: `http://0.0.0.0:${process.env.PORT}`,
         },
       ],
+      tags: opts.swagger.tags,
       components: {
         securitySchemes: {
           bearerAuth: {
@@ -25,11 +32,11 @@ export default fp<FastifyDynamicSwaggerOptions>(async (fastify, opts) => {
         },
       },
     },
-  })
+  });
 
-  if (fastify.config.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production') {
     await fastify.register(SwaggerUI, {
       routePrefix: '/docs',
-    })
+    });
   }
-})
+}) as FastifyPluginAsync<FastifyDynamicSwaggerOptions, RawServerDefault, FastifyTypeProviderDefault, FastifyBaseLogger>;

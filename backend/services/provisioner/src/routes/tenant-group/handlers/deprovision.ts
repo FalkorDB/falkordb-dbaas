@@ -1,5 +1,5 @@
 import { RouteHandlerMethod } from 'fastify';
-import { ApiError } from '../../../errors/ApiError';
+import { ApiError } from '@falkordb/errors';
 import { OperationsMongoDB } from '../../../repositories/operations/OperationsMongoDB';
 import { CloudProvisionConfigsMongoDB } from '../../../repositories/cloud-provision-configs/CloudProvisionConfigsMongoDB';
 import { TenantGroupsMongoDB } from '../../../repositories/tenant-groups/TenantGroupsMongoDB';

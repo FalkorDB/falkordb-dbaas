@@ -1,5 +1,5 @@
 import { RouteHandlerMethod } from 'fastify';
-import { ApiError } from '../../../errors/ApiError';
+import { ApiError } from '@falkordb/errors';
 import { TenantDeprovisionParamsSchemaType } from '../schemas/deprovision';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';

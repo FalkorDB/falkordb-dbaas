@@ -2,7 +2,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { IOperationsRepository } from './IOperationsRepository';
 
 import { MongoClient, ObjectId } from 'mongodb';
-import { ApiError } from '../../errors/ApiError';
+import { ApiError } from '@falkordb/errors';
 import {
   CreateOperationParamsSchemaType,
   OperationSchemaType,

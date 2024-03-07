@@ -1,4 +1,4 @@
-import { ApiError } from '../../../../errors/ApiError';
+import { ApiError } from '@falkordb/errors';
 import { CloudProvisionGCPConfigSchemaType } from '../../../../schemas/cloudProvision';
 import { SupportedRegionsSchemaType } from '../../../../schemas/global';
 import { OperationProviderSchemaType } from '../../../../schemas/operation';

@@ -1,0 +1,4 @@
+packages:
+  - "services/**"
+  - "libs/**"
+  - "tools/**"

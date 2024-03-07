@@ -5,7 +5,7 @@ import {
 } from '../../schemas/cloudProvision';
 import { ICloudProvisionConfigsRepository } from './ICloudProvisionConfigsRepository';
 import { MongoClient, ObjectId } from 'mongodb';
-import { ApiError } from '../../errors/ApiError';
+import { ApiError } from '@falkordb/errors';
 
 export class CloudProvisionConfigsMongoDB implements ICloudProvisionConfigsRepository {
   collection = this._client.db().collection(this._collectionName);
