@@ -1,10 +1,10 @@
-import { ApiError } from '../../../errors/ApiError';
-import { CloudProvisionGCPConfigSchemaType } from '../../../schemas/cloudProvision';
-import { SupportedRegionsSchemaType } from '../../../schemas/global';
-import { OperationProviderSchemaType } from '../../../schemas/operation';
+import { ApiError } from '../../../../errors/ApiError';
+import { CloudProvisionGCPConfigSchemaType } from '../../../../schemas/cloudProvision';
+import { SupportedRegionsSchemaType } from '../../../../schemas/global';
+import { OperationProviderSchemaType } from '../../../../schemas/operation';
 import { CloudBuildClient } from '@google-cloud/cloudbuild';
 import { TenantGroupGCPProvisioner } from './TenantGroupGCPProvisioner';
-import { TenantGroupSchemaType } from '../../../schemas/tenantGroup';
+import { TenantGroupSchemaType } from '../../../../schemas/tenantGroup';
 
 const cloudbuild = new CloudBuildClient();
 

@@ -16,7 +16,13 @@ export abstract class IOperationsRepository {
     throw new Error('Not implemented');
   }
 
-  updateStatus(id: string, status: OperationStatusSchemaType, payload?: object): Promise<OperationSchemaType> {
+  updateStatus(
+    id: string,
+    status: OperationStatusSchemaType,
+    payload?: {
+      buildId?: string;
+    },
+  ): Promise<OperationSchemaType> {
     throw new Error('Not implemented');
   }
 

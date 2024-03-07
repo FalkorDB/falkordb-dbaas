@@ -16,9 +16,9 @@ export class TenantsMongoDB implements ITenantsRepository {
 
   async create(id: string, params: CreateTenantSchemaType): Promise<TenantSchemaType> {
     try {
-      const existingTenant = await this.get(id).catch(() => null);
+      const existingTenants = await this.collection.countDocuments({ id });
 
-      if (existingTenant) {
+      if (existingTenants > 0) {
         throw ApiError.conflict('Tenant group already exists', 'TENANT_ALREADY_EXISTS');
       }
 

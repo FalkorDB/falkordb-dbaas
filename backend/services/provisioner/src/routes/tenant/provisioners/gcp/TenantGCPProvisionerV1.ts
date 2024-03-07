@@ -1,10 +1,10 @@
-import { CloudProvisionGCPConfigSchemaType } from '../../../schemas/cloudProvision';
-import { OperationProviderSchemaType } from '../../../schemas/operation';
+import { CloudProvisionGCPConfigSchemaType } from '../../../../schemas/cloudProvision';
+import { OperationProviderSchemaType } from '../../../../schemas/operation';
 import { CloudBuildClient } from '@google-cloud/cloudbuild';
 import { TenantGCPProvisioner } from './TenantGCPProvisioner';
-import { TenantGroupSchemaType } from '../../../schemas/tenantGroup';
-import { TenantProvisionBodySchemaType } from '../schemas/provision';
-import { TenantSchemaType } from '../../../schemas/tenant';
+import { TenantGroupSchemaType } from '../../../../schemas/tenantGroup';
+import { TenantProvisionBodySchemaType } from '../../schemas/provision';
+import { TenantSchemaType } from '../../../../schemas/tenant';
 
 const cloudbuild = new CloudBuildClient();
 
