@@ -8,44 +8,30 @@ import {
 export abstract class ITenantGroupRepository {
   static repositoryName = 'TenantGroupRepository';
 
-  create(params: TenantGroupCreateSchemaType): Promise<TenantGroupSchemaType> {
-    throw new Error('Not implemented');
-  }
+  abstract create(params: TenantGroupCreateSchemaType): Promise<TenantGroupSchemaType>;
 
-  delete(id: string): Promise<void> {
-    throw new Error('Not implemented');
-  }
+  abstract delete(id: string): Promise<void>;
 
-  get(id: string): Promise<TenantGroupSchemaType> {
-    throw new Error('Not implemented');
-  }
+  abstract get(id: string): Promise<TenantGroupSchemaType>;
 
-  runTransaction<TenantGroupSchemaType>(
+  abstract runTransaction<TenantGroupSchemaType>(
     id: string,
     fn: (tenantGroup: TenantGroupSchemaType) => Promise<TenantGroupSchemaType>,
-  ): Promise<TenantGroupSchemaType> {
-    throw new Error('Not implemented');
-  }
+  ): Promise<TenantGroupSchemaType>;
 
-  query(params: {
+  abstract query(params: {
     status?: TenantGroupStatusSchemaType[];
     cloudProvider?: SupportedCloudProviderSchemaType;
     region?: SupportedRegionsSchemaType;
-  }): Promise<TenantGroupSchemaType[]> {
-    throw new Error('Not implemented');
-  }
+  }): Promise<TenantGroupSchemaType[]>;
 
-  addTenantTransaction(
+  abstract addTenantTransaction(
     tenant: { id: string; name: string },
     cloudProvider: SupportedCloudProviderSchemaType,
     region: SupportedRegionsSchemaType,
-  ): Promise<TenantGroupSchemaType> {
-    throw new Error('Not implemented');
-  }
+  ): Promise<TenantGroupSchemaType>;
 
-  removeTenantTransaction(
+  abstract removeTenantTransaction(
     tenantId: string,
-  ): Promise<TenantGroupSchemaType> {
-    throw new Error('Not implemented');
-  }
+  ): Promise<TenantGroupSchemaType>;
 }

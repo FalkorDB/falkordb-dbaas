@@ -2,7 +2,7 @@ import { ApiError } from '@falkordb/errors';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
 import { OperationProviderSchemaType } from '../../../schemas/operation';
-import { TenantGroupGCPProvisioner } from '../provisioners/TenantGroupGCPProvisioner';
+import { TenantGroupGCPProvisioner } from '../provisioners/gcp/TenantGroupGCPProvisioner';
 import { TenantGroupProvisionBodySchemaType, TenantGroupProvisionResponseSchemaType } from '../schemas/provision';
 import ShortUniqueId from 'short-unique-id';
 import { FastifyBaseLogger, FastifyLogFn } from 'fastify';
@@ -12,6 +12,7 @@ import { SupportedCloudProviderSchemaType } from '../../../schemas/global';
 import { CloudProvisionConfigSchemaType } from '../../../schemas/cloudProvision';
 import { TenantGroupRefreshParamsSchemaType, TenantGroupRefreshResponseSchemaType } from '../schemas/refresh';
 import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
+import { TenantGroupProvisionerFactory } from '../provisioners/TenantGroupProvisioner';
 
 export class TenantGroupProvisionService {
   private _operationsRepository: IOperationsRepository;
@@ -52,12 +53,11 @@ export class TenantGroupProvisionService {
 
     await this._createTenantGroup(tenantGroupId, { ...params, cloudProvisionConfigId: cloudProvisionConfig.id });
 
-    switch (params.cloudProvider) {
-      case 'gcp':
-        await this._provisionTenantGroupGcp(operationId, tenantGroupId, cloudProvisionConfig, params);
-        break;
-      default:
-        throw ApiError.unprocessableEntity('Unsupported cloudProvider', 'UNSUPPORTED_CLOUD_PROVIDER');
+    const provisioner = TenantGroupProvisionerFactory.get(params.cloudProvider);
+    try {
+      await provisioner.provision(operationId, tenantGroupId, params.region, cloudProvisionConfig);
+    } catch (error) {
+      await this._failTenantGroupProvisioning(tenantGroupId);
     }
 
     const operation = await this._saveOperation(operationId, tenantGroupId, {
@@ -85,7 +85,7 @@ export class TenantGroupProvisionService {
       }
 
       // Sort by date desc
-      configs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      configs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       return configs[0];
     } catch (err) {
       this._opts.logger.error(err);
@@ -93,59 +93,6 @@ export class TenantGroupProvisionService {
         'Failed to query cloud provision config',
         'FAILED_TO_QUERY_CLOUD_PROVISION_CONFIG',
       );
-    }
-  }
-
-  private async _provisionTenantGroupGcp(
-    operationId: string,
-    tenantGroupId: string,
-    cloudProvisionConfig: CloudProvisionConfigSchemaType,
-    params: TenantGroupProvisionBodySchemaType,
-  ): Promise<void> {
-    try {
-      const provisioner = new TenantGroupGCPProvisioner();
-
-      switch (cloudProvisionConfig.deploymentConfigVersion) {
-        case 1:
-          await provisioner
-            .provision(operationId, tenantGroupId, params.region, cloudProvisionConfig)
-            .then((op) => op.operationProvider);
-          break;
-        default:
-          throw ApiError.unprocessableEntity(
-            'Unsupported clusterDeploymentVersion',
-            'UNSUPPORTED_CLUSTER_DEPLOYMENT_VERSION',
-          );
-      }
-    } catch (error) {
-      this._failTenantGroupProvisioning(tenantGroupId);
-      throw error;
-    }
-  }
-
-  private async _refreshTenantGroupGcp(
-    operationId: string,
-    tenantGroup: TenantGroupSchemaType,
-    cloudProvisionConfig: CloudProvisionConfigSchemaType,
-  ): Promise<void> {
-    try {
-      const provisioner = new TenantGroupGCPProvisioner();
-
-      switch (cloudProvisionConfig.deploymentConfigVersion) {
-        case 1:
-          await provisioner
-            .refresh(operationId, tenantGroup.id, tenantGroup.region, cloudProvisionConfig)
-            .then((op) => op.operationProvider);
-          break;
-        default:
-          throw ApiError.unprocessableEntity(
-            'Unsupported clusterDeploymentVersion',
-            'UNSUPPORTED_CLUSTER_DEPLOYMENT_VERSION',
-          );
-      }
-    } catch (error) {
-      this._failTenantGroupRefresh(tenantGroup.id);
-      throw error;
     }
   }
 
@@ -238,12 +185,12 @@ export class TenantGroupProvisionService {
 
     await this._updateTenantGroupStatus(tenantGroup.id, 'refreshing');
 
-    switch (tenantGroup.cloudProvider) {
-      case 'gcp':
-        await this._refreshTenantGroupGcp(operationId, tenantGroup, cloudProvisionConfig);
-        break;
-      default:
-        throw ApiError.unprocessableEntity('Unsupported cloudProvider', 'UNSUPPORTED_CLOUD_PROVIDER');
+    const provisioner = TenantGroupProvisionerFactory.get(tenantGroup.cloudProvider);
+
+    try {
+      await provisioner.refresh(operationId, tenantGroup.id, tenantGroup.region, cloudProvisionConfig);
+    } catch (error) {
+      await this._failTenantGroupRefresh(tenantGroup.id);
     }
 
     const operation = await this._saveOperation(operationId, tenantGroup.id, {

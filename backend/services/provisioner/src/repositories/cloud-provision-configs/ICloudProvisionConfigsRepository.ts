@@ -7,24 +7,16 @@ import { SupportedCloudProviderSchemaType } from '../../schemas/global';
 export abstract class ICloudProvisionConfigsRepository {
   static repositoryName = 'CloudProvisionConfigsRepository';
 
-  create(params: CreateCloudProvisionConfigParamsSchemaType): Promise<CloudProvisionConfigSchemaType> {
-    throw new Error('Not implemented');
-  }
+  abstract create(params: CreateCloudProvisionConfigParamsSchemaType): Promise<CloudProvisionConfigSchemaType>;
 
-  delete(id: string): Promise<void> {
-    throw new Error('Not implemented');
-  }
+  abstract delete(id: string): Promise<void>;
 
-  query(params: {
+  abstract query(params: {
     cloudProvider?: SupportedCloudProviderSchemaType;
     deploymentConfigVersion?: number;
     page?: number;
     pageSize?: number;
-  }): Promise<CloudProvisionConfigSchemaType[]> {
-    throw new Error('Not implemented');
-  }
+  });
 
-  get(id: string): Promise<CloudProvisionConfigSchemaType> {
-    throw new Error('Not implemented');
-  }
+  abstract get(id: string): Promise<CloudProvisionConfigSchemaType>;
 }

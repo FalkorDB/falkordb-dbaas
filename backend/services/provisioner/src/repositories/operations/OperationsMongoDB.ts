@@ -71,7 +71,13 @@ export class OperationsMongoDB implements IOperationsRepository {
     }
   }
 
-  async updateStatus(id: string, status: OperationStatusSchemaType, payload?: object): Promise<OperationSchemaType> {
+  async updateStatus(
+    id: string,
+    status: OperationStatusSchemaType,
+    payload?: {
+      buildId?: string;
+    },
+  ): Promise<OperationSchemaType> {
     try {
       const setObject = {
         status,
@@ -104,49 +110,44 @@ export class OperationsMongoDB implements IOperationsRepository {
   }
 
   async lastPublishTimeTransaction(id: string, lastPublishTime: string): Promise<OperationSchemaType> {
-    // eslint-disable-next-line no-async-promise-executor
-    return new Promise(async (resolve, reject) => {
-      const session = this._client.startSession();
+    const session = this._client.startSession();
 
-      try {
-        await session.withTransaction(async () => {
-          const operation = await this.collection.findOne({ id }, { session });
+    try {
+      return await session.withTransaction(async () => {
+        const operation = await this.collection.findOne({ id }, { session });
 
-          if (!operation) {
-            reject(ApiError.notFound('Operation not found', 'OPERATION_NOT_FOUND'));
-          }
+        if (!operation) {
+          throw ApiError.notFound('Operation not found', 'OPERATION_NOT_FOUND');
+        }
 
-          if (!operation.payload?.lastPublishTime || operation.payload?.lastPublishTime < lastPublishTime) {
-            const res = await this.collection
-              .findOneAndUpdate(
-                { id },
-                { $set: { 'payload.lastPublishTime': lastPublishTime } },
-                { returnDocument: 'after', session },
-              )
-              .then((doc) => ({
-                id: doc.id,
-                createdAt: doc.createdAt,
-                updatedAt: doc.updatedAt,
-                status: doc.status,
-                type: doc.type,
-                resourceType: doc.resourceType,
-                resourceId: doc.resourceId,
-                operationProvider: doc.operationProvider,
-                payload: doc.payload,
-              }));
-            resolve(res);
-          } else {
-            resolve(null);
-          }
-        });
-      } catch (error) {
-        this._opts.logger.error(error, 'Failed to update last publish time', id);
-        reject(
-          ApiError.internalServerError('Failed to update last publish time', 'FAILED_TO_UPDATE_LAST_PUBLISH_TIME'),
-        );
-      } finally {
-        session.endSession();
-      }
-    });
+        if (!operation.payload?.lastPublishTime || operation.payload?.lastPublishTime < lastPublishTime) {
+          const res = await this.collection
+            .findOneAndUpdate(
+              { id },
+              { $set: { 'payload.lastPublishTime': lastPublishTime } },
+              { returnDocument: 'after', session },
+            )
+            .then((doc) => ({
+              id: doc.id,
+              createdAt: doc.createdAt,
+              updatedAt: doc.updatedAt,
+              status: doc.status,
+              type: doc.type,
+              resourceType: doc.resourceType,
+              resourceId: doc.resourceId,
+              operationProvider: doc.operationProvider,
+              payload: doc.payload,
+            }));
+          return res;
+        } else {
+          return null;
+        }
+      });
+    } catch (error) {
+      this._opts.logger.error(error, 'Failed to update last publish time', id);
+      throw ApiError.internalServerError('Failed to update last publish time', 'FAILED_TO_UPDATE_LAST_PUBLISH_TIME');
+    } finally {
+      session.endSession();
+    }
   }
 }
