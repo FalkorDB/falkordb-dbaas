@@ -8,25 +8,17 @@ import {
 export abstract class IOperationsRepository {
   static repositoryName = 'OperationsRepository';
 
-  create(params: CreateOperationParamsSchemaType): Promise<OperationSchemaType> {
-    throw new Error('Not implemented');
-  }
+  abstract create(params: CreateOperationParamsSchemaType): Promise<OperationSchemaType>;
 
-  get(id: string): Promise<OperationSchemaType | null> {
-    throw new Error('Not implemented');
-  }
+  abstract get(id: string): Promise<OperationSchemaType | null>;
 
-  updateStatus(
+  abstract updateStatus(
     id: string,
     status: OperationStatusSchemaType,
     payload?: {
       buildId?: string;
     },
-  ): Promise<OperationSchemaType> {
-    throw new Error('Not implemented');
-  }
+  ): Promise<OperationSchemaType>;
 
-  async lastPublishTimeTransaction(id: string, lastPublishTime: string): Promise<OperationSchemaType> {
-    throw new Error('Not implemented');
-  }
+  abstract lastPublishTimeTransaction(id: string, lastPublishTime: string): Promise<OperationSchemaType>;
 }

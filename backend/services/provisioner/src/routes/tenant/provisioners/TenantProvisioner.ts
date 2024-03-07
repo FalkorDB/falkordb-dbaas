@@ -6,7 +6,7 @@ import { TenantProvisionBodySchemaType } from '../schemas/provision';
 import { TenantGCPProvisioner } from './gcp/TenantGCPProvisioner';
 
 export abstract class TenantProvisioner {
-  provision(
+  abstract provision(
     operationId: string,
     tenantId: string,
     tenantIdx: number,
@@ -15,31 +15,25 @@ export abstract class TenantProvisioner {
     cloudProvisionConfig: CloudProvisionConfigSchemaType,
   ): Promise<{
     operationProvider: OperationProviderSchemaType;
-  }> {
-    throw new Error('Method not implemented.');
-  }
+  }>;
 
-  deprovision(
+  abstract deprovision(
     operationId: string,
     tenant: TenantSchemaType,
     tenantGroup: TenantGroupSchemaType,
     cloudProvisionConfig: CloudProvisionConfigSchemaType,
   ): Promise<{
     operationProvider: OperationProviderSchemaType;
-  }> {
-    throw new Error('Method not implemented.');
-  }
+  }>;
 
-  refresh(
+  abstract refresh(
     operationId: string,
     tenant: TenantSchemaType,
     tenantGroup: TenantGroupSchemaType,
     cloudProvisionConfig: CloudProvisionConfigSchemaType,
   ): Promise<{
     operationProvider: OperationProviderSchemaType;
-  }> {
-    throw new Error('Method not implemented.');
-  }
+  }>;
 }
 
 export class TenantProvisionerFactory {
