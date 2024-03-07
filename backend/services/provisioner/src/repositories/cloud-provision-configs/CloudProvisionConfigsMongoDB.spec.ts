@@ -36,15 +36,76 @@ describe('CloudProvisionConfigsMongoDB', () => {
           stateBucket: 'state-bucket',
           timeout: 60,
         },
-        source: {
-          dir: 'dir',
-          revision: 'revision',
-          url: 'url',
-        },
         tenantGroupConfig: {
           clusterDeletionProtection: true,
           dnsDomain: 'dns-domain',
           forceDestroyBackupBucket: true,
+          clusterBackupSchedule: 'cluster-backup-schedule',
+          source: {
+            dir: 'dir',
+            revision: 'revision',
+            url: 'url',
+          },
+          veleroRoleId: 'velero-role-id',
+        },
+        tenantConfig: {
+          falkordbVersion: 'falkordb-version',
+          source: {
+            dir: 'dir',
+            revision: 'revision',
+            url: 'url',
+          },
+          tiers: {
+            m0: {
+              falkordbCpu: '0.5',
+              falkordbMemory: '1',
+              falkordbMinCpu: '0.5',
+              falkordbMinMemory: '1',
+              persistenceSize: '10Gi',
+            },
+            m1: {
+              falkordbCpu: '0.5',
+              falkordbMemory: '1',
+              falkordbMinCpu: '0.5',
+              falkordbMinMemory: '1',
+              persistenceSize: '10Gi',
+            },
+            m2: {
+              falkordbCpu: '0.5',
+              falkordbMemory: '1',
+              falkordbMinCpu: '0.5',
+              falkordbMinMemory: '1',
+              persistenceSize: '10Gi',
+            },
+            m4: {
+              falkordbCpu: '0.5',
+              falkordbMemory: '1',
+              falkordbMinCpu: '0.5',
+              falkordbMinMemory: '1',
+              persistenceSize: '10Gi',
+            },
+            m8: {
+              falkordbCpu: '0.5',
+              falkordbMemory: '1',
+              falkordbMinCpu: '0.5',
+              falkordbMinMemory: '1',
+              persistenceSize: '10Gi',
+            },
+            m16: {
+              falkordbCpu: '0.5',
+              falkordbMemory: '1',
+              falkordbMinCpu: '0.5',
+              falkordbMinMemory: '1',
+              persistenceSize: '10Gi',
+            },
+            m32: {
+              falkordbCpu: '0.5',
+              falkordbMemory: '1',
+              falkordbMinCpu: '0.5',
+              falkordbMinMemory: '1',
+              persistenceSize: '10Gi',
+            },
+          },
         },
       };
       const result = await repository.create(params);

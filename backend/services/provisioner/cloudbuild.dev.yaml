@@ -7,8 +7,10 @@ steps:
       - 'build'
       - '-t'
       - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - '--build-arg'
+      - 'SERVICE_PATH=services/${_SERVICE_NAME}'
       - '-f'
-      - 'Dockerfile'
+      - 'services/${_SERVICE_NAME}/Dockerfile'
       - '.'
 
   - id: Push to Artifact Registry
