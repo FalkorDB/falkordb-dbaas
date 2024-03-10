@@ -2,7 +2,7 @@
   "name": "@falkordb/plugins",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/index.cjs.js",
+  "main": "dist/index.js",
   "types": "src/index.ts",
   "scripts": {
     "build": "tsc"
@@ -11,7 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@falkordb/configs": "workspace:^",
-    "@falkordb/errors": "workspace:^"
+    "@falkordb/configs": "workspace:*",
+    "@falkordb/errors": "workspace:*"
   }
 }

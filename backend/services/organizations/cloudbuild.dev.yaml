@@ -8,7 +8,7 @@ steps:
       - '-t'
       - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
       - '--build-arg'
-      - 'PROJECT=services/${_SERVICE_NAME}'
+      - 'PROJECT=${_SERVICE_NAME}'
       - '-f'
       - 'Dockerfile'
       - '.'

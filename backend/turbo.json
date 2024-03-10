@@ -1,13 +1,26 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "pipeline": {
-    "test": {},
-    "build": {},
-    "start": {},
-    "serve": {
-      "dependsOn": ["^build"]
+    "test": {
+      "cache": false
     },
-    "docker": {}
+    "build": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "start": {
+      "cache": false
+    },
+    "serve": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
+    "docker": {
+      "cache": false
+    },
+    "deploy:dev": {
+      "cache": false
+    }
   },
   "globalDependencies": ["tsconfig.base.json"]
 }
