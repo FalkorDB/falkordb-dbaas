@@ -2,17 +2,13 @@
   "compilerOptions": {
     "target": "es2018",
     "module": "commonjs",
-    "outDir": "dist",
     "sourceMap": true,
     "types": ["node", "jest"],
     "skipLibCheck": true,
-    "paths": {
-      "@falkordb/plugins": ["./libs/plugins/src/index"],
-      "@falkordb/errors": ["./libs/errors/src/index"],
-    },
     "typeRoots": ["./src/types", "node_modules/@types"]
   },
+  "exclude": ["node_modules", "**/*.spec.ts"],
   "ts-node": {
     "files": true
-  },
+  }
 }

@@ -8,9 +8,9 @@ steps:
       - '-t'
       - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
       - '--build-arg'
-      - 'SERVICE_PATH=services/${_SERVICE_NAME}'
+      - 'PROJECT=services/${_SERVICE_NAME}'
       - '-f'
-      - 'services/${_SERVICE_NAME}/Dockerfile'
+      - 'Dockerfile'
       - '.'
 
   - id: Push to Artifact Registry
@@ -33,6 +33,8 @@ steps:
       - 'europe-west1'
       - '--set-env-vars'
       - 'NODE_ENV=${_NODE_ENV}'
+      - '--set-env-vars'
+      - 'MONGODB_DB=${_MONGODB_DB}'
       - '--set-secrets'
       - 'MONGODB_URI=projects/${_PROJECT_NUMBER}/secrets/MONGODB_URI/versions/latest'
       - '--service-account'
@@ -49,4 +51,5 @@ substitutions:
   _REPOSITORY: 'backend'
   _IMAGE_NAME: 'organizations'
   _SERVICE_NAME: 'organizations'
+  _MONGODB_DB: 'organizations'
   _NODE_ENV: 'development'

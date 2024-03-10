@@ -1,31 +1,35 @@
-import { MongoClient } from 'mongodb';
-import { CloudProvisionConfigsMongoDB } from './CloudProvisionConfigsMongoDB';
-import { FastifyBaseLogger } from 'fastify';
-import { CloudProvisionConfigSchema, CreateCloudProvisionConfigParamsSchemaType } from '../../schemas/cloudProvision';
+import Fastify, { FastifyInstance } from 'fastify';
+import App from '../app';
 import { Value } from '@sinclair/typebox/value';
+import {
+  CloudProvisionConfigCreateBodySchemaType,
+  CloudProvisionConfigCreateResponseSuccessSchema,
+} from '../routes/cloud-provision-config/schemas/create';
 
-let client: MongoClient;
-const logger = {
-  error: console.error,
-} as FastifyBaseLogger;
-let repository: CloudProvisionConfigsMongoDB;
-
+let fastify: FastifyInstance;
 beforeAll(async () => {
-  client = new MongoClient(process.env.MONGODB_URI ?? '');
-  await client.connect();
-  console.log('Connected to MongoDB:', client.db().databaseName);
-  repository = new CloudProvisionConfigsMongoDB({ logger }, client);
+  fastify = Fastify({
+    logger: true,
+  });
+
+  await fastify.register(App);
+
+  const PORT = parseInt(`${process.env.PORT}`, 10) || 3000;
+  await fastify.listen({
+    port: PORT,
+  });
 });
 
 afterAll(async () => {
-  await client.db().dropDatabase();
-  await client.close();
+  await fastify?.close();
 });
 
-describe('CloudProvisionConfigsMongoDB', () => {
-  describe('create', () => {
-    it('should create a new cloud provision config', async () => {
-      const params: CreateCloudProvisionConfigParamsSchemaType = {
+describe('create/delete', () => {
+  it('should create and delete a cloud provision config', async () => {
+    const response = await fastify.inject({
+      method: 'POST',
+      url: '/cloud-provision-config',
+      body: {
         deploymentConfigVersion: 1,
         cloudProvider: 'gcp',
         cloudProviderConfig: {
@@ -35,6 +39,7 @@ describe('CloudProvisionConfigsMongoDB', () => {
           runnerServiceAccount: 'runner-service-account-email',
           stateBucket: 'state-bucket',
           timeout: 60,
+          operationProvider: 'cloudbuild'
         },
         tenantGroupConfig: {
           clusterDeletionProtection: true,
@@ -107,23 +112,20 @@ describe('CloudProvisionConfigsMongoDB', () => {
             },
           },
         },
-      };
-      const result = await repository.create(params);
-      expect(Value.Check(CloudProvisionConfigSchema, result)).toBe(true);
-
-      // Add other assertions if needed
+      } as CloudProvisionConfigCreateBodySchemaType,
     });
-  });
 
-  describe('query', () => {
-    it('should return an array of cloud provision configs', async () => {
-      const params = {
-        cloudProvider: 'gcp',
-        deploymentConfigVersion: 1,
-      };
-      const result = await repository.query(params);
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThanOrEqual(1);
+    expect(response.statusCode).toBe(200);
+    expect(Value.Check(CloudProvisionConfigCreateResponseSuccessSchema, response.json())).toBe(true);
+
+    // Delete the created cloud provision config
+    const createdConfigId = response.json().id;
+
+    const deleteResponse = await fastify.inject({
+      method: 'DELETE',
+      url: `/cloud-provision-config/${createdConfigId}`,
     });
+
+    expect(deleteResponse.statusCode).toBe(200);
   });
 });

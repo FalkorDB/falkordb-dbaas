@@ -9,16 +9,24 @@
     "start": "nodemon",
     "jest": "jest",
     "test": "dotenv -e .env.test jest",
-    "build": "tsc",
-    "serve": "node dist/index.js",
-    "deploy:dev": "gcloud builds submit --config cloudbuild.dev.yaml --project ctrl-plane-dev-f7a2434f --async ../.."
+    "build": "tsc --noEmit && tsup",
+    "serve": "node ./dist/index.js",
+    "deploy:dev": "gcloud builds submit --config cloudbuild.dev.yaml --project ctrl-plane-dev-f7a2434f --async ../..",
+    "docker": "docker build -t falkordb/service-provisioner --build-arg PROJECT=provisioner ../.."
+  },
+  "tsup": {
+    "format": "cjs",
+    "entryPoints": [
+      "src/index.ts"
+    ]
   },
   "keywords": [],
   "author": "",
   "license": "SSPL",
   "dependencies": {
+    "@falkordb/configs": "workspace:^",
     "@falkordb/errors": "workspace:*",
-    "@falkordb/plugins": "workspace:^",
+    "@falkordb/plugins": "workspace:*",
     "@fastify/autoload": "^5.8.0",
     "@fastify/awilix": "^5.1.0",
     "@fastify/cors": "^9.0.1",
@@ -34,11 +42,12 @@
     "awilix": "^10.0.1",
     "dotenv": "^16.4.5",
     "fastify": "^4.26.1",
-    "fastify-boom": "^1.0.0",
     "fastify-plugin": "^4.5.1",
     "mongodb": "^6.3.0",
+    "rimraf": "^5.0.5",
     "short-unique-id": "^5.0.3",
     "tap": "^18.7.0",
+    "tsup": "^8.0.2",
     "unique-names-generator": "^4.7.1",
     "zod": "^3.22.4"
   },

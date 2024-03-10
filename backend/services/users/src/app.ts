@@ -62,6 +62,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   await fastify.register(MongoDB, {
     forceClose: true,
     url: fastify.config.MONGODB_URI,
+    database: fastify.config.MONGODB_DB,
   });
 
   fastify.register(fastifyAwilixPlugin, {

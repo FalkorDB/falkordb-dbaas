@@ -6,14 +6,10 @@
   "scripts": {
     "start": "pnpm --filter './services/**' run start",
     "test": "pnpm run test",
+    "serve": "pnpm --filter './services/**' run serve",
     "deploy:dev": "pnpm --filter './services/*' run deploy:dev"
   },
   "keywords": [],
   "author": "",
-  "license": "SSPL",
-  "resolutions": {
-    "@falkordb/plugins": "workspace:*",
-    "@falkordb/tools": "workspace:*",
-    "@falkordb/errors": "workspace:*"
-  }
+  "license": "SSPL"
 }
