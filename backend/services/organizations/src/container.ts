@@ -10,6 +10,8 @@ import { InvitationsRepositoryMongoDB } from './repositories/invitations/Invitat
 import { OrganizationsRepositoryMock } from './repositories/organizations/OrganizationsRepositoryMock';
 import { MembersRepositoryMock } from './repositories/members/MembersRepositoryMock';
 import { InvitationsRepositoryMock } from './repositories/invitations/InvitationsRepositoryMock';
+import { IMessagingRepository } from './repositories/messaging/IMessagingRepository';
+import { MessagingRepositoryMock } from './repositories/messaging/MessagingRepositoryMock';
 
 export const setupContainer = (req: FastifyRequest) => {
   if (process.env.NODE_ENV === 'test' && process.env.MOCK_CONTAINER === 'true') {
@@ -43,6 +45,11 @@ export const setupContainer = (req: FastifyRequest) => {
         req.server.mongo.client,
       );
     }),
+
+    [IMessagingRepository.repositoryName]: asFunction(() => {
+      // TODO: Implement messaging repository
+      return new MessagingRepositoryMock();
+    }),
   });
 };
 
@@ -59,6 +66,10 @@ const setupTestContainer = () => {
 
     [IInvitationsRepository.repositoryName]: asFunction(() => {
       return new InvitationsRepositoryMock();
+    }),
+
+    [IMessagingRepository.repositoryName]: asFunction(() => {
+      return new MessagingRepositoryMock();
     }),
   });
 };

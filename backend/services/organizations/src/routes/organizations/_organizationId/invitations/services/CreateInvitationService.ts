@@ -1,8 +1,10 @@
 import { FastifyBaseLogger } from 'fastify';
 import { IInvitationsRepository } from '../../../../../repositories/invitations/IInvitationsRepository';
-import { CreateInvitationType } from '../../../../../schemas/invitation';
+import { CreateInvitationType, InvitationType } from '../../../../../schemas/invitation';
 import { RoleType } from '../../../../../schemas/roles';
 import { ApiError } from '@falkordb/errors';
+import { IMessagingRepository } from '../../../../../repositories/messaging/IMessagingRepository';
+import { IOrganizationsRepository } from '../../../../../repositories/organizations/IOrganizationsRepository';
 
 export class CreateInvitationService {
   constructor(
@@ -10,6 +12,8 @@ export class CreateInvitationService {
       logger: FastifyBaseLogger;
     },
     private _invitationsRepository: IInvitationsRepository,
+    private _organizationsRepository: IOrganizationsRepository,
+    private _messagingRepository: IMessagingRepository,
   ) {}
 
   async createInvitation(params: { email: string; organizationId: string; role: RoleType; inviterId: string }) {
@@ -25,13 +29,34 @@ export class CreateInvitationService {
       // TODO: add inviterName
       inviterName: params.inviterId,
     };
+
+    let invitation: InvitationType | null = null;
     try {
-      const invitation = await this._invitationsRepository.create(invitationRequest);
-      // TODO: Send email
-      return invitation;
+      invitation = await this._invitationsRepository.create(invitationRequest);
     } catch (error) {
       this._opts.logger.error(error);
       throw ApiError.internalServerError('Failed to create invitation', 'FAILED_TO_CREATE_INVITATION');
+    }
+
+    if (invitation) {
+      await this._sendInvitationEmail(invitation);
+    }
+  }
+
+  private async _sendInvitationEmail(invitation: InvitationType) {
+    try {
+      const organization = await this._organizationsRepository.get(invitation.organizationId);
+
+      await this._messagingRepository.sendInvitationEmail({
+        email: invitation.email,
+        invitationId: invitation.id,
+        inviterName: invitation.inviterName,
+        organizationName: organization.name,
+        role: invitation.role,
+      });
+    } catch (error) {
+      this._opts.logger.error(error);
+      throw ApiError.internalServerError('Failed to send invitation email', 'FAILED_TO_SEND_INVITATION_EMAIL');
     }
   }
 

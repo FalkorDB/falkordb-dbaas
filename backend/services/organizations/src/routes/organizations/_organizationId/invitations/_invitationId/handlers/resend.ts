@@ -1,8 +1,10 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
-import { DeleteInvitationRequestParamsType, ResendInvitationRequestParamsType } from '../schemas/invitation';
+import { ResendInvitationRequestParamsType } from '../schemas/invitation';
 import { IInvitationsRepository } from '../../../../../../repositories/invitations/IInvitationsRepository';
 import { ResendInvitationService } from '../services/ResendInvitationService';
+import { IOrganizationsRepository } from '../../../../../../repositories/organizations/IOrganizationsRepository';
+import { IMessagingRepository } from '../../../../../../repositories/messaging/IMessagingRepository';
 
 export const resendInvitationHandler: RouteHandlerMethod<
   undefined,
@@ -15,8 +17,17 @@ export const resendInvitationHandler: RouteHandlerMethod<
   const opts = { logger: request.log };
 
   const invitationsRepository = request.diScope.resolve<IInvitationsRepository>(IInvitationsRepository.repositoryName);
+  const messagingRepository = request.diScope.resolve<IMessagingRepository>(IMessagingRepository.repositoryName);
+  const organizationsRepository = request.diScope.resolve<IOrganizationsRepository>(
+    IOrganizationsRepository.repositoryName,
+  );
 
-  const service = new ResendInvitationService(opts, invitationsRepository);
+  const service = new ResendInvitationService(
+    opts,
+    invitationsRepository,
+    organizationsRepository,
+    messagingRepository,
+  );
 
   try {
     return await service.resend(request.params.invitationId);
