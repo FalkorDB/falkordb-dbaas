@@ -26,6 +26,11 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   fastify.register(swaggerPlugin, {
     swagger: {
+      info: {
+        title: 'FalkorDB',
+        description: 'API Endpoints for FalkorDB Provisioner',
+        version: '0.1.0',
+      },
       tags: [
         {
           name: 'tenant-group',

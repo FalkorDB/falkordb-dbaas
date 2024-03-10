@@ -16,5 +16,5 @@ export abstract class IInvitationsRepository {
     organizationId?: string;
     page?: number;
     pageSize?: number;
-  }): Promise<InvitationType[]>;
+  }): Promise<{ data: InvitationType[]; count: number }>;
 }

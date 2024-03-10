@@ -115,11 +115,11 @@ export class InvitationsRepositoryMongoDB implements IInvitationsRepository {
   }
 
   async query(params: {
-    email?: string; 
-    organizationId?: string; 
+    email?: string;
+    organizationId?: string;
     page?: number;
     pageSize?: number;
-  }): Promise<InvitationType[]> {
+  }): Promise<{ data: InvitationType[]; count: number }> {
     try {
       const page = params.page || 1;
       const pageSize = params.pageSize || 10;
@@ -133,27 +133,33 @@ export class InvitationsRepositoryMongoDB implements IInvitationsRepository {
         query.role = params.email;
       }
 
-      const response = await this.collection
-        .find(query)
-        .skip((page > 0 ? page - 1 : 0) * pageSize)
-        .limit(pageSize)
-        .toArray();
+      const [response, count] = await Promise.all([
+        this.collection
+          .find(query)
+          .skip((page > 0 ? page - 1 : 0) * pageSize)
+          .limit(pageSize)
+          .toArray(),
+        this.collection.countDocuments(query),
+      ]);
 
-      return response.map((item) => {
-        return {
-          id: item._id.toHexString(),
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-          email: item.email,
-          userId: item.userId,
-          organizationId: item.organizationId,
-          role: item.role,
-          expireAt: item.expireAt,
-          status: item.status,
-          inviterId: item.inviterId,
-          inviterName: item.inviterName,
-        };
-      });
+      return {
+        count,
+        data: response.map((item) => {
+          return {
+            id: item._id.toHexString(),
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+            email: item.email,
+            userId: item.userId,
+            organizationId: item.organizationId,
+            role: item.role,
+            expireAt: item.expireAt,
+            status: item.status,
+            inviterId: item.inviterId,
+            inviterName: item.inviterName,
+          };
+        }),
+      };
     } catch (error) {
       this._opts.logger.error(error);
       throw ApiError.internalServerError('Failed to query invitations', 'FAILED_TO_QUERY_INVITATIONS');

@@ -45,4 +45,11 @@ export class OrganizationsRepositoryMock implements IOrganizationsRepository {
     this._store.splice(index, 1);
     return Promise.resolve();
   }
+
+  list(params: { page: number; pageSize: number }): Promise<{ count: number; data: OrganizationType[] }> {
+    const start = (params.page - 1) * params.pageSize;
+    const end = start + params.pageSize;
+    const data = this._store.slice(start, end);
+    return Promise.resolve({ count: this._store.length, data });
+  }
 }

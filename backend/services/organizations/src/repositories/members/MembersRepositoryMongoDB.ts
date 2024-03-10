@@ -110,7 +110,7 @@ export class MembersRepositoryMongoDB implements IMembersRepository {
     role?: RoleType;
     page?: number;
     pageSize?: number;
-  }): Promise<MemberType[]> {
+  }): Promise<{ data: MemberType[]; count: number }> {
     try {
       const page = params.page || 1;
       const pageSize = params.pageSize || 10;
@@ -124,25 +124,40 @@ export class MembersRepositoryMongoDB implements IMembersRepository {
         query.role = params.role;
       }
 
-      const response = await this.collection
-        .find(query)
-        .skip((page > 0 ? page - 1 : 0) * pageSize)
-        .limit(pageSize)
-        .toArray();
+      const [response, count] = await Promise.all([
+        this.collection
+          .find(query)
+          .skip((page > 0 ? page - 1 : 0) * pageSize)
+          .limit(pageSize)
+          .toArray(),
+        this.collection.countDocuments(query),
+      ]);
 
-      return response.map((item) => {
-        return {
-          id: item._id.toHexString(),
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-          organizationId: item.organizationId,
-          userId: item.userId,
-          role: item.role,
-        };
-      });
+      return {
+        count,
+        data: response.map((item) => {
+          return {
+            id: item._id.toHexString(),
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+            organizationId: item.organizationId,
+            userId: item.userId,
+            role: item.role,
+          };
+        }),
+      };
     } catch (error) {
       this._opts.logger.error(error);
       throw ApiError.internalServerError('Failed to query members', 'FAILED_TO_QUERY_MEMBERS');
+    }
+  }
+
+  async deleteQuery(params: { organizationId?: string }): Promise<void> {
+    try {
+      await this.collection.deleteMany({ organizationId: params.organizationId });
+    } catch (error) {
+      this._opts.logger.error(error);
+      throw ApiError.internalServerError('Failed to delete members', 'FAILED_TO_DELETE_MEMBERS');
     }
   }
 }

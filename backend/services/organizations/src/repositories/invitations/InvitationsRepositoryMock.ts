@@ -46,7 +46,11 @@ export class InvitationsRepositoryMock implements IInvitationsRepository {
     return Promise.resolve();
   }
 
-  query(params: { email?: string; page?: number; pageSize?: number }): Promise<InvitationType[]> {
+  query(params: {
+    email?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ data: InvitationType[]; count: number }> {
     const results = this._store.filter((m) => {
       if (params.email && m.email !== params.email) {
         return false;
@@ -58,6 +62,7 @@ export class InvitationsRepositoryMock implements IInvitationsRepository {
     const page = params.page || 1;
     const pageSize = params.pageSize || 10;
 
-    return Promise.resolve(results.slice((page - 1) * pageSize, page * pageSize));
+    const data = results.slice((page - 1) * pageSize, page * pageSize);
+    return Promise.resolve({ data, count: results.length });
   }
 }

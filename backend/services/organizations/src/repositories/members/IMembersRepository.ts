@@ -17,5 +17,7 @@ export abstract class IMembersRepository {
     role?: RoleType;
     page?: number;
     pageSize?: number;
-  }): Promise<MemberType[]>;
+  }): Promise<{ data: MemberType[]; count: number }>;
+
+  abstract deleteQuery(params: { organizationId?: string }): Promise<void>;
 }

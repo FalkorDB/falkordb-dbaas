@@ -47,7 +47,12 @@ export class MembersRepositoryMock implements IMembersRepository {
     return Promise.resolve();
   }
 
-  query(params: { organizationId?: string; role?: RoleType; page?: number; pageSize?: number }): Promise<MemberType[]> {
+  query(params: {
+    organizationId?: string;
+    role?: RoleType;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ data: MemberType[]; count: number }> {
     const results = this._store.filter((m) => {
       if (params.organizationId && m.organizationId !== params.organizationId) {
         return false;
@@ -63,6 +68,13 @@ export class MembersRepositoryMock implements IMembersRepository {
     const page = params.page || 1;
     const pageSize = params.pageSize || 10;
 
-    return Promise.resolve(results.slice((page - 1) * pageSize, page * pageSize));
+    const data = results.slice((page - 1) * pageSize, page * pageSize);
+
+    return Promise.resolve({ data, count: results.length });
+  }
+
+  deleteQuery(params: { organizationId?: string }): Promise<void> {
+    this._store = this._store.filter((m) => m.organizationId !== params.organizationId);
+    return Promise.resolve();
   }
 }

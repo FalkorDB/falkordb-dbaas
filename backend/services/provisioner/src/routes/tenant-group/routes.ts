@@ -1,7 +1,6 @@
 import fp from 'fastify-plugin';
 import {
   TenantGroupProvisionBodySchema,
-  TenantGroupProvisionResponseSchema,
   type TenantGroupProvisionBodySchemaType,
 } from './schemas/provision';
 import { tenantGroupProvisionHandler } from './handlers/provision';

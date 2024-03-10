@@ -101,4 +101,29 @@ export class OrganizationsRepositoryMongoDB implements IOrganizationsRepository 
       throw ApiError.internalServerError('Failed to update organization', 'FAILED_TO_UPDATE_ORGANIZATION');
     }
   }
+
+  async list(params: { page: number; pageSize: number }): Promise<{ count: number; data: OrganizationType[] }> {
+    try {
+      const count = await this.collection.countDocuments();
+      const data = await this.collection
+        .find()
+        .skip((params.page - 1) * params.pageSize)
+        .limit(params.pageSize)
+        .toArray();
+
+      return {
+        count,
+        data: data.map((o) => ({
+          id: o._id.toHexString(),
+          createdAt: o.createdAt,
+          updatedAt: o.updatedAt,
+          name: o.name,
+          creatorUserId: o.creatorUserId,
+        })),
+      };
+    } catch (error) {
+      this._opts.logger.error(error);
+      throw ApiError.internalServerError('Failed to list organizations', 'FAILED_TO_LIST_ORGANIZATIONS');
+    }
+  }
 }
