@@ -15,7 +15,7 @@ export const getOrganizationHandler: RouteHandlerMethod<
   const repository = request.diScope.resolve<IOrganizationsRepository>(IOrganizationsRepository.repositoryName);
 
   try {
-    return await repository.get(request.params.id);
+    return await repository.get(request.params.organizationId);
   } catch (error) {
     if (error instanceof ApiError) {
       throw error.toFastify(request.server);

@@ -20,7 +20,7 @@ export const updateOrganizationHandler: RouteHandlerMethod<
   const repository = request.diScope.resolve<IOrganizationsRepository>(IOrganizationsRepository.repositoryName);
 
   try {
-    return await repository.update(request.params.id, request.body);
+    return await repository.update(request.params.organizationId, request.body);
   } catch (error) {
     if (error instanceof ApiError) {
       throw error.toFastify(request.server);

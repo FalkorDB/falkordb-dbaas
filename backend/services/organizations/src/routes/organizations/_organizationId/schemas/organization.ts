@@ -3,7 +3,7 @@ import { OrganizationSchema } from '../../../../schemas/organization';
 
 /****** Get organization *****/
 export const GetOrganizationRequestParamsSchema = Type.Object({
-  id: Type.String(),
+  organizationId: Type.String(),
 });
 
 export type GetOrganizationRequestParamsType = Static<typeof GetOrganizationRequestParamsSchema>;
@@ -15,7 +15,7 @@ export type GetOrganizationResponseSchemaType = Static<typeof GetOrganizationRes
 /****** Update organization *****/
 
 export const UpdateOrganizationRequestParamsSchema = Type.Object({
-  id: Type.String(),
+  organizationId: Type.String(),
 });
 
 export type UpdateOrganizationRequestParamsType = Static<typeof UpdateOrganizationRequestParamsSchema>;
@@ -33,7 +33,7 @@ export type UpdateOrganizationResponseSchemaType = Static<typeof UpdateOrganizat
 /****** Delete organization *****/
 
 export const DeleteOrganizationRequestParamsSchema = Type.Object({
-  id: Type.String(),
+  organizationId: Type.String(),
 });
 
 export type DeleteOrganizationRequestParamsType = Static<typeof DeleteOrganizationRequestParamsSchema>;

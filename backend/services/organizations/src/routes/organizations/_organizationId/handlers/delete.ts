@@ -24,7 +24,7 @@ export const deleteOrganizationHandler: RouteHandlerMethod<
   const service = new DeleteOrganizationService(_opts, organizationsRepository, membersRepository);
 
   try {
-    return await service.execute(request.params.id);
+    return await service.execute(request.params.organizationId);
   } catch (error) {
     if (error instanceof ApiError) {
       throw error.toFastify(request.server);
