@@ -8,6 +8,27 @@ importers:
 
   .: {}
 
+  libs/client:
+    dependencies:
+      '@falkordb/configs':
+        specifier: workspace:*
+        version: link:../configs
+      '@falkordb/errors':
+        specifier: workspace:*
+        version: link:../errors
+      '@falkordb/schemas':
+        specifier: workspace:^
+        version: link:../schemas
+      axios:
+        specifier: ^1.6.7
+        version: 1.6.7
+      fastify-axios:
+        specifier: ^1.2.8
+        version: 1.2.8
+      fastify-plugin:
+        specifier: ^4.5.1
+        version: 4.5.1
+
   libs/configs:
     devDependencies:
       '@types/jest':
@@ -34,6 +55,15 @@ importers:
         version: 8.0.2(ts-node@10.9.2)(typescript@5.3.3)
 
   libs/plugins:
+    dependencies:
+      '@falkordb/configs':
+        specifier: workspace:*
+        version: link:../configs
+      '@falkordb/errors':
+        specifier: workspace:*
+        version: link:../errors
+
+  libs/schemas:
     dependencies:
       '@falkordb/configs':
         specifier: workspace:*
@@ -3764,6 +3794,15 @@ packages:
     hasBin: true
     dependencies:
       strnum: 1.0.5
+    dev: false
+
+  /fastify-axios@1.2.8:
+    resolution: {integrity: sha512-9/y36e5ZdoGz/YEWfKultjma9az5Xt5iwN+ESfNvfDlq7nUvf9F4UU+MCkF9BZhCbcgUl/9yKJNS5dWRvAG2Ag==}
+    dependencies:
+      axios: 1.6.7
+      fastify-plugin: 4.5.1
+    transitivePeerDependencies:
+      - debug
     dev: false
 
   /fastify-plugin@4.5.1:

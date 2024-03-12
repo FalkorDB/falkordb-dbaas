@@ -3,11 +3,16 @@ import {
   TenantProvisionBodySchema,
   TenantProvisionHeadersSchema,
   type TenantProvisionBodySchemaType,
+  TenantProvisionResponseSchema,
 } from './schemas/provision';
 import { tenantProvisionHandler } from './handlers/provision';
-import { TenantRefreshParamsSchema, TenantRefreshParamsSchemaType } from './schemas/refresh';
+import {
+  TenantRefreshParamsSchema,
+  TenantRefreshParamsSchemaType,
+  TenantRefreshResponseSchema,
+} from './schemas/refresh';
 import { tenantRefreshHandler } from './handlers/refresh';
-import { TenantDeprovisionParamsSchema } from './schemas/deprovision';
+import { TenantDeprovisionParamsSchema, TenantDeprovisionResponseSchema } from './schemas/deprovision';
 import { tenantDeprovisionHandler } from './handlers/deprovision';
 
 export default fp(
@@ -19,6 +24,9 @@ export default fp(
           tags: ['tenant'],
           headers: TenantProvisionHeadersSchema,
           body: TenantProvisionBodySchema,
+          response: {
+            200: TenantProvisionResponseSchema,
+          },
         },
       },
       tenantProvisionHandler,
@@ -30,6 +38,9 @@ export default fp(
         schema: {
           tags: ['tenant'],
           params: TenantRefreshParamsSchema,
+          response: {
+            200: TenantRefreshResponseSchema,
+          },
         },
       },
       tenantRefreshHandler,
@@ -41,6 +52,9 @@ export default fp(
         schema: {
           tags: ['tenant'],
           params: TenantDeprovisionParamsSchema,
+          response: {
+            200: TenantDeprovisionResponseSchema,
+          },
         },
       },
       tenantDeprovisionHandler,
