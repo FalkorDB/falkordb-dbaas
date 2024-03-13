@@ -1,10 +1,9 @@
 import { FastifyBaseLogger } from 'fastify';
 import { IOrganizationsRepository } from '../../../repositories/organizations/IOrganizationsRepository';
-import { CreateOrganizationRequestBodyType } from '../schemas/organizations';
-import { OrganizationType } from '../../../schemas/organization';
 import { ApiError } from '@falkordb/errors';
-import { RoleType } from '../../../schemas/roles';
 import { IMembersRepository } from '../../../repositories/members/IMembersRepository';
+import { CreateOrganizationRequestBodyType } from '@falkordb/schemas/src/services/organizations/v1';
+import { OrganizationType, RoleType } from '@falkordb/schemas/src/global';
 
 export class CreateOrganizationService {
   constructor(

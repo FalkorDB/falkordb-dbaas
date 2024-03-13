@@ -4,7 +4,7 @@ import {
   UpdateMemberRequestBodyType,
   UpdateMemberRequestParamsType,
   UpdateMemberResponseSchemaType,
-} from '../schemas/member';
+} from '@falkordb/schemas/src/services/organizations/v1';
 import { IMembersRepository } from '../../../../../../repositories/members/IMembersRepository';
 
 export const updateMemberHandler: RouteHandlerMethod<

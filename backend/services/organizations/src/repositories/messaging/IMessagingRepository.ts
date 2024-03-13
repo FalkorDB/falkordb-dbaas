@@ -1,4 +1,4 @@
-import { RoleType } from '../../schemas/roles';
+import { RoleType } from '@falkordb/schemas/src/global';
 
 export type ISendInvitationEmailParams = {
   email: string;

@@ -1,4 +1,4 @@
-import { CreateOrganizationType, OrganizationType, UpdateOrganizationType } from '../../schemas/organization';
+import { CreateOrganizationType, OrganizationType, UpdateOrganizationType } from '@falkordb/schemas/src/global';
 import { IOrganizationsRepository } from './IOrganizationsRepository';
 import { ApiError } from '@falkordb/errors';
 

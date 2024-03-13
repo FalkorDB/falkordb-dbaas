@@ -1,5 +1,5 @@
 import { RouteHandlerMethod } from 'fastify';
-import { GetOrganizationRequestParamsType, GetOrganizationResponseSchemaType } from '../schemas/organization';
+import { GetOrganizationRequestParamsType, GetOrganizationResponseSchemaType } from '@falkordb/schemas/src/services/organizations/v1';
 import { IOrganizationsRepository } from '../../../../repositories/organizations/IOrganizationsRepository';
 import { ApiError } from '@falkordb/errors';
 

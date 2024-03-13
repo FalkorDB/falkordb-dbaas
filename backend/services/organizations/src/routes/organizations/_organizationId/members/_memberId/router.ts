@@ -6,7 +6,7 @@ import {
   UpdateMemberRequestBodySchema,
   UpdateMemberRequestParamsSchema,
   UpdateMemberResponseSchema,
-} from './schemas/member';
+} from '@falkordb/schemas/src/services/organizations/v1';
 
 export default fp(
   async function provision(fastify, opts) {

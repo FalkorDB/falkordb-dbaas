@@ -1,4 +1,4 @@
-import { CreateInvitationType, InvitationType, UpdateInvitationType } from '../../schemas/invitation';
+import { CreateInvitationType, InvitationType, UpdateInvitationType } from '@falkordb/schemas/src/global';
 import { IInvitationsRepository } from './IInvitationsRepository';
 import { ApiError } from '@falkordb/errors';
 

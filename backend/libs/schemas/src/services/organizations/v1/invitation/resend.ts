@@ -1,12 +1,5 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { InvitationSchema } from '../../../../../../schemas/invitation';
-
-export const DeleteInvitationRequestParamsSchema = Type.Object({
-  organizationId: Type.String(),
-  invitationId: Type.String(),
-});
-
-export type DeleteInvitationRequestParamsType = Static<typeof DeleteInvitationRequestParamsSchema>;
+import { InvitationSchema } from '../../../../global/invitation';
 
 export const ResendInvitationRequestParamsSchema = Type.Object({
   organizationId: Type.String(),

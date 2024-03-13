@@ -7,7 +7,7 @@ import {
   ListInvitationsRequestParamsSchema,
   ListInvitationsRequestQuerySchema,
   ListInvitationsResponseSchema,
-} from './schemas/invitations';
+} from '@falkordb/schemas/src/services/organizations/v1';
 import { getInvitationsHandler } from './handlers/get';
 import { createInvitationHandler } from './handlers/create';
 

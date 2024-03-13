@@ -4,7 +4,7 @@ import {
   CreateInvitationRequestHeadersType,
   CreateInvitationRequestParamsType,
   CreateInvitationResponseSchemaType,
-} from '../schemas/invitations';
+} from '@falkordb/schemas/src/services/organizations/v1';
 import { IInvitationsRepository } from '../../../../../repositories/invitations/IInvitationsRepository';
 import { ApiError } from '@falkordb/errors';
 import { CreateInvitationService } from '../services/CreateInvitationService';

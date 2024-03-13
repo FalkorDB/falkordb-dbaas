@@ -1,6 +1,6 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
-import { DeleteInvitationRequestParamsType } from '../schemas/invitation';
+import { DeleteInvitationRequestParamsType } from '@falkordb/schemas/src/services/organizations/v1';
 import { IInvitationsRepository } from '../../../../../../repositories/invitations/IInvitationsRepository';
 
 export const deleteInvitationHandler: RouteHandlerMethod<

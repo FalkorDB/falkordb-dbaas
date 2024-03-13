@@ -4,7 +4,7 @@ import {
   ListMembersRequestParamsSchema,
   ListMembersRequestQuerySchema,
   ListMembersResponseSchema,
-} from './schemas/members';
+} from '@falkordb/schemas/src/services/organizations/v1';
 
 export default fp(
   async function provision(fastify, opts) {

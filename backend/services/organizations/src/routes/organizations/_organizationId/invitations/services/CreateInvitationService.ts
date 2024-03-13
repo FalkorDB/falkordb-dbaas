@@ -1,10 +1,9 @@
 import { FastifyBaseLogger } from 'fastify';
 import { IInvitationsRepository } from '../../../../../repositories/invitations/IInvitationsRepository';
-import { CreateInvitationType, InvitationType } from '../../../../../schemas/invitation';
-import { RoleType } from '../../../../../schemas/roles';
 import { ApiError } from '@falkordb/errors';
 import { IMessagingRepository } from '../../../../../repositories/messaging/IMessagingRepository';
 import { IOrganizationsRepository } from '../../../../../repositories/organizations/IOrganizationsRepository';
+import { CreateInvitationType, InvitationType, RoleType } from '@falkordb/schemas/src/global';
 
 export class CreateInvitationService {
   constructor(

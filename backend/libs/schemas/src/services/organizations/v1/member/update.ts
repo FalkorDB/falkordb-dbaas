@@ -1,6 +1,6 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { MemberSchema } from '../../../../../../schemas/members';
-import { RoleSchema } from '../../../../../../schemas/roles';
+import { MemberSchema } from '../../../../global/members';
+import { RoleSchema } from '../../../../global/roles';
 
 /****** Update member *******/
 
@@ -20,12 +20,3 @@ export type UpdateMemberRequestBodyType = Static<typeof UpdateMemberRequestBodyS
 export const UpdateMemberResponseSchema = MemberSchema;
 
 export type UpdateMemberResponseSchemaType = Static<typeof UpdateMemberResponseSchema>;
-
-/****** Delete member *******/
-
-export const DeleteMemberRequestParamsSchema = Type.Object({
-  organizationId: Type.String(),
-  memberId: Type.String(),
-});
-
-export type DeleteMemberRequestParamsType = Static<typeof DeleteMemberRequestParamsSchema>;

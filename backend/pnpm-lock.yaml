@@ -83,6 +83,9 @@ importers:
       '@falkordb/plugins':
         specifier: workspace:*
         version: link:../../libs/plugins
+      '@falkordb/schemas':
+        specifier: workspace:^
+        version: link:../../libs/schemas
       '@fastify/autoload':
         specifier: ^5.8.0
         version: 5.8.0

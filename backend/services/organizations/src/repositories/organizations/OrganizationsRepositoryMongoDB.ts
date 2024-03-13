@@ -2,7 +2,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { MongoClient, ObjectId } from 'mongodb';
 import { ApiError } from '@falkordb/errors';
 import { IOrganizationsRepository } from './IOrganizationsRepository';
-import { CreateOrganizationType, OrganizationType, UpdateOrganizationType } from '../../schemas/organization';
+import { CreateOrganizationType, OrganizationType, UpdateOrganizationType } from '@falkordb/schemas/src/global';
 
 export class OrganizationsRepositoryMongoDB implements IOrganizationsRepository {
   collection = this._client.db().collection('organizations');
