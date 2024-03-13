@@ -5,7 +5,7 @@ import {
   CreateUserRequestBodySchemaType,
   CreateUserRequestParamsSchemaType,
   CreateUserResponseBodySchemaType,
-} from '../schemas/user';
+} from '@falkordb/schemas/src/services/users/v1';
 
 export const createUserHandler: RouteHandlerMethod<
   undefined,

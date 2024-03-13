@@ -1,5 +1,5 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { UserMembershipItem } from '../../../../schemas/membership';
+import { UserMembershipItem } from '../../../../global';
 
 /********* Get memberships *********/
 export const GetMembershipsRequestParamsSchema = Type.Object({

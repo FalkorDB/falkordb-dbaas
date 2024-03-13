@@ -1,7 +1,7 @@
 import { RouteHandlerMethod } from 'fastify';
 import { IUsersRepository } from '../../../repositories/users/IUsersRepository';
 import { ApiError } from '@falkordb/errors';
-import { GetUserRequestParamsSchemaType, GetUserResponseBodySchemaType } from '../schemas/user';
+import { GetUserRequestParamsSchemaType, GetUserResponseBodySchemaType } from '@falkordb/schemas/src/services/users/v1';
 
 export const getUserHandler: RouteHandlerMethod<
   undefined,

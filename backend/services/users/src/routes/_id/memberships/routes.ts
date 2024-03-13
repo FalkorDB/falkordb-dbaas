@@ -3,7 +3,7 @@ import {
   GetMembershipsRequestParamsSchema,
   GetMembershipsRequestQuerySchema,
   GetMembershipsResponseBodySchema,
-} from './schemas/memberships';
+} from '@falkordb/schemas/src/services/users/v1';
 import { getUserMembershipsHandler } from './handlers/get';
 
 export default fp(

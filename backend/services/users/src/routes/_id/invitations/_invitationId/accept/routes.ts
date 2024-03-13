@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { AcceptInvitationRequestParamsSchema } from './schemas/invitation';
+import { AcceptInvitationRequestParamsSchema } from '@falkordb/schemas/src/services/users/v1';
 import { acceptInvitationHandler } from './handlers/post';
 
 export default fp(

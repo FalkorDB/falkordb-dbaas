@@ -1,7 +1,7 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import { IInvitationsRepository } from '../../../../../../repositories/invitations/IInvitationsRepository';
-import { RejectInvitationRequestParamsSchemaType } from '../schemas/invitation';
+import { RejectInvitationRequestParamsSchemaType } from '@falkordb/schemas/src/services/users/v1';
 
 export const rejectInvitationHandler: RouteHandlerMethod<
   undefined,

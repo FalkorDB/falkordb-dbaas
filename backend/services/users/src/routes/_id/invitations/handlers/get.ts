@@ -4,7 +4,7 @@ import {
   GetInvitationsRequestParamsSchemaType,
   GetInvitationsRequestQuerySchemaType,
   GetInvitationsResponseBodySchemaType,
-} from '../schemas/invitations';
+} from '@falkordb/schemas/src/services/users/v1';
 import { IInvitationsRepository } from '../../../../repositories/invitations/IInvitationsRepository';
 import { IUsersRepository } from '../../../../repositories/users/IUsersRepository';
 

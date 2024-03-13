@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { GetMeRequestHeadersSchema, GetMeResponseBodySchema } from './schemas/me';
+import { GetMeRequestHeadersSchema, GetMeResponseBodySchema } from '@falkordb/schemas/src/services/users/v1';
 import { getMeHandler } from './handlers/get';
 
 export default fp(

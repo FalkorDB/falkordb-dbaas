@@ -1,5 +1,5 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { UserSchema } from '../../../schemas/user';
+import { UserSchema } from '../../../../global';
 
 export const GetMeRequestHeadersSchema = Type.Object({
   'x-falkordb-userId': Type.String(),

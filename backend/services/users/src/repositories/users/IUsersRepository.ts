@@ -1,4 +1,4 @@
-import { UserCreateSchemaType, UserSchemaType, UserUpdateSchemaType } from '../../schemas/user';
+import { UserCreateSchemaType, UserSchemaType, UserUpdateSchemaType } from '@falkordb/schemas/src/global';
 
 export abstract class IUsersRepository {
   static repositoryName = 'UsersRepository';

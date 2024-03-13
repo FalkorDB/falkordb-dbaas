@@ -4,7 +4,7 @@ import {
   GetMembershipsRequestParamsSchemaType,
   GetMembershipsRequestQuerySchemaType,
   GetMembershipsResponseBodySchemaType,
-} from '../schemas/memberships';
+} from '@falkordb/schemas/src/services/users/v1';
 import { IMembershipsRepository } from '../../../../repositories/membership/IMembershipsRepository';
 
 export const getUserMembershipsHandler: RouteHandlerMethod<

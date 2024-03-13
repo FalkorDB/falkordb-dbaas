@@ -1,5 +1,5 @@
 import { RouteHandlerMethod } from 'fastify';
-import { GetMeRequestHeadersSchemaType, GetMeResponseBodySchemaType } from '../schemas/me';
+import { GetMeRequestHeadersSchemaType, GetMeResponseBodySchemaType } from '@falkordb/schemas/src/services/users/v1';
 import { IUsersRepository } from '../../../repositories/users/IUsersRepository';
 import { ApiError } from '@falkordb/errors';
 

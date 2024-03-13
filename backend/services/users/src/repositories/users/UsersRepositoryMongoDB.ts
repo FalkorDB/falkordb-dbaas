@@ -1,7 +1,7 @@
 import { FastifyBaseLogger } from 'fastify';
 import { IUsersRepository } from './IUsersRepository';
 import { MongoClient } from 'mongodb';
-import { UserCreateSchemaType, UserSchemaType } from '../../schemas/user';
+import { UserCreateSchemaType, UserSchemaType } from '@falkordb/schemas/src/global';
 import { ApiError } from '@falkordb/errors';
 
 export class UsersRepositoryMongoDB implements IUsersRepository {

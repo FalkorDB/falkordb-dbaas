@@ -1,5 +1,5 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { InvitationSchema } from '../../../../schemas/invitation';
+import { InvitationSchema } from '../../../../global';
 
 /********* Get invitations *********/
 export const GetInvitationsRequestParamsSchema = Type.Object({

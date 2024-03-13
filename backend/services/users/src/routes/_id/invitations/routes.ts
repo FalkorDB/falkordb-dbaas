@@ -3,7 +3,7 @@ import {
   GetInvitationsRequestParamsSchema,
   GetInvitationsRequestQuerySchema,
   GetInvitationsResponseBodySchema,
-} from './schemas/invitations';
+} from '@falkordb/schemas/src/services/users/v1';
 import { getInvitationsHandler } from './handlers/get';
 
 export default fp(
