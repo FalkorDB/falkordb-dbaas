@@ -1,18 +1,17 @@
 import fp from 'fastify-plugin';
+import { tenantProvisionHandler } from './handlers/provision';
+import { tenantRefreshHandler } from './handlers/refresh';
 import {
   TenantProvisionBodySchema,
   TenantProvisionHeadersSchema,
   type TenantProvisionBodySchemaType,
   TenantProvisionResponseSchema,
-} from './schemas/provision';
-import { tenantProvisionHandler } from './handlers/provision';
-import {
+  TenantDeprovisionParamsSchema,
+  TenantDeprovisionResponseSchema,
   TenantRefreshParamsSchema,
   TenantRefreshParamsSchemaType,
   TenantRefreshResponseSchema,
-} from './schemas/refresh';
-import { tenantRefreshHandler } from './handlers/refresh';
-import { TenantDeprovisionParamsSchema, TenantDeprovisionResponseSchema } from './schemas/deprovision';
+} from '@falkordb/schemas/src/services/provisioner/v1/tenant';
 import { tenantDeprovisionHandler } from './handlers/deprovision';
 
 export default fp(

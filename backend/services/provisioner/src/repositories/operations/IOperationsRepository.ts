@@ -1,9 +1,5 @@
-import {
-  CreateOperationParamsSchemaType,
-  OperationProviderSchemaType,
-  OperationSchemaType,
-  OperationStatusSchemaType,
-} from '../../schemas/operation';
+import { CreateOperationParamsSchemaType, OperationSchemaType, OperationStatusSchemaType } from "@falkordb/schemas/src/global";
+
 
 export abstract class IOperationsRepository {
   static repositoryName = 'OperationsRepository';

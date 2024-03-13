@@ -1,5 +1,5 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { CreateOperationParamsSchema } from '../../../global';
+import { CreateOperationParamsSchema } from '../../../../global';
 
 export const TenantRefreshParamsSchema = Type.Object({
   id: Type.String(),

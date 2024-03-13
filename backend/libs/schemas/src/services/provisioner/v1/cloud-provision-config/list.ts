@@ -1,5 +1,5 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { SupportedCloudProviderSchema } from '../../../schemas/global';
+import { SupportedCloudProviderSchema } from '../../../../global';
 
 export const CloudProvisionConfigListQuerySchema = Type.Object({
   page: Type.Optional(Type.Number({ default: 1 })),

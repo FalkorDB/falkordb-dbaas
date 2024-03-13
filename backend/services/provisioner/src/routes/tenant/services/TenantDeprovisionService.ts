@@ -1,14 +1,14 @@
 import { ApiError } from '@falkordb/errors';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
-import { OperationProviderSchemaType } from '../../../schemas/operation';
+import { OperationProviderSchemaType } from '@falkordb/schemas/src/global/operation';
 import { FastifyBaseLogger } from 'fastify';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
 import ShortUniqueId from 'short-unique-id';
 import { ITenantsRepository } from '../../../repositories/tenants/ITenantRepository';
-import { TenantDeprovisionResponseSchemaType } from '../schemas/deprovision';
-import { TenantSchemaType, TenantStatusSchemaType } from '../../../schemas/tenant';
 import { TenantProvisionerFactory } from '../provisioners/TenantProvisioner';
+import { TenantDeprovisionResponseSchemaType } from '@falkordb/schemas/src/services/provisioner/v1/tenant';
+import { TenantSchemaType, TenantStatusSchemaType } from '@falkordb/schemas/src/global';
 
 export class TenantDeprovisionService {
   private _operationsRepository: IOperationsRepository;

@@ -1,8 +1,8 @@
 import { FastifyBaseLogger } from 'fastify';
 import { ITenantsRepository } from './ITenantRepository';
 import { MongoClient } from 'mongodb';
-import { TenantSchemaType, TenantStatusSchemaType, CreateTenantSchemaType } from '../../schemas/tenant';
 import { ApiError } from '@falkordb/errors';
+import { CreateTenantSchemaType, TenantSchemaType, TenantStatusSchemaType } from '@falkordb/schemas/src/global';
 
 export class TenantsMongoDB implements ITenantsRepository {
   collection = this._client.db().collection('tenants');

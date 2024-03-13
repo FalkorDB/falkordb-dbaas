@@ -1,10 +1,7 @@
 import { RouteHandlerMethod } from 'fastify';
-import { TenantGroupProvisionBodySchemaType } from '../schemas/provision';
+import { TenantGroupProvisionBodySchemaType } from  '@falkordb/schemas/src/services/provisioner/v1/tenant-group'
 import { TenantGroupProvisionService } from '../services/TenantGroupProvisionService';
 import { ApiError } from '@falkordb/errors';
-import { OperationsMongoDB } from '../../../repositories/operations/OperationsMongoDB';
-import { CloudProvisionConfigsMongoDB } from '../../../repositories/cloud-provision-configs/CloudProvisionConfigsMongoDB';
-import { TenantGroupsMongoDB } from '../../../repositories/tenant-groups/TenantGroupsMongoDB';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';

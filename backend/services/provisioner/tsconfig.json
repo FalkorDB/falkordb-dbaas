@@ -1,6 +1,6 @@
 {
   "extends": "@falkordb/configs/tsconfig.base.json",
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../../libs/schemas/src/global/tenantGroup.ts"],
   "compilerOptions": {
     "outDir": "dist"
   }

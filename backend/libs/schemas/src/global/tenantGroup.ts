@@ -1,5 +1,6 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { SupportedCloudProviderSchema, SupportedRegionsSchema } from './global';
+import { SupportedCloudProviderSchema } from './cloudProviders';
+import { SupportedRegionsSchema } from './regions';
 
 export const TenantGroupStatusSchema = Type.Union([
   Type.Literal('provisioning'),

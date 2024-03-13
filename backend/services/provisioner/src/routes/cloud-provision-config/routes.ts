@@ -1,13 +1,14 @@
 import fp from 'fastify-plugin';
+import { cloudProvisionConfigCreateHandler } from './handlers/create';
 import {
+  CloudProvisionConfigDeleteParamsSchema,
+  CloudProvisionConfigListQuerySchema,
+  CloudProvisionConfigListQuerySchemaType,
   CloudProvisionConfigCreateBodySchema,
   CloudProvisionConfigCreateBodySchemaType,
   CloudProvisionConfigCreateResponseSuccessSchema,
-} from './schemas/create';
-import { cloudProvisionConfigCreateHandler } from './handlers/create';
-import { CloudProvisionConfigDeleteParamsSchema } from './schemas/delete';
+} from '@falkordb/schemas/src/services/provisioner/v1/cloud-provision-config';
 import { cloudProvisionConfigDeleteHandler } from './handlers/delete';
-import { CloudProvisionConfigListQuerySchema, CloudProvisionConfigListQuerySchemaType } from './schemas/list';
 import { cloudProvisionConfigListHandler } from './handlers/list';
 
 export default fp(

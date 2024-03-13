@@ -1,5 +1,5 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { CloudProvisionGCPConfigSchema, CreateCloudProvisionConfigParamsSchema } from '../../../schemas/cloudProvision';
+import { CloudProvisionGCPConfigSchema, CreateCloudProvisionConfigParamsSchema } from '../../../../global';
 
 export const CloudProvisionConfigCreateBodySchema = CreateCloudProvisionConfigParamsSchema;
 
@@ -7,4 +7,6 @@ export type CloudProvisionConfigCreateBodySchemaType = Static<typeof CloudProvis
 
 export const CloudProvisionConfigCreateResponseSuccessSchema = CloudProvisionGCPConfigSchema;
 
-export type CloudProvisionConfigCreateResponseSuccessSchemaType = Static<typeof CloudProvisionConfigCreateResponseSuccessSchema>;
+export type CloudProvisionConfigCreateResponseSuccessSchemaType = Static<
+  typeof CloudProvisionConfigCreateResponseSuccessSchema
+>;

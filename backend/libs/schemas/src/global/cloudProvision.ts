@@ -1,7 +1,7 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { SupportedCloudProviderSchema } from './global';
 import { OperationProviderSchema } from './operation';
-import { TierIdSchema } from './tenant';
+import { SupportedCloudProviderSchema } from './cloudProviders';
+import { TierIdSchema } from './tier';
 
 export const CloudProvisionConfigSchema = Type.Object({
   id: Type.String(),

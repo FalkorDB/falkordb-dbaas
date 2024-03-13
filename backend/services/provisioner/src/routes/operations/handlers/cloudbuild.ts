@@ -2,7 +2,7 @@ import { RouteHandlerMethod } from 'fastify';
 import {
   CloudBuildOperationsCallbackBodySchema,
   CloudBuildOperationsCallbackBodySchemaType,
-} from '../schemas/cloudbuild';
+} from '@falkordb/schemas/src/services/provisioner/v1/operations';
 import { CloudBuildOperationCallback } from '../services/cloudbuild/CloudBuildOperationCallback';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';

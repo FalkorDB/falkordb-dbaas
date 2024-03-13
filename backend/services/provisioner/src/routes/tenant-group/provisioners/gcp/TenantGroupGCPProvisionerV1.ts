@@ -1,10 +1,8 @@
 import { ApiError } from '@falkordb/errors';
-import { CloudProvisionGCPConfigSchemaType } from '../../../../schemas/cloudProvision';
-import { SupportedRegionsSchemaType } from '../../../../schemas/global';
-import { OperationProviderSchemaType } from '../../../../schemas/operation';
 import { CloudBuildClient } from '@google-cloud/cloudbuild';
 import { TenantGroupGCPProvisioner } from './TenantGroupGCPProvisioner';
-import { TenantGroupSchemaType } from '../../../../schemas/tenantGroup';
+import { TenantGroupSchemaType } from '@falkordb/schemas/src/global/tenantGroup';
+import { CloudProvisionGCPConfigSchemaType, OperationProviderSchemaType, SupportedRegionsSchemaType } from '@falkordb/schemas/src/global';
 
 
 export class TenantGroupGCPProvisionerV1 implements TenantGroupGCPProvisioner {

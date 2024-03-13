@@ -1,11 +1,11 @@
 import { FastifyBaseLogger } from 'fastify';
-import {
-  CloudProvisionConfigSchemaType,
-  CreateCloudProvisionConfigParamsSchemaType,
-} from '../../schemas/cloudProvision';
 import { ICloudProvisionConfigsRepository } from './ICloudProvisionConfigsRepository';
 import { MongoClient, ObjectId } from 'mongodb';
 import { ApiError } from '@falkordb/errors';
+import {
+  CloudProvisionConfigSchemaType,
+  CreateCloudProvisionConfigParamsSchemaType,
+} from '@falkordb/schemas/src/global';
 
 export class CloudProvisionConfigsMongoDB implements ICloudProvisionConfigsRepository {
   collection = this._client.db().collection(this._collectionName);

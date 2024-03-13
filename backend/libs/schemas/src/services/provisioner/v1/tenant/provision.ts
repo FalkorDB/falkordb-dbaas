@@ -5,7 +5,7 @@ import {
   SupportedRegionsSchema,
   TenantReplicationConfigurationSchema,
   TierIdSchema,
-} from '../../../global';
+} from '../../../../global';
 
 export const TenantProvisionHeadersSchema = Type.Object({
   'x-falkordb-userId': Type.String(),
