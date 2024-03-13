@@ -1,5 +1,6 @@
 import { Client } from './client';
 import { ProvisionerV1 } from './clients/v1/provisioner';
+import { UsersV1 } from './clients/v1/users';
 
 export interface IFalkorDBOpts {
   url: string;
@@ -15,7 +16,8 @@ export const FalkorDBClient = (opts?: IFalkorDBOpts) => {
   return {
     client,
     v1: {
-      provisioner: ProvisionerV1(client),
+      provisioner: () => ProvisionerV1(client),
+      users: () => UsersV1(client),
     },
   };
 };
