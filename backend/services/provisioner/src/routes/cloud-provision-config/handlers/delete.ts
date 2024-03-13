@@ -1,6 +1,6 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
-import { CloudProvisionConfigDeleteBodySchemaType } from '@falkordb/schemas/src/services/provisioner/v1/cloud-provision-config';
+import { CloudProvisionConfigDeleteParamsSchemaType } from '@falkordb/schemas/src/services/provisioner/v1/cloud-provision-config';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 
 export const cloudProvisionConfigDeleteHandler: RouteHandlerMethod<
@@ -8,7 +8,7 @@ export const cloudProvisionConfigDeleteHandler: RouteHandlerMethod<
   undefined,
   undefined,
   {
-    Params: CloudProvisionConfigDeleteBodySchemaType;
+    Params: CloudProvisionConfigDeleteParamsSchemaType;
   }
 > = async (request) => {
   const repository = request.diScope.resolve<ICloudProvisionConfigsRepository>(

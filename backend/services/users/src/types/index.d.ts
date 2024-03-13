@@ -1,11 +1,13 @@
 import { EnvSchemaType } from '../schemas/dotenv';
 import { RequestHeaderSchemaType } from '../schemas/request';
 import { TObject, Static } from '@sinclair/typebox';
+import { FalkorDBClient } from '@falkordb/rest-client';
 
 declare module 'fastify' {
   export interface FastifyRequest {}
   export interface FastifyInstance {
     config: EnvSchemaType;
+    falkordbClient: FalkorDBClient;
     parseHeaders: (request: FastifyRequest, reply: FastifyReply, requiredHeaders?: string[]) => RequestHeaderSchemaType;
     pubsubDecode: <T>(request: FastifyRequest, schema?: TObject) => T;
   }

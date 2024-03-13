@@ -1,5 +1,5 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { SupportedCloudProviderSchema } from '../../../../global';
+import { CloudProvisionConfigSchema, SupportedCloudProviderSchema } from '../../../../global';
 
 export const CloudProvisionConfigListQuerySchema = Type.Object({
   page: Type.Optional(Type.Number({ default: 1 })),
@@ -9,3 +9,12 @@ export const CloudProvisionConfigListQuerySchema = Type.Object({
 });
 
 export type CloudProvisionConfigListQuerySchemaType = Static<typeof CloudProvisionConfigListQuerySchema>;
+
+export const CloudProvisionConfigListResponseSchema = Type.Object({
+  data: Type.Array(CloudProvisionConfigSchema),
+  page: Type.Integer(),
+  pageSize: Type.Integer(),
+  total: Type.Integer(),
+});
+
+export type CloudProvisionConfigListResponseSchemaType = Static<typeof CloudProvisionConfigListResponseSchema>;

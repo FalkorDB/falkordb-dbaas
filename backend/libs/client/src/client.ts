@@ -1,56 +1,89 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
-const _client = axios.create({
-  baseURL: 'http://localhost:3001',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+export class Client {
+  private _client: AxiosInstance;
 
-export const caller = {
-  get: async (
+  constructor(opts?: { url: string }) {
+    this._client = axios.create({
+      baseURL: opts?.url ?? 'http://localhost:3000',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+
+  private _stringifyQueryParams(params: object) {
+    return Object.keys(params)
+      .map((key) => `${key}=${params[key]}`)
+      .join('&');
+  }
+
+  setHeaders(headers: object) {
+    this._client.defaults.headers = {
+      ...this._client.defaults.headers,
+      ...headers,
+    };
+  }
+
+  async get(
     path: string,
     opts?: {
       headers?: any;
       params?: any;
+      query?: any;
     },
-  ) => {
-    const res = await _client.get(path, opts);
+  ) {
+    const res = await this._client.get(`${path}?${this._stringifyQueryParams(opts?.query ?? {})}`, {
+      headers: opts?.headers,
+      params: opts?.params,
+    });
     return res.data;
-  },
+  }
 
-  post: async (
+  async post(
     path: string,
     data: any,
     opts?: {
       headers?: any;
       params?: any;
+      query?: any;
     },
-  ) => {
-    const res = await _client.post(path, data, opts);
+  ) {
+    const res = await this._client.post(`${path}?${this._stringifyQueryParams(opts?.query ?? {})}`, data, {
+      headers: opts?.headers,
+      params: opts?.params,
+    });
     return res.data;
-  },
+  }
 
-  put: async (
+  async put(
     path: string,
     data: any,
     opts?: {
       headers?: any;
       params?: any;
+      query?: any;
     },
-  ) => {
-    const res = await _client.put(path, data, opts);
+  ) {
+    const res = await this._client.put(`${path}?${this._stringifyQueryParams(opts?.query ?? {})}`, data, {
+      headers: opts?.headers,
+      params: opts?.params,
+    });
     return res.data;
-  },
+  }
 
-  delete: async (
+  async delete(
     path: string,
     opts?: {
       headers?: any;
       params?: any;
+      query?: any;
     },
-  ) => {
-    const res = await _client.delete(path, opts);
+  ) {
+    const res = await this._client.delete(`${path}?${this._stringifyQueryParams(opts?.query ?? {})}`, {
+      headers: opts?.headers,
+      params: opts?.params,
+    });
     return res.data;
-  },
-};
+  }
+}

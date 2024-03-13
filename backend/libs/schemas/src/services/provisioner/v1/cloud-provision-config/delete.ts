@@ -4,4 +4,4 @@ export const CloudProvisionConfigDeleteParamsSchema = Type.Object({
   id: Type.String(),
 });
 
-export type CloudProvisionConfigDeleteBodySchemaType = Static<typeof CloudProvisionConfigDeleteParamsSchema>;
+export type CloudProvisionConfigDeleteParamsSchemaType = Static<typeof CloudProvisionConfigDeleteParamsSchema>;

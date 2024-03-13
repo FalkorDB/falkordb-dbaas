@@ -10,6 +10,7 @@ import fastifyRequestContextPlugin from '@fastify/request-context';
 import { fastifyAwilixPlugin } from '@fastify/awilix';
 import { setupContainer } from './container';
 import { swaggerPlugin, pubsubDecodePlugin } from '@falkordb/plugins';
+import falkordbClientPlugin from '@falkordb/rest-client/src/fastify-plugin';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   await fastify.register(Env, {
@@ -77,6 +78,11 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   });
 
   fastify.register(fastifyRequestContextPlugin);
+
+  fastify.register(falkordbClientPlugin, {
+    injectContext: true,
+    url: fastify.config.FALKORDB_SERVER_URL,
+  });
 
   fastify.addHook('onRequest', (request, _, done) => {
     setupContainer(request);

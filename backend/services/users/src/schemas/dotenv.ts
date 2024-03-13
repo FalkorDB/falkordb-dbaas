@@ -5,6 +5,7 @@ export const EnvSchema = Type.Object({
   PORT: Type.Number({ default: 3000 }),
   MONGODB_URI: Type.String(),
   MONGODB_DB: Type.String(),
+  FALKORDB_SERVER_URL: Type.String({ default: 'http://localhost:3000' }),
 });
 
 export type EnvSchemaType = Static<typeof EnvSchema>;
