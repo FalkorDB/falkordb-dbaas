@@ -47,8 +47,8 @@ export const CreateInvitationSchema = Type.Object({
 export type CreateInvitationType = Static<typeof CreateInvitationSchema>;
 
 export const UpdateInvitationSchema = Type.Object({
-  status: InvitationStatus,
-  expireAt: Type.String(),
+  status: Type.Optional(InvitationStatus),
+  expireAt: Type.Optional(Type.String()),
 });
 
 export type UpdateInvitationType = Static<typeof UpdateInvitationSchema>;
