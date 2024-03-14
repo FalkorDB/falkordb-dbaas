@@ -2,11 +2,20 @@
   "name": "@falkordb/errors",
   "version": "1.0.0",
   "description": "",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc --noEmit && tsup"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@falkordb/configs": "workspace:*",
+    "@fastify/sensible": "^5.5.0",
+    "fastify": "^4.26.1"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.2"
+  }
 }

@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify';
-
+import { httpErrors } from '@fastify/sensible';
 export class ApiError {
   private constructor(
     public readonly message: string,
@@ -36,7 +36,7 @@ export class ApiError {
   }
 
   toFastify(fastify: FastifyInstance) {
-    return fastify.httpErrors.createError(this.statusCode, this.message, {
+    return httpErrors.createError(this.statusCode, this.message, {
       errorCode: this.errorCode,
     });
   }

@@ -26,6 +26,11 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   fastify.register(swaggerPlugin, {
     swagger: {
+      info: {
+        title: 'FalkorDB',
+        description: 'API Endpoints for FalkorDB Users',
+        version: '0.1.0',
+      },
       tags: [
         {
           name: 'me',
@@ -62,6 +67,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   await fastify.register(MongoDB, {
     forceClose: true,
     url: fastify.config.MONGODB_URI,
+    database: fastify.config.MONGODB_DB,
   });
 
   fastify.register(fastifyAwilixPlugin, {

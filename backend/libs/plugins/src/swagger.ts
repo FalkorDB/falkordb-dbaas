@@ -12,9 +12,9 @@ export default fp<FastifyDynamicSwaggerOptions>(async (fastify, opts) => {
   await fastify.register(Swagger, {
     openapi: {
       info: {
-        title: 'FalkorDB',
-        description: 'API Endpoints for FalkorDB Provisioner',
-        version: '0.1.0',
+        title: opts.swagger?.info?.title ?? 'FalkorDB',
+        description: opts.swagger?.info?.description ?? 'API Endpoints for FalkorDB Provisioner',
+        version: opts.swagger?.info?.version ?? '0.1.0',
       },
       servers: [
         {

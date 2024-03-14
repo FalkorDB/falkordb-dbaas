@@ -26,6 +26,11 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   fastify.register(swaggerPlugin, {
     swagger: {
+      info: {
+        title: 'FalkorDB',
+        description: 'API Endpoints for FalkorDB Provisioner',
+        version: '0.1.0',
+      },
       tags: [
         {
           name: 'tenant-group',
@@ -51,7 +56,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   await fastify.register(AutoLoad, {
     dir: join(__dirname, 'routes'),
     indexPattern: /.*routes(\.js|\.cjs)$/i,
-    ignorePattern: /spec\.ts$/,
+    ignorePattern: /.*spec(\.js|\.cjs|\.ts)$/i,
     autoHooksPattern: /.*hooks(\.js|\.cjs|\.ts)$/i,
     autoHooks: true,
     cascadeHooks: true,
@@ -61,6 +66,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   await fastify.register(MongoDB, {
     forceClose: true,
     url: fastify.config.MONGODB_URI,
+    database: fastify.config.MONGODB_DB,
   });
 
   fastify.register(fastifyAwilixPlugin, {
