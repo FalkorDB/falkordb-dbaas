@@ -15,6 +15,11 @@ export const GetUserMembershipsRequestQuerySchema = Type.Object({
 
 export type GetUserMembershipsRequestQuerySchemaType = Static<typeof GetUserMembershipsRequestQuerySchema>;
 
-export const GetUserMembershipsResponseBodySchema = Type.Array(UserMembershipItem);
+export const GetUserMembershipsResponseBodySchema = Type.Object({
+  data: Type.Array(UserMembershipItem),
+  page: Type.Number(),
+  pageSize: Type.Number(),
+  total: Type.Number(),
+});
 
 export type GetUserMembershipsResponseBodySchemaType = Static<typeof GetUserMembershipsResponseBodySchema>;

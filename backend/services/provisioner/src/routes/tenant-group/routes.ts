@@ -10,7 +10,7 @@ import { tenantGroupDeprovisionHandler } from './handlers/deprovision';
 import { tenantGroupRefreshHandler } from './handlers/refresh';
 
 export default fp(
-  async function provision(fastify, opts) {
+  async function tenantGroup(fastify, opts) {
     fastify.post<{ Body: TenantGroupProvisionBodySchemaType }>(
       '/provision',
       {

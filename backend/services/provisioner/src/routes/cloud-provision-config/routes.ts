@@ -12,7 +12,7 @@ import { cloudProvisionConfigDeleteHandler } from './handlers/delete';
 import { cloudProvisionConfigListHandler } from './handlers/list';
 
 export default fp(
-  async function provision(fastify, opts) {
+  async function config(fastify, opts) {
     fastify.post<{ Body: CloudProvisionConfigCreateBodySchemaType }>(
       '/',
       {

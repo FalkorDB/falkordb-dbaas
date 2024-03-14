@@ -1,20 +1,20 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import { IMembershipsRepository } from '../../../../../repositories/membership/IMembershipsRepository';
-import { DeleteMembershipRequestParamsSchemaType } from '@falkordb/schemas/src/services/users/v1';
+import { DeleteUserMembershipRequestParamsSchemaType } from '@falkordb/schemas/src/services/users/v1';
 
 export const deleteMembershipHandler: RouteHandlerMethod<
   undefined,
   undefined,
   undefined,
   {
-    Params: DeleteMembershipRequestParamsSchemaType;
+    Params: DeleteUserMembershipRequestParamsSchemaType;
   }
 > = async (request) => {
   const repository = request.diScope.resolve<IMembershipsRepository>(IMembershipsRepository.repositoryName);
 
   try {
-    const response = await repository.delete(request.params.id, request.params.membershipId);
+    const response = await repository.delete(request.params.membershipId);
     return response;
   } catch (error) {
     if (error instanceof ApiError) {

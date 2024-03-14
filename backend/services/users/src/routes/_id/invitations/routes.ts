@@ -1,8 +1,8 @@
 import fp from 'fastify-plugin';
 import {
-  GetInvitationsRequestParamsSchema,
-  GetInvitationsRequestQuerySchema,
-  GetInvitationsResponseBodySchema,
+  GetUserInvitationsRequestParamsSchema,
+  GetUserInvitationsRequestQuerySchema,
+  GetUserInvitationsResponseBodySchema,
 } from '@falkordb/schemas/src/services/users/v1';
 import { getInvitationsHandler } from './handlers/get';
 
@@ -13,10 +13,10 @@ export default fp(
       {
         schema: {
           tags: ['invitations'],
-          params: GetInvitationsRequestParamsSchema,
-          querystring: GetInvitationsRequestQuerySchema,
+          params: GetUserInvitationsRequestParamsSchema,
+          querystring: GetUserInvitationsRequestQuerySchema,
           response: {
-            200: GetInvitationsResponseBodySchema,
+            200: GetUserInvitationsResponseBodySchema,
           },
         },
       },

@@ -15,6 +15,11 @@ export const GetUserInvitationsRequestQuerySchema = Type.Object({
 
 export type GetUserInvitationsRequestQuerySchemaType = Static<typeof GetUserInvitationsRequestQuerySchema>;
 
-export const GetUserInvitationsResponseBodySchema = Type.Array(InvitationSchema);
+export const GetUserInvitationsResponseBodySchema = Type.Object({
+  data: Type.Array(InvitationSchema),
+  page: Type.Number(),
+  pageSize: Type.Number(),
+  total: Type.Number(),
+});
 
 export type GetUserInvitationsResponseBodySchemaType = Static<typeof GetUserInvitationsResponseBodySchema>;

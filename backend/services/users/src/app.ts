@@ -79,9 +79,18 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   fastify.register(fastifyRequestContextPlugin);
 
-  fastify.register(falkordbClientPlugin, {
+  await fastify.register(falkordbClientPlugin, {
     injectContext: true,
-    url: fastify.config.FALKORDB_SERVER_URL,
+    client: {
+      url: fastify.config.FALKORDB_SERVER_URL,
+      urls: {
+        v1: {
+          organizations: fastify.config.FALKORDB_ORGANIZATIONS_URL,
+          provisioner: fastify.config.FALKORDB_PROVISIONER_URL,
+          users: fastify.config.FALKORDB_USERS_URL,
+        },
+      },
+    },
   });
 
   fastify.addHook('onRequest', (request, _, done) => {

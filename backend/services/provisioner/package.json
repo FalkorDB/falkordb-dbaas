@@ -24,6 +24,7 @@
   "author": "",
   "license": "SSPL",
   "dependencies": {
+    "@autotelic/fastify-opentelemetry": "^0.20.0",
     "@falkordb/configs": "workspace:*",
     "@falkordb/errors": "workspace:*",
     "@falkordb/plugins": "workspace:*",

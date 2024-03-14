@@ -12,7 +12,7 @@ import {
 } from '@falkordb/schemas/src/services/organizations/v1';
 
 export default fp(
-  async function provision(fastify, opts) {
+  async function invitations(fastify, opts) {
     fastify.get(
       '',
       {

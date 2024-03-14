@@ -1,9 +1,9 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import {
-  GetInvitationsRequestParamsSchemaType,
-  GetInvitationsRequestQuerySchemaType,
-  GetInvitationsResponseBodySchemaType,
+  GetUserInvitationsRequestParamsSchemaType,
+  GetUserInvitationsRequestQuerySchemaType,
+  GetUserInvitationsResponseBodySchemaType,
 } from '@falkordb/schemas/src/services/users/v1';
 import { IInvitationsRepository } from '../../../../repositories/invitations/IInvitationsRepository';
 import { IUsersRepository } from '../../../../repositories/users/IUsersRepository';
@@ -13,9 +13,9 @@ export const getInvitationsHandler: RouteHandlerMethod<
   undefined,
   undefined,
   {
-    Params: GetInvitationsRequestParamsSchemaType;
-    Querystring: GetInvitationsRequestQuerySchemaType;
-    Reply: GetInvitationsResponseBodySchemaType;
+    Params: GetUserInvitationsRequestParamsSchemaType;
+    Querystring: GetUserInvitationsRequestQuerySchemaType;
+    Reply: GetUserInvitationsResponseBodySchemaType;
   }
 > = async (request) => {
   const invitationsRepository = request.diScope.resolve<IInvitationsRepository>(IInvitationsRepository.repositoryName);
@@ -23,12 +23,17 @@ export const getInvitationsHandler: RouteHandlerMethod<
   try {
     const user = await usersRepository.get(request.params.id);
 
-    const response = await invitationsRepository.query({
+    const { data, total } = await invitationsRepository.query({
       page: request.query.page,
       pageSize: request.query.pageSize,
       email: user.email,
     });
-    return response;
+    return {
+      data,
+      total,
+      page: request.query.page,
+      pageSize: request.query.pageSize,
+    };
   } catch (error) {
     if (error instanceof ApiError) {
       throw error.toFastify(request.server);

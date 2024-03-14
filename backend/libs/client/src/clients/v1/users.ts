@@ -21,31 +21,31 @@ import {
 export const UsersV1 = (client: Client) => ({
   me: {
     get: (): Promise<UserSchemaType> => {
-      return client.get('/users/me');
+      return client.get('/me');
     },
   },
 
   users: {
     get: (params: GetUserRequestParamsSchemaType): Promise<GetUserResponseBodySchemaType> => {
-      return client.get(`/users/${params.id}`);
+      return client.get(`/${params.id}`);
     },
 
     create: (
       params: CreateUserRequestParamsSchemaType,
       body: CreateUserRequestBodySchemaType,
     ): Promise<CreateUserResponseBodySchemaType> => {
-      return client.post('/users', body, { params });
+      return client.post('/', body, { params });
     },
 
     update: (
       params: UpdateUserRequestParamsSchemaType,
       body: UpdateUserRequestBodySchemaType,
     ): Promise<UpdateUserResponseBodySchemaType> => {
-      return client.put(`/users/${params.id}`, body);
+      return client.put(`/${params.id}`, body);
     },
 
     delete: (params: DeleteUserRequestParamsSchemaType): Promise<void> => {
-      return client.delete(`/users/${params.id}`);
+      return client.delete(`/${params.id}`);
     },
   },
 
@@ -54,7 +54,7 @@ export const UsersV1 = (client: Client) => ({
       params: GetUserInvitationsRequestParamsSchemaType,
       query: GetUserInvitationsRequestQuerySchemaType,
     ): Promise<GetUserInvitationsResponseBodySchemaType> => {
-      return client.get(`/users/${params.id}/invitations`, { query });
+      return client.get(`/${params.id}/invitations`, { query });
     },
   },
 
@@ -63,7 +63,7 @@ export const UsersV1 = (client: Client) => ({
       params: GetUserMembershipsRequestParamsSchemaType,
       query: GetUserMembershipsRequestQuerySchemaType,
     ): Promise<GetUserMembershipsResponseBodySchemaType> => {
-      return client.get(`/users/${params.id}/memberships`, { query });
+      return client.get(`/${params.id}/memberships`, { query });
     },
   },
 });

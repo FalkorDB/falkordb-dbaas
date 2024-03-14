@@ -9,7 +9,7 @@ export const AcceptOrganizationInvitationRequestHeadersSchemaType = Type.Object(
 export type AcceptOrganizationInvitationRequestHeadersSchemaType = Static<typeof AcceptOrganizationInvitationRequestHeadersSchemaType>;
 
 export const AcceptOrganizationInvitationRequestParamsSchema = Type.Object({
-  id: Type.String(),
+  organizationId: Type.String(),
   invitationId: Type.String(),
 });
 

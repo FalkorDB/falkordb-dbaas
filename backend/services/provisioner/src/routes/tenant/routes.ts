@@ -15,7 +15,7 @@ import {
 import { tenantDeprovisionHandler } from './handlers/deprovision';
 
 export default fp(
-  async function provision(fastify, opts) {
+  async function tenant(fastify, opts) {
     fastify.post<{ Body: TenantProvisionBodySchemaType }>(
       '/provision',
       {

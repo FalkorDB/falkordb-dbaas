@@ -8,6 +8,8 @@ import { MembershipsRepositoryMock } from './repositories/membership/Memberships
 import { IInvitationsRepository } from './repositories/invitations/IInvitationsRepository';
 import { InvitationsRepositoryMock } from './repositories/invitations/InvitationsRepositoryMock';
 import { UsersRepositoryMock } from './repositories/users/UsersRepositoryMock';
+import { InvitationsRepositoryFalkorDBClient } from './repositories/invitations/InvitationsRepositoryFalkorDBClient';
+import { MembershipsRepositoryFalkorDBClient } from './repositories/membership/MembershipsRepositoryFalkorDBClient';
 
 export const setupContainer = (req: FastifyRequest) => {
   if (process.env.NODE_ENV === 'test' && process.env.MOCK_CONTAINER === 'true') {
@@ -25,11 +27,11 @@ export const setupContainer = (req: FastifyRequest) => {
     }),
 
     [IMembershipsRepository.repositoryName]: asFunction(() => {
-      return new MembershipsRepositoryMock();
+      return new MembershipsRepositoryFalkorDBClient(req.server.falkordbClient);
     }),
 
     [IInvitationsRepository.repositoryName]: asFunction(() => {
-      return new InvitationsRepositoryMock();
+      return new InvitationsRepositoryFalkorDBClient(req.server.falkordbClient);
     }),
   });
 };

@@ -74,6 +74,9 @@ importers:
 
   services/organizations:
     dependencies:
+      '@autotelic/fastify-opentelemetry':
+        specifier: ^0.20.0
+        version: 0.20.0(@opentelemetry/api@1.8.0)
       '@falkordb/configs':
         specifier: workspace:*
         version: link:../../libs/configs
@@ -198,6 +201,9 @@ importers:
 
   services/provisioner:
     dependencies:
+      '@autotelic/fastify-opentelemetry':
+        specifier: ^0.20.0
+        version: 0.20.0(@opentelemetry/api@1.8.0)
       '@falkordb/configs':
         specifier: workspace:*
         version: link:../../libs/configs
@@ -328,6 +334,9 @@ importers:
 
   services/users:
     dependencies:
+      '@autotelic/fastify-opentelemetry':
+        specifier: ^0.20.0
+        version: 0.20.0(@opentelemetry/api@1.8.0)
       '@falkordb/configs':
         specifier: workspace:*
         version: link:../../libs/configs
@@ -503,6 +512,16 @@ packages:
       '@jridgewell/gen-mapping': 0.3.5
       '@jridgewell/trace-mapping': 0.3.25
     dev: true
+
+  /@autotelic/fastify-opentelemetry@0.20.0(@opentelemetry/api@1.8.0):
+    resolution: {integrity: sha512-OpCAUocoao7GATPobDOu6ee4svRa7kc68tlMBYwQqKjXFoh4y6W6KOTKBwLnkEWoVvKL8umX9GYONcLWGL96EQ==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.0.0
+    dependencies:
+      '@opentelemetry/api': 1.8.0
+      fastify-plugin: 4.5.1
+    dev: false
 
   /@babel/code-frame@7.23.5:
     resolution: {integrity: sha512-CgH3s1a96LipHCmSUmYFPwY7MNx8C3avkq7i4Wl3cfa662ldtUe4VM1TPXX70pfmrlWTb6jLqTYrZyT2ZTJBgA==}
@@ -1830,6 +1849,11 @@ packages:
     transitivePeerDependencies:
       - bluebird
       - supports-color
+    dev: false
+
+  /@opentelemetry/api@1.8.0:
+    resolution: {integrity: sha512-I/s6F7yKUDdtMsoBWXJe8Qz40Tui5vsuKCWJEWVL+5q9sSWRzzx6v2KeNsOBEwd94j0eWkpWCH4yB6rZg9Mf0w==}
+    engines: {node: '>=8.0.0'}
     dev: false
 
   /@pkgjs/parseargs@0.11.0:

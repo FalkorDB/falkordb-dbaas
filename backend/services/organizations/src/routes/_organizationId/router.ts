@@ -12,7 +12,7 @@ import { updateOrganizationHandler } from './handlers/update';
 import { deleteOrganizationHandler } from './handlers/delete';
 
 export default fp(
-  async function provision(fastify, opts) {
+  async function organization(fastify, opts) {
     fastify.get(
       '',
       {
