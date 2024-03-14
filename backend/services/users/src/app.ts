@@ -104,6 +104,13 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   fastify.addHook('onRequest', (request, _, done) => {
     setupContainer(request);
+
+    const { activeSpan } = request.openTelemetry();
+    activeSpan.setAttributes({
+      organizationId: request.headers['x-falkordb-organizationid'],
+      userId: request.headers['x-falkordb-userid'],
+    });
+
     done();
   });
 
