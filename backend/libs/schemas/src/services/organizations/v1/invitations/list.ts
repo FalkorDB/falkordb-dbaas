@@ -3,14 +3,9 @@ import { InvitationSchema } from '../../../../global/invitation';
 
 /**** List invitations *****/
 
-export const ListInvitationsRequestParamsSchema = Type.Object({
-  organizationId: Type.String(),
-});
-
-export type ListInvitationsRequestParamsType = Static<typeof ListInvitationsRequestParamsSchema>;
-
 export const ListInvitationsRequestQuerySchema = Type.Object({
-  data: Type.Array(InvitationSchema),
+  organizationId: Type.Optional(Type.String()),
+  email: Type.Optional(Type.String()),
   page: Type.Integer({
     minimum: 1,
     default: 1,

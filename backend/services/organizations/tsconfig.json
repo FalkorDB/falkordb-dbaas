@@ -1,6 +1,6 @@
 {
   "extends": "@falkordb/configs/tsconfig.base.json",
-  "include": ["src/**/*", "../../libs/schemas/src/global/invitation.ts", "../../libs/schemas/src/global/members.ts", "../../libs/schemas/src/global/organization.ts", "../../libs/schemas/src/global/roles.ts", "../../libs/schemas/src/services/organizations/v1/organizations/list.ts", "../../libs/schemas/src/services/organizations/v1/members/list.ts", "../../libs/schemas/src/services/organizations/v1/member/update.ts", "../../libs/schemas/src/services/organizations/v1/invitation/delete.ts"],
+  "include": ["src/**/*", "../../libs/schemas/src/global/invitation.ts", "../../libs/schemas/src/global/members.ts", "../../libs/schemas/src/global/organization.ts", "../../libs/schemas/src/global/roles.ts", "../../libs/schemas/src/services/organizations/v1/organizations/list.ts", "../../libs/schemas/src/services/organizations/v1/organization/members/list.ts", "../../libs/schemas/src/services/organizations/v1/organization/member/update.ts", "../../libs/schemas/src/services/organizations/v1/invitation/delete.ts"],
   "compilerOptions": {
     "outDir": "dist"
   }

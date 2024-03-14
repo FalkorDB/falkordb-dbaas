@@ -31,7 +31,13 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
         description: 'API Endpoints for FalkorDB Organizations',
         version: '0.1.0',
       },
-      tags: [],
+      tags: [
+        { name: 'organizations', description: 'Organizations' },
+        { name: 'organization-members', description: 'Organization Members' },
+        { name: 'organization-invitations', description: 'Organization Invitations' },
+        { name: 'invitations', description: 'Invitations' },
+        { name: 'members', description: 'Members' },
+      ],
     },
   });
   fastify.register(pubsubDecodePlugin);

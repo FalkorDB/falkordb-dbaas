@@ -1,13 +1,11 @@
 import { type Static, Type } from '@sinclair/typebox';
 import { MemberSchema } from '../../../../global/members';
-
-export const ListMembersRequestParamsSchema = Type.Object({
-  organizationId: Type.String(),
-});
-
-export type ListMembersRequestParamsType = Static<typeof ListMembersRequestParamsSchema>;
+import { RoleSchema } from '../../../../global';
 
 export const ListMembersRequestQuerySchema = Type.Object({
+  organizationId: Type.Optional(Type.String()),
+  userId: Type.Optional(Type.String()),
+  role: Type.Optional(RoleSchema),
   page: Type.Integer({
     minimum: 1,
     default: 1,

@@ -1,15 +1,15 @@
 import fp from 'fastify-plugin';
-import {
-  CreateInvitationRequestBodySchema,
-  CreateInvitationRequestHeadersSchema,
-  CreateInvitationRequestParamsSchema,
-  CreateInvitationResponseSchema,
-  ListInvitationsRequestParamsSchema,
-  ListInvitationsRequestQuerySchema,
-  ListInvitationsResponseSchema,
-} from '@falkordb/schemas/src/services/organizations/v1';
 import { getInvitationsHandler } from './handlers/get';
 import { createInvitationHandler } from './handlers/create';
+import {
+  CreateOrganizationInvitationRequestBodySchema,
+  CreateOrganizationInvitationRequestHeadersSchema,
+  CreateOrganizationInvitationRequestParamsSchema,
+  CreateOrganizationInvitationResponseSchema,
+  ListOrganizationInvitationsRequestParamsSchema,
+  ListOrganizationInvitationsRequestQuerySchema,
+  ListOrganizationInvitationsResponseSchema,
+} from '@falkordb/schemas/src/services/organizations/v1';
 
 export default fp(
   async function provision(fastify, opts) {
@@ -17,11 +17,11 @@ export default fp(
       '',
       {
         schema: {
-          tags: ['invitations'],
-          params: ListInvitationsRequestParamsSchema,
-          querystring: ListInvitationsRequestQuerySchema,
+          tags: ['organization-invitations'],
+          params: ListOrganizationInvitationsRequestParamsSchema,
+          querystring: ListOrganizationInvitationsRequestQuerySchema,
           response: {
-            200: ListInvitationsResponseSchema,
+            200: ListOrganizationInvitationsResponseSchema,
           },
         },
       },
@@ -33,11 +33,11 @@ export default fp(
       '',
       {
         schema: {
-          tags: ['invitations'],
-          headers: CreateInvitationRequestHeadersSchema,
-          params: CreateInvitationRequestParamsSchema,
-          body: CreateInvitationRequestBodySchema,
-          response: { 200: CreateInvitationResponseSchema },
+          tags: ['organization-invitations'],
+          headers: CreateOrganizationInvitationRequestHeadersSchema,
+          params: CreateOrganizationInvitationRequestParamsSchema,
+          body: CreateOrganizationInvitationRequestBodySchema,
+          response: { 200: CreateOrganizationInvitationResponseSchema },
         },
       },
 
@@ -45,7 +45,7 @@ export default fp(
     );
   },
   {
-    name: 'invitations-routes',
+    name: 'organization-invitations-routes',
     encapsulate: true,
   },
 );

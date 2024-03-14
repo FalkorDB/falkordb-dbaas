@@ -1,6 +1,6 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
-import { DeleteMemberRequestParamsType } from '@falkordb/schemas/src/services/organizations/v1';
+import { DeleteOrganizationMemberRequestParamsType } from '@falkordb/schemas/src/services/organizations/v1';
 import { IMembersRepository } from '../../../../../repositories/members/IMembersRepository';
 
 export const deleteMemberHandler: RouteHandlerMethod<
@@ -8,7 +8,7 @@ export const deleteMemberHandler: RouteHandlerMethod<
   undefined,
   undefined,
   {
-    Params: DeleteMemberRequestParamsType;
+    Params: DeleteOrganizationMemberRequestParamsType;
   }
 > = async (request) => {
   const membersRepository = request.diScope.resolve<IMembersRepository>(IMembersRepository.repositoryName);

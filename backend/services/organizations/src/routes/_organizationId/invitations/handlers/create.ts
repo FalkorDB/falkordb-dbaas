@@ -1,25 +1,25 @@
 import { RouteHandlerMethod } from 'fastify';
-import {
-  CreateInvitationRequestBodyType,
-  CreateInvitationRequestHeadersType,
-  CreateInvitationRequestParamsType,
-  CreateInvitationResponseSchemaType,
-} from '@falkordb/schemas/src/services/organizations/v1';
 import { IInvitationsRepository } from '../../../../repositories/invitations/IInvitationsRepository';
 import { ApiError } from '@falkordb/errors';
 import { CreateInvitationService } from '../services/CreateInvitationService';
 import { IMessagingRepository } from '../../../../repositories/messaging/IMessagingRepository';
 import { IOrganizationsRepository } from '../../../../repositories/organizations/IOrganizationsRepository';
+import {
+  CreateOrganizationInvitationRequestBodyType,
+  CreateOrganizationInvitationRequestHeadersType,
+  CreateOrganizationInvitationRequestParamsType,
+  CreateOrganizationInvitationResponseSchemaType,
+} from '@falkordb/schemas/src/services/organizations/v1';
 
 export const createInvitationHandler: RouteHandlerMethod<
   undefined,
   undefined,
   undefined,
   {
-    Headers: CreateInvitationRequestHeadersType;
-    Params: CreateInvitationRequestParamsType;
-    Body: CreateInvitationRequestBodyType;
-    Reply: CreateInvitationResponseSchemaType;
+    Headers: CreateOrganizationInvitationRequestHeadersType;
+    Params: CreateOrganizationInvitationRequestParamsType;
+    Body: CreateOrganizationInvitationRequestBodyType;
+    Reply: CreateOrganizationInvitationResponseSchemaType;
   }
 > = async (request) => {
   const opts = { logger: request.log };

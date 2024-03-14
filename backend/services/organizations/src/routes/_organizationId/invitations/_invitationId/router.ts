@@ -2,9 +2,9 @@ import fp from 'fastify-plugin';
 import { deleteInvitationHandler } from './handlers/delete';
 import { resendInvitationHandler } from './handlers/resend';
 import {
-  DeleteInvitationRequestParamsSchema,
-  ResendInvitationRequestParamsSchema,
-  ResendInvitationResponseSchema,
+  DeleteOrganizationInvitationRequestParamsSchema,
+  ResendOrganizationInvitationRequestParamsSchema,
+  ResendOrganizationInvitationResponseSchema,
 } from '@falkordb/schemas/src/services/organizations/v1';
 
 export default fp(
@@ -13,8 +13,8 @@ export default fp(
       '',
       {
         schema: {
-          tags: ['invitations'],
-          params: DeleteInvitationRequestParamsSchema,
+          tags: ['organization-invitations'],
+          params: DeleteOrganizationInvitationRequestParamsSchema,
         },
       },
 
@@ -25,9 +25,9 @@ export default fp(
       '/resend',
       {
         schema: {
-          tags: ['invitations'],
-          params: ResendInvitationRequestParamsSchema,
-          response: { 200: ResendInvitationResponseSchema },
+          tags: ['organization-invitations'],
+          params: ResendOrganizationInvitationRequestParamsSchema,
+          response: { 200: ResendOrganizationInvitationResponseSchema },
         },
       },
 
@@ -35,7 +35,7 @@ export default fp(
     );
   },
   {
-    name: 'invitation-routes',
+    name: 'organization-invitation-routes',
     encapsulate: true,
   },
 );

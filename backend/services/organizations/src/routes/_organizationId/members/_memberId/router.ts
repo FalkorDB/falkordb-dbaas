@@ -2,10 +2,10 @@ import fp from 'fastify-plugin';
 import { updateMemberHandler } from './handlers/update';
 import { deleteMemberHandler } from './handlers/delete';
 import {
-  DeleteMemberRequestParamsSchema,
-  UpdateMemberRequestBodySchema,
-  UpdateMemberRequestParamsSchema,
-  UpdateMemberResponseSchema,
+  DeleteOrganizationMemberRequestParamsSchema,
+  UpdateOrganizationMemberRequestBodySchema,
+  UpdateOrganizationMemberRequestParamsSchema,
+  UpdateOrganizationMemberResponseSchema,
 } from '@falkordb/schemas/src/services/organizations/v1';
 
 export default fp(
@@ -14,10 +14,10 @@ export default fp(
       '',
       {
         schema: {
-          tags: ['members'],
-          params: UpdateMemberRequestParamsSchema,
-          body: UpdateMemberRequestBodySchema,
-          response: { 200: UpdateMemberResponseSchema },
+          tags: ['organization-members'],
+          params: UpdateOrganizationMemberRequestParamsSchema,
+          body: UpdateOrganizationMemberRequestBodySchema,
+          response: { 200: UpdateOrganizationMemberResponseSchema },
         },
       },
 
@@ -28,8 +28,8 @@ export default fp(
       '',
       {
         schema: {
-          tags: ['members'],
-          params: DeleteMemberRequestParamsSchema,
+          tags: ['organization-members'],
+          params: DeleteOrganizationMemberRequestParamsSchema,
         },
       },
 

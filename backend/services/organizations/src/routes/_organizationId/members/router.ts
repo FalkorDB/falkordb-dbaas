@@ -1,9 +1,9 @@
 import fp from 'fastify-plugin';
 import { getMembersHandler } from './handlers/get';
 import {
-  ListMembersRequestParamsSchema,
-  ListMembersRequestQuerySchema,
-  ListMembersResponseSchema,
+  ListOrganizationMembersRequestParamsSchema,
+  ListOrganizationMembersRequestQuerySchema,
+  ListOrganizationMembersResponseSchema,
 } from '@falkordb/schemas/src/services/organizations/v1';
 
 export default fp(
@@ -12,11 +12,11 @@ export default fp(
       '',
       {
         schema: {
-          tags: ['members'],
-          params: ListMembersRequestParamsSchema,
-          querystring: ListMembersRequestQuerySchema,
+          tags: ['organization-members'],
+          params: ListOrganizationMembersRequestParamsSchema,
+          querystring: ListOrganizationMembersRequestQuerySchema,
           response: {
-            200: ListMembersResponseSchema,
+            200: ListOrganizationMembersResponseSchema,
           },
         },
       },

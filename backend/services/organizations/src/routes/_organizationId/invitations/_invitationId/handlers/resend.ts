@@ -1,6 +1,6 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
-import { ResendInvitationRequestParamsType } from '@falkordb/schemas/src/services/organizations/v1';
+import { ResendOrganizationInvitationRequestParamsType } from '@falkordb/schemas/src/services/organizations/v1';
 import { IInvitationsRepository } from '../../../../../repositories/invitations/IInvitationsRepository';
 import { ResendInvitationService } from '../services/ResendInvitationService';
 import { IOrganizationsRepository } from '../../../../../repositories/organizations/IOrganizationsRepository';
@@ -11,7 +11,7 @@ export const resendInvitationHandler: RouteHandlerMethod<
   undefined,
   undefined,
   {
-    Params: ResendInvitationRequestParamsType;
+    Params: ResendOrganizationInvitationRequestParamsType;
   }
 > = async (request) => {
   const opts = { logger: request.log };

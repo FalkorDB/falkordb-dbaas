@@ -2,8 +2,8 @@ import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import { IInvitationsRepository } from '../../../../../repositories/invitations/IInvitationsRepository';
 import {
-  RejectInvitationRequestHeadersSchemaType,
-  RejectInvitationRequestParamsSchemaType,
+  RejectOrganizationInvitationRequestHeadersSchemaType,
+  RejectOrganizationInvitationRequestParamsSchemaType,
 } from '@falkordb/schemas/src/services/organizations/v1';
 import { RejectInvitationService } from '../services/RejectInvitationService';
 import { IUsersRepository } from '../../../../../repositories/users/IUsersRepository';
@@ -13,8 +13,8 @@ export const rejectInvitationHandler: RouteHandlerMethod<
   undefined,
   undefined,
   {
-    Headers: RejectInvitationRequestHeadersSchemaType;
-    Params: RejectInvitationRequestParamsSchemaType;
+    Headers: RejectOrganizationInvitationRequestHeadersSchemaType;
+    Params: RejectOrganizationInvitationRequestParamsSchemaType;
   }
 > = async (request) => {
   const opts = {

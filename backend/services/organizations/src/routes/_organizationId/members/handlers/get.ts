@@ -1,9 +1,9 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import {
-  ListMembersRequestParamsType,
-  ListMembersRequestQueryType,
-  ListMembersResponseSchemaType,
+  ListOrganizationMembersRequestParamsType,
+  ListOrganizationMembersRequestQueryType,
+  ListOrganizationMembersResponseSchemaType,
 } from '@falkordb/schemas/src/services/organizations/v1';
 import { IMembersRepository } from '../../../../repositories/members/IMembersRepository';
 
@@ -12,9 +12,9 @@ export const getMembersHandler: RouteHandlerMethod<
   undefined,
   undefined,
   {
-    Params: ListMembersRequestParamsType;
-    Querystring: ListMembersRequestQueryType;
-    Reply: ListMembersResponseSchemaType;
+    Params: ListOrganizationMembersRequestParamsType;
+    Querystring: ListOrganizationMembersRequestQueryType;
+    Reply: ListOrganizationMembersResponseSchemaType;
   }
 > = async (request) => {
   const repository = request.diScope.resolve<IMembersRepository>(IMembersRepository.repositoryName);

@@ -1,6 +1,6 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
-import { DeleteInvitationRequestParamsType } from '@falkordb/schemas/src/services/organizations/v1';
+import { DeleteOrganizationInvitationRequestParamsType } from '@falkordb/schemas/src/services/organizations/v1';
 import { IInvitationsRepository } from '../../../../../repositories/invitations/IInvitationsRepository';
 
 export const deleteInvitationHandler: RouteHandlerMethod<
@@ -8,7 +8,7 @@ export const deleteInvitationHandler: RouteHandlerMethod<
   undefined,
   undefined,
   {
-    Params: DeleteInvitationRequestParamsType;
+    Params: DeleteOrganizationInvitationRequestParamsType;
   }
 > = async (request) => {
   const invitationsRepository = request.diScope.resolve<IInvitationsRepository>(IInvitationsRepository.repositoryName);

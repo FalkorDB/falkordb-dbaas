@@ -1,9 +1,9 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import {
-  ListInvitationsRequestParamsType,
-  ListInvitationsRequestQueryType,
-  ListInvitationsResponseSchemaType,
+  ListOrganizationInvitationsRequestParamsType,
+  ListOrganizationInvitationsRequestQueryType,
+  ListOrganizationInvitationsResponseSchemaType,
 } from '@falkordb/schemas/src/services/organizations/v1';
 import { IInvitationsRepository } from '../../../../repositories/invitations/IInvitationsRepository';
 
@@ -12,9 +12,9 @@ export const getInvitationsHandler: RouteHandlerMethod<
   undefined,
   undefined,
   {
-    Params: ListInvitationsRequestParamsType;
-    Querystring: ListInvitationsRequestQueryType;
-    Reply: ListInvitationsResponseSchemaType;
+    Params: ListOrganizationInvitationsRequestParamsType;
+    Querystring: ListOrganizationInvitationsRequestQueryType;
+    Reply: ListOrganizationInvitationsResponseSchemaType;
   }
 > = async (request) => {
   const repository = request.diScope.resolve<IInvitationsRepository>(IInvitationsRepository.repositoryName);
