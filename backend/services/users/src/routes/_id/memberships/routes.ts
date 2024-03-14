@@ -9,7 +9,7 @@ import { getUserMembershipsHandler } from './handlers/get';
 export default fp(
   async function userMemberships(fastify, opts) {
     fastify.get(
-      '',
+      '/',
       {
         schema: {
           tags: ['memberships'],

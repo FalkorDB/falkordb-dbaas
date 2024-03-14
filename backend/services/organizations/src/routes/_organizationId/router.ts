@@ -14,7 +14,7 @@ import { deleteOrganizationHandler } from './handlers/delete';
 export default fp(
   async function organization(fastify, opts) {
     fastify.get(
-      '',
+      '/',
       {
         schema: {
           tags: ['organizations'],
@@ -29,7 +29,7 @@ export default fp(
     );
 
     fastify.put(
-      '',
+      '/',
       {
         schema: {
           tags: ['organizations'],
@@ -43,7 +43,7 @@ export default fp(
     );
 
     fastify.delete(
-      '',
+      '/',
       {
         schema: {
           tags: ['organizations'],

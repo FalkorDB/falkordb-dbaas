@@ -1,4 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
+import { propagation, context } from '@opentelemetry/api';
+
 export interface IClientOpts {
   url: string;
 }
@@ -21,6 +23,12 @@ export class Client {
       .join('&');
   }
 
+  private _openTelemetryPropagation() {
+    const traceHeaders = {};
+    propagation.inject(context.active(), traceHeaders);
+    return traceHeaders;
+  }
+
   setHeaders(headers: object) {
     this._client.defaults.headers = {
       ...this._client.defaults.headers,
@@ -36,8 +44,12 @@ export class Client {
       query?: any;
     },
   ) {
+    const headers = {
+      ...this._openTelemetryPropagation(),
+      ...opts?.headers,
+    };
     const res = await this._client.get(`${path}?${this._stringifyQueryParams(opts?.query ?? {})}`, {
-      headers: opts?.headers,
+      headers,
       params: opts?.params,
     });
     return res.data;
@@ -52,8 +64,12 @@ export class Client {
       query?: any;
     },
   ) {
+    const headers = {
+      ...this._openTelemetryPropagation(),
+      ...opts?.headers,
+    };
     const res = await this._client.post(`${path}?${this._stringifyQueryParams(opts?.query ?? {})}`, data, {
-      headers: opts?.headers,
+      headers,
       params: opts?.params,
     });
     return res.data;
@@ -68,8 +84,12 @@ export class Client {
       query?: any;
     },
   ) {
+    const headers = {
+      ...this._openTelemetryPropagation(),
+      ...opts?.headers,
+    };
     const res = await this._client.put(`${path}?${this._stringifyQueryParams(opts?.query ?? {})}`, data, {
-      headers: opts?.headers,
+      headers,
       params: opts?.params,
     });
     return res.data;
@@ -83,8 +103,12 @@ export class Client {
       query?: any;
     },
   ) {
+    const headers = {
+      ...this._openTelemetryPropagation(),
+      ...opts?.headers,
+    };
     const res = await this._client.delete(`${path}?${this._stringifyQueryParams(opts?.query ?? {})}`, {
-      headers: opts?.headers,
+      headers,
       params: opts?.params,
     });
     return res.data;

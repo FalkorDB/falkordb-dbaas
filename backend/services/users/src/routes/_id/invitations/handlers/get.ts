@@ -20,6 +20,7 @@ export const getInvitationsHandler: RouteHandlerMethod<
 > = async (request) => {
   const invitationsRepository = request.diScope.resolve<IInvitationsRepository>(IInvitationsRepository.repositoryName);
   const usersRepository = request.diScope.resolve<IUsersRepository>(IUsersRepository.repositoryName);
+
   try {
     const user = await usersRepository.get(request.params.id);
 

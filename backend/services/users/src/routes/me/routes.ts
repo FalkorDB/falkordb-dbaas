@@ -5,7 +5,7 @@ import { getMeHandler } from './handlers/get';
 export default fp(
   async function me(fastify, opts) {
     fastify.get(
-      '',
+      '/',
       {
         schema: {
           tags: ['me'],

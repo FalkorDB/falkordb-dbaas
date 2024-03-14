@@ -14,7 +14,7 @@ import {
 export default fp(
   async function invitations(fastify, opts) {
     fastify.get(
-      '',
+      '/',
       {
         schema: {
           tags: ['organization-invitations'],
@@ -30,7 +30,7 @@ export default fp(
     );
 
     fastify.post(
-      '',
+      '/',
       {
         schema: {
           tags: ['organization-invitations'],

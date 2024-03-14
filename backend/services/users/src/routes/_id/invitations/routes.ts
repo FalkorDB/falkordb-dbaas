@@ -5,11 +5,12 @@ import {
   GetUserInvitationsResponseBodySchema,
 } from '@falkordb/schemas/src/services/users/v1';
 import { getInvitationsHandler } from './handlers/get';
+import { context as c } from '@opentelemetry/api';
 
 export default fp(
   async function userId(fastify, opts) {
     fastify.get(
-      '',
+      '/',
       {
         schema: {
           tags: ['invitations'],
@@ -21,7 +22,7 @@ export default fp(
         },
       },
       getInvitationsHandler,
-    );
+    )
   },
   {
     name: 'user-invitations-routes',

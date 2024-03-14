@@ -11,7 +11,7 @@ import {
 export default fp(
   async function members(fastify, opts) {
     fastify.put(
-      '',
+      '/',
       {
         schema: {
           tags: ['organization-members'],
@@ -25,7 +25,7 @@ export default fp(
     );
 
     fastify.delete(
-      '',
+      '/',
       {
         schema: {
           tags: ['organization-members'],

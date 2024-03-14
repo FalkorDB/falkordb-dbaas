@@ -8,7 +8,7 @@ import { listMembersHandler } from './handlers/list';
 export default fp(
   async function members(fastify, opts) {
     fastify.get(
-      '',
+      '/',
       {
         schema: {
           tags: ['members'],

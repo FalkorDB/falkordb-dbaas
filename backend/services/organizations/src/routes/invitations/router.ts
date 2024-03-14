@@ -8,7 +8,7 @@ import { listInvitationsHandler } from './handlers/list';
 export default fp(
   async function invitations(fastify, opts) {
     fastify.get(
-      '',
+      '/',
       {
         schema: {
           tags: ['invitations'],

@@ -1,3 +1,9 @@
+import { configDotenv } from 'dotenv';
+configDotenv();
+
+import { init } from '@falkordb/configs/openTelemetryConfig';
+init(process.env.SERVICE_NAME, process.env.NODE_ENV);
+
 import { type FastifyInstance, type FastifyPluginOptions } from 'fastify';
 import AutoLoad from '@fastify/autoload';
 import Sensible from '@fastify/sensible';
@@ -11,6 +17,7 @@ import { fastifyAwilixPlugin } from '@fastify/awilix';
 import { setupContainer } from './container';
 import { swaggerPlugin, pubsubDecodePlugin } from '@falkordb/plugins';
 import falkordbClientPlugin from '@falkordb/rest-client/src/fastify-plugin';
+import openTelemetryPlugin from '@autotelic/fastify-opentelemetry';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   await fastify.register(Env, {
@@ -54,17 +61,6 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   });
   fastify.register(pubsubDecodePlugin);
 
-  await fastify.register(AutoLoad, {
-    dir: join(__dirname, 'routes'),
-    routeParams: true,
-    indexPattern: /.*routes(\.js|\.cjs)$/i,
-    ignorePattern: /spec\.ts$/,
-    autoHooksPattern: /.*hooks(\.js|\.cjs|\.ts)$/i,
-    autoHooks: true,
-    cascadeHooks: true,
-    options: Object.assign({}, opts),
-  });
-
   await fastify.register(MongoDB, {
     forceClose: true,
     url: fastify.config.MONGODB_URI,
@@ -93,8 +89,30 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     },
   });
 
+  await fastify.register(openTelemetryPlugin, { wrapRoutes: true });
+
+  await fastify.register(AutoLoad, {
+    dir: join(__dirname, 'routes'),
+    routeParams: true,
+    indexPattern: /.*routes(\.js|\.cjs)$/i,
+    ignorePattern: /spec\.ts$/,
+    autoHooksPattern: /.*hooks(\.js|\.cjs|\.ts)$/i,
+    autoHooks: true,
+    cascadeHooks: true,
+    options: Object.assign({}, opts),
+  });
+
   fastify.addHook('onRequest', (request, _, done) => {
     setupContainer(request);
+    done();
+  });
+
+  fastify.addHook('preHandler', (request, reply, done) => {
+    // Add trace ID
+    const { activeSpan } = request.openTelemetry();
+    if (activeSpan.spanContext().traceId) {
+      reply.header('x-trace-id', activeSpan.spanContext().traceId);
+    }
     done();
   });
 

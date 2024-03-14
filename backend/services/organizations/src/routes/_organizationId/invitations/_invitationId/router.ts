@@ -16,7 +16,7 @@ import { rejectInvitationHandler } from './handlers/reject';
 export default fp(
   async function invitations(fastify, opts) {
     fastify.delete(
-      '',
+      '/',
       {
         schema: {
           tags: ['organization-invitations'],

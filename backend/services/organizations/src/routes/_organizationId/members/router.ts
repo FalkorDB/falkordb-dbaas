@@ -9,7 +9,7 @@ import {
 export default fp(
   async function members(fastify, opts) {
     fastify.get(
-      '',
+      '/',
       {
         schema: {
           tags: ['organization-members'],

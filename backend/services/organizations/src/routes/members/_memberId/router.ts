@@ -5,7 +5,7 @@ import { deleteMemberHandler } from './handlers/delete';
 export default fp(
   async function members(fastify, opts) {
     fastify.delete(
-      '',
+      '/',
       {
         schema: {
           tags: ['members'],
