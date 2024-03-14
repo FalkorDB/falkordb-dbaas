@@ -2,9 +2,9 @@ import { type Static, Type } from '@sinclair/typebox';
 
 /********* Delete membership *********/
 
-export const DeleteMembershipRequestParamsSchema = Type.Object({
+export const DeleteUserMembershipRequestParamsSchema = Type.Object({
   id: Type.String(),
   membershipId: Type.String(),
 });
 
-export type DeleteMembershipRequestParamsSchemaType = Static<typeof DeleteMembershipRequestParamsSchema>;
+export type DeleteUserMembershipRequestParamsSchemaType = Static<typeof DeleteUserMembershipRequestParamsSchema>;

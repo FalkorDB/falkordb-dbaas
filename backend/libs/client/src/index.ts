@@ -1,23 +1,70 @@
-import { Client } from './client';
+import { Client, IClientOpts } from './client';
 import { ProvisionerV1 } from './clients/v1/provisioner';
 import { UsersV1 } from './clients/v1/users';
 
-export interface IFalkorDBOpts {
-  url: string;
+export enum ApiVersions {
+  V1 = 'v1',
+}
 
+export enum Services {
+  Provision = 'provisioner',
+  Users = 'users',
+  Organizations = 'organizations',
+}
+
+export interface IFalkorDBOpts {
+  client?: {
+    url?: string;
+    urls?: {
+      [key in ApiVersions]: {
+        [key in Services]?: string;
+      };
+    };
+  };
   injectContext?: boolean;
 }
 
-export const FalkorDBClient = (opts?: IFalkorDBOpts) => {
-  const client = new Client({
-    url: opts?.url,
+type ClientMap = {
+  [key in ApiVersions]: {
+    [key in Services]: Client;
+  };
+};
+
+function createClients(opts: IFalkorDBOpts) {
+  const defaultClient = new Client({
+    url: opts?.client?.url ?? 'http://localhost:3000',
   });
 
+  const clientMap: Partial<ClientMap> = {};
+
+  for (const [version, services] of Object.entries(opts?.client?.urls ?? {})) {
+    for (const [service, url] of Object.entries(services ?? {})) {
+      const client = url ? new Client({ url }) : defaultClient;
+      clientMap[version][service] = client;
+    }
+  }
+
+  return { clientMap: clientMap as ClientMap, defaultClient };
+}
+
+export const FalkorDBClient = (opts?: IFalkorDBOpts) => {
+  const { clientMap, defaultClient } = createClients(opts);
   return {
-    client,
+    clients: clientMap,
+    defaultClient,
+    
     v1: {
-      provisioner: () => ProvisionerV1(client),
-      users: () => UsersV1(client),
+      provisioner: () => ProvisionerV1(clientMap.v1.provisioner),
+      users: () => UsersV1(clientMap.v1.users),
+    },
+
+    setHeaders(headers: object) {
+      defaultClient.setHeaders(headers);
+      for (const version of Object.keys(clientMap)) {
+        for (const service of Object.keys(clientMap[version])) {
+          clientMap[version][service].setHeaders(headers);
+        }
+      }
     },
   };
 };

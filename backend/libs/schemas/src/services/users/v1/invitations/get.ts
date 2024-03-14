@@ -2,19 +2,19 @@ import { type Static, Type } from '@sinclair/typebox';
 import { InvitationSchema } from '../../../../global';
 
 /********* Get invitations *********/
-export const GetInvitationsRequestParamsSchema = Type.Object({
+export const GetUserInvitationsRequestParamsSchema = Type.Object({
   id: Type.String(),
 });
 
-export type GetInvitationsRequestParamsSchemaType = Static<typeof GetInvitationsRequestParamsSchema>;
+export type GetUserInvitationsRequestParamsSchemaType = Static<typeof GetUserInvitationsRequestParamsSchema>;
 
-export const GetInvitationsRequestQuerySchema = Type.Object({
+export const GetUserInvitationsRequestQuerySchema = Type.Object({
   page: Type.Optional(Type.Number({ default: 1 })),
   pageSize: Type.Optional(Type.Number({ default: 10 })),
 });
 
-export type GetInvitationsRequestQuerySchemaType = Static<typeof GetInvitationsRequestQuerySchema>;
+export type GetUserInvitationsRequestQuerySchemaType = Static<typeof GetUserInvitationsRequestQuerySchema>;
 
-export const GetInvitationsResponseBodySchema = Type.Array(InvitationSchema);
+export const GetUserInvitationsResponseBodySchema = Type.Array(InvitationSchema);
 
-export type GetInvitationsResponseBodySchemaType = Static<typeof GetInvitationsResponseBodySchema>;
+export type GetUserInvitationsResponseBodySchemaType = Static<typeof GetUserInvitationsResponseBodySchema>;

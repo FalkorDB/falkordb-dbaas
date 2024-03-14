@@ -1,11 +1,14 @@
 import axios, { AxiosInstance } from 'axios';
+export interface IClientOpts {
+  url: string;
+}
 
 export class Client {
   private _client: AxiosInstance;
 
-  constructor(opts?: { url: string }) {
+  constructor(opts?: IClientOpts) {
     this._client = axios.create({
-      baseURL: opts?.url ?? 'http://localhost:3000',
+      baseURL: opts.url,
       headers: {
         'Content-Type': 'application/json',
       },

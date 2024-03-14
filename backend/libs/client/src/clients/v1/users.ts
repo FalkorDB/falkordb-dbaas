@@ -5,12 +5,12 @@ import {
   CreateUserRequestParamsSchemaType,
   CreateUserResponseBodySchemaType,
   DeleteUserRequestParamsSchemaType,
-  GetInvitationsRequestParamsSchemaType,
-  GetInvitationsRequestQuerySchemaType,
-  GetInvitationsResponseBodySchemaType,
-  GetMembershipsRequestParamsSchemaType,
-  GetMembershipsRequestQuerySchemaType,
-  GetMembershipsResponseBodySchemaType,
+  GetUserInvitationsRequestParamsSchemaType,
+  GetUserInvitationsRequestQuerySchemaType,
+  GetUserInvitationsResponseBodySchemaType,
+  GetUserMembershipsRequestParamsSchemaType,
+  GetUserMembershipsRequestQuerySchemaType,
+  GetUserMembershipsResponseBodySchemaType,
   GetUserRequestParamsSchemaType,
   GetUserResponseBodySchemaType,
   UpdateUserRequestBodySchemaType,
@@ -51,18 +51,18 @@ export const UsersV1 = (client: Client) => ({
 
   invitations: {
     get: (
-      params: GetInvitationsRequestParamsSchemaType,
-      query: GetInvitationsRequestQuerySchemaType,
-    ): Promise<GetInvitationsResponseBodySchemaType> => {
+      params: GetUserInvitationsRequestParamsSchemaType,
+      query: GetUserInvitationsRequestQuerySchemaType,
+    ): Promise<GetUserInvitationsResponseBodySchemaType> => {
       return client.get(`/users/${params.id}/invitations`, { query });
     },
   },
 
   memberships: {
     get: (
-      params: GetMembershipsRequestParamsSchemaType,
-      query: GetMembershipsRequestQuerySchemaType,
-    ): Promise<GetMembershipsResponseBodySchemaType> => {
+      params: GetUserMembershipsRequestParamsSchemaType,
+      query: GetUserMembershipsRequestQuerySchemaType,
+    ): Promise<GetUserMembershipsResponseBodySchemaType> => {
       return client.get(`/users/${params.id}/memberships`, { query });
     },
   },

@@ -8,7 +8,7 @@ export default fp(
 
     if (opts.injectContext) {
       fastify.addHook('onRequest', async (request) => {
-        falkordb.client.setHeaders({
+        falkordb.setHeaders({
           'x-falkordb-userId': request.headers['x-falkordb-userId'],
           'x-falkordb-organizationId': request.headers['x-falkordb-userId'],
           'x-request-id': request.id,
