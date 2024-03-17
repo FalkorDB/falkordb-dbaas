@@ -9,7 +9,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "SSPL",
   "dependencies": {
     "@falkordb/configs": "workspace:*",
     "@fastify/sensible": "^5.5.0",

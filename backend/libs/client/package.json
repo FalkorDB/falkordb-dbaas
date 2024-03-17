@@ -11,7 +11,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "SSPL",
   "dependencies": {
     "@falkordb/configs": "workspace:*",
     "@falkordb/errors": "workspace:*",

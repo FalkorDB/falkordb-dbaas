@@ -5,7 +5,7 @@
   "scripts": {},
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "SSPL",
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "^20.11.25"
