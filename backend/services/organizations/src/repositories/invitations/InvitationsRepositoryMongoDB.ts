@@ -2,7 +2,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { MongoClient, ObjectId } from 'mongodb';
 import { ApiError } from '@falkordb/errors';
 import { IInvitationsRepository } from './IInvitationsRepository';
-import { CreateInvitationType, InvitationType, UpdateInvitationType } from '@falkordb/schemas/src/global';
+import { CreateInvitationType, InvitationType, UpdateInvitationType } from '@falkordb/schemas/dist/global';
 
 export class InvitationsRepositoryMongoDB implements IInvitationsRepository {
   collection = this._client.db().collection('invitations');

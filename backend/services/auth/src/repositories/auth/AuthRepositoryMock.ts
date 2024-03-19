@@ -28,4 +28,8 @@ export class AuthRepositoryMock implements IAuthRepository {
       uid: 'uid',
     });
   }
+
+  delete(uid: string): Promise<void> {
+    return Promise.resolve();
+  }
 }

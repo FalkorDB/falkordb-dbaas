@@ -26,6 +26,7 @@ export class AuthRepositoryIdentityPlatform implements IAuthRepository {
   }
 
   private _handleError(error: Error) {
+    
     if (error instanceof GaxiosError && error.response?.status === 400) {
       if (error.response.data.error.message === 'EMAIL_EXISTS') {
         throw ApiError.conflict('Email exists', 'AUTH_EMAIL_EXISTS');
@@ -47,19 +48,28 @@ export class AuthRepositoryIdentityPlatform implements IAuthRepository {
         throw ApiError.unauthorized('Invalid password', 'AUTH_INVALID_PASSWORD');
       }
 
+      if (error.response.data.error.message === 'INVALID_LOGIN_CREDENTIALS') {
+        throw ApiError.unauthorized('Invalid login credentials', 'AUTH_INVALID_LOGIN_CREDENTIALS');
+      }
+
       if (error.response.data.error.message === 'USER_DISABLED') {
         throw ApiError.forbidden('User disabled', 'AUTH_USER_DISABLED');
+      }
+
+      if (error.response.data.error.message === 'USER_NOT_FOUND') {
+        throw ApiError.notFound('User not found', 'AUTH_USER_NOT_FOUND');
       }
 
       throw ApiError.badRequest('Error', error.response.data.error.message);
     }
 
+    this._opts.logger.error('Error', { error });
     throw error;
   }
 
   async signup(email: string, password: string): Promise<SignUpResponse> {
     try {
-      const response = await this._call<{
+     await this._call<{
         email: string;
         localId: string;
       }>('https://identitytoolkit.googleapis.com/v1/accounts:signUp', {
@@ -67,7 +77,6 @@ export class AuthRepositoryIdentityPlatform implements IAuthRepository {
         password,
         returnSecureToken: true,
       });
-      console.log(response);
 
       return this.loginWithEmail(email, password);
     } catch (error) {
@@ -96,6 +105,16 @@ export class AuthRepositoryIdentityPlatform implements IAuthRepository {
         refreshToken: response.refreshToken,
         uid: response.localId,
       };
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  async delete(uid: string): Promise<void> {
+    try {
+      await this._call('https://identitytoolkit.googleapis.com/v1/accounts:delete', {
+        localId: uid,
+      });
     } catch (error) {
       this._handleError(error);
     }

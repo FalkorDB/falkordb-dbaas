@@ -1,7 +1,7 @@
 import {
   ListMembersRequestQueryType,
   ListMembersResponseSchemaType,
-} from '@falkordb/schemas/src/services/organizations/v1';
+} from '@falkordb/schemas/dist/services/organizations/v1';
 import { RouteHandlerMethod } from 'fastify';
 import { IMembersRepository } from '../../../repositories/members/IMembersRepository';
 import { ApiError } from '@falkordb/errors';

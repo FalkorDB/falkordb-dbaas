@@ -4,7 +4,7 @@ import { ITenantGroupRepository } from '../../../../repositories/tenant-groups/I
 import { CloudBuildOperationCallbackTenantGroup } from './CloudBuildOperationCallbackTenantGroup';
 import { ITenantsRepository } from '../../../../repositories/tenants/ITenantRepository';
 import { CloudBuildOperationCallbackTenant } from './CloudBuildOperationCallbackTenant';
-import { CloudBuildOperationsCallbackBodySchemaType } from '@falkordb/schemas/src/services/provisioner/v1/operations';
+import { CloudBuildOperationsCallbackBodySchemaType } from '@falkordb/schemas/dist/services/provisioner/v1/operations';
 
 export class CloudBuildOperationCallback {
   private _operationsRepository: IOperationsRepository;

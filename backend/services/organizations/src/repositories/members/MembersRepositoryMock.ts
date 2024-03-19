@@ -1,4 +1,4 @@
-import { CreateMemberType, MemberType, UpdateMemberType, RoleType } from '@falkordb/schemas/src/global';
+import { CreateMemberType, MemberType, UpdateMemberType, RoleType } from '@falkordb/schemas/dist/global';
 import { IMembersRepository } from './IMembersRepository';
 import { ApiError } from '@falkordb/errors';
 

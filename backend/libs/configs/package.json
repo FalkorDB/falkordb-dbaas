@@ -2,7 +2,11 @@
   "name": "@falkordb/configs",
   "version": "1.0.0",
   "description": "",
-  "scripts": {},
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc --noEmit && tsup"
+  },
   "keywords": [],
   "author": "",
   "license": "SSPL",

@@ -102,6 +102,9 @@ importers:
       '@falkordb/errors':
         specifier: workspace:*
         version: link:../errors
+      '@falkordb/rest-client':
+        specifier: workspace:^
+        version: link:../client
 
   libs/schemas:
     dependencies:

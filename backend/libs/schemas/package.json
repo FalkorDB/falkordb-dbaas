@@ -5,6 +5,8 @@
   "main": "dist/index.js",
   "types": "src/index.ts",
   "scripts": {
+    "jest": "jest",
+    "test": "jest",
     "build": "tsc"
   },
   "keywords": [],

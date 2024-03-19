@@ -7,7 +7,7 @@ import {
   CloudProvisionConfigCreateBodySchema,
   CloudProvisionConfigCreateBodySchemaType,
   CloudProvisionConfigCreateResponseSuccessSchema,
-} from '@falkordb/schemas/src/services/provisioner/v1/cloud-provision-config';
+} from '@falkordb/schemas/dist/services/provisioner/v1/cloud-provision-config';
 import { cloudProvisionConfigDeleteHandler } from './handlers/delete';
 import { cloudProvisionConfigListHandler } from './handlers/list';
 

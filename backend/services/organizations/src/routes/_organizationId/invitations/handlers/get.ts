@@ -4,7 +4,7 @@ import {
   ListOrganizationInvitationsRequestParamsType,
   ListOrganizationInvitationsRequestQueryType,
   ListOrganizationInvitationsResponseSchemaType,
-} from '@falkordb/schemas/src/services/organizations/v1';
+} from '@falkordb/schemas/dist/services/organizations/v1';
 import { IInvitationsRepository } from '../../../../repositories/invitations/IInvitationsRepository';
 
 export const getInvitationsHandler: RouteHandlerMethod<

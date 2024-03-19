@@ -1,7 +1,7 @@
 import { RouteHandlerMethod } from 'fastify';
 import {
   DeleteOrganizationRequestParamsType,
-} from '@falkordb/schemas/src/services/organizations/v1';
+} from '@falkordb/schemas/dist/services/organizations/v1';
 import { IOrganizationsRepository } from '../../../repositories/organizations/IOrganizationsRepository';
 import { ApiError } from '@falkordb/errors';
 import { DeleteOrganizationService } from '../services/DeleteOrganizationService';

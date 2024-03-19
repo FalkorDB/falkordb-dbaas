@@ -9,7 +9,7 @@ import {
   ListOrganizationInvitationsRequestParamsSchema,
   ListOrganizationInvitationsRequestQuerySchema,
   ListOrganizationInvitationsResponseSchema,
-} from '@falkordb/schemas/src/services/organizations/v1';
+} from '@falkordb/schemas/dist/services/organizations/v1';
 
 export default fp(
   async function invitations(fastify, opts) {

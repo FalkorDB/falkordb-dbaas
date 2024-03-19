@@ -4,7 +4,7 @@ import { ApiError } from '@falkordb/errors';
 import {
   LoginWithEmailRequestBodySchemaType,
   LoginWithEmailResponseSuccessSchemaType,
-} from '@falkordb/schemas/src/services/auth/v1';
+} from '@falkordb/schemas/dist/services/auth/v1';
 
 export class LoginService {
   constructor(

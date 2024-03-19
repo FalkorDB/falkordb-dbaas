@@ -1,7 +1,7 @@
 import { configDotenv } from 'dotenv';
 configDotenv();
 
-import { init } from '@falkordb/configs/openTelemetryConfig';
+import { init } from '@falkordb/configs';
 init(process.env.SERVICE_NAME, process.env.NODE_ENV);
 
 import { type FastifyInstance, type FastifyPluginOptions } from 'fastify';

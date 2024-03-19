@@ -6,7 +6,7 @@ import {
   UpdateOrganizationRequestBodySchema,
   UpdateOrganizationRequestParamsSchema,
   UpdateOrganizationResponseSchema,
-} from '@falkordb/schemas/src/services/organizations/v1';
+} from '@falkordb/schemas/dist/services/organizations/v1';
 import { getOrganizationHandler } from './handlers/get';
 import { updateOrganizationHandler } from './handlers/update';
 import { deleteOrganizationHandler } from './handlers/delete';

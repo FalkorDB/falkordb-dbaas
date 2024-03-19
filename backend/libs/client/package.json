@@ -7,7 +7,7 @@
   "scripts": {
     "jest": "jest",
     "test": "jest",
-    "build": "tsc"
+    "build": "tsc --noEmit && tsup"
   },
   "keywords": [],
   "author": "",

@@ -4,7 +4,7 @@ import { IInvitationsRepository } from '../../../../../repositories/invitations/
 import {
   AcceptOrganizationInvitationRequestHeadersSchemaType,
   AcceptOrganizationInvitationRequestParamsSchemaType,
-} from '@falkordb/schemas/src/services/organizations/v1';
+} from '@falkordb/schemas/dist/services/organizations/v1';
 import { AcceptInvitationService } from '../services/AcceptInvitationService';
 import { IMembersRepository } from '../../../../../repositories/members/IMembersRepository';
 import { IUsersRepository } from '../../../../../repositories/users/IUsersRepository';

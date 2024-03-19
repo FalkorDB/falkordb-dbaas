@@ -7,6 +7,8 @@ import { ICaptchaRepository } from './repositories/captcha/ICaptchaRepository';
 import { ReCaptchaRepository } from './repositories/captcha/ReCaptchaRepository';
 import { AuthRepositoryMock } from './repositories/auth/AuthRepositoryMock';
 import { CaptchaRepositoryMock } from './repositories/captcha/CaptchaRepositoryMock';
+import { IUsersRepository } from './repositories/users/IUsersRepository';
+import { UsersRepositoryFalkorDBClient } from './repositories/users/UsersRepositoryFalkorDBClient';
 
 export const setupGlobalContainer = (fastify: FastifyInstance) => {
   diContainer.register({
@@ -31,6 +33,17 @@ export const setupContainer = (req: FastifyRequest) => {
       }
       return new AuthRepositoryIdentityPlatform({
         logger: req.log,
+      });
+    }),
+
+    [IUsersRepository.repositoryName]: asFunction(() => {
+      if (process.env.NODE_ENV !== 'production' && process.env.MOCK_USERS_REPOSITORY === 'true') {
+        // TODO: Create a mock for the UsersRepository
+        return;
+      }
+      return new UsersRepositoryFalkorDBClient({
+        logger: req.log,
+        client: req.server.falkordbClient,
       });
     }),
   });

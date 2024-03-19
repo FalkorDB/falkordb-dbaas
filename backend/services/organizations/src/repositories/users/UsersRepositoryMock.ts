@@ -1,4 +1,4 @@
-import { UserSchemaType } from '@falkordb/schemas/src/global';
+import { UserSchemaType } from '@falkordb/schemas/dist/global';
 import { IUsersRepository } from './IUsersRepository';
 import { ApiError } from '@falkordb/errors';
 

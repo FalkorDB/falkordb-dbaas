@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { FalkorDBClient, IFalkorDBOpts } from './index';
+import { FalkorDBClient, IFalkorDBOpts } from '@falkordb/rest-client';
 
 export default fp(
   async function client(fastify, opts: IFalkorDBOpts) {

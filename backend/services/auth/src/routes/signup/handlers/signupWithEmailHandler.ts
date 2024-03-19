@@ -1,11 +1,12 @@
 import {
   SignUpWithEmailRequestBodySchemaType,
   SignUpWithEmailResponseSuccessSchemaType,
-} from '@falkordb/schemas/src/services/auth/v1';
+} from '@falkordb/schemas/dist/services/auth/v1';
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import { IAuthRepository } from '../../../repositories/auth/IAuthRepository';
 import { SignUpService } from '../services/SignUpService';
+import { IUsersRepository } from '../../../repositories/users/IUsersRepository';
 
 export const signupWithEmailHandler: RouteHandlerMethod<
   undefined,
@@ -17,9 +18,10 @@ export const signupWithEmailHandler: RouteHandlerMethod<
   }
 > = async (request) => {
   const opts = { logger: request.log };
-  const repository = request.diScope.resolve<IAuthRepository>(IAuthRepository.repositoryName);
+  const authRepository = request.diScope.resolve<IAuthRepository>(IAuthRepository.repositoryName);
+  const usersRepository = request.diScope.resolve<IUsersRepository>(IUsersRepository.repositoryName);
 
-  const service = new SignUpService(opts, repository);
+  const service = new SignUpService(opts, authRepository, usersRepository);
 
   try {
     const response = await service.signupWithEmail(request.body);

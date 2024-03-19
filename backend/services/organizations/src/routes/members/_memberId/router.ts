@@ -1,4 +1,4 @@
-import { DeleteMemberRequestParamsSchema } from '@falkordb/schemas/src/services/organizations/v1';
+import { DeleteMemberRequestParamsSchema } from '@falkordb/schemas/dist/services/organizations/v1';
 import fp from 'fastify-plugin';
 import { deleteMemberHandler } from './handlers/delete';
 

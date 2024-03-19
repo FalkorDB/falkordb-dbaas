@@ -1,7 +1,7 @@
 import { RouteHandlerMethod } from 'fastify';
 import { IUsersRepository } from '../../../repositories/users/IUsersRepository';
 import { ApiError } from '@falkordb/errors';
-import { DeleteUserRequestParamsSchemaType } from '@falkordb/schemas/src/services/users/v1';
+import { DeleteUserRequestParamsSchemaType } from '@falkordb/schemas/dist/services/users/v1';
 
 export const deleteUserHandler: RouteHandlerMethod<
   undefined,

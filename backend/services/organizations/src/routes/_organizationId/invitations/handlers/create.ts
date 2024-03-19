@@ -9,7 +9,7 @@ import {
   CreateOrganizationInvitationRequestHeadersType,
   CreateOrganizationInvitationRequestParamsType,
   CreateOrganizationInvitationResponseSchemaType,
-} from '@falkordb/schemas/src/services/organizations/v1';
+} from '@falkordb/schemas/dist/services/organizations/v1';
 
 export const createInvitationHandler: RouteHandlerMethod<
   undefined,

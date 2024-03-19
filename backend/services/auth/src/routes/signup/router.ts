@@ -1,7 +1,7 @@
 import {
   SignUpWithEmailRequestBodySchema,
   SignUpWithEmailResponseSuccessSchema,
-} from '@falkordb/schemas/src/services/auth/v1';
+} from '@falkordb/schemas/dist/services/auth/v1';
 import fp from 'fastify-plugin';
 import { signupWithEmailHandler } from './handlers/signupWithEmailHandler';
 

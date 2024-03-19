@@ -3,8 +3,8 @@ import { IOperationsRepository } from '../../../../repositories/operations/IOper
 import { Storage, Bucket } from '@google-cloud/storage';
 import { ITenantsRepository } from '../../../../repositories/tenants/ITenantRepository';
 import { ITenantGroupRepository } from '../../../../repositories/tenant-groups/ITenantGroupsRepository';
-import { CloudBuildOperationsCallbackBodySchemaType } from '@falkordb/schemas/src/services/provisioner/v1/operations';
-import { OperationSchemaType, TenantSchemaType } from '@falkordb/schemas/src/global';
+import { CloudBuildOperationsCallbackBodySchemaType } from '@falkordb/schemas/dist/services/provisioner/v1/operations';
+import { OperationSchemaType, TenantSchemaType } from '@falkordb/schemas/dist/global';
 
 export class CloudBuildOperationCallbackTenant {
   private _operationsRepository: IOperationsRepository;

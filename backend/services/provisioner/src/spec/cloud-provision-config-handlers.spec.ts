@@ -4,7 +4,7 @@ import { Value } from '@sinclair/typebox/value';
 import {
   CloudProvisionConfigCreateBodySchemaType,
   CloudProvisionConfigCreateResponseSuccessSchema,
-} from '../routes/cloud-provision-config/schemas/create';
+} from '@falkordb/schemas/dist/services/provisioner/v1';
 
 let fastify: FastifyInstance;
 beforeAll(async () => {
@@ -39,7 +39,7 @@ describe('create/delete', () => {
           runnerServiceAccount: 'runner-service-account-email',
           stateBucket: 'state-bucket',
           timeout: 60,
-          operationProvider: 'cloudbuild'
+          operationProvider: 'cloudbuild',
         },
         tenantGroupConfig: {
           clusterDeletionProtection: true,
