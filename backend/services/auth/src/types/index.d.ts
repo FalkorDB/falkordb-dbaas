@@ -8,6 +8,7 @@ declare module 'fastify' {
     config: EnvSchemaType;
     falkordbClient: FalkorDBClient;
     pubsubDecode: <T>(request: FastifyRequest, schema?: TObject) => T;
+    validateCaptcha: (request: FastifyRequest) => Promise<void>;
   }
 }
 

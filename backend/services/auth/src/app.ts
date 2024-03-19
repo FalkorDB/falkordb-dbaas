@@ -14,10 +14,12 @@ import { EnvSchema } from './schemas/dotenv';
 import MongoDB from '@fastify/mongodb';
 import fastifyRequestContextPlugin from '@fastify/request-context';
 import { fastifyAwilixPlugin } from '@fastify/awilix';
-import { setupContainer } from './container';
+import { setupContainer, setupGlobalContainer } from './container';
 import { swaggerPlugin, pubsubDecodePlugin } from '@falkordb/plugins';
 import falkordbClientPlugin from '@falkordb/rest-client/src/fastify-plugin';
 import openTelemetryPlugin from '@autotelic/fastify-opentelemetry';
+import { captchaPlugin } from '@falkordb/plugins';
+import { ICaptchaRepository } from './repositories/captcha/ICaptchaRepository';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   await fastify.register(Env, {
@@ -39,10 +41,10 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
         description: 'API Endpoints for FalkorDB Auth',
         version: '0.1.0',
       },
-      tags: [
-      ],
+      tags: [],
     },
   });
+
   fastify.register(pubsubDecodePlugin);
 
   await fastify.register(MongoDB, {
@@ -74,6 +76,12 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   });
 
   await fastify.register(openTelemetryPlugin, { wrapRoutes: true });
+
+  setupGlobalContainer(fastify);
+
+  await fastify.register(captchaPlugin, {
+    captchaRepository: fastify.diContainer.resolve<ICaptchaRepository>(ICaptchaRepository.repositoryName),
+  });
 
   await fastify.register(AutoLoad, {
     dir: join(__dirname, 'routes'),

@@ -1,16 +1,37 @@
 import { diContainer } from '@fastify/awilix';
 import { asClass, asFunction, Lifetime } from 'awilix';
-import { FastifyRequest } from 'fastify';
+import { FastifyInstance, FastifyRequest } from 'fastify';
+import { IAuthRepository } from './repositories/auth/IAuthRepository';
+import { AuthRepositoryIdentityPlatform } from './repositories/auth/AuthRepositoryIdentityPlatform';
+import { ICaptchaRepository } from './repositories/captcha/ICaptchaRepository';
+import { ReCaptchaRepository } from './repositories/captcha/ReCaptchaRepository';
+import { AuthRepositoryMock } from './repositories/auth/AuthRepositoryMock';
+import { CaptchaRepositoryMock } from './repositories/captcha/CaptchaRepositoryMock';
 
-export const setupContainer = (req: FastifyRequest) => {
-  if (process.env.NODE_ENV === 'test' && process.env.MOCK_CONTAINER === 'true') {
-    return setupTestContainer();
-  }
+export const setupGlobalContainer = (fastify: FastifyInstance) => {
+  diContainer.register({
+    [ICaptchaRepository.repositoryName]: asFunction(() => {
+      if (process.env.NODE_ENV !== 'production' && process.env.MOCK_CAPTCHA_REPOSITORY === 'true') {
+        return new CaptchaRepositoryMock();
+      }
 
-  diContainer.register({});
+      return new ReCaptchaRepository({
+        logger: fastify.log,
+        secretKey: fastify.config.RECAPTCHA_SECRET_KEY,
+      });
+    }),
+  });
 };
 
-// TODO: Create mock repositories
-const setupTestContainer = () => {
-  diContainer.register({});
+export const setupContainer = (req: FastifyRequest) => {
+  diContainer.register({
+    [IAuthRepository.repositoryName]: asFunction(() => {
+      if (process.env.NODE_ENV !== 'production' && process.env.MOCK_AUTH_REPOSITORY === 'true') {
+        return new AuthRepositoryMock();
+      }
+      return new AuthRepositoryIdentityPlatform({
+        logger: req.log,
+      });
+    }),
+  });
 };

@@ -9,6 +9,7 @@ export const EnvSchema = Type.Object({
   FALKORDB_ORGANIZATIONS_URL: Type.String({ default: 'http://localhost:3000' }),
   FALKORDB_PROVISIONER_URL: Type.String({ default: 'http://localhost:3000' }),
   FALKORDB_USERS_URL: Type.String({ default: 'http://localhost:3000' }),
+  RECAPTCHA_SECRET_KEY: Type.String({ default: '' }),
 });
 
 export type EnvSchemaType = Static<typeof EnvSchema>;

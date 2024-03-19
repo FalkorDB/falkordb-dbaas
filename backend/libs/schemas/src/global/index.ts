@@ -11,3 +11,4 @@ export * from './organization';
 export * from './roles';
 export * from './membership';
 export * from './user';
+export * from './auth';
