@@ -9,6 +9,8 @@ import { AuthRepositoryMock } from './repositories/auth/AuthRepositoryMock';
 import { CaptchaRepositoryMock } from './repositories/captcha/CaptchaRepositoryMock';
 import { IUsersRepository } from './repositories/users/IUsersRepository';
 import { UsersRepositoryFalkorDBClient } from './repositories/users/UsersRepositoryFalkorDBClient';
+import { IMessagingRepository } from './repositories/messaging/IMessagingRepository';
+import { MessagingRepositoryMock } from './repositories/messaging/MessagingRepositoryMock';
 
 export const setupGlobalContainer = (fastify: FastifyInstance) => {
   diContainer.register({
@@ -45,6 +47,13 @@ export const setupContainer = (req: FastifyRequest) => {
         logger: req.log,
         client: req.server.falkordbClient,
       });
+    }),
+
+    [IMessagingRepository.repositoryName]: asFunction(() => {
+      if (process.env.NODE_ENV !== 'production' && process.env.MOCK_MESSAGING_REPOSITORY === 'true') {
+        return new MessagingRepositoryMock();
+      }
+      // TODO: Create a real implementation for the MessagingRepository
     }),
   });
 };

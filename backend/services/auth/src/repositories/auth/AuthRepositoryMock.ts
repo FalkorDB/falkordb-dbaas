@@ -32,4 +32,11 @@ export class AuthRepositoryMock implements IAuthRepository {
   delete(uid: string): Promise<void> {
     return Promise.resolve();
   }
+
+  createForgotPasswordLink(params: { email: string; continueUrl: string }): Promise<{ code: string; link: string }> {
+    return Promise.resolve({
+      code: 'code',
+      link: 'link',
+    });
+  }
 }

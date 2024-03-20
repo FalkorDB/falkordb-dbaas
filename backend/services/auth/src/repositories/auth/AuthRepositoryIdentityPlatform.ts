@@ -26,7 +26,6 @@ export class AuthRepositoryIdentityPlatform implements IAuthRepository {
   }
 
   private _handleError(error: Error) {
-    
     if (error instanceof GaxiosError && error.response?.status === 400) {
       if (error.response.data.error.message === 'EMAIL_EXISTS') {
         throw ApiError.conflict('Email exists', 'AUTH_EMAIL_EXISTS');
@@ -63,13 +62,13 @@ export class AuthRepositoryIdentityPlatform implements IAuthRepository {
       throw ApiError.badRequest('Error', error.response.data.error.message);
     }
 
-    this._opts.logger.error('Error', { error });
+    this._opts.logger.error(error, 'Error calling identity platform');
     throw error;
   }
 
   async signup(email: string, password: string): Promise<SignUpResponse> {
     try {
-     await this._call<{
+      await this._call<{
         email: string;
         localId: string;
       }>('https://identitytoolkit.googleapis.com/v1/accounts:signUp', {
@@ -115,6 +114,29 @@ export class AuthRepositoryIdentityPlatform implements IAuthRepository {
       await this._call('https://identitytoolkit.googleapis.com/v1/accounts:delete', {
         localId: uid,
       });
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  async createForgotPasswordLink(params: {
+    email: string;
+    continueUrl: string;
+  }): Promise<{ code: string; link: string }> {
+    try {
+      const response = await this._call<{
+        kind: string;
+        oobCode: string;
+        email: string;
+        oobLink: string;
+      }>('https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode', {
+        email: params.email,
+        continueUrl: params.continueUrl,
+        requestType: 'PASSWORD_RESET',
+        returnOobLink: true,
+      });
+
+      return { link: response.oobLink, code: response.oobCode };
     } catch (error) {
       this._handleError(error);
     }

@@ -38,7 +38,7 @@ export class DeleteService {
         throw error;
       }
 
-      this._opts.logger.error('Error deleting user', { error });
+      this._opts.logger.error(error, 'Error deleting user');
       throw ApiError.internalServerError('Error deleting user', 'AUTH_DELETE_USER_ERROR');
     }
   }

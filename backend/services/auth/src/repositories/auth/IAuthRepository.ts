@@ -21,4 +21,9 @@ export abstract class IAuthRepository {
   abstract loginWithEmail(email: string, password: string): Promise<SignUpResponse>;
 
   abstract delete(uid: string): Promise<void>;
+
+  abstract createForgotPasswordLink(params: {
+    email: string;
+    continueUrl: string;
+  }): Promise<{ code: string; link: string }>;
 }
