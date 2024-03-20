@@ -1,5 +1,5 @@
 import { type Static, Type } from '@sinclair/typebox';
-import { OrganizationSchema } from '../../../../../../../libs/schemas/src/global/organization';
+import { OrganizationSchema } from '../../../../global';
 
 /****** Update organization *****/
 
