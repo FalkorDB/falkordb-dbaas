@@ -1,3 +1,5 @@
+import { AuthTokenSchemaType } from '@falkordb/schemas/dist/global';
+
 export interface SignUpResponse {
   email: string;
   token: string;
@@ -26,4 +28,6 @@ export abstract class IAuthRepository {
     email: string;
     continueUrl: string;
   }): Promise<{ code: string; link: string }>;
+
+  abstract verifyToken(token: string): Promise<AuthTokenSchemaType>;
 }

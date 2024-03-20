@@ -1,12 +1,5 @@
 import { type Static, Type } from '@sinclair/typebox';
 
-export const AuthTokenClaimsSchema = Type.Object({
-  name: Type.String(),
-  email: Type.String(),
-});
-
-export type AuthTokenClaimsSchemaType = Static<typeof AuthTokenClaimsSchema>;
-
 export const AuthTokenSchema = Type.Object({
   alg: Type.String(),
   kid: Type.String(),
@@ -20,7 +13,6 @@ export const AuthTokenSchema = Type.Object({
   user_id: Type.String(),
   email: Type.String(),
   email_verified: Type.Boolean(),
-  claims: AuthTokenClaimsSchema,
 });
 
 export type AuthTokenSchemaType = Static<typeof AuthTokenSchema>;

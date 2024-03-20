@@ -1,3 +1,4 @@
+import { AuthTokenSchemaType } from '@falkordb/schemas/dist/global';
 import { IAuthRepository } from './IAuthRepository';
 
 export interface SignUpResponse {
@@ -37,6 +38,24 @@ export class AuthRepositoryMock implements IAuthRepository {
     return Promise.resolve({
       code: 'code',
       link: 'link',
+    });
+  }
+
+  verifyToken(token: string): Promise<AuthTokenSchemaType> {
+    return Promise.resolve({
+      uid: 'uid',
+      email: 'email',
+      iat: 100,
+      exp: 100,
+      alg: 'alg',
+      aud: 'aud',
+      auth_time: 100,
+      email_verified: true,
+      iss: 'iss',
+      kid: 'kid',
+      sub: 'sub',
+      typ: 'typ',
+      user_id: 'user_id',
     });
   }
 }

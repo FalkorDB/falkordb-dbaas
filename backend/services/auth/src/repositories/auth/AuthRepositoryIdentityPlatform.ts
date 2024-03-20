@@ -3,6 +3,8 @@ import { IAuthRepository, SignUpResponse } from './IAuthRepository';
 import { GoogleAuth, AuthClient } from 'google-auth-library';
 import { FastifyBaseLogger } from 'fastify';
 import { GaxiosError } from 'gaxios';
+import { AuthTokenSchemaType } from '@falkordb/schemas/dist/global';
+import * as admin from 'firebase-admin';
 
 export class AuthRepositoryIdentityPlatform implements IAuthRepository {
   private _client: AuthClient;
@@ -12,6 +14,9 @@ export class AuthRepositoryIdentityPlatform implements IAuthRepository {
     },
   ) {
     this._getClient();
+    if (!admin.apps.length) {
+      admin.initializeApp();
+    }
   }
 
   private async _getClient() {
@@ -60,6 +65,10 @@ export class AuthRepositoryIdentityPlatform implements IAuthRepository {
       }
 
       throw ApiError.badRequest('Error', error.response.data.error.message);
+    }
+
+    if (error['message']) {
+      throw ApiError.badRequest(error.message, 'AUTH_ERROR');
     }
 
     this._opts.logger.error(error, 'Error calling identity platform');
@@ -137,6 +146,29 @@ export class AuthRepositoryIdentityPlatform implements IAuthRepository {
       });
 
       return { link: response.oobLink, code: response.oobCode };
+    } catch (error) {
+      this._handleError(error);
+    }
+  }
+
+  async verifyToken(token: string): Promise<AuthTokenSchemaType> {
+    try {
+      const ticket = await admin.auth().verifyIdToken(token);
+
+      return {
+        alg: ticket.alg,
+        aud: ticket.aud,
+        kid: ticket.kid,
+        typ: ticket.typ,
+        exp: ticket.exp,
+        iat: ticket.iat,
+        iss: ticket.iss,
+        sub: ticket.sub,
+        auth_time: ticket.auth_time,
+        user_id: ticket.user_id,
+        email: ticket.email,
+        email_verified: ticket.email_verified,
+      };
     } catch (error) {
       this._handleError(error);
     }

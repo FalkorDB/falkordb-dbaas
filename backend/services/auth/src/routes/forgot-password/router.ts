@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { SendForgotPasswordRequestBodySchema } from '@falkordb/schemas/src/services/auth/v1';
+import { SendForgotPasswordRequestBodySchema } from '@falkordb/schemas/dist/services/auth/v1';
 import { sendForgotPasswordHandler } from './handlers/send';
 
 export default fp(

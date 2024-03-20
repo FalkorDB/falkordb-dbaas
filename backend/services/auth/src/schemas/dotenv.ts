@@ -11,6 +11,7 @@ export const EnvSchema = Type.Object({
   FALKORDB_USERS_URL: Type.String({ default: 'http://localhost:3000' }),
   RECAPTCHA_SECRET_KEY: Type.String({ default: '' }),
   RECOVER_PASSWORD_RETURN_URL: Type.String({ default: 'http://localhost:3000/recover-password/return' }),
+  GOOGLE_CLOUD_PROJECT: Type.String({ default: '' }),
 });
 
 export type EnvSchemaType = Static<typeof EnvSchema>;
