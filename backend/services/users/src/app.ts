@@ -83,6 +83,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
           organizations: fastify.config.FALKORDB_ORGANIZATIONS_URL,
           provisioner: fastify.config.FALKORDB_PROVISIONER_URL,
           users: fastify.config.FALKORDB_USERS_URL,
+          auth: fastify.config.FALKORDB_AUTH_URL,
         },
       },
     },

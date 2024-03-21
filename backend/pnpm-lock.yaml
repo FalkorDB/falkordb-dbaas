@@ -274,6 +274,9 @@ importers:
       '@falkordb/plugins':
         specifier: workspace:*
         version: link:../../libs/plugins
+      '@falkordb/rest-client':
+        specifier: workspace:^
+        version: link:../../libs/client
       '@falkordb/schemas':
         specifier: workspace:^
         version: link:../../libs/schemas
@@ -404,6 +407,9 @@ importers:
       '@falkordb/plugins':
         specifier: workspace:*
         version: link:../../libs/plugins
+      '@falkordb/rest-client':
+        specifier: workspace:^
+        version: link:../../libs/client
       '@falkordb/schemas':
         specifier: workspace:^
         version: link:../../libs/schemas

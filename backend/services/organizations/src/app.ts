@@ -15,7 +15,7 @@ import MongoDB from '@fastify/mongodb';
 import fastifyRequestContextPlugin from '@fastify/request-context';
 import { fastifyAwilixPlugin } from '@fastify/awilix';
 import { setupContainer } from './container';
-import { swaggerPlugin, pubsubDecodePlugin } from '@falkordb/plugins';
+import { swaggerPlugin, pubsubDecodePlugin, falkordbClientPlugin } from '@falkordb/plugins';
 import openTelemetryPlugin from '@autotelic/fastify-opentelemetry';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
@@ -62,6 +62,21 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   });
 
   fastify.register(fastifyRequestContextPlugin);
+
+  await fastify.register(falkordbClientPlugin, {
+    injectContext: true,
+    client: {
+      url: fastify.config.FALKORDB_SERVER_URL,
+      urls: {
+        v1: {
+          organizations: fastify.config.FALKORDB_ORGANIZATIONS_URL,
+          provisioner: fastify.config.FALKORDB_PROVISIONER_URL,
+          users: fastify.config.FALKORDB_USERS_URL,
+          auth: fastify.config.FALKORDB_AUTH_URL,
+        },
+      },
+    },
+  });
 
   await fastify.register(openTelemetryPlugin, { wrapRoutes: true });
 
