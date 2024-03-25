@@ -18,6 +18,8 @@ module "monitoring" {
 }
 
 module "billing" {
+  count = var.create_billing_project ? 1 : 0
+
   source = "./billing"
 
   org_id             = var.org_id

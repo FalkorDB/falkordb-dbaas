@@ -35,6 +35,11 @@ variable "alert_email_addresses" {
 
 ###### BILLING ######
 
+variable "create_billing_project" {
+  type    = bool
+  default = true
+}
+
 variable "billing_project_id" {
   type = string
 }

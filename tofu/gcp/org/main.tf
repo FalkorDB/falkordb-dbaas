@@ -50,8 +50,9 @@ module "shared_resources" {
   ]
   alert_email_addresses = var.alert_email_addresses
 
-  billing_project_id   = "${var.billing_project_id}-${random_bytes.project_suffix.hex}"
-  billing_project_name = var.billing_project_name
+  create_billing_project = var.create_billing_project
+  billing_project_id     = "${var.billing_project_id}-${random_bytes.project_suffix.hex}"
+  billing_project_name   = var.billing_project_name
 
   domains_to_allow = var.domains_to_allow
   enforce_policies = var.enforce_policies
