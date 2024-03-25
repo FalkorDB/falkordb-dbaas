@@ -1,9 +1,7 @@
 import { RouteHandlerMethod } from 'fastify';
-import { CloudProvisionConfigsMongoDB } from '../../../repositories/cloud-provision-configs/CloudProvisionConfigsMongoDB';
 import { ApiError } from '@falkordb/errors';
-import { CloudProvisionConfigDeleteBodySchemaType } from '../schemas/delete';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
-import { CloudProvisionConfigListQuerySchemaType } from '../schemas/list';
+import { CloudProvisionConfigListQuerySchemaType } from '@falkordb/schemas/src/services/provisioner/v1/cloud-provision-config';
 
 export const cloudProvisionConfigListHandler: RouteHandlerMethod<
   undefined,

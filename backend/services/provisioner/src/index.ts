@@ -1,5 +1,5 @@
-import Fastify from 'fastify';
 import App from './app';
+import Fastify from 'fastify';
 
 const envToLogger = {
   development: {

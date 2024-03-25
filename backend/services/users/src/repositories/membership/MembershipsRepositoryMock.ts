@@ -1,14 +1,21 @@
-import { UserMembershipItemType } from '../../schemas/membership';
+import { UserMembershipItemType } from '@falkordb/schemas/src/global';
 import { IMembershipsRepository } from './IMembershipsRepository';
 
 export class MembershipsRepositoryMock implements IMembershipsRepository {
   static repositoryName = 'MembershipsRepositoryMock';
 
-  query(params: { userId?: string; page?: number; pageSize?: number }): Promise<UserMembershipItemType[]> {
-    return Promise.resolve([]);
+  query(params: {
+    userId?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ total: number; data: UserMembershipItemType[] }> {
+    return Promise.resolve({
+      total: 0,
+      data: [],
+    });
   }
 
-  delete(userId: string, membershipId: string): Promise<void> {
+  delete(membershipId: string): Promise<void> {
     return Promise.resolve();
   }
 }

@@ -1,9 +1,13 @@
-import { UserMembershipItemType } from '../../schemas/membership';
+import { UserMembershipItemType } from '@falkordb/schemas/src/global';
 
 export abstract class IMembershipsRepository {
   static repositoryName = 'MembershipsRepository';
 
-  abstract query(params: { userId?: string; page?: number; pageSize?: number }): Promise<UserMembershipItemType[]> ;
+  abstract query(params: {
+    userId?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ data: UserMembershipItemType[]; total: number }>;
 
-  abstract delete(userId: string, membershipId: string): Promise<void> ;
+  abstract delete(memberId: string): Promise<void>;
 }

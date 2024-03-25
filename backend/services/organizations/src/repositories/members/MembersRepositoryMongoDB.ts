@@ -2,8 +2,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { MongoClient, ObjectId } from 'mongodb';
 import { ApiError } from '@falkordb/errors';
 import { IMembersRepository } from './IMembersRepository';
-import { CreateMemberType, MemberType, UpdateMemberType } from '../../schemas/members';
-import { RoleType } from '../../schemas/roles';
+import { CreateMemberType, MemberType, UpdateMemberType, RoleType } from '@falkordb/schemas/src/global';
 
 export class MembersRepositoryMongoDB implements IMembersRepository {
   collection = this._client.db().collection('members');

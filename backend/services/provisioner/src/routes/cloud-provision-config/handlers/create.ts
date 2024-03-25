@@ -2,7 +2,7 @@ import { RouteHandlerMethod } from 'fastify';
 import {
   CloudProvisionConfigCreateBodySchemaType,
   CloudProvisionConfigCreateResponseSuccessSchemaType,
-} from '../schemas/create';
+} from '@falkordb/schemas/src/services/provisioner/v1/cloud-provision-config';
 import { ApiError } from '@falkordb/errors';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 

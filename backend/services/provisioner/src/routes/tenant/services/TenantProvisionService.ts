@@ -5,14 +5,17 @@ import ShortUniqueId from 'short-unique-id';
 import { FastifyBaseLogger } from 'fastify';
 import { ITenantsRepository } from '../../../repositories/tenants/ITenantRepository';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
-import { TenantProvisionBodySchemaType, TenantProvisionResponseSchemaType } from '../schemas/provision';
-import { OperationProviderSchemaType } from '../../../schemas/operation';
-import { TenantGroupSchemaType } from '../../../schemas/tenantGroup';
-import { CloudProvisionConfigSchemaType } from '../../../schemas/cloudProvision';
-import { TenantSchemaType, TenantStatusSchemaType } from '../../../schemas/tenant';
+import { OperationProviderSchemaType } from '@falkordb/schemas/src/global/operation';
+import { TenantGroupSchemaType } from '@falkordb/schemas/src/global/tenantGroup';
 import { TenantGCPProvisioner } from '../provisioners/gcp/TenantGCPProvisioner';
-import { TenantRefreshParamsSchemaType, TenantRefreshResponseSchemaType } from '../schemas/refresh';
 import { TenantProvisionerFactory } from '../provisioners/TenantProvisioner';
+import { TenantSchemaType, TenantStatusSchemaType } from '@falkordb/schemas/src/global';
+import {
+  TenantProvisionBodySchemaType,
+  TenantProvisionResponseSchemaType,
+  TenantRefreshParamsSchemaType,
+  TenantRefreshResponseSchemaType,
+} from '@falkordb/schemas/src/services/provisioner/v1/tenant';
 
 export class TenantProvisionService {
   private _operationsRepository: IOperationsRepository;

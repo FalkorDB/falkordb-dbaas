@@ -1,5 +1,4 @@
-import { CreateMemberType, MemberType, UpdateMemberType } from '../../schemas/members';
-import { RoleType } from '../../schemas/roles';
+import { CreateMemberType, MemberType, UpdateMemberType, RoleType } from '@falkordb/schemas/src/global';
 
 export abstract class IMembersRepository {
   static repositoryName = 'MembersRepository';

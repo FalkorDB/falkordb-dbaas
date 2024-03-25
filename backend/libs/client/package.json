@@ -1,0 +1,23 @@
+{
+  "name": "@falkordb/rest-client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "scripts": {
+    "jest": "jest",
+    "test": "jest",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@falkordb/configs": "workspace:*",
+    "@falkordb/errors": "workspace:*",
+    "@falkordb/schemas": "workspace:^",
+    "axios": "^1.6.7",
+    "fastify-axios": "^1.2.8",
+    "fastify-plugin": "^4.5.1"
+  }
+}

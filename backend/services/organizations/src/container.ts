@@ -12,6 +12,8 @@ import { MembersRepositoryMock } from './repositories/members/MembersRepositoryM
 import { InvitationsRepositoryMock } from './repositories/invitations/InvitationsRepositoryMock';
 import { IMessagingRepository } from './repositories/messaging/IMessagingRepository';
 import { MessagingRepositoryMock } from './repositories/messaging/MessagingRepositoryMock';
+import { IUsersRepository } from './repositories/users/IUsersRepository';
+import { UsersRepositoryMock } from './repositories/users/UsersRepositoryMock';
 
 export const setupContainer = (req: FastifyRequest) => {
   if (process.env.NODE_ENV === 'test' && process.env.MOCK_CONTAINER === 'true') {
@@ -46,6 +48,11 @@ export const setupContainer = (req: FastifyRequest) => {
       );
     }),
 
+    [IUsersRepository.repositoryName]: asFunction(() => {
+      // TODO: Implement users repository
+      return new UsersRepositoryMock();
+    }),
+
     [IMessagingRepository.repositoryName]: asFunction(() => {
       // TODO: Implement messaging repository
       return new MessagingRepositoryMock();
@@ -66,6 +73,10 @@ const setupTestContainer = () => {
 
     [IInvitationsRepository.repositoryName]: asFunction(() => {
       return new InvitationsRepositoryMock();
+    }),
+
+    [IUsersRepository.repositoryName]: asFunction(() => {
+      return new UsersRepositoryMock();
     }),
 
     [IMessagingRepository.repositoryName]: asFunction(() => {

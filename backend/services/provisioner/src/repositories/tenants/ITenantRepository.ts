@@ -1,4 +1,4 @@
-import { CreateTenantSchemaType, TenantSchemaType, TenantStatusSchemaType } from '../../schemas/tenant';
+import { CreateTenantSchemaType, TenantSchemaType, TenantStatusSchemaType } from "@falkordb/schemas/src/global";
 
 export abstract class ITenantsRepository {
   static repositoryName = 'TenantsRepository';

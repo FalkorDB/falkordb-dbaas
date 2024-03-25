@@ -1,22 +1,22 @@
 import fp from 'fastify-plugin';
 import {
-  GetMembershipsRequestParamsSchema,
-  GetMembershipsRequestQuerySchema,
-  GetMembershipsResponseBodySchema,
-} from './schemas/memberships';
+  GetUserMembershipsRequestParamsSchema,
+  GetUserMembershipsRequestQuerySchema,
+  GetUserMembershipsResponseBodySchema,
+} from '@falkordb/schemas/src/services/users/v1';
 import { getUserMembershipsHandler } from './handlers/get';
 
 export default fp(
   async function userMemberships(fastify, opts) {
     fastify.get(
-      '',
+      '/',
       {
         schema: {
           tags: ['memberships'],
-          params: GetMembershipsRequestParamsSchema,
-          querystring: GetMembershipsRequestQuerySchema,
+          params: GetUserMembershipsRequestParamsSchema,
+          querystring: GetUserMembershipsRequestQuerySchema,
           response: {
-            200: GetMembershipsResponseBodySchema,
+            200: GetUserMembershipsResponseBodySchema,
           },
         },
       },

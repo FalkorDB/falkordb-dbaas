@@ -1,10 +1,10 @@
 import { FastifyBaseLogger } from 'fastify';
 import { IOperationsRepository } from '../../../../repositories/operations/IOperationsRepository';
-import { CloudBuildOperationsCallbackBodySchemaType } from '../../schemas/cloudbuild';
-import { OperationSchemaType } from '../../../../schemas/operation';
 import { ITenantGroupRepository } from '../../../../repositories/tenant-groups/ITenantGroupsRepository';
-import { TenantGroupSchemaType } from '../../../../schemas/tenantGroup';
+import { TenantGroupSchemaType } from '@falkordb/schemas/src/global/tenantGroup';
 import { Storage, Bucket } from '@google-cloud/storage';
+import { CloudBuildOperationsCallbackBodySchemaType } from '@falkordb/schemas/src/services/provisioner/v1/operations';
+import { OperationSchemaType } from '@falkordb/schemas/src/global';
 
 export class CloudBuildOperationCallbackTenantGroup {
   private _operationsRepository: IOperationsRepository;

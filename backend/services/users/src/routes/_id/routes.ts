@@ -9,7 +9,7 @@ import {
   UpdateUserRequestBodySchema,
   UpdateUserRequestParamsSchema,
   UpdateUserResponseBodySchema,
-} from './schemas/user';
+} from '@falkordb/schemas/src/services/users/v1';
 import { getUserHandler } from './handlers/get';
 import { createUserHandler } from './handlers/create';
 import { updateUserHandler } from './handlers/update';
@@ -18,7 +18,7 @@ import { deleteUserHandler } from './handlers/delete';
 export default fp(
   async function userId(fastify, opts) {
     fastify.get(
-      '',
+      '/',
       {
         schema: {
           tags: ['users'],
@@ -32,7 +32,7 @@ export default fp(
     );
 
     fastify.post(
-      '',
+      '/',
       {
         schema: {
           tags: ['users'],
@@ -47,7 +47,7 @@ export default fp(
     );
 
     fastify.put(
-      '',
+      '/',
       {
         schema: {
           tags: ['users'],
@@ -62,7 +62,7 @@ export default fp(
     );
 
     fastify.delete(
-      '',
+      '/',
       {
         schema: {
           tags: ['users'],

@@ -1,9 +1,8 @@
-import { CloudProvisionConfigSchemaType } from '../../../schemas/cloudProvision';
-import { OperationProviderSchemaType } from '../../../schemas/operation';
-import { TenantSchemaType } from '../../../schemas/tenant';
-import { TenantGroupSchemaType } from '../../../schemas/tenantGroup';
-import { TenantProvisionBodySchemaType } from '../schemas/provision';
+import { OperationProviderSchemaType } from '@falkordb/schemas/src/global/operation';
+import { TenantGroupSchemaType } from '@falkordb/schemas/src/global/tenantGroup';
 import { TenantGCPProvisioner } from './gcp/TenantGCPProvisioner';
+import { TenantProvisionBodySchemaType } from '@falkordb/schemas/src/services/provisioner/v1/tenant';
+import { CloudProvisionConfigSchemaType, TenantSchemaType } from '@falkordb/schemas/src/global';
 
 export abstract class TenantProvisioner {
   abstract provision(

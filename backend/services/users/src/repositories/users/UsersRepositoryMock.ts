@@ -1,5 +1,5 @@
 import { ApiError } from '@falkordb/errors';
-import { UserSchemaType } from '../../schemas/user';
+import { UserSchemaType } from '@falkordb/schemas/src/global';
 import { IUsersRepository } from './IUsersRepository';
 
 export class UsersRepositoryMock implements IUsersRepository {

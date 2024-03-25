@@ -1,0 +1,17 @@
+{
+  "name": "@falkordb/schemas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@falkordb/configs": "workspace:*",
+    "@falkordb/errors": "workspace:*"
+  }
+}
