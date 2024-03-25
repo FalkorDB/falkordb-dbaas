@@ -5,7 +5,7 @@ import { ApiError } from '@falkordb/errors';
 import {
   CloudProvisionConfigSchemaType,
   CreateCloudProvisionConfigParamsSchemaType,
-} from '@falkordb/schemas/src/global';
+} from '@falkordb/schemas/dist/global';
 
 export class CloudProvisionConfigsMongoDB implements ICloudProvisionConfigsRepository {
   collection = this._client.db().collection(this._collectionName);

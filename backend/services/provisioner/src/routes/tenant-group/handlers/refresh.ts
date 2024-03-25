@@ -4,7 +4,7 @@ import { ApiError } from '@falkordb/errors';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
-import { TenantGroupRefreshParamsSchemaType } from '@falkordb/schemas/src/services/provisioner/v1/tenant-group';
+import { TenantGroupRefreshParamsSchemaType } from '@falkordb/schemas/dist/services/provisioner/v1/tenant-group';
 
 export const tenantGroupRefreshHandler: RouteHandlerMethod<
   undefined,

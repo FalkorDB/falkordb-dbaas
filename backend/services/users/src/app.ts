@@ -1,7 +1,7 @@
 import { configDotenv } from 'dotenv';
 configDotenv();
 
-import { init } from '@falkordb/configs/openTelemetryConfig';
+import { init } from '@falkordb/configs';
 init(process.env.SERVICE_NAME, process.env.NODE_ENV);
 
 import { type FastifyInstance, type FastifyPluginOptions } from 'fastify';
@@ -15,8 +15,7 @@ import MongoDB from '@fastify/mongodb';
 import fastifyRequestContextPlugin from '@fastify/request-context';
 import { fastifyAwilixPlugin } from '@fastify/awilix';
 import { setupContainer } from './container';
-import { swaggerPlugin, pubsubDecodePlugin } from '@falkordb/plugins';
-import falkordbClientPlugin from '@falkordb/rest-client/src/fastify-plugin';
+import { swaggerPlugin, pubsubDecodePlugin, falkordbClientPlugin } from '@falkordb/plugins';
 import openTelemetryPlugin from '@autotelic/fastify-opentelemetry';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
@@ -84,6 +83,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
           organizations: fastify.config.FALKORDB_ORGANIZATIONS_URL,
           provisioner: fastify.config.FALKORDB_PROVISIONER_URL,
           users: fastify.config.FALKORDB_USERS_URL,
+          auth: fastify.config.FALKORDB_AUTH_URL,
         },
       },
     },

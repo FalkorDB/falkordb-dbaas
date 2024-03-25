@@ -32,9 +32,7 @@ steps:
       - '--region'
       - 'europe-west1'
       - '--set-env-vars'
-      - 'NODE_ENV=${_NODE_ENV}'
-      - '--set-env-vars'
-      - 'MONGODB_DB=${_MONGODB_DB}'
+      - 'NODE_ENV=${_NODE_ENV},MONGODB_DB=${_MONGODB_DB},FALKORDB_AUTH_URL=${_FALKORDB_AUTH_URL},FALKORDB_ORGANIZATIONS_URL=${_FALKORDB_ORGANIZATIONS_URL},FALKORDB_PROVISIONER_URL=${_FALKORDB_PROVISIONER_URL},FALKORDB_USERS_URL=${_FALKORDB_USERS_URL}'
       - '--set-secrets'
       - 'MONGODB_URI=projects/${_PROJECT_NUMBER}/secrets/MONGODB_URI/versions/latest'
       - '--service-account'
@@ -51,5 +49,10 @@ substitutions:
   _REPOSITORY: 'backend'
   _IMAGE_NAME: 'users'
   _SERVICE_NAME: 'users'
-  _MONGODB_DB: 'users'
   _NODE_ENV: 'development'
+  _MONGODB_DB: 'users'
+  _FALKORDB_AUTH_URL: https://organizations-4pegeva3vq-ew.a.run.app
+  _FALKORDB_ORGANIZATIONS_URL: https://organizations-4pegeva3vq-ew.a.run.app
+  _FALKORDB_PROVISIONER_URL: https://provisioner-4pegeva3vq-ew.a.run.app
+  _FALKORDB_USERS_URL: https://users-4pegeva3vq-ew.a.run.app
+

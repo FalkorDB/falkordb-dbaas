@@ -5,11 +5,13 @@
   "main": "dist/index.js",
   "types": "src/index.ts",
   "scripts": {
+    "jest": "jest",
+    "test": "jest",
     "build": "tsc"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "SSPL",
   "dependencies": {
     "@falkordb/configs": "workspace:*",
     "@falkordb/errors": "workspace:*"

@@ -1,9 +1,9 @@
-import { SupportedCloudProviderSchemaType, SupportedRegionsSchemaType } from '@falkordb/schemas/src/global';
+import { SupportedCloudProviderSchemaType, SupportedRegionsSchemaType } from '@falkordb/schemas/dist/global';
 import {
   TenantGroupCreateSchemaType,
   TenantGroupSchemaType,
   TenantGroupStatusSchemaType,
-} from '@falkordb/schemas/src/global/tenantGroup';
+} from '@falkordb/schemas/dist/global/tenantGroup';
 
 export abstract class ITenantGroupRepository {
   static repositoryName = 'TenantGroupRepository';

@@ -7,11 +7,11 @@
   "scripts": {
     "jest": "jest",
     "test": "jest",
-    "build": "tsc"
+    "build": "tsc --noEmit && tsup"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "SSPL",
   "dependencies": {
     "@falkordb/configs": "workspace:*",
     "@falkordb/errors": "workspace:*",

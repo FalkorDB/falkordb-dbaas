@@ -23,6 +23,7 @@ module "project" {
     "pubsub.googleapis.com",
     "run.googleapis.com",
     "secretmanager.googleapis.com",
+    "identitytoolkit.googleapis.com",
   ]
 }
 

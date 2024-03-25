@@ -3,7 +3,7 @@ import { TenantProvisionService } from '../services/TenantProvisionService';
 import { ApiError } from '@falkordb/errors';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
-import { TenantRefreshParamsSchemaType } from '@falkordb/schemas/src/services/provisioner/v1/tenant'
+import { TenantRefreshParamsSchemaType } from '@falkordb/schemas/dist/services/provisioner/v1/tenant'
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
 import { ITenantsRepository } from '../../../repositories/tenants/ITenantRepository';
 

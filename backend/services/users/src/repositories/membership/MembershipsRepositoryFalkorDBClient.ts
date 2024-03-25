@@ -1,5 +1,5 @@
 import { FalkorDBClient } from '@falkordb/rest-client';
-import { ListMembersResponseSchemaType } from '@falkordb/schemas/src/services/organizations/v1';
+import { ListMembersResponseSchemaType } from '@falkordb/schemas/dist/services/organizations/v1';
 import { IMembershipsRepository } from './IMembershipsRepository';
 
 export class MembershipsRepositoryFalkorDBClient implements IMembershipsRepository {

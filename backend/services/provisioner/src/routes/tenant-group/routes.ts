@@ -4,7 +4,7 @@ import {
   type TenantGroupProvisionBodySchemaType,
   TenantGroupDeprovisionParamsSchema,
   TenantGroupRefreshParamsSchema,
-} from '@falkordb/schemas/src/services/provisioner/v1/tenant-group';
+} from '@falkordb/schemas/dist/services/provisioner/v1/tenant-group';
 import { tenantGroupProvisionHandler } from './handlers/provision';
 import { tenantGroupDeprovisionHandler } from './handlers/deprovision';
 import { tenantGroupRefreshHandler } from './handlers/refresh';

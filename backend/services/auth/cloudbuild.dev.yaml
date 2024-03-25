@@ -1,0 +1,62 @@
+steps:
+  - id: Build image
+    name: 'gcr.io/cloud-builders/docker'
+    env:
+      - 'DOCKER_BUILDKIT=1'
+    args:
+      - 'build'
+      - '-t'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - '--build-arg'
+      - 'PROJECT=${_SERVICE_NAME}'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+
+  - id: Push to Artifact Registry
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+
+  - id: Deploy to Cloud Run
+    name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - 'europe-west1'
+      - '--set-env-vars'
+      -  NODE_ENV=${_NODE_ENV},MONGODB_DB=${_MONGODB_DB},FALKORDB_AUTH_URL=${_FALKORDB_AUTH_URL},FALKORDB_ORGANIZATIONS_URL=${_FALKORDB_ORGANIZATIONS_URL},FALKORDB_PROVISIONER_URL=${_FALKORDB_PROVISIONER_URL},FALKORDB_USERS_URL=${_FALKORDB_USERS_URL},RECAPTCHA_SECRET_KEY=${_RECAPTCHA_SECRET_KEY},RECOVER_PASSWORD_RETURN_URL=${_RECOVER_PASSWORD_RETURN_URL},GOOGLE_CLOUD_PROJECT=${_GOOGLE_CLOUD_PROJECT},MOCK_CAPTCHA_REPOSITORY=${_MOCK_CAPTCHA_REPOSITORY},MOCK_MESSAGING_REPOSITORY=${_MOCK_MESSAGING_REPOSITORY}
+      - '--set-secrets'
+      - 'MONGODB_URI=projects/${_PROJECT_NUMBER}/secrets/MONGODB_URI/versions/latest'
+      - '--service-account'
+      - 'backend-sa@${_PROJECT_ID}.iam.gserviceaccount.com'
+
+tags:
+  - backend
+  - service-auth
+  - env-${_NODE_ENV}
+
+substitutions:
+  _PROJECT_ID: 'ctrl-plane-dev-f7a2434f'
+  _PROJECT_NUMBER: '425012726186'
+  _REPOSITORY: 'backend'
+  _IMAGE_NAME: 'auth'
+  _SERVICE_NAME: 'auth'
+  _NODE_ENV: 'development'
+  _MONGODB_DB: 'auth'
+  _FALKORDB_AUTH_URL: https://organizations-4pegeva3vq-ew.a.run.app
+  _FALKORDB_ORGANIZATIONS_URL: https://organizations-4pegeva3vq-ew.a.run.app
+  _FALKORDB_PROVISIONER_URL: https://provisioner-4pegeva3vq-ew.a.run.app
+  _FALKORDB_USERS_URL: https://users-4pegeva3vq-ew.a.run.app
+  _RECAPTCHA_SECRET_KEY: ''
+  _RECOVER_PASSWORD_RETURN_URL: 'http://localhost:3000/auth/recover-password/return'
+  _GOOGLE_CLOUD_PROJECT: 'ctrl-plane-dev-f7a2434f'
+  _MOCK_CAPTCHA_REPOSITORY: 'true'
+  _MOCK_MESSAGING_REPOSITORY: 'true'

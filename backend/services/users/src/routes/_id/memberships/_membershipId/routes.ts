@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { DeleteUserMembershipRequestParamsSchema } from '@falkordb/schemas/src/services/users/v1';
+import { DeleteUserMembershipRequestParamsSchema } from '@falkordb/schemas/dist/services/users/v1';
 import { deleteMembershipHandler } from './handlers/delete';
 
 export default fp(

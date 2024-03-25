@@ -1,4 +1,4 @@
-import { CreateInvitationType, InvitationType, UpdateInvitationType } from '@falkordb/schemas/src/global';
+import { CreateInvitationType, InvitationType, UpdateInvitationType } from '@falkordb/schemas/dist/global';
 
 export abstract class IInvitationsRepository {
   static repositoryName = 'InvitationsRepository';

@@ -1,8 +1,8 @@
 import { MongoClient } from 'mongodb';
 import { CloudProvisionConfigsMongoDB } from '../repositories/cloud-provision-configs/CloudProvisionConfigsMongoDB';
 import { FastifyBaseLogger } from 'fastify';
-import { CloudProvisionConfigSchema, CreateCloudProvisionConfigParamsSchemaType } from '../schemas/cloudProvision';
 import { Value } from '@sinclair/typebox/value';
+import { CloudProvisionConfigSchema, CreateCloudProvisionConfigParamsSchemaType } from '@falkordb/schemas/dist/global';
 
 let client: MongoClient;
 const logger = {

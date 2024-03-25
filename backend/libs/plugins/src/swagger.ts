@@ -39,4 +39,6 @@ export default fp<FastifyDynamicSwaggerOptions>(async (fastify, opts) => {
       routePrefix: '/docs',
     });
   }
+}, {
+  name: 'swagger-plugin',
 }) as FastifyPluginAsync<FastifyDynamicSwaggerOptions, RawServerDefault, FastifyTypeProviderDefault, FastifyBaseLogger>;
