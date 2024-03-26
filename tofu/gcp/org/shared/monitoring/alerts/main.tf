@@ -1,5 +1,5 @@
 locals {
-  quotas = nonsensitive(toset(flatten([
+  quotas = toset(flatten([
     for project in var.monitored_projects : [
       {
         project_id   = project
@@ -20,7 +20,7 @@ locals {
         threshold    = "0.75"
       },
     ]
-  ])))
+  ]))
 }
 
 resource "google_monitoring_alert_policy" "policies" {
