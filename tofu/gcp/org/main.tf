@@ -15,8 +15,8 @@ module "shared_resources" {
 
   monitoring_project_id   = "${var.monitoring_project_id}-${random_bytes.project_suffix.hex}"
   monitoring_project_name = var.monitoring_project_name
-  monitored_projects = var.monitored_projects
-  alert_email_addresses = var.alert_email_addresses
+  monitored_projects      = var.monitored_projects
+  alert_email_addresses   = var.alert_email_addresses
 
   create_billing_project = var.create_billing_project
   billing_project_id     = "${var.billing_project_id}-${random_bytes.project_suffix.hex}"
