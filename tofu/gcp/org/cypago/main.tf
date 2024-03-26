@@ -56,9 +56,9 @@ resource "google_service_account" "cypago" {
 
 // Assign org role to service account
 resource "google_organization_iam_member" "cypago" {
-  org_id  = var.org_id
-  role    = "organizations/${var.org_id}/roles/${google_organization_iam_custom_role.cypago.role_id}"
-  member  = "serviceAccount:${google_service_account.cypago.email}"
+  org_id = var.org_id
+  role   = "organizations/${var.org_id}/roles/${google_organization_iam_custom_role.cypago.role_id}"
+  member = "serviceAccount:${google_service_account.cypago.email}"
 }
 
 resource "google_service_account" "cypago_gws_collector" {
