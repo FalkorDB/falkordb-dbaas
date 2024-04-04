@@ -91,6 +91,7 @@ module "gh_oidc" {
       attribute = "attribute.repository/${var.repo_name}"
     }
   }
+  attribute_condition = "assertion.repository_owner=='FalkorDB'"
 }
 
 # Velero role for cluster backup
