@@ -22,6 +22,7 @@ module "project" {
     "cloudkms.googleapis.com",
     "dns.googleapis.com",
     "containersecurity.googleapis.com",
+    "logging.googleapis.com",
   ]
 }
 
