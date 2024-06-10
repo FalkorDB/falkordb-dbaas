@@ -55,7 +55,7 @@ jobs:
       #     key: tofu-${{hashFiles('./tofu/.terraform.lock.hcl')}}
 
       - name: Get artifacts
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v5
         with:
           workflow: ${{ env.PLAN_WORKFLOW_NAME }}
           pr: ${{ env.PR_NUMBER }}
