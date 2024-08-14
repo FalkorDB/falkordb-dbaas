@@ -1,5 +1,5 @@
 output "pipelines_development_state_bucket_name" {
-  value = length(module.pipelines_development) > 0 ? nonsensitive(module.pipelines_development[0].state_bucket_name) : null
+  value = length(module.pipelines_development) > 0 ? module.pipelines_development[0].state_bucket_name : null
 }
 
 output "pipelines_development_github_sa_email" {
