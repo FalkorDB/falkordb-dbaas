@@ -17,7 +17,7 @@ resource "aws_organizations_account" "account" {
   email             = var.account_email
   parent_id         = data.aws_organizations_organizational_unit.ou.id
   role_name         = "OrganizationAccountAccessRole"
-  close_on_deletion = true
+  close_on_deletion = false
 }
 
 provider "aws" {
