@@ -73,27 +73,65 @@ export class K8sRepository {
     instanceId: string,
     hasTLS = false,
   ): Promise<FalkorDBInfoObjectSchemaType> {
-    this._options.logger.info('Getting FalkorDB info', { clusterId, region, instanceId });
+    this._options.logger.info({ clusterId, region, instanceId }, 'Getting FalkorDB info');
 
     const kubeConfig = await this._getK8sConfig(clusterId, region);
 
-    const passwordResponse = await this._executeCommand(kubeConfig, instanceId, ['cat', '/run/secrets/adminpassword']);
+    let password = '';
+    if (!process.env.SKIP_K8S_ENV_CHECK) {
+      const envResponse = await this._executeCommand(kubeConfig, instanceId, ['env']).catch((e) => {
+        console.error(e);
+        throw e;
+      });
 
-    const response = await this._executeCommand(kubeConfig, instanceId, [
-      'redis-cli',
-      '-a',
-      passwordResponse.replace(/\n$/, ''),
-      '--no-auth-warning',
-      hasTLS ? '--tls' : '',
-      'info',
-    ]);
+      if (envResponse.includes('ADMIN_PASSWORD')) {
+        password = envResponse.match(/ADMIN_PASSWORD=(.*)/)[1];
+      }
+    }
 
-    return {
+    if (!password) {
+      const fileResponse = await this._executeCommand(kubeConfig, instanceId, [
+        'cat',
+        '/run/secrets/adminpassword',
+      ]).catch((e) => {
+        console.error(e);
+        throw e;
+      });
+      password = fileResponse;
+    }
+
+    if (!password) {
+      throw new Error('Could not get password');
+    }
+
+    const response = await this._executeCommand(
+      kubeConfig,
+      instanceId,
+      ['redis-cli', hasTLS ? '--tls' : '', '-a', password.replace(/\n$/, ''), '--no-auth-warning', 'info'].filter(
+        (c) => c,
+      ),
+    ).catch((e) => {
+      console.error(e);
+      throw e;
+    });
+
+    const info = {
       rdb_bgsave_in_progress: parseInt(response.match(/rdb_bgsave_in_progress:(\d+)/)?.[1]),
       rdb_saves: parseInt(response.match(/rdb_changes_since_last_save:(\d+)/)?.[1] || '0'),
       rdb_changes_since_last_save: parseInt(response.match(/rdb_changes_since_last_save:(\d+)/)?.[1] || '0'),
-      rdb_last_save_time: parseInt(response.match(/rdb_last_save_time:(\d+)/)?.[1] || '0'),
+      rdb_last_save_time: 0,//parseInt(response.match(/rdb_last_save_time:(\d+)/)?.[1] || '0'),
     };
+
+    if (
+      isNaN(info.rdb_bgsave_in_progress) ||
+      isNaN(info.rdb_saves) ||
+      isNaN(info.rdb_changes_since_last_save) ||
+      isNaN(info.rdb_last_save_time)
+    ) {
+      throw new Error('Could not parse info');
+    }
+
+    return info;
   }
 
   private async _executeCommand(kubeConfig: k8s.KubeConfig, instanceId: string, command: string[]): Promise<string> {
@@ -107,7 +145,7 @@ export class K8sRepository {
       },
     });
 
-    exec.exec(instanceId, 'node-mz-0', 'service', command, output, null, null, false);
+    await exec.exec(instanceId, 'node-f-0', 'service', command, output, null, null, false);
 
     return new Promise((resolve, reject) => {
       output.on('finish', () => {
@@ -115,6 +153,7 @@ export class K8sRepository {
         output.end();
       });
       output.on('error', (error) => {
+        console.error(error);
         reject(error);
       });
     });

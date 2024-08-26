@@ -1,3 +1,5 @@
+import { config } from 'dotenv';
+config();
 import { K8sRepository } from './repositories/k8s/K8sRepository';
 import { MailRepository } from './repositories/mail/MailRepository';
 import { OmnistrateRepository } from './repositories/omnistrate/OmnistrateRepository';
@@ -27,6 +29,7 @@ async function handleFreeInstance(
   k8sRepo: K8sRepository,
   mailRepo: MailRepository,
 ) {
+  logger.info(`Handling free instance ${instance.id}`);
   try {
     // 2. For each instance, get the last used time from k8s
     const { clusterId, region, id: instanceId } = instance;
@@ -41,7 +44,7 @@ async function handleFreeInstance(
       await mailRepo.sendInstanceStoppedEmail(userEmail, instanceId);
     }
   } catch (error) {
-    logger.error('Error handling free instance', error);
+    logger.error(error);
   }
 }
 
@@ -59,6 +62,8 @@ export async function start() {
     process.env.OMNISTRATE_PRODUCT_TIER_ID,
   );
 
+  logger.info(`Found ${freeInstances.length} free instances`);
+
   // Group in arrays of 10
   const grouped: OmnistrateInstanceSchemaType[][] = [];
   let temp = [];
@@ -69,10 +74,16 @@ export async function start() {
       temp = [];
     }
   }
+  if (temp.length > 0) grouped.push(temp);
 
   for await (const instances of grouped) {
     await Promise.all(instances.map((instance) => handleFreeInstance(instance, omnistrateRepo, k8sRepo, mailRepo)));
   }
+
+  logger.info('Done');
 }
 
+if (process.env.DRY_RUN === "1") {
+  logger.info('DRY RUN');
+}
 start();

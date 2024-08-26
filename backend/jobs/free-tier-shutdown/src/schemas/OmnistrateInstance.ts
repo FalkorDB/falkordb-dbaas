@@ -9,6 +9,7 @@ export const OmnistrateInstanceSchema = Type.Object({
   serviceId: Type.String(),
   environmentId: Type.String(),
   tls: Type.Boolean(),
+  resourceId: Type.String(),
 });
 
 export type OmnistrateInstanceSchemaType = Static<typeof OmnistrateInstanceSchema>;

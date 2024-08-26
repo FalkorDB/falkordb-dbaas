@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { OmnistrateInstanceSchemaType } from '../../schemas/OmnistrateInstance';
 import { decode, JwtPayload } from 'jsonwebtoken';
@@ -39,25 +40,21 @@ export class OmnistrateRepository {
       } catch (_) {
         //
       }
-      const response = await axios.post(
-        '/auth',
-        {},
-        {
-          auth: {
-            username: user,
-            password: password,
-          },
-        },
-      );
-      config.headers.Authorization = `Bearer ${response.data.token}`;
+      const response = await axios.post('https://api.omnistrate.cloud/2022-09-01-00/signin', {
+        email: user,
+        password,
+      });
+      config.headers.Authorization = `Bearer ${response.data.jwtToken}`;
       return config;
     };
   }
 
   async getUserEmail(userId: string): Promise<string> {
     assert(userId, 'OmnistrateRepository: User ID is required');
-    this._options.logger.info('Getting user email', { userId });
+    this._options.logger.info({ userId }, 'Getting user email');
     const response = await OmnistrateRepository._client.get(`/2022-09-01-00/fleet/users`);
+    console.log(response.data);
+    
     return response.data['users']?.find((u: unknown) => u?.['userId'] === userId)?.['email'];
   }
 
@@ -70,29 +67,44 @@ export class OmnistrateRepository {
     assert(environmentId, 'OmnistrateRepository: Environment ID is required');
     assert(tierId, 'OmnistrateRepository: Tier ID is required');
 
-    this._options.logger.info('Getting instances from tier', { serviceId, environmentId, tierId });
+    this._options.logger.info({ serviceId, environmentId, tierId }, 'Getting instances from tier');
 
     const response = await OmnistrateRepository._client.get(
       `/2022-09-01-00/fleet/service/${serviceId}/environment/${environmentId}/instances`,
     );
 
-    return response.data['resourceInstances'].map((d: unknown) => ({
-      id: d?.['consumptionResourceInstanceResult']?.['id'],
-      clusterId: 'c-' + d?.['deploymentCellID']?.replace('-', ''),
-      region: d?.['consumptionResourceInstanceResult']?.['region'],
-      userId: d?.['consumptionResourceInstanceResult']?.['createdByUserId'],
-      createdDate: d?.['consumptionResourceInstanceResult']?.['created_at'],
-      serviceId: d?.['serviceId'],
-      environmentId: d?.['environmentId'],
-      tls: d?.['consumptionResourceInstanceResult']?.['result_params']?.["enableTLS"] === 'true',
-    })) as OmnistrateInstanceSchemaType[];
+    return response.data['resourceInstances']
+      .map((d: unknown) => ({
+        id: d?.['consumptionResourceInstanceResult']?.['id'],
+        clusterId: 'c-' + d?.['deploymentCellID']?.replace('-', ''),
+        region: d?.['consumptionResourceInstanceResult']?.['region'],
+        userId: d?.['consumptionResourceInstanceResult']?.['createdByUserId'],
+        createdDate: d?.['consumptionResourceInstanceResult']?.['created_at'],
+        serviceId: d?.['serviceId'],
+        environmentId: d?.['environmentId'],
+        productTierId: d?.['productTierId'],
+        tls: d?.['consumptionResourceInstanceResult']?.['result_params']?.['enableTLS'] === 'true',
+        status: d?.['consumptionResourceInstanceResult']?.['status'],
+        resourceId: Object.entries(d?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology']).filter(
+          (ob) => (ob[1] as unknown)?.['main'],
+        )[0][0],
+      }))
+      .filter(
+        (instance) => instance.productTierId === tierId && instance.status === 'RUNNING',
+      ) as OmnistrateInstanceSchemaType[];
   }
 
   async stopInstance(instance: OmnistrateInstanceSchemaType): Promise<void> {
     assert(instance, 'OmnistrateRepository: Instance is required');
-    this._options.logger.info('Stopping instance', instance);
+    this._options.logger.info({ instanceId: instance.id }, 'Stopping instance');
+    if (process.env.DRY_RUN === '1') {
+      return;
+    }
     await OmnistrateRepository._client.post(
       `/2022-09-01-00/fleet/service/${instance.serviceId}/environment/${instance.environmentId}/instance/${instance.id}/stop`,
+      {
+        resourceId: instance.resourceId,
+      },
     );
   }
 }

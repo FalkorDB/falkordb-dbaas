@@ -34,6 +34,7 @@
     "@fastify/sensible": "^5.5.0",
     "@fastify/swagger": "^8.14.0",
     "@fastify/swagger-ui": "^3.0.0",
+    "@getbrevo/brevo": "^2.2.0",
     "@google-cloud/cloudbuild": "^4.2.0",
     "@google-cloud/container": "^5.16.0",
     "@google-cloud/storage": "^7.7.0",
