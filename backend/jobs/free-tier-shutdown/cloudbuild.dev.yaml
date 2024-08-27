@@ -1,0 +1,59 @@
+steps:
+  - id: Build image
+    name: 'gcr.io/cloud-builders/docker'
+    env:
+      - 'DOCKER_BUILDKIT=1'
+    args:
+      - 'build'
+      - '-t'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - '--build-arg'
+      - 'PROJECT=${_SERVICE_NAME}'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+
+  - id: Push to Artifact Registry
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+
+  - id: Deploy to Cloud Run
+    name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'jobs'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - '--platform'
+      - 'managed'
+      - '--region'
+      - 'europe-west1'
+      - '--set-env-vars'
+      - NODE_ENV=${_NODE_ENV},OMNISTRATE_USER=${_OMNISTRATE_USER},OMNISTRATE_SERVICE_ID=${_OMNISTRATE_SERVICE_ID},OMNISTRATE_ENVIRONMENT_ID=${_OMNISTRATE_ENVIRONMENT_ID},OMNISTRATE_PRODUCT_TIER_ID=${_OMNISTRATE_PRODUCT_TIER_ID},OMNISTRATE_RESOURCE_ID=${_OMNISTRATE_RESOURCE_ID},APPLICATION_PLANE_PROJECT_ID=${_APPLICATION_PLANE_PROJECT_ID}
+      - '--set-secrets'
+      - 'BREVO_API_KEY=projects/${_PROJECT_NUMBER}/secrets/BREVO_API_KEY/versions/latest,OMNISTRATE_PASSWORD=projects/${_PROJECT_NUMBER}/secrets/OMNISTRATE_PASSWORD/versions/latest'
+      - '--service-account'
+      - 'free-tier-shutdown-job-sa@${_PROJECT_ID}.iam.gserviceaccount.com'
+
+tags:
+  - backend
+  - job-free-tier-shutdown
+  - env-${_NODE_ENV}
+
+substitutions:
+  _PROJECT_ID: 'ctrl-plane-dev-f7a2434f'
+  _PROJECT_NUMBER: '425012726186'
+  _REPOSITORY: 'jobs'
+  _IMAGE_NAME: 'free-tier-shutdown'
+  _SERVICE_NAME: 'free-tier-shutdown'
+  _NODE_ENV: 'development'
+  _OMNISTRATE_USER: david.zimberknopf@falkordb.com
+  _OMNISTRATE_SERVICE_ID: s-KgFDwg5vBS
+  _OMNISTRATE_ENVIRONMENT_ID: se-DC0AzhMHOD
+  _OMNISTRATE_PRODUCT_TIER_ID: pt-055K4xaRsm
+  _OMNISTRATE_RESOURCE_ID: r-sfi8xL2OVu
+  _APPLICATION_PLANE_PROJECT_ID: app-plane-dev-f7a2434f
