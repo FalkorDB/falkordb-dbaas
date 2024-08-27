@@ -40,8 +40,8 @@ async function handleFreeInstance(
 
     if (Date.now() - lastUsedTime > 24 * 60 * 60 * 1000) {
       await omnistrateRepo.stopInstance(instance);
-      const userEmail = await omnistrateRepo.getUserEmail(instance.userId);
-      await mailRepo.sendInstanceStoppedEmail(userEmail, instanceId);
+      const { email, name } = await omnistrateRepo.getUser(instance.userId);
+      await mailRepo.sendInstanceStoppedEmail(email, name, instanceId);
     }
   } catch (error) {
     logger.error(error);
@@ -83,7 +83,7 @@ export async function start() {
   logger.info('Done');
 }
 
-if (process.env.DRY_RUN === "1") {
+if (process.env.DRY_RUN === '1') {
   logger.info('DRY RUN');
 }
 start();

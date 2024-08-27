@@ -49,13 +49,21 @@ export class OmnistrateRepository {
     };
   }
 
-  async getUserEmail(userId: string): Promise<string> {
+  async getUser(userId: string): Promise<{ email: string; name: string }> {
     assert(userId, 'OmnistrateRepository: User ID is required');
-    this._options.logger.info({ userId }, 'Getting user email');
+    this._options.logger.info({ userId }, 'Getting user');
     const response = await OmnistrateRepository._client.get(`/2022-09-01-00/fleet/users`);
-    console.log(response.data);
-    
-    return response.data['users']?.find((u: unknown) => u?.['userId'] === userId)?.['email'];
+
+    const user = response.data['users']?.find((u: unknown) => u?.['userId'] === userId);
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return {
+      email: user?.['email'],
+      name: user?.['userName'],
+    };
   }
 
   async getInstancesFromTier(

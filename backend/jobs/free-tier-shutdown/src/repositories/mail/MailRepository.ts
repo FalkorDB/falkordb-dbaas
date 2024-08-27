@@ -1,6 +1,9 @@
 import { Logger } from 'pino';
 import * as brevo from '@getbrevo/brevo';
 import assert = require('assert');
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import mjml2html from 'mjml';
 
 export class MailRepository {
   private _apiInstance = new brevo.TransactionalEmailsApi();
@@ -12,7 +15,27 @@ export class MailRepository {
     const apiKey = this._apiInstance.authentications['apiKey'];
     apiKey.apiKey = process.env.BREVO_API_KEY;
   }
-  async sendInstanceStoppedEmail(email: string, instanceId: string): Promise<void> {
+
+  private _getTemplate(templateName: string) {
+    return readFileSync(join(__dirname, '../../assets/templates', `${templateName}.mjml`), 'utf8');
+  }
+
+  private _interpolateTemplate(templateName: 'instance-stopped', vars: { [key: string]: string }) {
+    // Load template.
+    const tpl = this._getTemplate(templateName);
+
+    // Render.
+    let html = mjml2html(tpl).html;
+
+    // Interpolate variables.
+    for (const prop in vars) {
+      html = html.replace(new RegExp(`{{( )?${prop}( )?}}`, 'g'), vars[prop]);
+    }
+
+    return html;
+  }
+
+  async sendInstanceStoppedEmail(email: string, name: string, instanceId: string): Promise<void> {
     assert(email, 'MailRepository: Email is required');
     if (process.env.DRY_RUN === '1') {
       return;
@@ -24,9 +47,9 @@ export class MailRepository {
     sendSmtpEmail.sender = { email: process.env.SENDER_EMAIL || 'noreply@falkordb.cloud', name: 'FalkorDB Cloud' };
     sendSmtpEmail.to = [{ email }];
     sendSmtpEmail.subject = 'Your FalkorDB instance has been stopped';
-    sendSmtpEmail.htmlContent = `<p>Your FalkorDB instance with ID ${instanceId} has been stopped due to inactivity. You can start it again from the <a href="${link}">FalkorDB dashboard</a>.</p>`;
     sendSmtpEmail.replyTo = { email: process.env.REPLY_TO_EMAIL || 'info@falkordb.com', name: 'FalkorDB Support' };
 
+    sendSmtpEmail.htmlContent = this._interpolateTemplate('instance-stopped', { instanceId, name, link });
     await this._apiInstance.sendTransacEmail(sendSmtpEmail);
   }
 }
