@@ -7,7 +7,9 @@
     "start": "pnpm --filter './services/**' run start",
     "test": "pnpm run test",
     "serve": "pnpm --filter './services/**' run serve",
-    "deploy:dev": "pnpm --filter './services/*' run deploy:dev"
+    "deploy:dev": "pnpm --filter './services/*' run deploy:dev",
+    "deploy:prod": "pnpm --filter './services/*' run deploy:prod",
+    "build": "pnpm --filter './services/**' run build"
   },
   "keywords": [],
   "author": "",
