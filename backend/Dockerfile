@@ -1,7 +1,7 @@
 ARG NODE_VERSION=18.18.0
 
 # Alpine image
-FROM node:${NODE_VERSION}-alpine AS alpine
+FROM node:$NODE_VERSION-alpine AS alpine
 RUN apk update
 RUN apk add --no-cache libc6-compat
 
@@ -13,14 +13,16 @@ RUN pnpm config set store-dir ~/.pnpm-store
 # Prune projects
 FROM base AS pruner
 ARG PROJECT
+ARG DIR=services
 
 WORKDIR /app
 COPY . .
-RUN turbo prune --scope=${PROJECT} --docker
+RUN turbo prune --scope=$PROJECT --docker
 
 # Build the project
 FROM base AS builder
 ARG PROJECT
+ARG DIR=services
 
 WORKDIR /app
 
@@ -35,14 +37,17 @@ RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm install
 # Copy source code of isolated subworkspace
 COPY --from=pruner /app/out/full/ .
 
-RUN turbo build --filter=${PROJECT}
+RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm install
+RUN pnpm --filter ./$DIR/$PROJECT run build
 RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm prune --prod --no-optional
 RUN rm -rf ./services/*/src
+RUN rm -rf ./jobs/*/src
 RUN rm -rf ./libs/*/src
 
 # Final image
 FROM alpine AS runner
 ARG PROJECT
+ARG DIR=services
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
@@ -50,11 +55,11 @@ USER nodejs
 
 WORKDIR /app
 COPY --from=builder --chown=nodejs:nodejs /app .
-WORKDIR /app/services/${PROJECT}
+WORKDIR /app/$DIR/$PROJECT
 
 ARG PORT=8080
-ENV PORT=${PORT}
+ENV PORT=$PORT
 ENV NODE_ENV=production
-EXPOSE ${PORT}
+EXPOSE $PORT
 
 CMD node dist/index.js
