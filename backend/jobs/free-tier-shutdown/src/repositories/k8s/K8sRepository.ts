@@ -190,7 +190,9 @@ export class K8sRepository {
 
     if (!graphs.length) {
       this._options.logger.info({ clusterId, region, instanceId }, 'No graphs found');
-      return await this.getFalkorDBInfo(clusterId, region, instanceId, hasTLS).then((info) => info.rdb_last_save_time);
+      return await this.getFalkorDBInfo(clusterId, region, instanceId, hasTLS).then(
+        (info) => info.rdb_last_save_time * 1000,
+      );
     }
 
     let lastQueryTime = 0;
