@@ -5,10 +5,11 @@ import { MailRepository } from './repositories/mail/MailRepository';
 import { OmnistrateRepository } from './repositories/omnistrate/OmnistrateRepository';
 import { OmnistrateInstanceSchemaType } from './schemas/OmnistrateInstance';
 import pino from 'pino';
+import { gcpLogOptions } from 'pino-cloud-logging';
 
 const LAST_USED_TIME_THRESHOLD = parseInt(process.env.LAST_USED_TIME_THRESHOLD || '86400000', 10); // 24 hours
 
-const logger = pino();
+const logger = pino(gcpLogOptions());
 
 async function handleFreeInstance(
   instance: OmnistrateInstanceSchemaType,
