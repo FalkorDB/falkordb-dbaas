@@ -21,11 +21,8 @@ export class K8sRepository {
     });
     // the following are the parameters added when a new k8s context is created
     return {
-      // the endpoint set as 'cluster.server'
       endpoint: response.endpoint,
-      // the certificate set as 'cluster.certificate-authority-data'
       certificateAuthority: response.masterAuth.clusterCaCertificate,
-      // the accessToken set as 'user.auth-provider.config.access-token'
       accessToken: accessToken,
     };
   }
@@ -67,16 +64,7 @@ export class K8sRepository {
     return kubeConfig;
   }
 
-  async getFalkorDBInfo(
-    clusterId: string,
-    region: string,
-    instanceId: string,
-    hasTLS = false,
-  ): Promise<FalkorDBInfoObjectSchemaType> {
-    this._options.logger.info({ clusterId, region, instanceId }, 'Getting FalkorDB info');
-
-    const kubeConfig = await this._getK8sConfig(clusterId, region);
-
+  private async _getDeploymentPassword(kubeConfig: k8s.KubeConfig, instanceId: string): Promise<string> {
     let password = '';
     if (!process.env.SKIP_K8S_ENV_CHECK) {
       const envResponse = await this._executeCommand(kubeConfig, instanceId, ['env']).catch((e) => {
@@ -104,12 +92,138 @@ export class K8sRepository {
       throw new Error('Could not get password');
     }
 
+    return password.replace(/\n$/, '');
+  }
+
+  private async _getFalkorDBGraphs(
+    kubeConfig: k8s.KubeConfig,
+    instanceId: string,
+    hasTLS: boolean,
+    password: string,
+  ): Promise<string[]> {
     const response = await this._executeCommand(
       kubeConfig,
       instanceId,
-      ['redis-cli', hasTLS ? '--tls' : '', '-a', password.replace(/\n$/, ''), '--no-auth-warning', 'info'].filter(
-        (c) => c,
-      ),
+      ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', 'GRAPH.LIST'].filter((c) => c),
+    ).catch((e) => {
+      console.error(e);
+      throw e;
+    });
+
+    return response.split('\n').filter((g) => g);
+  }
+
+  private async _getFalkorDBGraphLastQueryTime(
+    kubeConfig: k8s.KubeConfig,
+    instanceId: string,
+    hasTLS: boolean,
+    password: string,
+    graph: string,
+  ): Promise<number> {
+    const response = await this._executeCommand(
+      kubeConfig,
+      instanceId,
+      [
+        'redis-cli',
+        hasTLS ? '--tls' : '',
+        '-a',
+        password,
+        '--no-auth-warning',
+        'XREVRANGE',
+        `telemetry{${graph}}`,
+        '+',
+        '-',
+        'COUNT',
+        '1',
+      ].filter((c) => c),
+    ).catch((e) => {
+      console.error(e);
+      throw e;
+    });
+
+    /**
+     * Extract Received at from response:
+     * 1) 1) "1725180135590-0"
+   2)  1) "Received at"
+       2) "1725180133"
+       3) "Query"
+       4) "create (n)"
+       5) "Total duration"
+       6) "21.613542"
+       7) "Wait duration"
+       8) "6.488792"
+       9) "Execution duration"
+      10) "13.990292"
+      11) "Report duration"
+      12) "1.134458"
+      13) "Utilized cache"
+      14) "0"
+      15) "Write"
+      16) "1"
+      17) "Timeout"
+      18) "0"
+     * 
+     */
+
+    const receivedAt = response.split('\n')[2];
+
+    if (!receivedAt) {
+      throw new Error('Could not parse last query time');
+    }
+
+    return parseInt(receivedAt);
+  }
+
+  async getFalkorDBLastQueryTime(
+    clusterId: string,
+    region: string,
+    instanceId: string,
+    hasTLS = false,
+  ): Promise<number> {
+    this._options.logger.info({ clusterId, region, instanceId }, 'Getting FalkorDB last query time');
+
+    const kubeConfig = await this._getK8sConfig(clusterId, region);
+
+    const password = await this._getDeploymentPassword(kubeConfig, instanceId);
+
+    const graphs = await this._getFalkorDBGraphs(kubeConfig, instanceId, hasTLS, password);
+
+    if (!graphs.length) {
+      this._options.logger.info({ clusterId, region, instanceId }, 'No graphs found');
+      return await this.getFalkorDBInfo(clusterId, region, instanceId, hasTLS).then((info) => info.rdb_last_save_time);
+    }
+
+    let lastQueryTime = 0;
+    for (const graph of graphs) {
+      const graphLastQueryTime = await this._getFalkorDBGraphLastQueryTime(
+        kubeConfig,
+        instanceId,
+        hasTLS,
+        password,
+        graph,
+      );
+      lastQueryTime = Math.max(lastQueryTime, graphLastQueryTime);
+    }
+
+    return lastQueryTime * 1000;
+  }
+
+  async getFalkorDBInfo(
+    clusterId: string,
+    region: string,
+    instanceId: string,
+    hasTLS = false,
+  ): Promise<FalkorDBInfoObjectSchemaType> {
+    this._options.logger.info({ clusterId, region, instanceId }, 'Getting FalkorDB info');
+
+    const kubeConfig = await this._getK8sConfig(clusterId, region);
+
+    const password = await this._getDeploymentPassword(kubeConfig, instanceId);
+
+    const response = await this._executeCommand(
+      kubeConfig,
+      instanceId,
+      ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', 'info'].filter((c) => c),
     ).catch((e) => {
       console.error(e);
       throw e;
@@ -119,7 +233,7 @@ export class K8sRepository {
       rdb_bgsave_in_progress: parseInt(response.match(/rdb_bgsave_in_progress:(\d+)/)?.[1]),
       rdb_saves: parseInt(response.match(/rdb_changes_since_last_save:(\d+)/)?.[1] || '0'),
       rdb_changes_since_last_save: parseInt(response.match(/rdb_changes_since_last_save:(\d+)/)?.[1] || '0'),
-      rdb_last_save_time: 0,//parseInt(response.match(/rdb_last_save_time:(\d+)/)?.[1] || '0'),
+      rdb_last_save_time: parseInt(response.match(/rdb_last_save_time:(\d+)/)?.[1] || '0'),
     };
 
     if (
