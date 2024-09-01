@@ -1,27 +1,14 @@
 import { config } from 'dotenv';
-config();
+config({ path: process.env.NODE_ENV === 'production' ? './.env.prod' : undefined });
 import { K8sRepository } from './repositories/k8s/K8sRepository';
 import { MailRepository } from './repositories/mail/MailRepository';
 import { OmnistrateRepository } from './repositories/omnistrate/OmnistrateRepository';
-import { FalkorDBInfoObjectSchemaType } from './schemas/FalkorDBInfoObject';
 import { OmnistrateInstanceSchemaType } from './schemas/OmnistrateInstance';
 import pino from 'pino';
 
+const LAST_USED_TIME_THRESHOLD = parseInt(process.env.LAST_USED_TIME_THRESHOLD || '86400000', 10); // 24 hours
+
 const logger = pino();
-
-function getLastUsedTime(instanceInfo: FalkorDBInfoObjectSchemaType): number {
-  if (instanceInfo.rdb_bgsave_in_progress) return Date.now();
-
-  if (instanceInfo.rdb_saves === 0) {
-    if (instanceInfo.rdb_changes_since_last_save === 0) {
-      return instanceInfo.rdb_last_save_time * 1000;
-    }
-
-    return Date.now();
-  }
-
-  return instanceInfo.rdb_last_save_time * 1000;
-}
 
 async function handleFreeInstance(
   instance: OmnistrateInstanceSchemaType,
@@ -33,15 +20,19 @@ async function handleFreeInstance(
   try {
     // 2. For each instance, get the last used time from k8s
     const { clusterId, region, id: instanceId } = instance;
-    const instanceInfo = await k8sRepo.getFalkorDBInfo(clusterId, region, instanceId, instance.tls);
 
     // 3. If the last used time is more than 24 hours, stop the instance in omnistrate, and send an email to the user
-    const lastUsedTime = getLastUsedTime(instanceInfo);
+    const lastUsedTime = await k8sRepo.getFalkorDBLastQueryTime(clusterId, region, instanceId, instance.tls);
 
-    if (Date.now() - lastUsedTime > 24 * 60 * 60 * 1000) {
+    if (Date.now() - lastUsedTime > LAST_USED_TIME_THRESHOLD) {
+      logger.info(
+        `Instance ${instance.id} is not in use, last used time: ${new Date(lastUsedTime).toISOString()}. Stopping it.`,
+      );
       await omnistrateRepo.stopInstance(instance);
       const { email, name } = await omnistrateRepo.getUser(instance.userId);
       await mailRepo.sendInstanceStoppedEmail(email, name, instanceId);
+    } else {
+      logger.info(`Instance ${instance.id} is still in use. Last used time: ${new Date(lastUsedTime).toISOString()}`);
     }
   } catch (error) {
     logger.error(error);
