@@ -1,7 +1,7 @@
 <mjml>
   <mj-head>
-    <mj-title>Your instance has been stopped</mj-title>
-    <mj-preview>Your instance has been stopped</mj-preview>
+    <mj-title>Welcome to FalkorDB</mj-title>
+    <mj-preview>Your free FalkorDB instance will be ready shortly.</mj-preview>
     <mj-attributes>
       <mj-all font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"></mj-all>
       <mj-text font-weight="400" font-size="16px" color="#000000" line-height="24px" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif"></mj-text>
@@ -35,23 +35,38 @@
       <mj-section background-color="#ffffff" padding-left="15px" padding-right="15px">
         <mj-column width="100%">
           <mj-text color="#212b35" font-weight="bold" font-size="20px">
-            Your instance has been stopped :(
+            Welcome to <b>FalkorDB!</b>
           </mj-text>
           <mj-text color="#637381" font-size="16px">
-            Hi {{ name }},
-          </mj-text>
-          <mj-text color="#637381" font-size="16px">
-            Your FalkorDB instance with ID <b>{{ instanceId }}</b> has been stopped due to inactivity. 
+            Your FalkorDB instance with ID <b>{{ instanceId }}</b> is being deployed and will be ready shortly. 
             <br>
-            You can start it again from the FalkorDB Cloud Dashboard.
+            You can find it in the FalkorDB Cloud Dashboard through the button below.
           </mj-text>
-        
-          <mj-button background-color="#7466FF" align="center" color="#ffffff" font-size="17px" font-weight="bold" href="{{ link }}" width="300px">
+          <mj-text color="#637381" font-size="16px">
+          To connect with your instance, you can use the following connection details:
+          <br>
+          <b>Username:</b> {{ username }}
+          <br>
+          <b>Password:</b> {{ password }}
+          <br><br>
+          Don't forget to change the password after the first login!
+          </mj-text>
+
+          <mj-text color="#637381" font-size="16px">
+          Check out our <a target="_blank" href="https://docs.falkordb.com">documentation</a> to get started with FalkorDB.
+          </mj-text>
+
+
+
+          <mj-button background-color="#7466FF" align="center" color="#ffffff" font-size="17px" font-weight="bold" href="{{ link }}" width="200px">
             Dashboard
           </mj-button>
+
+
         </mj-column>
       </mj-section>
     </mj-wrapper>
+
 
     <mj-wrapper full-width="full-width">
       <mj-section>
