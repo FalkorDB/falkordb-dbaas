@@ -44,15 +44,15 @@ tags:
   - env-${_NODE_ENV}
 
 substitutions:
-  _PROJECT_ID: 'ctrl-plane-dev-f7a2434f'
-  _PROJECT_NUMBER: '425012726186'
+  _PROJECT_ID: 'ctrl-plane-prod-b1b92df2'
+  _PROJECT_NUMBER: '987165368882'
   _REPOSITORY: 'backend'
   _IMAGE_NAME: 'marketplace-integration'
   _SERVICE_NAME: 'marketplace-integration'
-  _NODE_ENV: 'development'
+  _NODE_ENV: 'production'
   _OMNISTRATE_USER: "david.zimberknopf@falkordb.com"
   _OMNISTRATE_SERVICE_ID: s-KgFDwg5vBS
-  _OMNISTRATE_ENVIRONMENT_ID: se-DC0AzhMHOD
-  _OMNISTRATE_FREE_PRODUCT_TIER_ID: pt-055K4xaRsm
-  _OMNISTRATE_CREATE_FREE_INSTANCE_PATH: resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-free-customer-hosted/falkordb-free-falkordb-customer-hosted-model-omnistrate-multi-tenancy/dev
-  _OMNISTRATE_FREE_RESOURCE_ID: r-sfi8xL2OVu
+  _OMNISTRATE_ENVIRONMENT_ID: se-1iyXYFtYfA
+  _OMNISTRATE_FREE_PRODUCT_TIER_ID: pt-YhJSEGRCYv
+  _OMNISTRATE_CREATE_FREE_INSTANCE_PATH: resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-free-customer-hosted/falkordb-free-falkordb-customer-hosted-model-omnistrate-multi-tenancy/free
+  _OMNISTRATE_FREE_RESOURCE_ID: r-KdUl0BQyDT
