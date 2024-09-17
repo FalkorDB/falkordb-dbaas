@@ -17,7 +17,7 @@ import {
   CloudProvisionConfigListQuerySchemaType,
   CloudProvisionConfigListResponseSchemaType,
   CloudProvisionConfigDeleteParamsSchemaType,
-} from '@falkordb/schemas/dist/services/provisioner/v1';
+} from '@falkordb/schemas/src/services/provisioner/v1';
 
 export const ProvisionerV1 = (client: Client) => ({
   tenant: {

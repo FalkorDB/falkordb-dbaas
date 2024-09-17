@@ -32,11 +32,15 @@ steps:
       - '--region'
       - 'europe-west1'
       - '--set-env-vars'
-      -  NODE_ENV=${_NODE_ENV},OMNISTRATE_USER=${_OMNISTRATE_USER},OMNISTRATE_SERVICE_ID=${_OMNISTRATE_SERVICE_ID},OMNISTRATE_ENVIRONMENT_ID=${_OMNISTRATE_ENVIRONMENT_ID},OMNISTRATE_FREE_PRODUCT_TIER_ID=${_OMNISTRATE_FREE_PRODUCT_TIER_ID},OMNISTRATE_CREATE_FREE_INSTANCE_PATH=${_OMNISTRATE_CREATE_FREE_INSTANCE_PATH},OMNISTRATE_FREE_RESOURCE_ID=${_OMNISTRATE_FREE_RESOURCE_ID}
+      - NODE_ENV=${_NODE_ENV},OMNISTRATE_USER=${_OMNISTRATE_USER},OMNISTRATE_SERVICE_ID=${_OMNISTRATE_SERVICE_ID},OMNISTRATE_ENVIRONMENT_ID=${_OMNISTRATE_ENVIRONMENT_ID},OMNISTRATE_FREE_PRODUCT_TIER_ID=${_OMNISTRATE_FREE_PRODUCT_TIER_ID},OMNISTRATE_CREATE_FREE_INSTANCE_PATH=${_OMNISTRATE_CREATE_FREE_INSTANCE_PATH},OMNISTRATE_FREE_RESOURCE_ID=${_OMNISTRATE_FREE_RESOURCE_ID},COMMIT_BACKEND_BASE_URL=${_COMMIT_BACKEND_BASE_URL}
       - '--set-secrets'
       - 'OMNISTRATE_PASSWORD=projects/${_PROJECT_NUMBER}/secrets/OMNISTRATE_PASSWORD/versions/latest,OMNISTRATE_SERVICE_ACCOUNT_SECRET=projects/${_PROJECT_NUMBER}/secrets/OMNISTRATE_SERVICE_ACCOUNT_SECRET/versions/latest,BREVO_API_KEY=projects/${_PROJECT_NUMBER}/secrets/BREVO_API_KEY/versions/latest'
       - '--service-account'
-      - 'marketplace-integration-sa@${_PROJECT_ID}.iam.gserviceaccount.com'
+      - 'marketplace-integration@${_PROJECT_ID}.iam.gserviceaccount.com'
+      - '--network'
+      - 'falkordb-marketplace-private-network'
+      - '--subnet'
+      - 'falkordb-marketplace-subnet'
 
 tags:
   - backend
@@ -44,15 +48,16 @@ tags:
   - env-${_NODE_ENV}
 
 substitutions:
-  _PROJECT_ID: 'ctrl-plane-prod-b1b92df2'
-  _PROJECT_NUMBER: '987165368882'
+  _PROJECT_ID: 'falkordb-public'
+  _PROJECT_NUMBER: '45916700823'
   _REPOSITORY: 'backend'
   _IMAGE_NAME: 'marketplace-integration'
   _SERVICE_NAME: 'marketplace-integration'
   _NODE_ENV: 'production'
-  _OMNISTRATE_USER: "david.zimberknopf@falkordb.com"
+  _OMNISTRATE_USER: 'david.zimberknopf@falkordb.com'
   _OMNISTRATE_SERVICE_ID: s-KgFDwg5vBS
   _OMNISTRATE_ENVIRONMENT_ID: se-1iyXYFtYfA
   _OMNISTRATE_FREE_PRODUCT_TIER_ID: pt-YhJSEGRCYv
   _OMNISTRATE_CREATE_FREE_INSTANCE_PATH: resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-free-customer-hosted/falkordb-free-falkordb-customer-hosted-model-omnistrate-multi-tenancy/free
   _OMNISTRATE_FREE_RESOURCE_ID: r-KdUl0BQyDT
+  _COMMIT_BACKEND_BASE_URL: 'localhost'

@@ -7,6 +7,7 @@ import { ICommitRepository } from './repositories/commit/ICommitRepository';
 import { CommitRepositoryMock } from './repositories/commit/CommitRepositoryMock';
 import { IMailRepository } from './repositories/mail/IMailRepository';
 import { MailRepository } from './repositories/mail/MailRepository';
+import { CommitRepository } from './repositories/commit/CommitRepository';
 
 export const setupGlobalContainer = (fastify: FastifyInstance) => {
   diContainer.register({
@@ -18,17 +19,30 @@ export const setupGlobalContainer = (fastify: FastifyInstance) => {
         fastify.config.OMNISTRATE_ENVIRONMENT_ID,
         fastify.config.OMNISTRATE_FREE_PRODUCT_TIER_ID,
         fastify.config.OMNISTRATE_CREATE_FREE_INSTANCE_PATH,
-        fastify.config.OMNISTRATE_FREE_RESOURCE_ID,
         fastify.config.OMNISTRATE_SERVICE_ACCOUNT_SECRET,
+        {
+          dryRun: fastify.config.DRY_RUN,
+          logger: fastify.log,
+        },
       );
     }),
 
     [ICommitRepository.repositoryName]: asFunction(() => {
-      return new CommitRepositoryMock();
+      if (fastify.config.DRY_RUN) {
+        return new CommitRepositoryMock();
+      }
+
+      return new CommitRepository(fastify.config.COMMIT_BACKEND_BASE_URL, {
+        dryRun: fastify.config.DRY_RUN,
+        logger: fastify.log,
+      });
     }),
 
     [IMailRepository.repositoryName]: asFunction(() => {
-      return new MailRepository(fastify.config.BREVO_API_KEY);
+      return new MailRepository(fastify.config.BREVO_API_KEY, {
+        dryRun: fastify.config.DRY_RUN,
+        logger: fastify.log,
+      });
     }),
   });
 };

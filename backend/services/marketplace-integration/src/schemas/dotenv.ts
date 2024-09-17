@@ -12,6 +12,8 @@ export const EnvSchema = Type.Object({
   OMNISTRATE_FREE_RESOURCE_ID: Type.String(),
   OMNISTRATE_SERVICE_ACCOUNT_SECRET: Type.String(),
   BREVO_API_KEY: Type.String(),
+  DRY_RUN: Type.Boolean({ default: true }),
+  COMMIT_BACKEND_BASE_URL: Type.String({ default: 'http://localhost' }),
 });
 
 export type EnvSchemaType = Static<typeof EnvSchema>;

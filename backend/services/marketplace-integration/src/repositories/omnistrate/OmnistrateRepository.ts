@@ -3,6 +3,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { JwtPayload, decode } from 'jsonwebtoken';
 import assert = require('assert');
 import { randomBytes } from 'crypto';
+import { FastifyBaseLogger } from 'fastify';
 
 export class OmnistrateRepository implements IOmnistrateRepository {
   private static _client: AxiosInstance;
@@ -18,8 +19,11 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     private _environmentId: string,
     private _freeProductTierId: string,
     private _createFreeInstancePath: string,
-    private _freeInstanceResourceId: string,
     private _serviceAccountSecret: string,
+    private _opts: {
+      dryRun?: boolean;
+      logger: FastifyBaseLogger;
+    },
   ) {
     OmnistrateRepository._client = axios.create({
       baseURL: OmnistrateRepository._baseUrl,
@@ -31,7 +35,6 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     assert(_freeProductTierId, 'OmnistrateRepository: Free Product Tier ID is required');
     assert(_createFreeInstancePath, 'OmnistrateRepository: Create Free Instance Path is required');
     assert(_serviceAccountSecret, 'OmnistrateRepository: Service Account Secret is required');
-    assert(_freeInstanceResourceId, 'OmnistrateRepository: Free Instance Resource ID is required');
     OmnistrateRepository._client.interceptors.request.use(
       OmnistrateRepository._getBearerInterceptor(_omnistrateUser, _omnistratePassword),
     );
@@ -81,6 +84,12 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   }
 
   private async _createServiceAccount(id: string): Promise<{ email: string; password: string }> {
+    this._opts.logger.info({ id, dryRun: this._opts.dryRun }, 'Creating service account');
+
+    if (this._opts?.dryRun) {
+      return { email: this._getSAEmail(id), password: this._serviceAccountSecret };
+    }
+
     const email = this._getSAEmail(id);
     await OmnistrateRepository._client.post(`/2022-09-01-00/customer-user-signup`, {
       email,
@@ -92,6 +101,12 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   }
 
   private async _getUser(email: string): Promise<{ userId: string; token?: string }> {
+    this._opts.logger.info({ email, dryRun: this._opts.dryRun }, 'Getting user');
+
+    if (this._opts?.dryRun) {
+      return { userId: '123', token: '123' };
+    }
+
     const response = await OmnistrateRepository._client.get(`/2022-09-01-00/fleet/users`);
     const user = response.data['users']?.find((u: unknown) => u?.['email'] === email);
     if (!user) {
@@ -101,6 +116,12 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   }
 
   private async _verifyServiceAccount(email: string, token: string): Promise<void> {
+    this._opts.logger.info({ email, dryRun: this._opts.dryRun }, 'Verifying service account');
+
+    if (this._opts?.dryRun) {
+      return;
+    }
+
     await OmnistrateRepository._client.post(`/2022-09-01-00/validate-token`, {
       email,
       token,
@@ -129,6 +150,12 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   }
 
   private async _inviteReadOnlyUser(bearerToken: string, subscriptionId: string, email: string): Promise<void> {
+    this._opts.logger.info({ subscriptionId, email, dryRun: this._opts.dryRun }, 'Inviting read-only user');
+
+    if (this._opts?.dryRun) {
+      return;
+    }
+
     await axios.post(
       `${OmnistrateRepository._baseUrl}/2022-09-01-00/resource-instance/subscription/${subscriptionId}/invite-user`,
       {
@@ -242,6 +269,15 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   }
 
   async createReadOnlySubscription(params: { marketplaceAccountId: string; userEmail: string }): Promise<void> {
+    this._opts.logger.info(
+      { marketplaceAccountId: params.marketplaceAccountId, userEmail: params.userEmail },
+      'Creating read-only subscription',
+    );
+
+    if (this._opts?.dryRun) {
+      return;
+    }
+
     // Create service account
     const { email, password } = await this._createServiceAccount(params.marketplaceAccountId);
 
@@ -273,6 +309,15 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     username: string;
     password: string;
   }> {
+    this._opts.logger.info(
+      { marketplaceAccountId: params.marketplaceAccountId, entitlementId: params.entitlementId },
+      'Creating free deployment',
+    );
+
+    if (this._opts?.dryRun) {
+      return { instanceId: '123', username: 'falkordb', password: 'password' };
+    }
+
     const saEmail = this._getSAEmail(params.marketplaceAccountId);
 
     // Get Free subscription ID
@@ -295,6 +340,15 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   }
 
   async deleteDeployment(params: { marketplaceAccountId: string; entitlementId: string }): Promise<void> {
+    this._opts.logger.info(
+      { marketplaceAccountId: params.marketplaceAccountId, entitlementId: params.entitlementId },
+      'Deleting deployment',
+    );
+
+    if (this._opts?.dryRun) {
+      return;
+    }
+
     const { instanceId } = await this._getInstanceWithName(params.entitlementId);
 
     await this._deleteInstance(instanceId);

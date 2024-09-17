@@ -1,4 +1,4 @@
-import { Logger } from 'pino';
+import { FastifyBaseLogger } from 'fastify';
 import * as brevo from '@getbrevo/brevo';
 import assert = require('assert');
 import { readFileSync } from 'fs';
@@ -9,9 +9,15 @@ import { IMailRepository } from './IMailRepository';
 export class MailRepository implements IMailRepository {
   private _apiInstance = new brevo.TransactionalEmailsApi();
 
-  constructor(_brevoApiKey: string) {
+  constructor(
+    _brevoApiKey: string,
+    private _opts: {
+      dryRun?: boolean;
+      logger: FastifyBaseLogger;
+    },
+  ) {
     assert(_brevoApiKey, 'Brevo api key is required');
-    //@ts-expect-error issue with the lib itseld
+    //@ts-expect-error issue with the lib
     const apiKey = this._apiInstance.authentications['apiKey'];
     apiKey.apiKey = _brevoApiKey;
   }
@@ -46,7 +52,10 @@ export class MailRepository implements IMailRepository {
     password: string;
   }): Promise<void> {
     assert(params.email, 'MailRepository: Email is required');
-    if (process.env.DRY_RUN === '1') {
+
+    this._opts.logger.info({ ...params, password: undefined }, 'Sending free instance created email');
+
+    if (this._opts.dryRun) {
       return;
     }
 
