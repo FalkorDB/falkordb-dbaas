@@ -32,9 +32,14 @@ export const createEntitlementHandler: RouteHandlerMethod<undefined, undefined, 
     username = instance.username;
     password = instance.password;
   } catch (error) {
+    
+    if (error instanceof Error && error.message.includes('User not found')) {
+      throw ApiError.notFound('User not found', 'USER_NOT_FOUND');
+    }
+    
     request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to create free deployment: ${error}`);
-    throw ApiError.internalServerError('Failed to create free deployment', 'CREATE_FREE_DEPLOYMENT_FAILED');
-  }
+    return;
+   }
 
   try {
     await commitRepository.verifyEntitlementCreated(marketplaceAccountId, entitlementId);

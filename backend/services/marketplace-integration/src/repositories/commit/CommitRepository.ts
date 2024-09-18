@@ -81,7 +81,7 @@ export class CommitRepository implements ICommitRepository {
     }
 
     try {
-      await CommitRepository._client.delete('/cancelationComplete', {
+      await CommitRepository._client.post('/cancelationComplete', {
         data: {
           account_id: accountId,
           entitlement_id: entitlementId,

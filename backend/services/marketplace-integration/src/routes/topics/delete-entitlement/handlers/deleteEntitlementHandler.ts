@@ -20,7 +20,12 @@ export const deleteEntitlementHandler: RouteHandlerMethod<undefined, undefined, 
       entitlementId,
     });
   } catch (error) {
+    // Check if instance was not found
+    if (error instanceof Error && error.message.includes('not found')) {
+      throw error;
+    }
     request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to delete deployment: ${error}`);
+    return;
   }
 
   try {

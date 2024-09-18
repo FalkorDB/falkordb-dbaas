@@ -20,7 +20,14 @@ export const createAccountHandler: RouteHandlerMethod<undefined, undefined, unde
       userEmail,
     });
   } catch (error) {
+    // Check if error is the account already exists
+    if (error instanceof Error && error.message.includes('already exists')) {
+      request.log.info({ marketplaceAccountId, userEmail }, 'Account already exists');
+      return;
+    }
+
     request.log.error({ error, marketplaceAccountId, userEmail }, `Failed to create read-only subscription: ${error}`);
+    return;
   }
 
   try {

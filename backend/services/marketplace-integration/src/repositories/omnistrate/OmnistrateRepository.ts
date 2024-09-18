@@ -190,6 +190,8 @@ export class OmnistrateRepository implements IOmnistrateRepository {
         `/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/instances`,
       )
     ).data;
+    
+    this._opts.logger.info({ name, response }, 'Getting instance with name');
 
     const instance = response['resourceInstances']?.find(
       (i: unknown) => i?.['consumptionResourceInstanceResult']?.['result_params']?.['name'] === name,
@@ -278,6 +280,10 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       return;
     }
 
+    if (await this._getUser(this._getSAEmail(params.marketplaceAccountId)).catch(() => false)) {
+      throw new Error('Service account already exists');
+    }
+
     // Create service account
     const { email, password } = await this._createServiceAccount(params.marketplaceAccountId);
 
@@ -319,6 +325,8 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     }
 
     const saEmail = this._getSAEmail(params.marketplaceAccountId);
+
+    await this._getUser(saEmail)
 
     // Get Free subscription ID
     const { subscriptionId } = await this._getFreeSubscriptionIdFromEmail(saEmail);
