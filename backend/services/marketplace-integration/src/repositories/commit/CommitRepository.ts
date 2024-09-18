@@ -44,7 +44,7 @@ export class CommitRepository implements ICommitRepository {
   }
 
   async verifyAccountCreated(accountId: string): Promise<void> {
-    this._opts.logger.info({ accountId }, 'Verifying account created');
+    this._opts.logger.info({ accountId, dryRun: this._opts.dryRun }, 'Verifying account created');
     if (this._opts.dryRun) {
       return;
     }
@@ -58,7 +58,7 @@ export class CommitRepository implements ICommitRepository {
   }
 
   async verifyEntitlementCreated(accountId: string, entitlementId: string): Promise<void> {
-    this._opts.logger.info({ accountId, entitlementId }, 'Verifying entitlement created');
+    this._opts.logger.info({ accountId, entitlementId, dryRun: this._opts.dryRun }, 'Verifying entitlement created');
     if (this._opts.dryRun) {
       return;
     }
@@ -75,7 +75,7 @@ export class CommitRepository implements ICommitRepository {
   }
 
   async verifyEntitlementDeleted(accountId: string, entitlementId: string): Promise<void> {
-    this._opts.logger.info({ accountId, entitlementId }, 'Verifying entitlement deleted');
+    this._opts.logger.info({ accountId, entitlementId, dryRun: this._opts.dryRun }, 'Verifying entitlement deleted');
     if (this._opts.dryRun) {
       return;
     }

@@ -53,7 +53,7 @@ export class MailRepository implements IMailRepository {
   }): Promise<void> {
     assert(params.email, 'MailRepository: Email is required');
 
-    this._opts.logger.info({ ...params, password: undefined }, 'Sending free instance created email');
+    this._opts.logger.info({ ...params, password: undefined, dryRun: this._opts.dryRun }, 'Sending free instance created email');
 
     if (this._opts.dryRun) {
       return;

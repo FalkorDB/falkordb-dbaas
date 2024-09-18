@@ -270,7 +270,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
 
   async createReadOnlySubscription(params: { marketplaceAccountId: string; userEmail: string }): Promise<void> {
     this._opts.logger.info(
-      { marketplaceAccountId: params.marketplaceAccountId, userEmail: params.userEmail },
+      { marketplaceAccountId: params.marketplaceAccountId, userEmail: params.userEmail, dryRun: this._opts.dryRun },
       'Creating read-only subscription',
     );
 
@@ -310,7 +310,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     password: string;
   }> {
     this._opts.logger.info(
-      { marketplaceAccountId: params.marketplaceAccountId, entitlementId: params.entitlementId },
+      { marketplaceAccountId: params.marketplaceAccountId, entitlementId: params.entitlementId, dryRun: this._opts.dryRun },
       'Creating free deployment',
     );
 
@@ -341,7 +341,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
 
   async deleteDeployment(params: { marketplaceAccountId: string; entitlementId: string }): Promise<void> {
     this._opts.logger.info(
-      { marketplaceAccountId: params.marketplaceAccountId, entitlementId: params.entitlementId },
+      { marketplaceAccountId: params.marketplaceAccountId, entitlementId: params.entitlementId, dryRun: this._opts.dryRun },
       'Deleting deployment',
     );
 
