@@ -60,4 +60,4 @@ substitutions:
   _OMNISTRATE_FREE_PRODUCT_TIER_ID: pt-YhJSEGRCYv
   _OMNISTRATE_CREATE_FREE_INSTANCE_PATH: resource-instance/sp-JvkxkPhinN/falkordb/v1/prod/falkordb-free-customer-hosted/falkordb-free-falkordb-customer-hosted-model-omnistrate-multi-tenancy/free
   _OMNISTRATE_FREE_RESOURCE_ID: r-KdUl0BQyDT
-  _COMMIT_BACKEND_BASE_URL: 'localhost'
+  _COMMIT_BACKEND_BASE_URL: 'http://10.132.0.2'

@@ -65,7 +65,7 @@ export class CommitRepository implements ICommitRepository {
 
     try {
       await CommitRepository._client.post('/provisioningComplete', {
-        accountId: accountId,
+        account_id: accountId,
         entitlement_id: entitlementId,
       });
     } catch (error) {
@@ -83,7 +83,7 @@ export class CommitRepository implements ICommitRepository {
     try {
       await CommitRepository._client.delete('/cancelationComplete', {
         data: {
-          accountId: accountId,
+          account_id: accountId,
           entitlement_id: entitlementId,
         },
       });
