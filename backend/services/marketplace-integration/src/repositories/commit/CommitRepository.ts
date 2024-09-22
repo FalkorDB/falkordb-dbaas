@@ -82,10 +82,8 @@ export class CommitRepository implements ICommitRepository {
 
     try {
       await CommitRepository._client.post('/cancelationComplete', {
-        data: {
-          account_id: accountId,
-          entitlement_id: entitlementId,
-        },
+        account_id: accountId,
+        entitlement_id: entitlementId,
       });
     } catch (error) {
       this._opts.logger.error({ accountId, entitlementId, error }, 'Failed to verify entitlement deleted');
