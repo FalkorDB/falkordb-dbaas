@@ -62,7 +62,7 @@ jobs:
           cp ../tofu/terraform.tfvars ${GITHUB_WORKSPACE}/artifacts/terraform.tfvars
 
       - name: Set up Tofu
-        uses: opentofu/setup-opentofu@v1.0.3
+        uses: opentofu/setup-opentofu@v1.0.4
 
       # - name: Create Tofu Plugin Cache Dir
       #   run: |
