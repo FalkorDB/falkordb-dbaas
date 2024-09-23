@@ -27,7 +27,7 @@
     "@kubernetes/client-node": "^0.21.0",
     "@opentelemetry/exporter-jaeger": "^1.22.0",
     "@sinclair/typebox": "^0.32.14",
-    "axios": "^1.6.7",
+    "axios": "^1.7.4",
     "dotenv": "^16.4.5",
     "google-auth-library": "^9.7.0",
     "googleapis": "^134.0.0",
