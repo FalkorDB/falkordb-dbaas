@@ -1,4 +1,4 @@
-ARG NODE_VERSION=18.18.0
+ARG NODE_VERSION=22.6.0
 
 # Alpine image
 FROM node:$NODE_VERSION-alpine AS alpine
@@ -36,9 +36,7 @@ RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm install
 
 # Copy source code of isolated subworkspace
 COPY --from=pruner /app/out/full/ .
-
-RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm install
-RUN pnpm --filter ./$DIR/$PROJECT run build
+RUN turbo run --filter=$PROJECT build 
 RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm prune --prod --no-optional
 RUN rm -rf ./services/*/src
 RUN rm -rf ./jobs/*/src

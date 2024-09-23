@@ -19,11 +19,15 @@ export default fp(
         throw ApiError.badRequest('Invalid pubsub message: missing data attribute', 'INVALID_PUBSUB_MESSAGE');
       }
       const data = Buffer.from(base64, 'base64').toString('utf-8');
-      pubsubMessage['data'] = JSON.parse(data);
+      try {
+        pubsubMessage['data'] = JSON.parse(data);
+      } catch (error) {
+        throw ApiError.badRequest('Invalid pubsub message: data is not a valid json', 'INVALID_PUBSUB_MESSAGE');
+      }
 
-      if (schema && !Value.Check(schema, pubsubMessage)) {
-        console.log(Array.from(Value.Errors(schema, pubsubMessage)));
-        throw ApiError.badRequest('Invalid pubsub message: invalid data', 'INVALID_PUBSUB_MESSAGE');
+      if (schema && !Value.Check(schema, pubsubMessage["data"])) {
+        console.log(Array.from(Value.Errors(schema, pubsubMessage["data"])));
+        throw ApiError.badRequest('Invalid pubsub message: data does not match schema', 'INVALID_PUBSUB_MESSAGE');
       }
       return pubsubMessage;
     });
