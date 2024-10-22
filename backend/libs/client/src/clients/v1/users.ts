@@ -1,4 +1,4 @@
-import { UserSchemaType } from '@falkordb/schemas/dist/global';
+import { UserSchemaType } from '@falkordb/schemas/src/global';
 import { Client } from '../../client';
 import {
   CreateUserRequestBodySchemaType,
@@ -16,7 +16,7 @@ import {
   UpdateUserRequestBodySchemaType,
   UpdateUserRequestParamsSchemaType,
   UpdateUserResponseBodySchemaType,
-} from '@falkordb/schemas/dist/services/users/v1';
+} from '@falkordb/schemas/src/services/users/v1';
 
 export const UsersV1 = (client: Client) => ({
   me: {
