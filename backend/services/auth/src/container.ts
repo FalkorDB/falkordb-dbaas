@@ -11,6 +11,8 @@ import { IUsersRepository } from './repositories/users/IUsersRepository';
 import { UsersRepositoryFalkorDBClient } from './repositories/users/UsersRepositoryFalkorDBClient';
 import { IMessagingRepository } from './repositories/messaging/IMessagingRepository';
 import { MessagingRepositoryMock } from './repositories/messaging/MessagingRepositoryMock';
+import { IOmnistrateRepository } from './repositories/omnistrate/IOmnistrateRepository';
+import { OmnistrateRepository } from './repositories/omnistrate/OmnistrateRepository';
 
 export const setupGlobalContainer = (fastify: FastifyInstance) => {
   diContainer.register({
@@ -23,6 +25,10 @@ export const setupGlobalContainer = (fastify: FastifyInstance) => {
         logger: fastify.log,
         secretKey: fastify.config.RECAPTCHA_SECRET_KEY,
       });
+    }),
+
+    [IOmnistrateRepository.repositoryName]: asFunction(() => {
+      return new OmnistrateRepository(fastify.config.OMNISTRATE_EMAIL, fastify.config.OMNISTRATE_PASSWORD);
     }),
   });
 };
