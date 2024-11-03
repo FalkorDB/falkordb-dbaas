@@ -41,7 +41,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   }
 
   private _getSAEmail(id: string): string {
-    return `omnistrate-sa-${id}@falkordb.com`;
+    return `omnistrate-sa+${id}@falkordb.com`;
   }
 
   static _getBearerInterceptor(
