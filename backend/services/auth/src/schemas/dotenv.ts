@@ -13,6 +13,9 @@ export const EnvSchema = Type.Object({
   RECAPTCHA_SECRET_KEY: Type.String({ default: '' }),
   RECOVER_PASSWORD_RETURN_URL: Type.String({ default: 'http://localhost:3000/recover-password/return' }),
   GOOGLE_CLOUD_PROJECT: Type.String({ default: '' }),
+  OMNISTRATE_TOKEN_REQUEST_API_KEY: Type.String({}),
+  OMNISTRATE_EMAIL: Type.String({}),
+  OMNISTRATE_PASSWORD: Type.String({}),
 });
 
 export type EnvSchemaType = Static<typeof EnvSchema>;
