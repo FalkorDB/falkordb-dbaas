@@ -18,3 +18,9 @@ variable "cloudtrail_retention_days" {
   description = "Number of days to retain CloudTrail logs"
   default     = 90
 }
+
+variable "app_plane_lb_bucket_access_allow_list" {
+  type        = list(string)
+  description = "List of ARNs of load balancers that are allowed to write to the access logs bucket"
+  default     = []
+}
