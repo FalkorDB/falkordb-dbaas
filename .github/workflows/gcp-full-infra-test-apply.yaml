@@ -57,7 +57,7 @@ jobs:
           tofu_wrapper: false
 
       - name: Retrieve artifacts from last plan
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v7
         with:
           workflow: ${{ env.PLAN_WORKFLOW_NAME }}
           pr: ${{ env.PR_NUMBER }}
