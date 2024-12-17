@@ -35,8 +35,8 @@ importers:
         specifier: ^0.32.14
         version: 0.32.15
       axios:
-        specifier: ^1.6.7
-        version: 1.6.7
+        specifier: ^1.7.4
+        version: 1.7.4
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
@@ -129,8 +129,8 @@ importers:
         specifier: workspace:^
         version: link:../schemas
       axios:
-        specifier: ^1.6.7
-        version: 1.6.7
+        specifier: ^1.7.4
+        version: 1.7.4
       fastify-axios:
         specifier: ^1.2.8
         version: 1.2.8
@@ -928,8 +928,8 @@ importers:
         specifier: ^0.32.15
         version: 0.32.15
       axios:
-        specifier: ^1.6.7
-        version: 1.6.7
+        specifier: ^1.7.4
+        version: 1.7.4
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
@@ -4028,7 +4028,7 @@ packages:
       async-hook-domain: 4.0.1
       diff: 5.2.0
       is-actual-promise: 1.0.1
-      minipass: 7.1.2
+      minipass: 7.0.4
       signal-exit: 4.1.0
       tap-parser: 15.3.1
       tap-yaml: 2.2.1
@@ -5157,10 +5157,10 @@ packages:
     resolution: {integrity: sha512-u5w79Rd7SU4JaIlA/zFqG+gOiuq25q5VLyZ8E+ijJeILuTxVzZgp2CaGw/UTw6pXYN9XMO9yiqj/nEHmhTG5CA==}
     dev: false
 
-  /axios@1.6.7:
-    resolution: {integrity: sha512-/hDJGff6/c7u0hDkvkGxR/oy6CbCs8ziCsC7SqmhjfozqiJGc8Z11wrv9z9lYfY4K8l+H9TpjcMDX0xOZmx+RA==}
+  /axios@1.7.4:
+    resolution: {integrity: sha512-DukmaFRnY6AzAALSH4J2M3k6PkaC+MfaAGdEERRWcC9q3/TWQwLpHR8ZRLKTdQ3aBDL64EdluRDjJqKw+BPZEw==}
     dependencies:
-      follow-redirects: 1.15.5
+      follow-redirects: 1.15.9
       form-data: 4.0.0
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
@@ -6316,7 +6316,7 @@ packages:
   /fastify-axios@1.2.8:
     resolution: {integrity: sha512-9/y36e5ZdoGz/YEWfKultjma9az5Xt5iwN+ESfNvfDlq7nUvf9F4UU+MCkF9BZhCbcgUl/9yKJNS5dWRvAG2Ag==}
     dependencies:
-      axios: 1.6.7
+      axios: 1.7.4
       fastify-plugin: 4.5.1
     transitivePeerDependencies:
       - debug
@@ -6434,8 +6434,8 @@ packages:
   /flatted@3.3.1:
     resolution: {integrity: sha512-X8cqMLLie7KsNUDSdzeN8FYK9rEt4Dt67OsG/DNGnYTSDBG4uFAJFBnUeiV+zCVAvwFy56IjM9sH51jVaEhNxw==}
 
-  /follow-redirects@1.15.5:
-    resolution: {integrity: sha512-vSFWUON1B+yAw1VN4xMfxgn5fTUiaOzAJCKBwIIgT/+7CuGy9+r+5gITvP62j3RmaD5Ph65UaERdOSRGUzZtgw==}
+  /follow-redirects@1.15.9:
+    resolution: {integrity: sha512-gew4GsXizNgdoRyqmyfMHyAmXsZDk6mHkSxZFCzW9gwlbtOW44CDtYavM+y+72qD/Vq2l550kMF52DT8fOLJqQ==}
     engines: {node: '>=4.0'}
     peerDependencies:
       debug: '*'
