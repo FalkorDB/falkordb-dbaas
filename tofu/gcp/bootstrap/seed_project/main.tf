@@ -10,6 +10,8 @@ module "bootstrap" {
   group_org_admins     = "gcp-organization-admins@falkordb.com"
   group_billing_admins = "gcp-billing-admins@falkordb.com"
 
+  sa_org_iam_permissions = []
+
   activate_apis = [
     "serviceusage.googleapis.com",
     "servicenetworking.googleapis.com",
@@ -28,4 +30,23 @@ module "bootstrap" {
   create_terraform_sa = true
 
   state_bucket_name = var.state_bucket_name_prefix
+  
+}
+
+locals {
+  tf_sa_org_perms = [
+    "roles/compute.networkAdmin",
+    "roles/compute.xpnAdmin",
+    "roles/iam.securityAdmin",
+    "roles/iam.serviceAccountAdmin",
+    "roles/logging.configWriter",
+    "roles/resourcemanager.folderAdmin",
+  ]
+}
+
+resource "google_folder_iam_member" "tf_sa_org_perms" {
+  for_each = toset(local.tf_sa_org_perms)
+  folder   = var.parent_folder_id
+  role     = each.value
+  member   = "serviceAccount:${module.bootstrap.terraform_sa_email}"
 }
