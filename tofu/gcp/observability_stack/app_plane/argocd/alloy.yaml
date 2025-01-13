@@ -504,7 +504,7 @@ spec:
               memory: 5Mi
       dnsPolicy: ClusterFirst
       nodeSelector:
-        cloud.google.com/gke-nodepool: prometheus
+        node_pool: observability
       volumes:
         - name: config
           configMap:

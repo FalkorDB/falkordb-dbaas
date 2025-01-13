@@ -1,19 +1,16 @@
-
 global:
-  image:
+  image:    
     tag: "v2.13.3"
   logging:
     format: json
 server:
   extraArgs:
-  - --insecure
-
+    - --insecure
 
 cmp:
   repositories:
     falkordb-dbaas:
       url: https://github.com/FalkorDB/falkordb-dbaas
-
 
 extraObjects:
   - apiVersion: argoproj.io/v1alpha1
@@ -24,10 +21,10 @@ extraObjects:
       goTemplate: true
       goTemplateOptions: ["missingkey=error"]
       generators:
-      - clusters: 
-          selector:
-            matchLabels:
-              argocd.argoproj.io/secret-type: cluster
+        - clusters:
+            selector:
+              matchLabels:
+                argocd.argoproj.io/secret-type: cluster
       template:
         metadata:
           name: '{{`{{substr 0 40 .name | replace "_" "-"}}`}}-observability-stack'
@@ -38,6 +35,6 @@ extraObjects:
             targetRevision: 94-add-app-plane-observability-stack
             path: tofu/gcp/observability_stack/app_plane/argocd
           destination:
-            server: '{{`{{.server}}`}}'
+            server: "{{`{{.server}}`}}"
           syncPolicy:
             automated: {}

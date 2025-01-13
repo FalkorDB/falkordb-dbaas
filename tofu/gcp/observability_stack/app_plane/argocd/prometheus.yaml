@@ -32,7 +32,7 @@ spec:
         app: prometheus-server
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: prometheus
+        node_pool: observability
       containers:
         - name: prometheus
           image: prom/prometheus
