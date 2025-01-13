@@ -20,5 +20,9 @@ terraform {
       source  = "hashicorp/tls"
       version = ">= 4.0"
     }
+    argocd = {
+      source = "argoproj-labs/argocd"
+      version = "7.3.0"
+    }
   }
 }

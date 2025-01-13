@@ -30,13 +30,14 @@ extraObjects:
               argocd.argoproj.io/secret-type: cluster
       template:
         metadata:
-          name: '{{`{{.name | replace "_" "-"}}`}}-observability-stack'
+          name: '{{`{{substr 0 40 .name | replace "_" "-"}}`}}-observability-stack'
         spec:
           project: default
           source:
             repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
-            targetRevision: HEAD
+            targetRevision: 94-add-app-plane-observability-stack
             path: tofu/gcp/observability_stack/app_plane/argocd
           destination:
             server: '{{`{{.server}}`}}'
-            namespace: observability
+          syncPolicy:
+            automated: {}
