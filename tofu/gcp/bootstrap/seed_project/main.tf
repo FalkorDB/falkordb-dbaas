@@ -30,7 +30,7 @@ module "bootstrap" {
   create_terraform_sa = true
 
   state_bucket_name = var.state_bucket_name_prefix
-  
+
 }
 
 locals {

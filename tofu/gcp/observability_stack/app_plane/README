@@ -1,0 +1,10 @@
+# Observability Stack - Application plane
+
+Defines the resources that will be deployed in each application cluster to monitor its contents.
+
+The application plane for the observability stack is composed of the following components:
+  -  Prometheus: Store metrics
+     -  Alertmanager
+  -  Grafana Alloy: Scrape metrics from applications, and write them to the control plane
+  -  Pod Monitor: Scrape metrics from pods
+  -  VPC Peering connection to the control plane: allow streaming metrics from the application plane to the control plane
