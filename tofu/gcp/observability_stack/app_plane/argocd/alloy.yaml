@@ -16,9 +16,15 @@ metadata:
     app.kubernetes.io/component: config
 data:
   config.alloy: |-
-    prometheus.remote_write "default" {
+    prometheus.remote_write "in_cluster" {
       endpoint {
         url = "http://prometheus-server.observability.svc.cluster.local:9090/api/v1/write"
+      }
+    }
+    
+    prometheus.remote_write "ctrl_plane" {
+      endpoint {
+        url = "http://172.16.0.17:19291/api/v1/receive"
       }
     }
 
@@ -210,7 +216,7 @@ data:
     }
 
     prometheus.relabel "add_cluster_label" {
-      forward_to = [prometheus.remote_write.default.receiver]
+      forward_to = [prometheus.remote_write.in_cluster.receiver, prometheus.remote_write.ctrl_plane.receiver]
 
       rule {
         // Select "node" label and extract the cluster name with regex
