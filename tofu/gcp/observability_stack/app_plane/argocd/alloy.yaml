@@ -24,7 +24,7 @@ data:
     
     prometheus.remote_write "ctrl_plane" {
       endpoint {
-        url = "http://172.16.0.17:19291/api/v1/receive"
+        url = "http://10.0.60.2:19291/api/v1/receive"
       }
     }
 
