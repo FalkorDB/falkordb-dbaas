@@ -12,6 +12,9 @@ data:
     storage:
       tsdb:
         out_of_order_time_window: 24h
+        retention:
+          time: 3d
+          size: 20GB
 
     scrape_configs:
 

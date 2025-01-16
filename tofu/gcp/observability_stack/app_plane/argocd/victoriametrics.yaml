@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: victoriametrics
+  namespace: observability
+spec:
+  project: default
+  source:
+    chart: victoria-metrics-operator
+    repoURL: https://victoriametrics.github.io/helm-charts
+    targetRevision: 0.40.4
+    helm:
+      releaseName: victoriametrics
+      valuesObject: {}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -181,6 +181,15 @@ data:
       }
     }
 
+    prometheus.relabel "node_exporter" {
+      forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+
+      rule {
+        replacement = "node-exporter"
+        target_label = "job"
+      }
+    }
+    
     prometheus.relabel "drop_unwanted_metrics" {
       forward_to = [prometheus.relabel.add_cluster_label.receiver]
 
@@ -196,21 +205,12 @@ data:
       }
     }
 
-    prometheus.relabel "node_exporter" {
-      forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
-
-      rule {
-        replacement = "node-exporter"
-        target_label = "job"
-      }
-    }
-
     prometheus.relabel "add_cluster_label" {
       forward_to = [prometheus.remote_write.in_cluster.receiver, prometheus.remote_write.ctrl_plane.receiver]
 
       rule {
         // Select "node" label and extract the cluster name with regex
-        source_labels = ["node", "obs_nodename"]
+        source_labels = ["node", "obs_nodename", "kubernetes_io_hostname"]
         regex = "gke-(c-[^-]+).+"
         target_label = "cluster"
         replacement = "$1"
