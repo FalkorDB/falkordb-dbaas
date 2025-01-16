@@ -3,8 +3,6 @@ kind: Application
 metadata:
   name: victoriametrics
   namespace: argocd
-  finalizers:
-  - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
@@ -15,7 +13,7 @@ spec:
       releaseName: victoriametrics
       valuesObject: {}
   destination:
-    server: {{ .Values.spec.destination.server }}
+    server: https://kubernetes.default.svc
     namespace: observability
   syncPolicy:
     automated:
