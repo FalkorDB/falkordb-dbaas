@@ -2,7 +2,6 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: victoriametrics
-  namespace: observability
 spec:
   project: default
   source:
@@ -14,7 +13,7 @@ spec:
       valuesObject: {}
   destination:
     server: https://kubernetes.default.svc
-    namespace: default
+    namespace: observability
   syncPolicy:
     automated:
       prune: true
