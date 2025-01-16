@@ -176,11 +176,6 @@ data:
       forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
       rule {
-        replacement = env("HOSTNAME")
-        target_label = "nodename"
-      }
-
-      rule {
         replacement = "kube-state-metrics"
         target_label = "job"
       }
@@ -197,17 +192,12 @@ data:
 
       rule {
         replacement = env("HOSTNAME")
-        target_label = "nodename"
+        target_label = "obs_nodename"
       }
     }
 
     prometheus.relabel "node_exporter" {
       forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
-
-      rule {
-        replacement = env("HOSTNAME")
-        target_label = "nodename"
-      }
 
       rule {
         replacement = "node-exporter"
@@ -220,7 +210,7 @@ data:
 
       rule {
         // Select "node" label and extract the cluster name with regex
-        source_labels = ["nodename", "node"]
+        source_labels = ["node", "obs_nodename"]
         regex = "gke-(c-[^-]+).+"
         target_label = "cluster"
         replacement = "$1"
