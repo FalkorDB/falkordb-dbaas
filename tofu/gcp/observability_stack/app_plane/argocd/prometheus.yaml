@@ -6,8 +6,8 @@ metadata:
 data:
   prometheus.yml: |
     global:
-      scrape_interval:     15s
-      evaluation_interval: 15s
+      scrape_interval:     30s
+      evaluation_interval: 30s
 
     storage:
       tsdb:
@@ -38,6 +38,13 @@ spec:
           image: prom/prometheus
           ports:
             - containerPort: 9090
+          resources:
+            limits:
+              memory: "3Gi"
+              cpu: "2"
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
           volumeMounts:
             - name: prometheus-server-conf
               mountPath: /etc/prometheus

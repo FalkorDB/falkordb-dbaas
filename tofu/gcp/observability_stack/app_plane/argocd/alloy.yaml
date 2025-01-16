@@ -24,7 +24,7 @@ data:
     
     prometheus.remote_write "ctrl_plane" {
       endpoint {
-        url = "http://10.0.60.2:19291/api/v1/receive"
+        url = "http://thanos-receiver.observability.gcp.falkordb.internal:19291/api/v1/receive"
       }
     }
 
@@ -202,7 +202,7 @@ data:
     }
 
     prometheus.relabel "node_exporter" {
-      forward_to = [prometheus.relabel.add_cluster_label.receiver]
+      forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
       rule {
         replacement = env("HOSTNAME")
@@ -493,6 +493,13 @@ spec:
               scheme: HTTP
             initialDelaySeconds: 10
             timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              cpu: '2'
+              memory: 6Gi
           volumeMounts:
             - name: config
               mountPath: /etc/alloy
