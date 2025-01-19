@@ -30,6 +30,7 @@ spec:
             vmsingle:
               spec:
                 retentionPeriod: 3d
+                logFormat: json
                 nodeSelector:
                   node_pool: observability
             alertmanager:

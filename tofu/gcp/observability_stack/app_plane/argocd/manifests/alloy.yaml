@@ -209,8 +209,8 @@ data:
       forward_to = [prometheus.relabel.add_cluster_label.receiver]
 
       rule {
-        action = "labeldrop"
-        regex = "cloud_google_com*|omnistrate_com*|"
+        action    = "labeldrop"
+        regex     = "^(cloud_google_com|omnistrate_com).*"
       }
     }
 
