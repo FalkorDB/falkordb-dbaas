@@ -2,6 +2,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
   name: observability-stack
+  namespace: argocd
 spec:
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
@@ -21,5 +22,6 @@ spec:
         path: tofu/gcp/observability_stack/app_plane/argocd/manifests
       destination:
         server: "{{`{{.server}}`}}"
+        namespace: default
       syncPolicy:
         automated: {}
