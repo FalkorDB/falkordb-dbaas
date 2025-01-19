@@ -19,14 +19,70 @@ spec:
       source:
         chart: victoria-metrics-operator
         repoURL: https://victoriametrics.github.io/helm-charts
-        targetRevision: 0.40.4
+        targetRevision: 0.33.4
         helm:
-          releaseName: victoriametrics
-          valuesObject: {}
+          releaseName: victoria-metrics-k8s-stack
+          valuesObject:
+            defaultDashboards:
+              enabled: false
+            defaultRules:
+              create: true
+            vmsingle:
+              spec:
+                retentionPeriod: 3d
+                nodeSelector:
+                  node_pool: observability
+            alertmanager:
+              spec:
+                nodeSelector:
+                  node_pool: observability
+            vmalert:
+              spec:
+                nodeSelector:
+                  node_pool: observability
+            vmagent:
+              enabled: false
+            grafana:
+              enabled: false
+            prometheus-node-exporter:
+              enabled: false
+            kube-state-metrics:
+              enabled: false
+            kubelet:
+              enabled: false
+            kubeApiServer:
+              enabled: false
+            kubeControllerManager:
+              enabled: false
+            kubeDns:
+              enabled: false
+            coreDns:
+              enabled: false
+            kubeEtcd:
+              enabled: false
+            enabled:
+              enabled: false
+            kubeProxy:
+              enabled: false
       destination:
         server: "{{.server}}"
-        namespace: default
+        namespace: observability
       syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - RespectIgnoreDifferences=true
         automated:
           prune: true
           selfHeal: true
+      ignoreDifferences:
+        - group: ""
+          kind: Secret
+          name: victoriametrics-victoria-metrics-operator-validation
+          namespace: observability
+          jsonPointers:
+            - /data
+        - group: admissionregistration.k8s.io
+          kind: ValidatingWebhookConfiguration
+          name: victoriametrics-victoria-metrics-operator-admission
+          jqPathExpressions:
+            - ".webhooks[]?.clientConfig.caBundle"

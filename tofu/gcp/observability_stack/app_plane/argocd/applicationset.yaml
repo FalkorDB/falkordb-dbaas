@@ -22,6 +22,10 @@ spec:
         path: tofu/gcp/observability_stack/app_plane/argocd/manifests
       destination:
         server: "{{.server}}"
-        namespace: default
+        namespace: observability
       syncPolicy:
-        automated: {}
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          prune: true
+          selfHeal: true
