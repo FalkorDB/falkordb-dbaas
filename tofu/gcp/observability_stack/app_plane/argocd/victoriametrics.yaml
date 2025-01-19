@@ -17,11 +17,11 @@ spec:
     spec:
       project: default
       source:
-        chart: victoria-metrics-operator
+        chart:  victoria-metrics-k8s-stack
         repoURL: https://victoriametrics.github.io/helm-charts
         targetRevision: 0.33.4
         helm:
-          releaseName: victoria-metrics-k8s-stack
+          releaseName: vm
           valuesObject:
             defaultDashboards:
               enabled: false
@@ -77,12 +77,12 @@ spec:
       ignoreDifferences:
         - group: ""
           kind: Secret
-          name: victoriametrics-victoria-metrics-operator-validation
+          name: victoria-metrics-k8s-stack-vm-validation
           namespace: observability
           jsonPointers:
             - /data
         - group: admissionregistration.k8s.io
           kind: ValidatingWebhookConfiguration
-          name: victoriametrics-victoria-metrics-operator-admission
+          name: victoria-metrics-k8s-stack-vm-admission
           jqPathExpressions:
             - ".webhooks[]?.clientConfig.caBundle"
