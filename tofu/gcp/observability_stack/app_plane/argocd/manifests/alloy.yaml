@@ -1,4 +1,3 @@
-
 # Source: alloy/templates/configmap.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -21,7 +20,7 @@ data:
         url = "http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429/prometheus/api/v1/write"
       }
     }
-    
+
     prometheus.remote_write "ctrl_plane" {
       endpoint {
         url = "http://victoriametrics.observability.gcp.falkordb.internal:8429/prometheus/api/v1/write"
@@ -189,7 +188,7 @@ data:
         target_label = "job"
       }
     }
-    
+
     prometheus.relabel "drop_unwanted_metrics" {
       forward_to = [prometheus.relabel.remove_unwanted_labels.receiver]
 
@@ -205,17 +204,8 @@ data:
       }
     }
 
-    prometheus.relabel "remove_unwanted_labels" {
-      forward_to = [prometheus.relabel.add_cluster_label.receiver]
-
-      rule {
-        action    = "labeldrop"
-        regex     = "^(cloud_google_com|omnistrate_com).*"
-      }
-    }
-
     prometheus.relabel "add_cluster_label" {
-      forward_to = [prometheus.remote_write.in_cluster.receiver, prometheus.remote_write.ctrl_plane.receiver]
+      forward_to = [prometheus.relabel.remove_unwanted_labels.receiver]
 
       rule {
         // Select "node" label and extract the cluster name with regex
@@ -224,6 +214,20 @@ data:
         target_label = "cluster"
         replacement = "$1"
         action = "replace"
+      }
+    }
+
+    prometheus.relabel "remove_unwanted_labels" {
+      forward_to = [prometheus.remote_write.in_cluster.receiver, prometheus.remote_write.ctrl_plane.receiver]
+
+      rule {
+        action    = "labeldrop"
+        regex     = "^(cloud_google_com|omnistrate_com).*"
+      }
+
+      rule {
+        action  = "labeldrop"
+        regex   = "obs_nodename"
       }
     }
 ---
@@ -497,7 +501,7 @@ spec:
               cpu: 500m
               memory: 2Gi
             limits:
-              cpu: '2'
+              cpu: "2"
               memory: 6Gi
           volumeMounts:
             - name: config
