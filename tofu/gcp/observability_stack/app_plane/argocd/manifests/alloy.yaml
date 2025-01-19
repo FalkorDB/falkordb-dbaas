@@ -24,7 +24,7 @@ data:
     
     prometheus.remote_write "ctrl_plane" {
       endpoint {
-        url = "http://thanos-receiver.observability.gcp.falkordb.internal:19291/api/v1/receive"
+        url = "http://victoriametrics.observability.gcp.falkordb.internal:8429/prometheus/api/v1/write"
       }
     }
 
