@@ -220,7 +220,7 @@ data:
       rule {
         // Select "node" label and extract the cluster name with regex
         source_labels = ["node", "obs_nodename", "kubernetes_io_hostname"]
-        regex = "gke-(c-[^-]+).+"
+        regex = "(?:.*);?gke-(c-[^-]+).+"
         target_label = "cluster"
         replacement = "$1"
         action = "replace"
