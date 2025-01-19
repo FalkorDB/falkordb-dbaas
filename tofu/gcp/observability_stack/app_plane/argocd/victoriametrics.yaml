@@ -24,7 +24,7 @@ spec:
           releaseName: vm
           valuesObject:
             defaultDashboards:
-              enabled: true
+              enabled: false
             defaultRules:
               create: true
             vmsingle:
