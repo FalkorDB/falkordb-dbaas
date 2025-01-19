@@ -24,7 +24,7 @@ spec:
           releaseName: vm
           valuesObject:
             defaultDashboards:
-              enabled: false
+              enabled: true
             defaultRules:
               create: true
             vmsingle:
@@ -44,7 +44,7 @@ spec:
             vmagent:
               enabled: false
             grafana:
-              enabled: false
+              enabled: true
             prometheus-node-exporter:
               enabled: false
             kube-state-metrics:
