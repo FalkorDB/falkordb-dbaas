@@ -21,7 +21,7 @@ spec:
         targetRevision: 94-add-app-plane-observability-stack
         path: tofu/gcp/observability_stack/app_plane/argocd/manifests
       destination:
-        server: "{{`{{.server}}`}}"
+        server: "{{.server}}"
         namespace: default
       syncPolicy:
         automated: {}

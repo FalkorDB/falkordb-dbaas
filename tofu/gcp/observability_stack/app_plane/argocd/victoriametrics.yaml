@@ -24,7 +24,7 @@ spec:
           releaseName: victoriametrics
           valuesObject: {}
       destination:
-        server: "{{`{{.server}}`}}"
+        server: "{{.server}}"
         namespace: default
       syncPolicy:
         automated:
