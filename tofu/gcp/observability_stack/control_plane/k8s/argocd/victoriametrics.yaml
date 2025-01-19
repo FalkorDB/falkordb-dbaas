@@ -24,9 +24,10 @@ spec:
             nodeSelector:
               node_pool: observability-resources
             service:
-              type: LoadBalancer
-              annotations:
-                cloud.google.com/load-balancer-type: Internal
+              spec:
+                type: LoadBalancer
+                annotations:
+                  cloud.google.com/load-balancer-type: Internal
         alertmanager:
           spec:
             nodeSelector:
