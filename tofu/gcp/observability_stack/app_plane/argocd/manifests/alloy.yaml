@@ -224,11 +224,6 @@ data:
         action    = "labeldrop"
         regex     = "^(cloud_google_com|omnistrate_com).*"
       }
-
-      rule {
-        action  = "labeldrop"
-        regex   = "obs_nodename"
-      }
     }
 ---
 # Source: alloy/templates/serviceaccount.yaml
