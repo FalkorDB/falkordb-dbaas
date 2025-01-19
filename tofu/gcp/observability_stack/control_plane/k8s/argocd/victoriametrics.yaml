@@ -1,0 +1,82 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: victoriametrics
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: victoria-metrics-k8s-stack
+    repoURL: https://victoriametrics.github.io/helm-charts
+    targetRevision: 0.33.4
+    helm:
+      releaseName: vm
+      valuesObject:
+        defaultDashboards:
+          enabled: true
+        defaultRules:
+          create: true
+        vmsingle:
+          spec:
+            retentionPeriod: 3d
+            logFormat: json
+            nodeSelector:
+              node_pool: observability-resources
+            service:
+              type: LoadBalancer
+              annotations:
+                cloud.google.com/load-balancer-type: Internal
+        alertmanager:
+          spec:
+            nodeSelector:
+              node_pool: observability-resources
+        vmalert:
+          spec:
+            nodeSelector:
+              node_pool: observability-resources
+        vmagent:
+          enabled: false
+        grafana:
+          enabled: true
+        prometheus-node-exporter:
+          enabled: false
+        kube-state-metrics:
+          enabled: false
+        kubelet:
+          enabled: false
+        kubeApiServer:
+          enabled: false
+        kubeControllerManager:
+          enabled: false
+        kubeDns:
+          enabled: false
+        coreDns:
+          enabled: false
+        kubeEtcd:
+          enabled: false
+        enabled:
+          enabled: false
+        kubeProxy:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+    automated:
+      prune: true
+      selfHeal: true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: victoria-metrics-k8s-stack-vm-validation
+      namespace: observability
+      jsonPointers:
+        - /data
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: victoria-metrics-k8s-stack-vm-admission
+      jqPathExpressions:
+        - ".webhooks[]?.clientConfig.caBundle"
