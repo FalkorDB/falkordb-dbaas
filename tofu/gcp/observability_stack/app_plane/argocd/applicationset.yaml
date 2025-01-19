@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: victoriametrics
+  name: observability-stack
 spec:
   goTemplate: true
   goTemplateOptions: ["missingkey=error"]
@@ -12,19 +12,14 @@ spec:
             argocd.argoproj.io/secret-type: cluster
   template:
     metadata:
-      name: '{{`{{substr 0 40 .name | replace "_" "-"}}`}}-victoriametrics'
+      name: '{{`{{substr 0 40 .name | replace "_" "-"}}`}}-observability-stack'
     spec:
       project: default
       source:
-        chart: victoria-metrics-operator
-        repoURL: https://victoriametrics.github.io/helm-charts
-        targetRevision: 0.40.4
-        helm:
-          releaseName: victoriametrics
-          valuesObject: {}
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: 94-add-app-plane-observability-stack
+        path: tofu/gcp/observability_stack/app_plane/argocd/manifests
       destination:
         server: "{{`{{.server}}`}}"
       syncPolicy:
-        automated:
-          prune: true
-          selfHeal: true
+        automated: {}
