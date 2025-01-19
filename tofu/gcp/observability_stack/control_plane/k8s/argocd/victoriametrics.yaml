@@ -25,11 +25,12 @@ spec:
             logFormat: json
             nodeSelector:
               node_pool: observability-resources
-            service:
-              spec:
-                type: LoadBalancer
+            serviceSpec:
+              metadata:
                 annotations:
                   cloud.google.com/load-balancer-type: Internal
+              spec:
+                type: LoadBalancer
         alertmanager:
           spec:
             nodeSelector:
