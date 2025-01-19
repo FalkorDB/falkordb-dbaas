@@ -6,12 +6,13 @@ metadata:
 spec:
   project: default
   source:
-    chart: victoria-metrics-k8s-stack
+    chart: victoria-metrics
     repoURL: https://victoriametrics.github.io/helm-charts
     targetRevision: 0.33.4
     helm:
       releaseName: vm
       valuesObject:
+        fullnameOverride: "vm"
         defaultDashboards:
           enabled: true
         defaultRules:
@@ -71,12 +72,12 @@ spec:
   ignoreDifferences:
     - group: ""
       kind: Secret
-      name: victoria-metrics-k8s-stack-vm-validation
+      name: victoria-metrics-vm-validation
       namespace: observability
       jsonPointers:
         - /data
     - group: admissionregistration.k8s.io
       kind: ValidatingWebhookConfiguration
-      name: victoria-metrics-k8s-stack-vm-admission
+      name: victoria-metrics-vm-admission
       jqPathExpressions:
         - ".webhooks[]?.clientConfig.caBundle"
