@@ -191,7 +191,7 @@ data:
     }
     
     prometheus.relabel "drop_unwanted_metrics" {
-      forward_to = [prometheus.relabel.add_cluster_label.receiver]
+      forward_to = [prometheus.relabel.remove_unwanted_labels.receiver]
 
       rule {
         source_labels = ["__name__"]
@@ -202,6 +202,15 @@ data:
       rule {
         replacement = env("HOSTNAME")
         target_label = "obs_nodename"
+      }
+    }
+
+    prometheus.relabel "remove_unwanted_labels" {
+      forward_to = [prometheus.relabel.add_cluster_label.receiver]
+
+      rule {
+        action = "labeldrop"
+        regex = "cloud_google_com*|omnistrate_com*|"
       }
     }
 
