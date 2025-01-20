@@ -190,7 +190,7 @@ data:
     }
 
     prometheus.relabel "drop_unwanted_metrics" {
-      forward_to = [prometheus.relabel.remove_unwanted_labels.receiver]
+      forward_to = [prometheus.relabel.add_cluster_label.receiver]
 
       rule {
         source_labels = ["__name__"]
