@@ -107,8 +107,6 @@ data:
     ksm.scrape "metrics" {
       targets    = ksm.kubernetes.targets.output
       forward_to = [prometheus.relabel.kube_state_metrics.receiver]
-
-      job_name = "kube-state-metrics"
     }
 
     prometheus.scrape "pods" {
