@@ -1,5 +1,9 @@
 data "google_client_config" "default" {}
 
+data "google_project" "this" {
+  project_id = var.project_id
+}
+
 provider "kubernetes" {
   host                   = "https://${var.cluster_endpoint}"
   token                  = data.google_client_config.default.access_token
@@ -75,5 +79,31 @@ resource "helm_release" "argocd" {
   version          = "7.7.15"
 
   values = [file("./values/argocd.yaml")]
+}
+
+resource "kubernetes_namespace" "observability" {
+  metadata {
+    name = "observability"
+  }
+}
+
+resource "kubernetes_manifest" "victoriametrics_service_attachment" {
+  manifest = {
+    "apiVersion" = "networking.gke.io/v1beta1"
+    "kind"       = "ServiceAttachment"
+    "metadata" = {
+      "name"      = "victoriametrics"
+      "namespace" = "observability"
+    }
+    "spec" = {
+      "connectionPreference" = "ACCEPT_AUTOMATIC"
+      "natSubnets"           = ["observability-stack-service-attachment"]
+      "proxyProtocol"        = false
+      "resourceRef" = {
+        "kind" = "Service"
+        "name" = "vmsingle-vm-additional-service"
+      }
+    }
+  }
 
 }

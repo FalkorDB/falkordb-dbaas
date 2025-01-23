@@ -1,5 +1,5 @@
 global:
-  image:    
+  image:
     tag: "v2.13.3"
   logging:
     format: json
@@ -14,27 +14,31 @@ cmp:
 
 extraObjects:
   - apiVersion: argoproj.io/v1alpha1
-    kind: ApplicationSet
+    kind: Application
     metadata:
-      name: observability-stack
+      name: ctrl-plane-observability-stack
     spec:
-      goTemplate: true
-      goTemplateOptions: ["missingkey=error"]
-      generators:
-        - clusters:
-            selector:
-              matchLabels:
-                argocd.argoproj.io/secret-type: cluster
-      template:
-        metadata:
-          name: '{{`{{substr 0 40 .name | replace "_" "-"}}`}}-observability-stack'
-        spec:
-          project: default
-          source:
-            repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
-            targetRevision: 94-add-app-plane-observability-stack
-            path: tofu/gcp/observability_stack/app_plane/argocd
-          destination:
-            server: "{{`{{.server}}`}}"
-          syncPolicy:
-            automated: {}
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: 94-add-app-plane-observability-stack
+        path: tofu/gcp/observability_stack/control_plane/k8s/argocd
+      destination:
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        automated: {}
+
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: app-plane-observability-stack
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: 94-add-app-plane-observability-stack
+        path: tofu/gcp/observability_stack/app_plane/argocd
+      destination:
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        automated: {}

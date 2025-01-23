@@ -1,10 +1,10 @@
 locals {
+  // TODO: Change range to /24
   ip_range_subnet   = "172.16.0.0/20"
   ip_range_pods     = "172.16.16.0/20"
   ip_range_services = "172.16.32.0/20"
 
-  // Format: <peer_network_name> = <peer_network_link>
-  peerings = {}
+  ip_range_service_attachment = "172.16.48.0/24"
 }
 
 provider "google" {
@@ -27,6 +27,12 @@ module "vpc" {
     subnet_region         = var.region
     subnet_ip             = local.ip_range_subnet
     subnet_private_access = true
+    },
+    {
+      subnet_name   = "observability-stack-service-attachment"
+      subnet_region = var.region
+      subnet_ip     = local.ip_range_service_attachment
+      purpose       = "PRIVATE_SERVICE_CONNECT"
   }]
 
   secondary_ranges = {
@@ -64,16 +70,6 @@ resource "google_compute_router_nat" "nat" {
   nat_ip_allocate_option             = "AUTO_ONLY"
   source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
 
-}
-
-# VPC peering connection to application planes
-resource "google_compute_network_peering" "peerings" {
-  for_each = tomap(local.peerings)
-
-  name    = "${each.key}-peering"
-  network = module.vpc.network_name
-
-  peer_network = each.value
 }
 
 # Reserve premium IP Address for the Grafana Load Balancer
@@ -128,6 +124,9 @@ module "gke" {
   enable_private_endpoint              = false
   enable_private_nodes                 = true
 
+  // TODO: Set master_ipv4_cidr_block
+  # master_ipv4_cidr_block               = local.ip_range_subnet
+
   default_max_pods_per_node = 110
 
   monitoring_enabled_components = ["SYSTEM_COMPONENTS"]
@@ -165,7 +164,32 @@ resource "google_storage_bucket" "metrics_bucket" {
   project       = var.project_id
   force_destroy = true
 
-  labels = {
-    "project" = var.project_id
+  lifecycle_rule {
+    action {
+      type          = "SetStorageClass"
+      storage_class = "NEARLINE"
+    }
+    condition {
+      age = 30
+    }
+  }
+
+  lifecycle_rule {
+    action {
+      type          = "SetStorageClass"
+      storage_class = "COLDLINE"
+    }
+    condition {
+      age = 90
+    }
+  }
+
+  lifecycle_rule {
+    action {
+      type = "Delete"
+    }
+    condition {
+      age = 365
+    }
   }
 }

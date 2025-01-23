@@ -13,24 +13,85 @@ The application plane for the observability stack is composed of the following c
 
 ## Adding clusters to be monitored
 
+### GCP Clusters
+
 Steps:
 
 1. Create the node pool for the desired cluster
 
 ```bash
 gcloud container node-pools create observability \
-    --cluster=<cluster-name> \
-    --region=<region> \
+    --cluster=$CLUSTER \
+    --region=$REGION \
     --machine-type=e2-standard-2 \
-    --num-nodes=1 \
+    --disk-size=50 \
     --enable-autoscaling \
-    --min-nodes=1 \
-    --max-nodes=3 \
-    --project=<project-id> \
+    --max-nodes=10 \
+    --project=$PROJECT \
+    --node-labels=node_pool=observability
 ```
 
 2. Add the cluster credentials to the observability cluster in the control plane
 
 ```bash
-argocd cluster add <context> --server <server>
+argocd cluster add CONTEXT --server SERVER
+```
+
+3. Create subnet for PSC
+```bash
+gcloud compute networks subnets create $CLUSTER-observability-consumer \
+    --project=$PROJECT  \
+    --range=$RANGE \
+    --network=$NETWORK \
+    --region=$REGION
+```
+
+4. Create egress firewall rule for PSC
+```bash
+gcloud compute firewall-rules create $CLUSTER-observability-egress \
+    --project=$PROJECT \
+    --network=$NETWORK \
+    --action=allow \
+    --priority=1000 \
+    --direction=egress \
+     --rules=all \
+    --destination-ranges=$RANGE
+```
+
+5. Create static IP address for PSC
+```bash 
+gcloud compute addresses create $CLUSTER-observability \
+    --project=$PROJECT \
+    --region=$REGION \
+    --subnet=$CLUSTER-observability-consumer \
+    --addresses=$IP_ADDRESS
+```
+
+6. Create service attachment for PSC
+```bash
+gcloud compute forwarding-rules create observability-psc \
+    --project=$PROJECT \
+    --region=$REGION \
+    --network=$NETWORK \
+    --address=$CLUSTER-observability \
+    --target-service-attachment=$SERVICE_ATTACHMENT_ID
+```
+
+7. Create internal DNS zone
+```bash
+gcloud dns managed-zones create $CLUSTER-observability \
+    --project=$PROJECT \
+    --description="Internal DNS zone for observability" \
+    --dns-name=observability.gcp.falkordb.internal. \
+    --visibility=private \
+    --networks=$NETWORK
+```
+
+8. Create record for PSC
+```bash
+gcloud dns record-sets create victoriametrics.observability.gcp.falkordb.internal. \
+    --project=$PROJECT \
+    --rrdatas=$IP_ADDRESS \
+    --type=A \
+    --zone=$CLUSTER-observability
 ```

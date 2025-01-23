@@ -11,3 +11,7 @@ output "cluster_ca_certificate" {
 output "cluster_name" {
   value = module.gke.name
 }
+
+output "metrics_bucket" {
+  value = google_storage_bucket.metrics_bucket.name
+}
