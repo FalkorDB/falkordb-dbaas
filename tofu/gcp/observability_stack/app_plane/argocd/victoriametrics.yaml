@@ -25,6 +25,8 @@ spec:
           valuesObject:
             defaultDashboards:
               enabled: true
+              annotations:
+                argocd.argoproj.io/sync-options: ServerSideApply=true
               # grafanaOperator:
               #   enabled: true
               #   spec:
