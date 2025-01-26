@@ -24,7 +24,20 @@ spec:
           releaseName: vm
           valuesObject:
             defaultDashboards:
-              enabled: false
+              enabled: true
+              grafanaOperator:
+                enabled: true
+                spec:
+                  instanceSelector:
+                    matchLabels:
+                      dashboards: grafana
+              dashboards:
+                victoriametrics-vmalert:
+                  enabled: true
+                victoriametrics-operator:
+                  enabled: true
+                node-exporter-full:
+                  enabled: false
             defaultRules:
               create: true
               groups:
@@ -189,19 +202,6 @@ spec:
               enabled: false
             grafana:
               enabled: true
-              grafanaOperator:
-                enabled: true
-                spec:
-                  instanceSelector:
-                    matchLabels:
-                      dashboards: grafana
-              dashboards:
-                victoriametrics-vmalert:
-                  enabled: true
-                victoriametrics-operator:
-                  enabled: true
-                node-exporter-full:
-                  enabled: false
             prometheus-node-exporter:
               enabled: false
             kube-state-metrics:
