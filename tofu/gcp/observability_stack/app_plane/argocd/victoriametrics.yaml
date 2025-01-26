@@ -17,7 +17,7 @@ spec:
     spec:
       project: default
       source:
-        chart:  victoria-metrics-k8s-stack
+        chart: victoria-metrics-k8s-stack
         repoURL: https://victoriametrics.github.io/helm-charts
         targetRevision: 0.33.4
         helm:
@@ -27,6 +27,127 @@ spec:
               enabled: false
             defaultRules:
               create: true
+              groups:
+                etcd:
+                  create: true
+                  rules: {}
+                general:
+                  create: true
+                  rules: {}
+                k8sContainerCpuLimits:
+                  create: true
+                  rules: {}
+                k8sContainerCpuRequests:
+                  create: true
+                  rules: {}
+                k8sContainerCpuUsageSecondsTotal:
+                  create: true
+                  rules: {}
+                k8sContainerMemoryLimits:
+                  create: true
+                  rules: {}
+                k8sContainerMemoryRequests:
+                  create: true
+                  rules: {}
+                k8sContainerMemoryRss:
+                  create: true
+                  rules: {}
+                k8sContainerMemoryCache:
+                  create: true
+                  rules: {}
+                k8sContainerMemoryWorkingSetBytes:
+                  create: true
+                  rules: {}
+                k8sContainerMemorySwap:
+                  create: true
+                  rules: {}
+                k8sPodOwner:
+                  create: true
+                  rules: {}
+                k8sContainerResource:
+                  create: true
+                  rules: {}
+                kubeApiserver:
+                  create: false
+                  rules: {}
+                kubeApiserverAvailability:
+                  create: false
+                  rules: {}
+                kubeApiserverBurnrate:
+                  create: false
+                  rules: {}
+                kubeApiserverHistogram:
+                  create: false
+                  rules: {}
+                kubeApiserverSlos:
+                  create: false
+                  rules: {}
+                kubelet:
+                  create: false
+                  rules: {}
+                kubePrometheusGeneral:
+                  create: false
+                  rules: {}
+                kubePrometheusNodeRecording:
+                  create: false
+                  rules: {}
+                kubernetesApps:
+                  create: true
+                  rules: {}
+                  targetNamespace: ".*"
+                kubernetesResources:
+                  create: true
+                  rules: {}
+                kubernetesStorage:
+                  create: true
+                  rules: {}
+                  targetNamespace: ".*"
+                kubernetesSystem:
+                  create: true
+                  rules: {}
+                kubernetesSystemKubelet:
+                  create: false
+                  rules: {}
+                kubernetesSystemApiserver:
+                  create: false
+                  rules: {}
+                kubernetesSystemControllerManager:
+                  create: false
+                  rules: {}
+                kubeScheduler:
+                  create: false
+                  rules: {}
+                kubernetesSystemScheduler:
+                  create: false
+                  rules: {}
+                kubeStateMetrics:
+                  create: true
+                  rules: {}
+                nodeNetwork:
+                  create: false
+                  rules: {}
+                node:
+                  create: true
+                  rules: {}
+                vmagent:
+                  create: false
+                  rules: {}
+                vmsingle:
+                  create: true
+                  rules: {}
+                vmcluster:
+                  create: false
+                  rules: {}
+                vmHealth:
+                  create: true
+                  rules: {}
+                vmoperator:
+                  create: true
+                  rules: {}
+                alertmanager:
+                  create: true
+                  rules: {}
+            additionalVictoriaMetricsMap: {}
             vmsingle:
               spec:
                 retentionPeriod: 3d
@@ -37,6 +158,29 @@ spec:
               spec:
                 nodeSelector:
                   node_pool: observability
+                secrets:
+                  - pagerduty-service-key
+                config:
+                  global:
+                    resolve_timeout: 5m
+                  route:
+                    group_by: ["alertname", "namespace", "pod"]
+                    group_wait: 30s
+                    group_interval: 5m
+                    repeat_interval: 12h
+                    receiver: "blackhole"
+                    routes:
+                      - match:
+                          alertname: Watchdog
+                        receiver: "null"
+                      - receiver: "pagerduty"
+                    receivers:
+                      - name: blackhole
+                      - name: "pagerduty"
+                        pagerduty_configs:
+                          - service_key_file: " /etc/vm/secrets/pagerduty-service-key"
+                            url: https://events.pagerduty.com/generic/2010-04-15/create_event.json
+                            send_resolved: true
             vmalert:
               spec:
                 nodeSelector:
@@ -61,6 +205,8 @@ spec:
             prometheus-node-exporter:
               enabled: false
             kube-state-metrics:
+              enabled: false
+            kubeScheduler:
               enabled: false
             kubelet:
               enabled: false
