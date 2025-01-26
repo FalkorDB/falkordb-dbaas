@@ -31,13 +31,25 @@ gcloud container node-pools create observability \
     --node-labels=node_pool=observability
 ```
 
-2. Add the cluster credentials to the observability cluster in the control plane
+2. Set the current context to the desired cluster
+```bash
+gcloud container clusters get-credentials $CLUSTER --region=$REGION --project=$PROJECT
+```
+
+3. Create the PagerDuty secret in the cluster
+```bash
+kubectl create secret generic pagerduty-service-key \
+    --from-literal=api-key=$PAGERDUTY_API_KEY \
+    --namespace=observability
+```
+
+4. Add the cluster credentials to the observability cluster in the control plane
 
 ```bash
 argocd cluster add CONTEXT --server SERVER
 ```
 
-3. Create subnet for PSC
+5. Create subnet for PSC
 ```bash
 gcloud compute networks subnets create $CLUSTER-observability-consumer \
     --project=$PROJECT  \
@@ -46,7 +58,7 @@ gcloud compute networks subnets create $CLUSTER-observability-consumer \
     --region=$REGION
 ```
 
-4. Create egress firewall rule for PSC
+6. Create egress firewall rule for PSC
 ```bash
 gcloud compute firewall-rules create $CLUSTER-observability-egress \
     --project=$PROJECT \
@@ -58,7 +70,7 @@ gcloud compute firewall-rules create $CLUSTER-observability-egress \
     --destination-ranges=$RANGE
 ```
 
-5. Create static IP address for PSC
+7. Create static IP address for PSC
 ```bash 
 gcloud compute addresses create $CLUSTER-observability \
     --project=$PROJECT \
@@ -67,7 +79,7 @@ gcloud compute addresses create $CLUSTER-observability \
     --addresses=$IP_ADDRESS
 ```
 
-6. Create service attachment for PSC
+8. Create service attachment for PSC
 ```bash
 gcloud compute forwarding-rules create observability-psc \
     --project=$PROJECT \
@@ -77,7 +89,7 @@ gcloud compute forwarding-rules create observability-psc \
     --target-service-attachment=$SERVICE_ATTACHMENT_ID
 ```
 
-7. Create internal DNS zone
+9. Create internal DNS zone
 ```bash
 gcloud dns managed-zones create $CLUSTER-observability \
     --project=$PROJECT \
@@ -87,7 +99,7 @@ gcloud dns managed-zones create $CLUSTER-observability \
     --networks=$NETWORK
 ```
 
-8. Create record for PSC
+10. Create record for PSC
 ```bash
 gcloud dns record-sets create victoriametrics.observability.gcp.falkordb.internal. \
     --project=$PROJECT \
