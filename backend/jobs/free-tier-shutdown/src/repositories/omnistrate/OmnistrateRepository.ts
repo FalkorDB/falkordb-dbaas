@@ -84,7 +84,7 @@ export class OmnistrateRepository {
     return response.data['resourceInstances']
       .map((d: unknown) => ({
         id: d?.['consumptionResourceInstanceResult']?.['id'],
-        clusterId: 'c-' + d?.['deploymentCellID']?.replace('-', ''),
+        clusterId: d?.['deploymentCellID'],
         region: d?.['consumptionResourceInstanceResult']?.['region'],
         userId: d?.['consumptionResourceInstanceResult']?.['createdByUserId'],
         createdDate: d?.['consumptionResourceInstanceResult']?.['created_at'],
@@ -96,6 +96,7 @@ export class OmnistrateRepository {
         resourceId: Object.entries(d?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology']).filter(
           (ob) => (ob[1] as unknown)?.['main'],
         )[0][0],
+        cloudProvider: d?.['consumptionResourceInstanceResult']?.['cloud_provider'],
       }))
       .filter(
         (instance) => instance.productTierId === tierId && instance.status === 'RUNNING',
