@@ -175,7 +175,7 @@ spec:
                   node_pool: observability
                 secrets:
                   - pagerduty-service-key
-                configSecret: "vmalertmanager-vm-victoria-metrics-k8s-stack"
+                configSecret: null #"vmalertmanager-vm-victoria-metrics-k8s-stack"
               config:
                 global:
                   resolve_timeout: 5m
