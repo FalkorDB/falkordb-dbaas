@@ -175,7 +175,6 @@ spec:
                   node_pool: observability
                 secrets:
                   - pagerduty-service-key
-                configSecret: null
               config:
                 global:
                   resolve_timeout: 5m
