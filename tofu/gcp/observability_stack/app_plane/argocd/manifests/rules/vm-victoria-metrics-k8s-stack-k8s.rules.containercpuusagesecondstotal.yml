@@ -3,7 +3,7 @@
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMRule
 metadata:
-  namespace: default
+  namespace: observability
   name: k8s.rules.containercpuusagesecondstotal
   labels:
     app: victoria-metrics-k8s-stack
