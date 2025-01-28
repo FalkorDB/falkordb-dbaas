@@ -21,7 +21,13 @@ spec:
           containers:
             - name: grafana
               readinessProbe:
-                failureThreshold: 3
+                failureThreshold: 3                
+                runAsUser: 1001
+                runAsGroup: 1001
+                runAsNonRoot: true
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
           volumes:
             - name: grafana-data
               persistentVolumeClaim:
