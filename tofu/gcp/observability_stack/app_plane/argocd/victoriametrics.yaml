@@ -78,7 +78,7 @@ spec:
             vmagent:
               enabled: false
             grafana:
-              enabled: true
+              enabled: false
             prometheus-node-exporter:
               enabled: false
             kube-state-metrics:
@@ -123,10 +123,3 @@ spec:
           name: victoria-metrics-k8s-stack-vm-admission
           jqPathExpressions:
             - ".webhooks[]?.clientConfig.caBundle"
-        - group: ""
-          kind: Deployment
-          name: vm-grafana
-          namespace: observability
-          jsonPointers:
-            - /spec/template/metadata/annotations/checksum~1secret
-

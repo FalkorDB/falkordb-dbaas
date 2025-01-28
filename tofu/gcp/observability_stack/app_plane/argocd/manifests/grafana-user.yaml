@@ -1,0 +1,10 @@
+apiVersion: "secretgenerator.mittwald.de/v1alpha1"
+kind: "BasicAuth"
+metadata:
+  name: "grafana-user"
+  namespace: "observability"
+spec:
+  length: "16"
+  username: "admin"
+  encoding: "base64"
+  forceRegenerate: false
