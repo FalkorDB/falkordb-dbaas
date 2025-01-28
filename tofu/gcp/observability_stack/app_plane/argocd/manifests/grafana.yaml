@@ -24,13 +24,13 @@ spec:
                 - name: GF_SECURITY_ADMIN_USER
                   valueFrom:
                     secretKeyRef:
-                      key: grafana-user
-                      name: username
+                      key: username
+                      name: grafana-user
                 - name: GF_SECURITY_ADMIN_PASSWORD
                   valueFrom:
                     secretKeyRef:
-                      key: grafana-user
-                      name: password
+                      key: password
+                      name: grafana-user
           volumes:
             - name: grafana-data
               persistentVolumeClaim:
