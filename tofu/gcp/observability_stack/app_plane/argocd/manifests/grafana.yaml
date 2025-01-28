@@ -18,19 +18,6 @@ spec:
         node_pool: observability
       template:
         spec:
-          containers:
-            - name: grafana
-              env:
-                - name: GF_SECURITY_ADMIN_USER
-                  valueFrom:
-                    secretKeyRef:
-                      key: username
-                      name: grafana-user
-                - name: GF_SECURITY_ADMIN_PASSWORD
-                  valueFrom:
-                    secretKeyRef:
-                      key: password
-                      name: grafana-user
           volumes:
             - name: grafana-data
               persistentVolumeClaim:
