@@ -22,14 +22,14 @@ spec:
           containers:
             - name: grafana
               readinessProbe:
-                failureThreshold: 3            
-          securityContext:    
-            runAsUser: 1001
-            runAsGroup: 1001
-            runAsNonRoot: true
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
+                failureThreshold: 3
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+                runAsUser: 1001
+                runAsGroup: 1001
+                runAsNonRoot: true
           volumes:
             - name: grafana-data
               persistentVolumeClaim:
