@@ -82,8 +82,6 @@ spec:
                 nodeSelector:
                   node_pool: observability
                 rulePath: null
-                ruleSelector:
-                  app: victoria-metrics-k8s-stack
             vmagent:
               enabled: false
             grafana:
