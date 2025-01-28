@@ -18,6 +18,10 @@ spec:
         node_pool: observability
       template:
         spec:
+          containers:
+            - name: grafana
+              readinessProbe:
+                failureThreshold: 3
           volumes:
             - name: grafana-data
               persistentVolumeClaim:
