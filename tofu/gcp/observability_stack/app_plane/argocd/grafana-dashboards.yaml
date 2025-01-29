@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: grafana-dashboards
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            argocd.argoproj.io/secret-type: cluster
+  template:
+    metadata:
+      name: '{{substr 0 40 .name | replace "_" "-"}}-grafana-dashb'
+    spec:
+      project: default
+      source:
+        path: tofu/gcp/observability_stack/app_plane/argocd/kustomize/grafana-dashboards
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: 94-add-app-plane-observability-stack
+      destination:
+        server: "{{.server}}"
+        namespace: observability
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+        automated:
+          prune: true
+          selfHeal: true

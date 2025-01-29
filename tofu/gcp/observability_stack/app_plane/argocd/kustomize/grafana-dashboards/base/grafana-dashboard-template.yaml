@@ -1,0 +1,7 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: {{ .name }}
+spec:
+  json: |
+    {{ .json }}      # Placeholder for the dashboard JSON
