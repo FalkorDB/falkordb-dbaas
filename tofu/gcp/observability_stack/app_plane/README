@@ -4,18 +4,37 @@ Defines the resources that will be deployed in each application cluster to monit
 
 The application plane for the observability stack is composed of the following components:
 
-- Prometheus: Store metrics
+- VictoriaMetrics: Store metrics
   - Alertmanager
 - Grafana Alloy: Scrape metrics from applications, and write them to the control plane
 - Pod Monitor: Scrape metrics from pods
-- VPC Peering connection to the control plane: allow streaming metrics from the application plane to the control plane
--
+- Private Service Connect: Send metrics to the control plane
 
 ## Adding clusters to be monitored
 
 ### GCP Clusters
 
 Steps:
+
+0. Set the following environment variables:
+```bash
+# App plane Project ID
+export PROJECT=
+# GCP Region
+export REGION=
+# GCP App Plane Cluster Name
+export CLUSTER=
+# Network name where the App Plane cluster is deployed
+export NETWORK=
+# Range for the Private Service Connect subnet
+export RANGE=
+# IP Address for the Private Service Connect LB
+export IP_ADDRESS=
+# PSC Service Attachment ID (from the control plane)
+export SERVICE_ATTACHMENT_ID=
+# PagerDuty API Key
+export PAGERDUTY_API_KEY=
+```
 
 1. Create the node pool for the desired cluster
 
@@ -44,7 +63,6 @@ kubectl create secret generic pagerduty-service-key \
 ```
 
 4. Add the cluster credentials to the observability cluster in the control plane
-
 ```bash
 argocd cluster add CONTEXT --server SERVER
 ```

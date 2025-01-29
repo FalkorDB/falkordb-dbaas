@@ -3,12 +3,10 @@
 Defines a GKE cluster that will centralize observability on all customer deployments.
 
 The control plane for the observability stack is composed of the following components:
- - GKE Cluster
-   - FluxCD: Sync all observability components in all clusters
-   - Thanos: Store and query Prometheus metrics across all clusters
-     - Internal Load Balancer: Expose Thanos to the application plane
-   - Grafana: Visualize metrics from Thanos
-     - External Load Balancer: Expose Grafana to the internet
- - GCS Bucket: Store metrics from Thanos
- - VPC Peering connection to each application network: allow streaming metrics from the application plane to the control plane
 
+- GKE Cluster
+  - ArgoCD: Sync all observability components in all clusters
+  - VictoriaMetrics: Store and query metrics across all clusters
+  - Grafana: Visualize metrics
+  - External Load Balancer: Expose Grafana to the internet
+- Private Service Connect: Expose VictoriaMetrics to application planes
