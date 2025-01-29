@@ -19,7 +19,7 @@ spec:
     matchLabels:
       dashboards: "grafana"
   configMapRef:
-    name: dashboards-k8s-views-pod
+    name: dashboards-k8s-views-pods
     key: json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
@@ -31,7 +31,7 @@ spec:
     matchLabels:
       dashboards: "grafana"
   configMapRef:
-    name: dashboards-k8s-views-namespace
+    name: dashboards-k8s-views-namespaces
     key: json
 ---
 apiVersion: grafana.integreatly.org/v1beta1
