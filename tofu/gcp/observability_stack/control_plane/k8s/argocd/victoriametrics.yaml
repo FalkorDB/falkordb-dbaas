@@ -17,6 +17,16 @@ spec:
           enabled: true
           annotations:
             argocd.argoproj.io/sync-options: ServerSideApply=true
+          dashboards:
+            victoriametrics-vmagent:
+              enabled: false
+          grafanaOperator:
+            enabled: true
+            spec:
+              allowCrossNamespaceImport: false
+              instanceSelector:
+                matchLabels:
+                  dashboards: grafana
         defaultRules:
           create: true
         vmsingle:
@@ -91,4 +101,3 @@ spec:
       namespace: observability
       jsonPointers:
         - /spec/template/metadata/annotations/checksum~1secret
-
