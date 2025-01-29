@@ -10,9 +10,6 @@ namespace: observability
 resources:
   - base
 
-patchesStrategicMerge:
-  - dashboard-patch.yaml
-  
 # Generate a ConfigMap for each dashboard
 configMapGenerator:
   #################################################
