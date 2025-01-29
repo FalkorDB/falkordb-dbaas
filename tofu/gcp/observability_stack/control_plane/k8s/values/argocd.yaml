@@ -7,11 +7,10 @@ server:
   extraArgs:
     - --insecure
 
-configs:
-  cm:
-    repositories:
-      falkordb-dbaas:
-        url: https://github.com/FalkorDB/falkordb-dbaas
+cmp:
+  repositories:
+    falkordb-dbaas:
+      url: https://github.com/FalkorDB/falkordb-dbaas
 
 extraObjects:
   - apiVersion: argoproj.io/v1alpha1
