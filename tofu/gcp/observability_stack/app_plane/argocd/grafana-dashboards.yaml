@@ -17,8 +17,6 @@ spec:
     spec:
       project: default
       source:
-        plugin:
-          name: kustomize-load-restrictions-none
         path: observability/grafana
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: 94-add-app-plane-observability-stack
