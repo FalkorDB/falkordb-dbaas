@@ -9,6 +9,7 @@ spec:
       dashboards: grafana
   allowCrossNamespaceImport: false
   datasource:
+    isDefault: true
     access: proxy
     database: prometheus
     jsonData:
