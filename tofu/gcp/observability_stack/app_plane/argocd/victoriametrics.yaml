@@ -27,6 +27,9 @@ spec:
               enabled: true
               annotations:
                 argocd.argoproj.io/sync-options: ServerSideApply=true
+              dashboards:
+                victoriametrics-vmagent:
+                  enabled: false
               grafanaOperator:
                 enabled: true
                 spec:
