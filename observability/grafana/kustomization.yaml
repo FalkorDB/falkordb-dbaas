@@ -5,7 +5,6 @@ generatorOptions:
     grafana_dashboard: "1"
 commonAnnotations:
   grafana_folder: "Kubernetes"
-namespace: observability
 
 resources:
   - base
@@ -17,16 +16,16 @@ configMapGenerator:
   #################################################
 
   - name: dashboards-k8s-views-cluster
-    files: [json=../../../../../../../observability/grafana/dashboards/cluster-overview.json]
+    files: [json=./dashboards/cluster-overview.json]
 
   - name: dashboards-k8s-views-namespaces
-    files: [json=../../../../../../../observability/grafana/dashboards/namespace-overview.json]
+    files: [json=./dashboards/namespace-overview.json]
 
   - name: dashboards-k8s-views-pods
-    files: [json=../../../../../../../observability/grafana/dashboards/pod-overview.json]
+    files: [json=./dashboards/pod-overview.json]
 
   - name: dashboards-k8s-views-falkordb
-    files: [json=../../../../../../../observability/grafana/dashboards/falkordb-cloud.json]
+    files: [json=./dashboards/falkordb-cloud.json]
 
   - name: dashboards-k8s-views-prometheus
-    files: [json=../../../../../../../observability/grafana/dashboards/prometheus-dashboard.json]
+    files: [json=./dashboards/prometheus-dashboard.json]

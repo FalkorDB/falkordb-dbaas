@@ -8,13 +8,8 @@ server:
     - --insecure
 
 configs:
-  cmp:
-    plugins:
-      kustomize-load-restrictions-none:
-        generate:
-          command: ["sh", "-c"]
-          args: ["kustomize build --load-restrictor LoadRestrictionsNone"]
-
+cm:
+  create: false
   repositories:
     falkordb-dbaas:
       url: https://github.com/FalkorDB/falkordb-dbaas
