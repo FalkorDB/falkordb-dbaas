@@ -19,6 +19,16 @@ spec:
         spec:
           nodeSelector:
             node_pool: observability
+          securityContext: # Pod-level security context (important for initContainer)
+            runAsUser: 0 # Run initContainer as root
+            runAsGroup: 0
+          initContainers:
+            - name: init-grafana-data
+              image: busybox # Or any image with chown
+              command: ["chown", "-R", "1001:1001", "/var/lib/grafana"]
+              volumeMounts:
+                - name: grafana-data
+                  mountPath: /var/lib/grafana
           containers:
             - name: grafana
               readinessProbe:
