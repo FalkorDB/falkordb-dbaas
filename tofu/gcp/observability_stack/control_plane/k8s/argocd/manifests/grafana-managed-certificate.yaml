@@ -4,4 +4,4 @@ metadata:
   name: grafana-managed-cert
 spec:
   domains:
-    - "grafana.observability.internal.falkordb.cloud"
+    - "grafana.observability.dev.internal.falkordb.cloud"

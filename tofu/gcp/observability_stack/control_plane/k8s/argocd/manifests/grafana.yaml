@@ -56,7 +56,7 @@ spec:
         kubernetes.io/ingress.class: "gce" # Updated annotation
     spec:
       rules:
-        - host: grafana.observability.internal.falkordb.cloud
+        - host: grafana.observability.dev.internal.falkordb.cloud
           http:
             paths:
               - backend:
