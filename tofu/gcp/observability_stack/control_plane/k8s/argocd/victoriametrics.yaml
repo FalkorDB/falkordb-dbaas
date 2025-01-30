@@ -31,7 +31,7 @@ spec:
           create: true
         vmsingle:
           spec:
-            retentionPeriod: 3d
+            retentionPeriod: 365d
             logFormat: json
             nodeSelector:
               node_pool: observability-resources
@@ -52,7 +52,7 @@ spec:
         vmagent:
           enabled: false
         grafana:
-          enabled: true
+          enabled: false
         prometheus-node-exporter:
           enabled: false
         kube-state-metrics:
