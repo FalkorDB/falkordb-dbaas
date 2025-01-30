@@ -29,6 +29,11 @@ spec:
                   dashboards: grafana
         defaultRules:
           create: true
+        victoria-metrics-operator:
+          operator:
+            disable_prometheus_converter: true
+          nodeSelector:
+            node_pool: observability-resources
         vmsingle:
           spec:
             retentionPeriod: 365d
