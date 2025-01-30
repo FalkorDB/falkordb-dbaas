@@ -50,10 +50,11 @@ spec:
     auth:
       disable_login_form: "false"
   ingress:
+    metadata:
+      annotations:
+        networking.gke.io/managed-certificates: grafana-managed-cert
+        kubernetes.io/ingress.class: "gce" # Updated annotation
     spec:
-      metadata:
-        annotations:
-          kubernetes.io/ingress.class: "gce"
       rules:
         - host: grafana.observability.internal.falkordb.cloud
           http:
