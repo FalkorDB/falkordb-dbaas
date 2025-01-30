@@ -123,6 +123,7 @@ module "gke" {
   deletion_protection                  = false
   enable_private_endpoint              = false
   enable_private_nodes                 = true
+  http_load_balancing                  = true
 
   // TODO: Set master_ipv4_cidr_block
   # master_ipv4_cidr_block               = local.ip_range_subnet

@@ -50,13 +50,17 @@ spec:
                 logFormat: json
                 nodeSelector:
                   node_pool: observability
+            storage:
+              resources:
+                requests:
+                  storage: 50Gi
             alertmanager:
               spec:
                 nodeSelector:
                   node_pool: observability
                 secrets:
                   - pagerduty-service-key
-                configSecret: null #"vmalertmanager-vm-victoria-metrics-k8s-stack"
+                configSecret: null
               config:
                 global:
                   resolve_timeout: 5m
@@ -82,7 +86,6 @@ spec:
               spec:
                 nodeSelector:
                   node_pool: observability
-                rulePath: null
             vmagent:
               enabled: false
             grafana:

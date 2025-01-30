@@ -40,6 +40,10 @@ spec:
             logFormat: json
             nodeSelector:
               node_pool: observability-resources
+            storage:
+              resources:
+                requests:
+                  storage: 200Gi
             serviceSpec:
               metadata:
                 annotations:
@@ -50,6 +54,30 @@ spec:
           spec:
             nodeSelector:
               node_pool: observability-resources
+              secrets:
+                - pagerduty-service-key
+              configSecret: null
+            config:
+              global:
+                resolve_timeout: 5m
+              route:
+                group_by: ["alertname", "namespace", "pod"]
+                group_wait: 30s
+                group_interval: 5m
+                repeat_interval: 12h
+                receiver: "pagerduty"
+                routes:
+                  - match:
+                      alertname: Watchdog
+                    receiver: "blackhole"
+                  - receiver: "pagerduty"
+              receivers:
+                - name: blackhole
+                - name: "pagerduty"
+                  pagerduty_configs:
+                    - service_key_file: "/etc/vm/secrets/pagerduty-service-key/api-key"
+                      url: https://events.pagerduty.com/generic/2010-04-15/create_event.json
+                      send_resolved: true
         vmalert:
           spec:
             nodeSelector:
