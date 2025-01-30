@@ -28,7 +28,7 @@ spec:
                 matchLabels:
                   dashboards: grafana
         defaultRules:
-          create: true
+          create: false
         victoria-metrics-operator:
           operator:
             disable_prometheus_converter: true
