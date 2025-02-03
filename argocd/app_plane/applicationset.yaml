@@ -19,7 +19,7 @@ spec:
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: 94-add-app-plane-observability-stack
-        path: tofu/gcp/observability_stack/app_plane/argocd/manifests
+        path: argocd/app_plane/manifests
         directory:
           recurse: true
       destination:
