@@ -1,0 +1,44 @@
+global:
+  image:
+    tag: "v2.13.3"
+  logging:
+    format: json
+server:
+  extraArgs:
+    - --insecure
+
+cmp:
+  repositories:
+    falkordb-dbaas:
+      url: https://github.com/FalkorDB/falkordb-dbaas
+
+extraObjects:
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: ctrl-plane-observability-stack
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: main
+        path: argocd/ctrl_plane/prod
+      destination:
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        automated: {}
+
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: app-plane-observability-stack
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: main
+        path: argocd/app_plane
+      destination:
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        automated: {}

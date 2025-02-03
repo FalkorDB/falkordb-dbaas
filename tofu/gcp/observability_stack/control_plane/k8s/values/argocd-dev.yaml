@@ -22,7 +22,7 @@ extraObjects:
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: 94-add-app-plane-observability-stack
-        path: tofu/gcp/observability_stack/control_plane/k8s/argocd
+        path: argocd/ctrl_plane/dev
       destination:
         server: https://kubernetes.default.svc
       syncPolicy:
@@ -37,7 +37,7 @@ extraObjects:
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: 94-add-app-plane-observability-stack
-        path: tofu/gcp/observability_stack/app_plane/argocd
+        path: argocd/app_plane
       destination:
         server: https://kubernetes.default.svc
       syncPolicy:

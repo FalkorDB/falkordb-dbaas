@@ -27,3 +27,13 @@ variable "github_repository" {
   type    = string
   default = "falkordb-observability-cluster"
 }
+
+variable "environment" {
+  type    = string
+  default = "production"
+
+  validation {
+    condition     = var.environment == "production" || var.environment == "development"
+    error_message = "Environment must be either 'production' or 'development'"
+  }
+}

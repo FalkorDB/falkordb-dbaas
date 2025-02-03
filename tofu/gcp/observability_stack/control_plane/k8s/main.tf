@@ -78,7 +78,7 @@ resource "helm_release" "argocd" {
   create_namespace = true
   version          = "7.7.15"
 
-  values = [file("./values/argocd.yaml")]
+  values = var.environment == "development" ? [file("./values/argocd-dev.yaml")] : [file("./values/argocd-prod.yaml")]
 }
 
 resource "kubernetes_namespace" "observability" {
