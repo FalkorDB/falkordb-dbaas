@@ -171,6 +171,9 @@ resource "google_container_node_pool" "public" {
     disk_size_gb    = 30
     image_type      = "COS_CONTAINERD"
     service_account = module.gke.service_account
+    labels = {
+      "node_pool" = "public-pool"
+    }
   }
 
   autoscaling {
