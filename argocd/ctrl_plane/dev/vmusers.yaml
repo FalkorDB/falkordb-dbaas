@@ -27,7 +27,7 @@ spec:
                 name: vmuser
               patch: |-
                 - op: replace
-                  path: /spec/template/spec/username
+                  path: /spec/username
                   value: '{{ regexFind "c-[A-Za-z0-9]+" .name }}'
       destination:
         server: https://kubernetes.default.svc
