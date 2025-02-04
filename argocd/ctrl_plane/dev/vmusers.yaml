@@ -19,7 +19,7 @@ spec:
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: 94-add-app-plane-observability-stack
-        path: argocd/ctrl_plane/kustomize/vmuser
+        path: argocd/ctrl_plane/dev/kustomize/vmuser
         kustomize:
           patches:
             - target:
