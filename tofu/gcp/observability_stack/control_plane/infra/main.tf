@@ -154,8 +154,34 @@ module "gke" {
       image_type         = "COS_CONTAINERD"
       initial_node_count = 0
 
-    }
+    },
   ]
+}
+
+# Public node pool
+resource "google_container_node_pool" "public" {
+  project    = var.project_id
+  name       = "public-pool"
+  location   = var.region
+  cluster    = module.gke.name
+  node_count = 0
+
+  node_config {
+    machine_type    = "e2-standard-2"
+    disk_size_gb    = 30
+    image_type      = "COS_CONTAINERD"
+    service_account = module.gke.service_account
+  }
+
+  autoscaling {
+    min_node_count = 0
+    max_node_count = 220
+
+  }
+  network_config {
+    enable_private_nodes = false
+  }
+
 }
 
 # Storage bucket for metrics

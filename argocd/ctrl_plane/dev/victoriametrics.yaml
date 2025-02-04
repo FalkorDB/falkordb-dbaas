@@ -82,6 +82,11 @@ spec:
           spec:
             nodeSelector:
               node_pool: observability-resources
+        vmauth:
+          enabled: true
+          spec:
+            nodeSelector:
+              node_pool: public-pool
         vmagent:
           enabled: false
         grafana:
