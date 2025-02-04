@@ -94,8 +94,8 @@ spec:
               annotations:
                 kubernetes.io/ingress.class: "gce"
                 networking.gke.io/managed-certificates: vmauth-managed-cert
-              tlsHosts:
-                - "vmauth.observability.dev.internal.falkordb.cloud"
+              # tlsHosts:
+              #   - "vmauth.observability.dev.internal.falkordb.cloud"
         vmagent:
           enabled: false
         grafana:
