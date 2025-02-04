@@ -10,6 +10,6 @@ spec:
   targetRefs:
     - crd:
         kind: VMSingle
-        name: vmsingle-vm
+        name: vm
         namespace: observability
       paths: ["/.*"]
