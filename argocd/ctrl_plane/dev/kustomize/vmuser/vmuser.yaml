@@ -4,6 +4,7 @@ metadata:
   name: vmuser
   namespace: observability
 spec:
+  name: vmuser
   username: vmuser
   generatePassword: true
   targetRefs:

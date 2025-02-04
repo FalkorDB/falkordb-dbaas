@@ -30,6 +30,9 @@ spec:
                   path: /metadata/name
                   value: '{{ regexFind "c-[A-Za-z0-9]+" .name }}-user'
                 - op: replace
+                  path: /spec/name
+                  value: '{{ regexFind "c-[A-Za-z0-9]+" .name }}'
+                - op: replace
                   path: /spec/username
                   value: '{{ regexFind "c-[A-Za-z0-9]+" .name }}'
       destination:
