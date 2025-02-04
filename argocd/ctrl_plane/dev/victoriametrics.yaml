@@ -90,6 +90,13 @@ spec:
             userSelector: {}
             nodeSelector:
               node_pool: public-pool
+            ingress:
+              annotations:
+                kubernetes.io/ingress.class: "gce"
+                networking.gke.io/managed-certificates: vmauth-managed-cert
+              tlsHosts:
+                - "vmauth.observability.dev.internal.falkordb.cloud"
+              tlsSecretName: "vmauth-tls"
         vmagent:
           enabled: false
         grafana:
