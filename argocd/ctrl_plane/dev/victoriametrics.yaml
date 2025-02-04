@@ -96,7 +96,6 @@ spec:
                 networking.gke.io/managed-certificates: vmauth-managed-cert
               tlsHosts:
                 - "vmauth.observability.dev.internal.falkordb.cloud"
-              tlsSecretName: "vmauth-tls"
         vmagent:
           enabled: false
         grafana:
