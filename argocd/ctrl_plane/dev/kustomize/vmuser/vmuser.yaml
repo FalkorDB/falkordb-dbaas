@@ -1,0 +1,14 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMUser
+metadata:
+  name: vmuser
+  namespace: observability
+spec:
+  username: vmuser
+  generatePassword: true
+  targetRefs:
+    - crd:
+        kind: VMSingle
+        name: vmsingle-vm
+        namespace: observability
+      paths: ["/.*"]

@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vmusers
+  namespace: argocs
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            argocd.argoproj.io/secret-type: cluster
+  template:
+    metadata:
+      name: '{{ regexFind "c-[A-Za-z0-9]+" .name }}-vmuser'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: 94-add-app-plane-observability-stack
+        path: argocd/ctrl_plane/kustomize/vmuser
+        kustomize:
+          patches:
+            - target:
+                kind: VMUser
+                name: vmuser
+              patch: |-
+                - op: replace
+                  path: /spec/username
+                  value: '{{ regexFind "c-[A-Za-z0-9]+" .name }}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: observability
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          prune: true
+          selfHeal: true
