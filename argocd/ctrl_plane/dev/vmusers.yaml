@@ -37,7 +37,7 @@ spec:
                   value: '{{ regexFind "c-[A-Za-z0-9]+" .name }}'
                 - op: replace
                   path: /spec/targetRefs/0/crd/name
-                  value: 'vmsingle-vm-6965d4998d'
+                  value: 'vmsingle-vm-6965d4998d-g4chr'
       destination:
         server: https://kubernetes.default.svc
         namespace: observability
