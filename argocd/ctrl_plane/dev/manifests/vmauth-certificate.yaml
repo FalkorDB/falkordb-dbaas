@@ -7,5 +7,5 @@ spec:
   secretName: vmauth-tls
   issuerRef:
     name: letsencrypt
-    kind: Issuer
+    kind: ClusterIssuer
   commonName: vmauth.observability.dev.internal.falkordb.cloud
