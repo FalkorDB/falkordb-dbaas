@@ -88,6 +88,8 @@ spec:
             selectAllByDefault: true
             userNamespaceSelector: {}
             userSelector: {}
+            nodeSelector:
+              node_pool: public-pool
             # tlsConfig:
             #   caFile: /etc/vm/tls/ca.pem
             #   certFile: /etc/vm/secrets/tls/cert.pem
@@ -100,13 +102,11 @@ spec:
             #   - name: tls
             #     mountPath: /etc/vm/tls
             #     readOnly: true
-            # nodeSelector:
-            #   node_pool: public-pool
-            # ingress:
-            #   class_name: nginx
-            #   tlsSecretName: vmauth-tls-1
-            #   tlsHosts:
-            #     - "vmauth.observability.dev.internal.falkordb.cloud"
+            ingress:
+              class_name: nginx
+              tlsSecretName: vmauth-tls
+              tlsHosts:
+                - "vmauth.observability.dev.internal.falkordb.cloud"
         vmagent:
           enabled: false
         grafana:
