@@ -104,6 +104,7 @@ spec:
               node_pool: public-pool
             ingress:
               class_name: nginx
+              tlsSecretName: vmauth-tls
               tlsHosts:
                 - "vmauth.observability.dev.internal.falkordb.cloud"
         vmagent:
