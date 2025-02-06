@@ -106,6 +106,7 @@ spec:
               annotations:
                 cert-manager.io/issuer: letsencrypt
                 kubernetes.io/ingress.class: gce
+                kubernetes.io/ingress.allow-http: "false"
               tlsSecretName: vmauth-tls
               tlsHosts:
                 - "vmauth.observability.dev.internal.falkordb.cloud"
