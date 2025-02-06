@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nginx-operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: nginx-operator
+    repoURL: https://kubernetes.github.io/ingress-nginx
+    targetRevision: 4.12.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    automated:
+      prune: true
+      selfHeal: true
