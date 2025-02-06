@@ -102,13 +102,13 @@ spec:
             #   - name: tls
             #     mountPath: /etc/vm/tls
             #     readOnly: true
-            ingress:
-              annotations:
-                cert-manager.io/cluster-issuer: letsencrypt
-                kubernetes.io/ingress.class: gce
-              tlsSecretName: vmauth-tls
-              tlsHosts:
-                - "vmauth.observability.dev.internal.falkordb.cloud"
+            # ingress:
+            #   annotations:
+            #     cert-manager.io/cluster-issuer: letsencrypt
+            #     kubernetes.io/ingress.class: gce
+            #   tlsSecretName: vmauth-tls
+            #   tlsHosts:
+            #     - "vmauth.observability.dev.internal.falkordb.cloud"
         vmagent:
           enabled: false
         grafana:
