@@ -9,3 +9,5 @@ spec:
     name: letsencrypt
     kind: ClusterIssuer
   commonName: vmauth.observability.dev.internal.falkordb.cloud
+  dnsNames:
+    - vmauth.observability.dev.internal.falkordb.cloud
