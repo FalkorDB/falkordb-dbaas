@@ -1,7 +1,8 @@
 apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
+kind: Issuer
 metadata:
   name: letsencrypt
+  namespace: observability
 spec:
   acme:
     email: devops+dev@falkordb.com
