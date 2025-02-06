@@ -8,10 +8,10 @@ spec:
   source:
     chart: nginx-operator
     repoURL: https://kubernetes.github.io/ingress-nginx
-    targetRevision: 4.12.0
+    targetRevision: v4.12.0
   destination:
     server: https://kubernetes.default.svc
-    namespace: observability
+    namespace: nginx
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
