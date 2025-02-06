@@ -104,11 +104,11 @@ spec:
             #     readOnly: true
             ingress:
               annotations:
-                # cert-manager.io/cluster-issuer: letsencrypt
+                cert-manager.io/issuer: letsencrypt
                 kubernetes.io/ingress.class: gce
-              # tlsSecretName: vmauth-tls
-              # tlsHosts:
-              #   - "vmauth.observability.dev.internal.falkordb.cloud"
+              tlsSecretName: vmauth-tls
+              tlsHosts:
+                - "vmauth.observability.dev.internal.falkordb.cloud"
         vmagent:
           enabled: false
         grafana:
