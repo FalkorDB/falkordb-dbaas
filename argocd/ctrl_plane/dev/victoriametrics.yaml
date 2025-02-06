@@ -88,14 +88,24 @@ spec:
             selectAllByDefault: true
             userNamespaceSelector: {}
             userSelector: {}
+            tlsConfig:
+              caFile: /etc/vm/tls/ca.pem
+              certFile: /etc/vm/secrets/tls/cert.pem
+              keyFile: /etc/vm/secrets/tls/key.pem
+            volumes:
+              - name: tls
+                secret:
+                  secretName: vmauth-tls
+            volumeMounts:
+              - name: tls
+                mountPath: /etc/vm/tls
+                readOnly: true
             nodeSelector:
               node_pool: public-pool
             ingress:
-              annotations:
-                kubernetes.io/ingress.class: "gce"
-                networking.gke.io/managed-certificates: vmauth-managed-cert
-              # tlsHosts:
-              #   - "vmauth.observability.dev.internal.falkordb.cloud"
+              class_name: nginx
+              tlsHosts:
+                - "vmauth.observability.dev.internal.falkordb.cloud"
         vmagent:
           enabled: false
         grafana:
