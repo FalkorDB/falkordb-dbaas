@@ -1,7 +1,0 @@
-apiVersion: networking.gke.io/v1
-kind: ManagedCertificate
-metadata:
-  name: vmauth-managed-cert
-spec:
-  domains:
-    - "vmauth.observability.dev.internal.falkordb.cloud"
