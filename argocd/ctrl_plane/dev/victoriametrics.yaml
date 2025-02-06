@@ -103,6 +103,8 @@ spec:
             #     mountPath: /etc/vm/tls
             #     readOnly: true
             ingress:
+              annotations:
+                cert-manager.io/cluster-issuer: letsencrypt
               class_name: nginx
               tlsSecretName: vmauth-tls
               tlsHosts:
