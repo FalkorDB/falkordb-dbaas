@@ -95,7 +95,7 @@ spec:
             volumes:
               - name: tls
                 secret:
-                  secretName: vmauth-tls
+                  secretName: vmauth-tls-1
             volumeMounts:
               - name: tls
                 mountPath: /etc/vm/tls
@@ -104,7 +104,7 @@ spec:
               node_pool: public-pool
             ingress:
               class_name: nginx
-              tlsSecretName: vmauth-tls
+              tlsSecretName: vmauth-tls-1
               tlsHosts:
                 - "vmauth.observability.dev.internal.falkordb.cloud"
         vmagent:
