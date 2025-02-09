@@ -10,7 +10,7 @@ spec:
     - clusters:
         selector:
           matchLabels:
-            role=app-plane
+            role: app-plane
   template:
     metadata:
       name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-grafana-op'
