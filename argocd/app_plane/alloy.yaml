@@ -13,7 +13,7 @@ spec:
             argocd.argoproj.io/secret-type: cluster
   template:
     metadata:
-      name: '{{ regexFind "(h)?c-[A-Za-z0-9]+" .name }}-alloy'
+      name: '{{ regexFind "c-[A-Za-z0-9]+" .name }}-alloy'
     spec:
       project: default
       source:
@@ -263,10 +263,6 @@ spec:
                       action        = "keep"
                     }
 
-                    rule {
-                      replacement  = env("HOSTNAME")
-                      target_label = "obs_nodename"
-                    }
                   }
 
                   prometheus.relabel "add_cluster_label" {
