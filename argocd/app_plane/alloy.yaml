@@ -23,8 +23,6 @@ spec:
         helm:
           valuesObject:
             fullnameOverride: alloy
-            nodeSelector:
-              node_pool: observability
             alloy:
               configMap:
                 content: |-
@@ -290,12 +288,17 @@ spec:
                       regex  = "^(cloud_google_com|omnistrate_com).*"
                     }
                   }
+              clustering:
+                enabled: true
+                name: alloy
               mounts:
                 extra:
                   - name: vmuser
                     mountPath: /var/run/secrets/victoriametrics/vmuser
             controller:
               type: statefulset
+              nodeSelector:
+                node_pool: observability
               volumes:
                 extra:
                   - name: vmuser
