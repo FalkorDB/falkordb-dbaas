@@ -13,7 +13,7 @@ spec:
             argocd.argoproj.io/secret-type: cluster
   template:
     metadata:
-      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-alloy'
+      name: '{{ regexFind "(h)?c-[A-Za-z0-9]+" .name }}-alloy'
     spec:
       project: default
       source:
@@ -37,7 +37,7 @@ spec:
                       url = "https://vmauth.observability.dev.internal.falkordb.cloud/prometheus/api/v1/write"
                       
                       basic_auth {
-                        username = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-user"
+                        username = "{{ regexFind "(h)?c-[A-Za-z0-9]+" .name }}-user"
                         password_file = "/var/run/secrets/victoriametrics/vmuser/password"
                       }
                       
@@ -274,7 +274,7 @@ spec:
 
                     rule {
                       target_label  = "cluster"
-                      replacement   = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}"
+                      replacement   = "{{ regexFind "(h)?c-[A-Za-z0-9]+" .name }}"
                     }
                   }
 

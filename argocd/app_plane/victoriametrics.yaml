@@ -13,7 +13,7 @@ spec:
             argocd.argoproj.io/secret-type: cluster
   template:
     metadata:
-      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-victoriametrics'
+      name: '{{ regexFind "(h)?c-[A-Za-z0-9]+" .name }}-victoriametrics'
     spec:
       project: default
       source:
