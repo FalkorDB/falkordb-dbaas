@@ -291,6 +291,13 @@ spec:
               clustering:
                 enabled: true
                 name: alloy
+              resources:
+                requests:
+                  cpu: 500m
+                  memory: 2Gi
+                limits:
+                  cpu: "2"
+                  memory: 6Gi
               mounts:
                 extra:
                   - name: vmuser
