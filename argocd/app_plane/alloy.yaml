@@ -35,13 +35,15 @@ spec:
                   prometheus.remote_write "ctrl_plane" {
                     endpoint {
                       url = "https://vmauth.observability.dev.internal.falkordb.cloud/prometheus/api/v1/write"
-                    }
-                    basic_auth {
-                      username = "{{ regexFind "c-[A-Za-z0-9]+" .name }}-user"
-                      password_file = "/var/run/secrets/victoriametrics/vmuser/password"
-                    }
-                    tls_config {
-                      insecure_skip_verify = true
+                      
+                      basic_auth {
+                        username = "{{ regexFind "c-[A-Za-z0-9]+" .name }}-user"
+                        password_file = "/var/run/secrets/victoriametrics/vmuser/password"
+                      }
+                      
+                      tls_config {
+                        insecure_skip_verify = true
+                      }
                     }
                   }
 
