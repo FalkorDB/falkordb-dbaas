@@ -297,9 +297,10 @@ spec:
             controller:
               type: statefulset
               volumes:
-                - name: vmuser
-                  secret:
-                    secretName: '{{ `{{regexFind "c-[A-Za-z0-9]+" .name}}` }}-vmuser'
+                extra:
+                  - name: vmuser
+                    secret:
+                      secretName: '{{ `{{regexFind "c-[A-Za-z0-9]+" .name}}` }}-vmuser'
       destination:
         server: "{{.server}}"
         namespace: observability
