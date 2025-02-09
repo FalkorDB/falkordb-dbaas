@@ -5,3 +5,4 @@ metadata:
 namespace: observability
 resources:
   - vmuser.yaml
+  - string-secret.yaml

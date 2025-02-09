@@ -35,6 +35,16 @@ spec:
                 - op: replace
                   path: /spec/username
                   value: '{{ regexFind "c-[A-Za-z0-9]+" .name }}-user'
+                - op: replace
+                  path: /spec/passwordRef/name
+                  value: '{{ regexFind "c-[A-Za-z0-9]+" .name }}-vmuser'
+            - target:
+                kind: StringSecret
+                name: vmuser-secret
+              patch: |-
+                - op: replace
+                  path: /metadata/name
+                  value: '{{ regexFind "c-[A-Za-z0-9]+" .name }}-vmuser'
       destination:
         server: https://kubernetes.default.svc
         namespace: observability

@@ -6,7 +6,9 @@ metadata:
 spec:
   name: vmuser
   username: vmuser
-  generatePassword: true
+  passwordRef:
+    key: password
+    name: vmuser
   targetRefs:
     - crd:
         kind: VMSingle
