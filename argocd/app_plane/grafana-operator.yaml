@@ -13,7 +13,7 @@ spec:
             argocd.argoproj.io/secret-type: cluster
   template:
     metadata:
-      name: '{{ regexFind "c-[A-Za-z0-9]+" .name }}-grafana-op'
+      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-grafana-op'
     spec:
       project: default
       source:

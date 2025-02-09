@@ -13,7 +13,7 @@ spec:
             argocd.argoproj.io/secret-type: cluster
   template:
     metadata:
-      name: '{{ regexFind "c-[A-Za-z0-9]+" .name }}-alloy'
+      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-alloy'
     spec:
       project: default
       source:
@@ -37,7 +37,7 @@ spec:
                       url = "https://vmauth.observability.dev.internal.falkordb.cloud/prometheus/api/v1/write"
                       
                       basic_auth {
-                        username = "{{ regexFind "c-[A-Za-z0-9]+" .name }}-user"
+                        username = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-user"
                         password_file = "/var/run/secrets/victoriametrics/vmuser/password"
                       }
                       
@@ -273,12 +273,8 @@ spec:
                     forward_to = [prometheus.relabel.remove_unwanted_labels.receiver]
 
                     rule {
-                      // Select "node" label and extract the cluster name with regex
-                      source_labels = ["node", "obs_nodename", "kubernetes_io_hostname"]
-                      regex         = "(?:.*);?gke-(c-[^-]+).+"
                       target_label  = "cluster"
-                      replacement   = "$1"
-                      action        = "replace"
+                      replacement   = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}"
                     }
                   }
 

@@ -18,22 +18,20 @@ Steps:
 
 0. Set the following environment variables:
 ```bash
+# ArgoCD Server
+export ARGOCD_SERVER=
 # App plane Project ID
 export PROJECT=
 # GCP Region
 export REGION=
 # GCP App Plane Cluster Name
 export CLUSTER=
-# Network name where the App Plane cluster is deployed
-export NETWORK=
-# Range for the Private Service Connect subnet
-export RANGE=
-# IP Address for the Private Service Connect LB
-export IP_ADDRESS=
-# PSC Service Attachment ID (from the control plane)
-export SERVICE_ATTACHMENT_ID=
+# App plane Cluster Context name
+export APP_PLANE_CTX=
 # PagerDuty API Key
 export PAGERDUTY_API_KEY=
+# Control Plane Context name
+export CTRL_PLANE_CTX=
 ```
 
 1. Create the node pool for the desired cluster
@@ -64,64 +62,81 @@ kubectl create secret generic pagerduty-service-key \
 
 4. Add the cluster credentials to the observability cluster in the control plane
 ```bash
-argocd cluster add CONTEXT --server SERVER
+argocd cluster add $CONTEXT --server ARGOCD_SERVER --label role=app-plane,cloud_provider=gcp
 ```
 
-5. Create subnet for PSC
+5. Wait for the cluster to be added to the control plane and the resources to be deployed. 
+```
+kubectl get secret $CLUSTER-vmuser -n observability -w --context $CTRL_PLANE_CTX
+```
+
+6. Once the vmuser secret is created, create a new secret on the app plane for the vmuser:
 ```bash
-gcloud compute networks subnets create $CLUSTER-observability-consumer \
-    --project=$PROJECT  \
-    --range=$RANGE \
-    --network=$NETWORK \
-    --region=$REGION
+kubectl create secret generic vmuser \
+    --from-literal=password=$(kubectl get secret $CLUSTER-vmuser -n observability -o jsonpath="{.data.password}" --context $CTRL_PLANE_CTX | base64 --decode) \
+    --namespace=observability
 ```
 
-6. Create egress firewall rule for PSC
+
+### AWS Clusters
+
+Steps:
+0. Set the following environment variables:
 ```bash
-gcloud compute firewall-rules create $CLUSTER-observability-egress \
-    --project=$PROJECT \
-    --network=$NETWORK \
-    --action=allow \
-    --priority=1000 \
-    --direction=egress \
-     --rules=all \
-    --destination-ranges=$RANGE
+# ArgoCD Server
+export ARGOCD_SERVER=
+# AWS App Plane Cluster Name
+export CLUSTER=
+# App plane Cluster Context name
+export APP_PLANE_CTX=
+# AWS Node Role
+export NODE_ROLE=
+# AWS Subnets
+export SUBNETS=
+# PagerDuty API Key
+export PAGERDUTY_API_KEY=
+# Control Plane Context name
+export CTRL_PLANE_CTX=
 ```
 
-7. Create static IP address for PSC
-```bash 
-gcloud compute addresses create $CLUSTER-observability \
-    --project=$PROJECT \
-    --region=$REGION \
-    --subnet=$CLUSTER-observability-consumer \
-    --addresses=$IP_ADDRESS
-```
-
-8. Create service attachment for PSC
+1. Create the node pool for the desired cluster
 ```bash
-gcloud compute forwarding-rules create observability-psc \
-    --project=$PROJECT \
-    --region=$REGION \
-    --network=$NETWORK \
-    --address=$CLUSTER-observability \
-    --target-service-attachment=$SERVICE_ATTACHMENT_ID
+aws eks create-nodegroup \
+    --cluster-name $CLUSTER \
+    --nodegroup-name observability \
+    --node-role $NODE_ROLE \
+    --subnets $SUBNETS \
+    --instance-types m5.large \
+    --disk-size 50 \
+    --scaling-config minSize=1,maxSize=10,desiredSize=1 \
+    --labels node_pool=observability
 ```
 
-9. Create internal DNS zone
+2. Set the current context to the desired cluster
 ```bash
-gcloud dns managed-zones create $CLUSTER-observability \
-    --project=$PROJECT \
-    --description="Internal DNS zone for observability" \
-    --dns-name=observability.gcp.falkordb.internal. \
-    --visibility=private \
-    --networks=$NETWORK
+aws eks update-kubeconfig --name $CLUSTER --region $REGION
 ```
 
-10. Create record for PSC
+3. Create the PagerDuty secret in the cluster
 ```bash
-gcloud dns record-sets create victoriametrics.observability.gcp.falkordb.internal. \
-    --project=$PROJECT \
-    --rrdatas=$IP_ADDRESS \
-    --type=A \
-    --zone=$CLUSTER-observability
+kubectl create secret generic pagerduty-service-key \
+    --from-literal=api-key=$PAGERDUTY_API_KEY
+    --namespace=observability
+```
+
+4. Add the cluster credentials to the observability cluster in the control plane
+```bash
+argocd cluster add $CONTEXT --server ARGOCD_SERVER --label role=app-plane,cloud_provider=aws
+```
+
+5. Wait for the cluster to be added to the control plane and the resources to be deployed. 
+```
+kubectl get secret $CLUSTER-vmuser -n observability -w --context $CTRL_PLANE_CTX
+```
+
+6. Once the vmuser secret is created, create a new secret on the app plane for the vmuser:
+```bash
+kubectl create secret generic vmuser \
+    --from-literal=password=$(kubectl get secret $CLUSTER-vmuser -n observability -o jsonpath="{.data.password}" --context $CTRL_PLANE_CTX | base64 --decode) \
+    --namespace=observability
 ```
