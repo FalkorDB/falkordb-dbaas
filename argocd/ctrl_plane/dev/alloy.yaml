@@ -286,19 +286,10 @@ spec:
                 limits:
                   cpu: "2"
                   memory: 6Gi
-              mounts:
-                extra:
-                  - name: vmuser
-                    mountPath: /var/run/secrets/victoriametrics/vmuser
             controller:
               type: statefulset
               nodeSelector:
                 node_pool: observability-resources
-              volumes:
-                extra:
-                  - name: vmuser
-                    secret:
-                      secretName: vmuser
       destination:
         server: "{{.server}}"
         namespace: observability
