@@ -22,7 +22,7 @@ spec:
       selfHeal: true
   ignoreDifferences:
     - jsonPointers:
-        - /spec/template/spec/stringData/tls.key
-        - /spec/template/spec/stringData/tls.crt
+        - /stringData
+        - /data
       kind: Secret
       name: vmauth-tls
