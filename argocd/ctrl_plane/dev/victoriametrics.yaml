@@ -90,12 +90,6 @@ spec:
             userSelector: {}
             nodeSelector:
               node_pool: public-pool
-            unauthorizedUserAccessSpec: 
-              default_url: 
-               - "http://example.com"
-              discover_backend_ips: false
-              url_map: []
-              url_prefix: http://example.com"
             ingress:
               annotations:
                 cert-manager.io/issuer: letsencrypt
