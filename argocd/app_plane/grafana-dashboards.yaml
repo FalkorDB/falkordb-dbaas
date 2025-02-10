@@ -27,7 +27,11 @@ spec:
                 kind: GrafanaDashboard
                 name: vmauth
               patch: |-
-                - op: remove
+                $patch: delete
+                apiVersion: grafana.integreatly.org/v1beta1
+                kind: GrafanaDashboard
+                metadata:
+                  name: vmauth
       destination:
         server: "{{.server}}"
         namespace: observability
