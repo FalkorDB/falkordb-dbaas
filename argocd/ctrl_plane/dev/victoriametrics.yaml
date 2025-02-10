@@ -95,7 +95,7 @@ spec:
                - "http://example.com"
               discover_backend_ips: false
               url_map: []
-              url_prefix: /auth
+              url_prefix: http://example.com"
             ingress:
               annotations:
                 cert-manager.io/issuer: letsencrypt
