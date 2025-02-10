@@ -264,7 +264,7 @@ spec:
 
                     rule {
                       target_label  = "cluster"
-                      replacement   = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}"
+                      replacement   = "{{ .name }}"
                     }
                   }
 
