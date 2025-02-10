@@ -232,7 +232,7 @@ spec:
 
                   prometheus.scrape "vm_auth" {
                     targets = [
-                      {__address__ = "vmauth-vm.observability.svc.cluster.local:8080"},
+                      {__address__ = "vmauth-vm.observability.svc.cluster.local:8427"},
                     ]
                     forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
