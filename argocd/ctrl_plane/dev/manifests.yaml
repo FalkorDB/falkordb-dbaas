@@ -20,3 +20,9 @@ spec:
     automated:
       prune: true
       selfHeal: true
+  ignoreDifferences:
+    - jsonPointers:
+        - /spec/template/spec/stringData/tls.key
+        - /spec/template/spec/stringData/tls.crt
+      kind: Secret
+      name: vmauth-tls
