@@ -293,7 +293,7 @@ spec:
             controller:
               type: statefulset
               nodeSelector:
-                node_pool: observability
+                node_pool: observability-resources
               volumes:
                 extra:
                   - name: vmuser

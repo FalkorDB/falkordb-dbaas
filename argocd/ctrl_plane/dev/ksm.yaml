@@ -13,7 +13,7 @@ spec:
       valuesObject:
         fullnameOverride: ksm
         nodeSelector:
-          node_pool: observability
+          node_pool: observability-resources
   destination:
     server: https://kubernetes.default.svc
     namespace: observability

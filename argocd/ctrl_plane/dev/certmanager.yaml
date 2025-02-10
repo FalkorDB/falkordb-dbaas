@@ -10,12 +10,15 @@ spec:
   project: default
   source:
     chart: cert-manager
+    repoURL: https://charts.jetstack.io
+    targetRevision: v1.17.0
     helm:
+      valuesObject:
+        nodeSelector:
+          node_pool: observability-resources
       parameters:
         - name: installCRDs
           value: "true"
-    repoURL: https://charts.jetstack.io
-    targetRevision: v1.17.0
   syncPolicy:
     automated: {}
     syncOptions:
