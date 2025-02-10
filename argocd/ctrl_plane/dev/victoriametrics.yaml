@@ -90,18 +90,9 @@ spec:
             userSelector: {}
             nodeSelector:
               node_pool: public-pool
-            # tlsConfig:
-            #   caFile: /etc/vm/tls/ca.pem
-            #   certFile: /etc/vm/secrets/tls/cert.pem
-            #   keyFile: /etc/vm/secrets/tls/key.pem
-            # volumes:
-            #   - name: tls
-            #     secret:
-            #       secretName: vmauth-tls-1
-            # volumeMounts:
-            #   - name: tls
-            #     mountPath: /etc/vm/tls
-            #     readOnly: true
+            unauthorizedUserAccessSpec:
+              discover_backend_ips: false
+              url_map: []
             ingress:
               annotations:
                 cert-manager.io/issuer: letsencrypt
