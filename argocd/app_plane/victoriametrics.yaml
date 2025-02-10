@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: victoriametrics
+  name: victoriametrics-app-plane
   namespace: argocd
 spec:
   goTemplate: true

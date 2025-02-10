@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: vmrules
+  name: vmrules-app-plane
   namespace: argocd
 spec:
   goTemplate: true
