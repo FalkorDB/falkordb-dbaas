@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: grafana-operator-app-plane
+  name: grafana-operator
   namespace: argocd
 spec:
   goTemplate: true

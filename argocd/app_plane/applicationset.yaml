@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: observability-stack-app-plane
+  name: observability-stack
   namespace: argocd
 spec:
   goTemplate: true

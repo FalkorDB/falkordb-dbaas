@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: vmusers-ctrl-plane
+  name: vmusers
   namespace: argocd
 spec:
   goTemplate: true

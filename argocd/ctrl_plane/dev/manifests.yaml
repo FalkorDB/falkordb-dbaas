@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: observability-stack-ctrl-plane
+  name: observability-stack
   namespace: argocd
 spec:
   project: default

@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: grafana-operator-ctrl-plane
+  name: grafana-operator
   namespace: argocd
 spec:
   project: default

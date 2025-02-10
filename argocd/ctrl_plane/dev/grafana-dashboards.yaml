@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: grafana-dashboards-ctrl-plane
+  name: grafana-dashboards
   namespace: argocd
 spec:
   project: default
