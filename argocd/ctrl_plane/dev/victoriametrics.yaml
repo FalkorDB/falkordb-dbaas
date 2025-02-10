@@ -90,9 +90,7 @@ spec:
             userSelector: {}
             nodeSelector:
               node_pool: public-pool
-            unauthorizedUserAccessSpec:
-              discover_backend_ips: false
-              url_map: []
+            unauthorizedUserAccessSpec: Null
             ingress:
               annotations:
                 cert-manager.io/issuer: letsencrypt
