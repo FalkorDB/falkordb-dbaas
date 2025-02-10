@@ -20,6 +20,14 @@ spec:
         path: observability/grafana
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: 94-add-app-plane-observability-stack
+        kustomize:
+          patches:
+            # remove vmauth dashboard
+            - target:
+                kind: GrafanaDashboard
+                name: vmauth
+              patch: |-
+                - op: remove
       destination:
         server: "{{.server}}"
         namespace: observability

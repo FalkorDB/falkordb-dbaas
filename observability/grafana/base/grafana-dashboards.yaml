@@ -58,3 +58,15 @@ spec:
     name: dashboards-k8s-views-prometheus
     key: json
 ---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: vmauth
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  configMapRef:
+    name: dashboards-k8s-views-vmauth
+    key: json
+---

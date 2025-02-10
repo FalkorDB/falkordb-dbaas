@@ -29,3 +29,6 @@ configMapGenerator:
 
   - name: dashboards-k8s-views-prometheus
     files: [json=./dashboards/prometheus-dashboard.json]
+
+  - name: dashboards-k8s-views-vmauth
+    files: [json=./dashboards/vmauth.json]
