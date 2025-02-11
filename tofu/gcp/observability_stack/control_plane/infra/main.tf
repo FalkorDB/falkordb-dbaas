@@ -1,12 +1,3 @@
-locals {
-  // TODO: Change range to /24
-  ip_range_subnet   = "172.16.0.0/20"
-  ip_range_pods     = "172.16.16.0/20"
-  ip_range_services = "172.16.32.0/20"
-
-  ip_range_service_attachment = "172.16.48.0/24"
-}
-
 provider "google" {
   project = var.project_id
   region  = var.region
@@ -25,24 +16,18 @@ module "vpc" {
   subnets = [{
     subnet_name           = "observability-stack-subnet"
     subnet_region         = var.region
-    subnet_ip             = local.ip_range_subnet
+    subnet_ip             = var.ip_range_subnet
     subnet_private_access = true
-    },
-    {
-      subnet_name   = "observability-stack-service-attachment"
-      subnet_region = var.region
-      subnet_ip     = local.ip_range_service_attachment
-      purpose       = "PRIVATE_SERVICE_CONNECT"
   }]
 
   secondary_ranges = {
     "observability-stack-subnet" = [{
       range_name    = "pods"
-      ip_cidr_range = local.ip_range_pods
+      ip_cidr_range = var.ip_range_pods
       },
       {
         range_name    = "services"
-        ip_cidr_range = local.ip_range_services
+        ip_cidr_range = var.ip_range_services
     }],
   }
 
@@ -124,9 +109,6 @@ module "gke" {
   enable_private_endpoint              = false
   enable_private_nodes                 = true
   http_load_balancing                  = true
-
-  // TODO: Set master_ipv4_cidr_block
-  # master_ipv4_cidr_block               = local.ip_range_subnet
 
   default_max_pods_per_node = 110
 

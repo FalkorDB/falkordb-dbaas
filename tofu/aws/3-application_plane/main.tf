@@ -104,17 +104,3 @@ module "aws-s3-bucket-access-logs" {
     aws = aws.app-plane-account
   }
 }
-
-# module "cloudtrail" {
-#   source  = "trussworks/cloudtrail/aws"
-#   version = "5.2.0"
-
-#   s3_bucket_name     = module.aws-s3-bucket.id
-#   log_retention_days = var.cloudtrail_retention_days
-
-#   providers = {
-#     aws = aws.app-plane-account
-#   }
-
-#   depends_on = [module.aws-s3-bucket, data.aws_iam_policy_document.cloudtrail_bucket_policy]
-# }
