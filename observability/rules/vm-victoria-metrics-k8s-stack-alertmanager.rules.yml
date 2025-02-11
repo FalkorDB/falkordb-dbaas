@@ -20,7 +20,7 @@ spec:
           expr: |-
             # Without max_over_time, failed scrapes could create false negatives, see
             # https://www.robustperception.io/alerting-on-gauges-in-prometheus-2-0 for details.
-            max_over_time(alertmanager_config_last_reload_successful{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default"}[5m]) == 0
+            max_over_time(alertmanager_config_last_reload_successful{job="vm-alertmanager",namespace="default"}[5m]) == 0
           for: 10m
           labels:
             severity: critical
@@ -32,9 +32,9 @@ spec:
           expr: |-
             # Without max_over_time, failed scrapes could create false negatives, see
             # https://www.robustperception.io/alerting-on-gauges-in-prometheus-2-0 for details.
-              max_over_time(alertmanager_cluster_members{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default"}[5m])
+              max_over_time(alertmanager_cluster_members{job="vm-alertmanager",namespace="default"}[5m])
             < on (namespace,service,cluster) group_left
-              count by (namespace,service,cluster) (max_over_time(alertmanager_cluster_members{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default"}[5m]))
+              count by (namespace,service,cluster) (max_over_time(alertmanager_cluster_members{job="vm-alertmanager",namespace="default"}[5m]))
           for: 15m
           labels:
             severity: critical
@@ -45,9 +45,9 @@ spec:
             summary: An Alertmanager instance failed to send notifications.
           expr: |-
             (
-              rate(alertmanager_notifications_failed_total{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default"}[5m])
+              rate(alertmanager_notifications_failed_total{job="vm-alertmanager",namespace="default"}[5m])
             /
-              ignoring (reason) group_left rate(alertmanager_notifications_total{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default"}[5m])
+              ignoring (reason) group_left rate(alertmanager_notifications_total{job="vm-alertmanager",namespace="default"}[5m])
             )
             > 0.01
           for: 5m
@@ -60,9 +60,9 @@ spec:
             summary: All Alertmanager instances in a cluster failed to send notifications to a critical integration.
           expr: |-
             min by (namespace,service,integration,cluster) (
-              rate(alertmanager_notifications_failed_total{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default", integration=~`.*`}[5m])
+              rate(alertmanager_notifications_failed_total{job="vm-alertmanager",namespace="default", integration=~`.*`}[5m])
             /
-              ignoring (reason) group_left rate(alertmanager_notifications_total{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default", integration=~`.*`}[5m])
+              ignoring (reason) group_left rate(alertmanager_notifications_total{job="vm-alertmanager",namespace="default", integration=~`.*`}[5m])
             )
             > 0.01
           for: 5m
@@ -75,9 +75,9 @@ spec:
             summary: All Alertmanager instances in a cluster failed to send notifications to a non-critical integration.
           expr: |-
             min by (namespace,service,integration,cluster) (
-              rate(alertmanager_notifications_failed_total{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default", integration!~`.*`}[5m])
+              rate(alertmanager_notifications_failed_total{job="vm-alertmanager",namespace="default", integration!~`.*`}[5m])
             /
-              ignoring (reason) group_left rate(alertmanager_notifications_total{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default", integration!~`.*`}[5m])
+              ignoring (reason) group_left rate(alertmanager_notifications_total{job="vm-alertmanager",namespace="default", integration!~`.*`}[5m])
             )
             > 0.01
           for: 5m
@@ -90,7 +90,7 @@ spec:
             summary: Alertmanager instances within the same cluster have different configurations.
           expr: |-
             count by (namespace,service,cluster) (
-              count_values by (namespace,service,cluster) ("config_hash", alertmanager_config_hash{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default"})
+              count_values by (namespace,service,cluster) ("config_hash", alertmanager_config_hash{job="vm-alertmanager",namespace="default"})
             )
             != 1
           for: 20m
@@ -104,11 +104,11 @@ spec:
           expr: |-
             (
               count by (namespace,service,cluster) (
-                avg_over_time(up{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default"}[5m]) < 0.5
+                avg_over_time(up{job="vm-alertmanager",namespace="default"}[5m]) < 0.5
               )
             /
               count by (namespace,service,cluster) (
-                up{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default"}
+                up{job="vm-alertmanager",namespace="default"}
               )
             )
             >= 0.5
@@ -123,11 +123,11 @@ spec:
           expr: |-
             (
               count by (namespace,service,cluster) (
-                changes(process_start_time_seconds{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default"}[10m]) > 4
+                changes(process_start_time_seconds{job="vm-alertmanager",namespace="default"}[10m]) > 4
               )
             /
               count by (namespace,service,cluster) (
-                up{job="vmalertmanager-vm-victoria-metrics-k8s-stack",namespace="default"}
+                up{job="vm-alertmanager",namespace="default"}
               )
             )
             >= 0.5
