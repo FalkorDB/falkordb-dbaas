@@ -5,8 +5,6 @@ kind: VMRule
 metadata:
   namespace: observability
   name: vmoperator
-  labels:
-    app: victoria-metrics-k8s-stack
 spec:
   groups:
     - name: vmoperator

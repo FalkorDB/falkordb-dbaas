@@ -5,8 +5,6 @@ kind: VMRule
 metadata:
   namespace: observability
   name: alertmanager.rules
-  labels:
-    app: victoria-metrics-k8s-stack
 spec:
   groups:
     - name: alertmanager.rules
@@ -98,7 +96,7 @@ spec:
             severity: critical
         - alert: AlertmanagerClusterDown
           annotations:
-            description: '{{ $value | humanizePercentage }} of Alertmanager instances within the {{$labels.job}} cluster have been up for less than half of the last 5m.'
+            description: "{{ $value | humanizePercentage }} of Alertmanager instances within the {{$labels.job}} cluster have been up for less than half of the last 5m."
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/alertmanager/alertmanagerclusterdown
             summary: Half or more of the Alertmanager instances within the same cluster are down.
           expr: |-
@@ -117,7 +115,7 @@ spec:
             severity: critical
         - alert: AlertmanagerClusterCrashlooping
           annotations:
-            description: '{{ $value | humanizePercentage }} of Alertmanager instances within the {{$labels.job}} cluster have restarted at least 5 times in the last 10m.'
+            description: "{{ $value | humanizePercentage }} of Alertmanager instances within the {{$labels.job}} cluster have restarted at least 5 times in the last 10m."
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/alertmanager/alertmanagerclustercrashlooping
             summary: Half or more of the Alertmanager instances within the same cluster are crashlooping.
           expr: |-
