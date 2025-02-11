@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
-    targetRevision: 94-add-app-plane-observability-stack
+    targetRevision: dev
     path: argocd/ctrl_plane/dev/manifests
     directory:
       recurse: true

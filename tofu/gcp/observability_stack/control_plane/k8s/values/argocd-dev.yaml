@@ -21,7 +21,7 @@ extraObjects:
       project: default
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
-        targetRevision: 94-add-app-plane-observability-stack
+        targetRevision: dev
         path: argocd/ctrl_plane/dev
       destination:
         server: https://kubernetes.default.svc
@@ -36,7 +36,7 @@ extraObjects:
       project: default
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
-        targetRevision: 94-add-app-plane-observability-stack
+        targetRevision: dev
         path: argocd/app_plane
       destination:
         server: https://kubernetes.default.svc

@@ -19,7 +19,7 @@ spec:
       source:
         path: observability/grafana
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
-        targetRevision: 94-add-app-plane-observability-stack
+        targetRevision: dev
         kustomize:
           patches:
             # remove vmauth dashboard
