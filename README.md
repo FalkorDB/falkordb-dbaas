@@ -15,7 +15,7 @@ This repository contains OpenTofu templates to deploy FalkorDB on cloud.
 
 Scripts to help work with this repository
 
-1.  add_cluster.sh: Add a new application plane cluster to ArgoCD.
+1. add_cluster.sh: Add a new application plane cluster to ArgoCD.
 2. tofu_init.sh: Initialize OpenTofu working directory.
 3. tofu_upgrade.sh: Upgrade OpenTofu dependency.
 4. tofu_new_workspace.sh: Create workspace for deployment.
