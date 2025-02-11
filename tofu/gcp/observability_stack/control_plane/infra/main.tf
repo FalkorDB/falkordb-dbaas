@@ -171,10 +171,11 @@ resource "google_container_node_pool" "public" {
 
 # Storage bucket for metrics
 resource "google_storage_bucket" "metrics_bucket" {
-  name          = "falkordb-observability-metrics"
-  location      = var.region
-  project       = var.project_id
-  force_destroy = true
+  name                     = "falkordb-observability-metrics"
+  location                 = var.region
+  project                  = var.project_id
+  force_destroy            = true
+  public_access_prevention = "enforced"
 
   lifecycle_rule {
     action {
