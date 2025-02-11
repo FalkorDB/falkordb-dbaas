@@ -73,7 +73,3 @@ spec:
                       number: 3000
                 path: /
                 pathType: Prefix
-      tls:
-        - hosts:
-            - grafana.observability.dev.internal.falkordb.cloud
-          secretName: core-cert
