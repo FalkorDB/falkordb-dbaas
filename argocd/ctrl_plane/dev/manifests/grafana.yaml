@@ -33,6 +33,13 @@ spec:
             - name: grafana
               readinessProbe:
                 failureThreshold: 3
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "2"
+                  memory: "2Gi"
               securityContext:
                 allowPrivilegeEscalation: false
                 capabilities:
