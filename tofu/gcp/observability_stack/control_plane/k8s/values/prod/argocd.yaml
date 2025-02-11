@@ -21,8 +21,8 @@ extraObjects:
       project: default
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
-        targetRevision: dev
-        path: argocd/ctrl_plane/dev
+        targetRevision: main
+        path: argocd/ctrl_plane/prod
       destination:
         server: https://kubernetes.default.svc
       syncPolicy:
@@ -36,8 +36,8 @@ extraObjects:
       project: default
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
-        targetRevision: dev
-        path: argocd/app_plane
+        targetRevision: main
+        path: argocd/app_plane/prod
       destination:
         server: https://kubernetes.default.svc
       syncPolicy:
