@@ -7,7 +7,7 @@ describe('K8sRepository', () => {
     const logger = pino();
     const k8sRepo = new K8sRepository({ logger });
     try {
-      const instanceInfo = await k8sRepo.getFalkorDBInfo('c-hcjx5tis6bc', 'us-central1', 'instance-y9up7yqzz', true);
+      const instanceInfo = await k8sRepo.getFalkorDBInfo('gcp', 'c-hcjx5tis6bc', 'us-central1', 'instance-y9up7yqzz', true);
       console.log(instanceInfo);
 
       expect(instanceInfo.rdb_bgsave_in_progress).toBeDefined();

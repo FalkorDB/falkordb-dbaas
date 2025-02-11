@@ -4,7 +4,9 @@ import * as k8s from '@kubernetes/client-node';
 import { v1 as googleContainerV1 } from '@google-cloud/container';
 import assert = require('assert');
 import * as stream from 'stream';
-
+import { STSClient, AssumeRoleWithWebIdentityCommand } from '@aws-sdk/client-sts';
+import { EKSClient, DescribeClusterCommand } from '@aws-sdk/client-eks';
+import axios from 'axios';
 // Create the Cluster Manager Client
 const client = new googleContainerV1.ClusterManagerClient();
 
@@ -17,18 +19,80 @@ export class K8sRepository {
     const accessToken = await client.auth.getAccessToken();
 
     const [response] = await client.getCluster({
-      name: `projects/${projectId}/locations/${region}/clusters/${clusterId}`,
+      name: `projects/${projectId}/locations/${region}/clusters/c-${clusterId.replace('-', '')}`,
     });
     // the following are the parameters added when a new k8s context is created
     return {
-      endpoint: response.endpoint,
+      endpoint: `https://${response.endpoint}`,
       certificateAuthority: response.masterAuth.clusterCaCertificate,
       accessToken: accessToken,
     };
   }
 
-  private async _getK8sConfig(clusterId: string, region: string): Promise<k8s.KubeConfig> {
-    const k8sCredentials = await this._getGKECredentials(clusterId, region);
+  private async _getEKSCredentials(clusterId: string, region: string) {
+    // get ID token from default GCP SA
+    const targetAudience = process.env.AWS_TARGET_AUDIENCE;
+
+    const res = await axios.get(
+      'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=' +
+        targetAudience,
+      {
+        headers: {
+          'Metadata-Flavor': 'Google',
+        },
+      },
+    );
+
+    const idToken = res.data;
+
+    const sts = new STSClient({ region });
+
+    const { Credentials } = await sts.send(
+      new AssumeRoleWithWebIdentityCommand({
+        RoleArn: process.env.AWS_ROLE_ARN,
+        RoleSessionName: 'free-tier-shutdown',
+        WebIdentityToken: idToken,
+      }),
+    );
+
+    const eks = new EKSClient({
+      credentials: {
+        accessKeyId: Credentials?.AccessKeyId,
+        secretAccessKey: Credentials?.SecretAccessKey,
+        sessionToken: Credentials?.SessionToken,
+      },
+      region,
+    });
+
+    const { cluster } = await eks.send(new DescribeClusterCommand({ name: clusterId }));
+
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const EKSToken = require('aws-eks-token');
+    EKSToken.config = {
+      accessKeyId: Credentials?.AccessKeyId,
+      secretAccessKey: Credentials?.SecretAccessKey,
+      sessionToken: Credentials?.SessionToken,
+      region,
+    };
+
+    const token = await EKSToken.renew(clusterId);
+
+    return {
+      endpoint: cluster.endpoint,
+      certificateAuthority: cluster.certificateAuthority.data,
+      accessToken: token,
+    };
+  }
+
+  private async _getK8sConfig(
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+  ): Promise<k8s.KubeConfig> {
+    const k8sCredentials =
+      cloudProvider === 'gcp'
+        ? await this._getGKECredentials(clusterId, region)
+        : await this._getEKSCredentials(clusterId, region);
 
     const kubeConfig = new k8s.KubeConfig();
     kubeConfig.loadFromOptions({
@@ -36,13 +100,13 @@ export class K8sRepository {
         {
           name: clusterId,
           caData: k8sCredentials.certificateAuthority,
-          server: `https://${k8sCredentials.endpoint}`,
+          server: k8sCredentials.endpoint,
         },
       ],
       users: [
         {
           name: clusterId,
-          authProvider: 'gcp',
+          authProvider: cloudProvider === 'gcp' ? cloudProvider : undefined,
           token: k8sCredentials.accessToken,
         },
       ],
@@ -175,6 +239,7 @@ export class K8sRepository {
   }
 
   async getFalkorDBLastQueryTime(
+    cloudProvider: 'gcp' | 'aws',
     clusterId: string,
     region: string,
     instanceId: string,
@@ -182,7 +247,7 @@ export class K8sRepository {
   ): Promise<number> {
     this._options.logger.info({ clusterId, region, instanceId }, 'Getting FalkorDB last query time');
 
-    const kubeConfig = await this._getK8sConfig(clusterId, region);
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
 
     const password = await this._getDeploymentPassword(kubeConfig, instanceId);
 
@@ -190,7 +255,7 @@ export class K8sRepository {
 
     if (!graphs.length) {
       this._options.logger.info({ clusterId, region, instanceId }, 'No graphs found');
-      return await this.getFalkorDBInfo(clusterId, region, instanceId, hasTLS).then(
+      return await this.getFalkorDBInfo(cloudProvider, clusterId, region, instanceId, hasTLS).then(
         (info) => info.rdb_last_save_time * 1000,
       );
     }
@@ -211,6 +276,7 @@ export class K8sRepository {
   }
 
   async getFalkorDBInfo(
+    cloudProvider: 'gcp' | 'aws',
     clusterId: string,
     region: string,
     instanceId: string,
@@ -218,7 +284,7 @@ export class K8sRepository {
   ): Promise<FalkorDBInfoObjectSchemaType> {
     this._options.logger.info({ clusterId, region, instanceId }, 'Getting FalkorDB info');
 
-    const kubeConfig = await this._getK8sConfig(clusterId, region);
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
 
     const password = await this._getDeploymentPassword(kubeConfig, instanceId);
 
