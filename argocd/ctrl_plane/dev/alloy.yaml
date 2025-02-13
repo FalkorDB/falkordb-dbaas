@@ -135,7 +135,7 @@ spec:
                   }
 
                   discovery.relabel "set_instance_pod_name" {
-                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+                    targets = discovery.kubernetes.pods.targets
 
                     rule {
                       source_labels = ["__meta_kubernetes_pod_name"]
