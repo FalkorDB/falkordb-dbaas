@@ -144,7 +144,7 @@ spec:
                     bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
                     targets           = discovery.kubernetes.pods.targets
                     scrape_interval   = "60s"
-                    forward_to        = [discovery.relabel.set_instance_pod_name.receiver]
+                    forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
                     job_name = "pods"
                   }
