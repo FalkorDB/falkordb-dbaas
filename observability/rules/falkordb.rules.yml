@@ -94,7 +94,7 @@ spec:
   - name: falkordb.rules.replication
     rules:
       - alert: FalkorDBReplicationBroken
-        expr: (delta(redis_connected_slaves[1m]) < 0) and on(namespace) (redis_instance_info{redis_mode="replication"} > 0)
+        expr: ((delta(redis_connected_slaves[1m]) < 0) and on(namespace) redis_instance_info{redis_mode="replication"}) > 0
         for: 5m
         labels:
           severity: critical
@@ -105,7 +105,7 @@ spec:
   - name: falkordb.rules.cluster
     rules:
       - alert: FalkorDBClusterFlapping
-        expr: (changes(redis_connected_slaves[1m]) > 1 and on(namespace) (redis_instance_info{redis_mode="cluster"} > 0)
+        expr: ((changes(redis_connected_slaves[1m]) > 1) and on(namespace) redis_instance_info{redis_mode="cluster"} > 0)
         for: 2m
         labels:
           severity: critical
