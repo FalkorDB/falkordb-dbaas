@@ -15,7 +15,7 @@ spec:
             description: '{{ printf "%.4g" $value }}% of the {{ $labels.job }}/{{ $labels.service }} targets in {{ $labels.namespace }} namespace are down.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/general/targetdown
             summary: One or more targets are unreachable.
-          expr: 100 * (count(up{namespace!~"instance-.*"} == 0) BY (job,namespace,service,cluster) / count(up{namespace!~"instance-.*"}) BY (job,namespace,service,cluster)) > 10
+          expr: 100 * (count(up{namespace!~"instance-.*", job="pods"} == 0) BY (job,namespace,service,cluster,instance) / count(up{namespace!~"instance-.*", job="pods"}) BY (job,namespace,service,cluster,instance)) > 10
           for: 10m
           labels:
             severity: warning
