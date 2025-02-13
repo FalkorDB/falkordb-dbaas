@@ -1,9 +1,0 @@
-groups:
-  - name: kube-prometheus-general.rules
-    rules:
-      - expr: count without(instance, pod, node) (up == 1)
-        labels: {}
-        record: count:up1
-      - expr: count without(instance, pod, node) (up == 0)
-        labels: {}
-        record: count:up0
