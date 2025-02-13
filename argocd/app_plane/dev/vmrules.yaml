@@ -20,8 +20,6 @@ spec:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: dev
         path: observability/rules
-        directory:
-          recurse: true
       destination:
         server: "{{.server}}"
         namespace: observability
