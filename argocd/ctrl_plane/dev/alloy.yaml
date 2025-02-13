@@ -129,9 +129,20 @@ spec:
                     bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
                     targets           = discovery.kubernetes.pods.targets
                     scrape_interval   = "60s"
-                    forward_to        = [prometheus.relabel.set_instance_pod_name.receiver]
+                    forward_to        = [discovery.relabel.set_instance_pod_name.receiver]
 
                     job_name = "pods"
+                  }
+
+                  discovery.relabel "set_instance_pod_name" {
+                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+
+                    rule {
+                      source_labels = ["__meta_kubernetes_pod_name"]
+                      regex = "(.*)"
+                      target_label = "instance"
+                      action        = "replace"
+                    }
                   }
 
                   prometheus.scrape "cadvisor" {
@@ -241,16 +252,6 @@ spec:
                     forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
                     job_name = "vm-auth"
-                  }
-
-                  prometheus.relabel "set_instance_pod_name" {
-                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
-
-                    rule {
-                      source_labels = ["__meta_kubernetes_pod_name"]
-                      regex = "(.*)"
-                      target_label = "instance"
-                    }
                   }
 
                   prometheus.relabel "kube_state_metrics" {
