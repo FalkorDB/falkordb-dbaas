@@ -71,6 +71,10 @@ spec:
 
                   discovery.kubernetes "pods" {
                     role = "pod"
+
+                    attach_metadata {
+                      node = true
+                    }
                   }
 
                   discovery.kubernetes "nodes" {
