@@ -118,7 +118,7 @@ spec:
                     forward_to = [prometheus.relabel.kube_state_metrics.receiver]
                   }
 
-                  discovery.relabel "set_instance_pod_name" {
+                  discovery.relabel "pods" {
                     targets = discovery.kubernetes.pods.targets
 
                     rule {
