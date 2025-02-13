@@ -13,16 +13,16 @@ spec:
         labels:
           severity: critical
         annotations:
-          summary: FalkorDB down (instance {{ $labels.instance }})
+          summary: FalkorDB down (instance {{ $labels.namespace }})
           description: "FalkorDB instance is down\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
       - alert: FalkorDBMissingMaster
-        expr: (count(redis_instance_info{role="master"}) by (namespace) or vector(0)) < 1
+        expr: absent(redis_instance_info) == 0 and count(redis_instance_info{role="master"}) by (namespace) < 1
         for: 5m
         labels:
           severity: critical
         annotations:
-          summary: FalkorDB missing master (instance {{ $labels.instance }})
+          summary: FalkorDB missing master (instance {{ $labels.namespace }})
           description: "FalkorDB has no node marked as master.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
       - alert: FalkorDBTooManyMasters
@@ -31,7 +31,7 @@ spec:
         labels:
           severity: critical
         annotations:
-          summary: FalkorDB too many masters (instance {{ $labels.instance }})
+          summary: FalkorDB too many masters (instance {{ $labels.namespace }})
           description: "FalkorDB has too many nodes marked as master.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
       - alert: FalkorDBMissingBackup
@@ -40,7 +40,7 @@ spec:
         labels:
           severity: critical
         annotations:
-          summary: FalkorDB missing backup (instance {{ $labels.instance }})
+          summary: FalkorDB missing backup (instance {{ $labels.namespace }})
           description: "FalkorDB has not been backuped for 24 hours\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
       - alert: FalkorDBOutOfSystemMemory
@@ -49,7 +49,7 @@ spec:
         labels:
           severity: warning
         annotations:
-          summary: FalkorDB out of system memory (instance {{ $labels.instance }})
+          summary: FalkorDB out of system memory (instance {{ $labels.namespace }})
           description: "FalkorDB is running out of system memory (> 90%)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
       - alert: FalkorDBOutOfConfiguredMaxmemory
@@ -58,7 +58,7 @@ spec:
         labels:
           severity: warning
         annotations:
-          summary: FalkorDB out of configured maxmemory (instance {{ $labels.instance }})
+          summary: FalkorDB out of configured maxmemory (instance {{ $labels.namespace }})
           description: "FalkorDB is running out of configured maxmemory (> 90%)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
       - alert: FalkorDBTooManyConnections
@@ -67,7 +67,7 @@ spec:
         labels:
           severity: warning
         annotations:
-          summary: FalkorDB too many connections (instance {{ $labels.instance }})
+          summary: FalkorDB too many connections (instance {{ $labels.namespace }})
           description: "FalkorDB is running out of connections (> 90% used)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
       - alert: FalkorDBRejectedConnections
@@ -76,7 +76,7 @@ spec:
         labels:
           severity: critical
         annotations:
-          summary: FalkorDB rejected connections (instance {{ $labels.instance }})
+          summary: FalkorDB rejected connections (instance {{ $labels.namespace }})
           description: "Some connections to FalkorDB has been rejected\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
       - alert: FalkorDBAOFFileSizeExceeded
@@ -99,7 +99,7 @@ spec:
         labels:
           severity: critical
         annotations:
-          summary: FalkorDB replication broken (instance {{ $labels.instance }})
+          summary: FalkorDB replication broken (instance {{ $labels.namespace }})
           description: "FalkorDB instance lost a slave\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
   - name: falkordb.rules.cluster
@@ -110,5 +110,5 @@ spec:
         labels:
           severity: critical
         annotations:
-          summary: FalkorDB cluster flapping (instance {{ $labels.instance }})
+          summary: FalkorDB cluster flapping (instance {{ $labels.namespace }})
           description: "Changes have been detected in FalkorDB replica connection. This can occur when replica nodes lose connection to the master and reconnect (a.k.a flapping).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
