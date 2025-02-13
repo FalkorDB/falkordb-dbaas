@@ -69,14 +69,6 @@ spec:
                     namespaces = ["observability"]
                   }
 
-                  discovery.kubernetes "pods" {
-                    role = "pod"
-
-                    attach_metadata {
-                      node = true
-                    }
-                  }
-
                   discovery.kubernetes "nodes" {
                     role = "node"
                   }
@@ -131,33 +123,6 @@ spec:
                   ksm.scrape "metrics" {
                     targets    = ksm.kubernetes.targets.output
                     forward_to = [prometheus.relabel.kube_state_metrics.receiver]
-                  }
-
-                  discovery.relabel "pods" {
-                    targets = discovery.kubernetes.pods.targets
-
-                    rule {
-                      source_labels = ["__meta_kubernetes_pod_name"]
-                      regex = "(.*)"
-                      target_label = "instance"
-                      action        = "replace"
-                    }
-                  }
-
-                  prometheus.scrape "pods" {
-                    scheme = "https"
-
-                    tls_config {
-                      server_name          = "kubernetes"
-                      ca_file              = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-                      insecure_skip_verify = false
-                    }
-                    bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-                    targets           = discovery.relabel.pods.output
-                    scrape_interval   = "60s"
-                    forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
-
-                    job_name = "pods"
                   }
 
                   prometheus.scrape "cadvisor" {
