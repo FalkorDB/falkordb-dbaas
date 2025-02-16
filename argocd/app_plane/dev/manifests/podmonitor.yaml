@@ -8,7 +8,7 @@ spec:
     - bearerTokenSecret:
         key: ""
         name: ""
-      port: metrics
+      targetPort: "9121"
   selector:
     matchLabels:
       app.kubernetes.io/managed-by: omnistrate
