@@ -202,8 +202,7 @@ spec:
 
                     rule {
                       action = "labeldrop"
-                      target_label = "instance"
-                      regex = ".*"
+                      regex = "^instance$"
                     }
 
                     rule {
