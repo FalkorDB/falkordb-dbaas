@@ -14,7 +14,7 @@ spec:
         fullnameOverride: node-exporter
   destination:
     server: https://kubernetes.default.svc
-    namespace: node-exporter
+    namespace: observability
   syncPolicy:
     syncOptions:
       - CreateNamespace=true

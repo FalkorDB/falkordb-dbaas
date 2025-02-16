@@ -25,7 +25,7 @@ spec:
             fullnameOverride: node-exporter
       destination:
         server: "{{.server}}"
-        namespace: node-exporter
+        namespace: observability
       syncPolicy:
         syncOptions:
           - CreateNamespace=true
