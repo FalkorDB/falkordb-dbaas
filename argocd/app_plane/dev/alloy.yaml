@@ -193,6 +193,12 @@ spec:
                       action            = "keep"
                       regex             = "service"
                     }
+
+                    rule {
+                      action = "replace"
+                      target_label = "namespace"
+                      source_labels = ["__meta_kubernetes_namespace"]
+                    }
                   }
 
                   prometheus.scrape "falkordb_pods" {
