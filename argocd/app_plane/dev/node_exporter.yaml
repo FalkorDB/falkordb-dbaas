@@ -23,8 +23,6 @@ spec:
         helm:
           valuesObject:
             fullnameOverride: node-exporter
-            nodeSelector:
-              node_pool: observability
       destination:
         server: "{{.server}}"
         namespace: observability
