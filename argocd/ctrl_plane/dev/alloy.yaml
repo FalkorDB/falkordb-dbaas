@@ -144,7 +144,7 @@ spec:
                     targets = discovery.kubernetes.nodes.targets
 
                     rule {
-                      source_labels = ["__meta_kubernetes_node_name"]
+                      source_labels = ["__meta_kubernetes_node_address_InternalIP"]
                       regex = "(.+)"
                       replacement = "$1:9100" // Node Exporter port
                       target_label = "__address__"
