@@ -69,16 +69,44 @@ resource "github_repository_deploy_key" "this" {
   read_only  = "false"
 }
 
+resource "kubernetes_namespace" "argocd" {
+  metadata {
+    name = "argocd"
+  }
+}
+
+resource "random_id" "argocd" {
+  byte_length = 16
+}
+
+resource "kubernetes_secret" "argocd-secret" {
+  metadata {
+    name      = "argocd-secret"
+    namespace = kubernetes_namespace.argocd.metadata.0.name
+  }
+
+  data = {
+    "admin.password"      = base64encode(var.argocd_admin_password)
+    "admin.passwordMtime" = base64encode(timestamp())
+    "server.secretkey"    = base64encode(random_id.argocd.hex)
+    "dex.google.clientId" : base64encode(var.dex_google_client_id)
+    "dex.google.clientSecret" : base64encode(var.dex_google_client_secret)
+  }
+
+  depends_on = [kubernetes_namespace.argocd]
+}
+
 resource "helm_release" "argocd" {
   name = "argocd"
 
-  repository       = "https://argoproj.github.io/argo-helm"
-  chart            = "argo-cd"
-  namespace        = "argocd"
-  create_namespace = true
-  version          = "7.7.15"
+  repository = "https://argoproj.github.io/argo-helm"
+  chart      = "argo-cd"
+  namespace  = "argocd"
+  version    = "7.7.15"
 
   values = var.environment == "development" ? [file("./values/dev/argocd.yaml")] : [file("./values/prod/argocd.yaml")]
+
+  depends_on = [kubernetes_secret.argocd-secret]
 }
 
 resource "kubernetes_namespace" "observability" {

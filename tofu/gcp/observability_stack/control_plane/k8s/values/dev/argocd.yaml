@@ -22,6 +22,21 @@ cmp:
     falkordb-dbaas:
       url: https://github.com/FalkorDB/falkordb-dbaas
 
+configs:
+  secret:
+    createSecret: false
+  cm:
+    url: https://argocd.observability.dev.internal.falkordb.cloud
+    dex.config: |
+      connectors:
+      - config:
+          issuer: https://accounts.google.com
+          clientID: $dex.google.clientId
+          clientSecret: $dex.google.clientSecret
+        type: oidc
+        id: google
+        name: Google
+
 extraObjects:
   - apiVersion: argoproj.io/v1alpha1
     kind: Application
