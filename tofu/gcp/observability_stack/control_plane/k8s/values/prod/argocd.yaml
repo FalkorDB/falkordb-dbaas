@@ -3,9 +3,17 @@ global:
     tag: "v2.13.3"
   logging:
     format: json
+  domain: "argocd.observability.internal.falkordb.cloud"
 server:
   extraArgs:
     - --insecure
+  ingress:
+    enabled: true
+    controller: gke
+    tls: true
+    gke:
+      managedCertificate:
+        create: true
 
 cmp:
   repositories:
