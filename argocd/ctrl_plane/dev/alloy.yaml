@@ -48,12 +48,6 @@ spec:
                     pull_frequency = "15m"
                   }
 
-                  prometheus.operator.podmonitors "pods" {
-                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
-
-                    namespaces = ["observability"]
-                  }
-
                   discovery.kubernetes "nodes" {
                     role = "node"
                   }

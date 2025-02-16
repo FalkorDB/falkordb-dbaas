@@ -63,14 +63,17 @@ spec:
                     pull_frequency = "15m"
                   }
 
-                  prometheus.operator.podmonitors "pods" {
-                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
-
-                    namespaces = ["observability"]
-                  }
-
                   discovery.kubernetes "nodes" {
                     role = "node"
+                  }
+
+                  discovery.kubernetes "falkordb_pods" {
+                    role = "pod"
+
+                    selectors {
+                      role = "pod"
+                      label = "app.kubernetes.io/managed-by=omnistrate"
+                    }
                   }
 
                   ksm.kubernetes "targets" { }
@@ -173,6 +176,26 @@ spec:
                     forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
                     job_name = "node-exporter"
+                  }
+
+                  discovery.relabel "falkordb_pods" {
+                    targets = discovery.kubernetes.falkordb_pods.targets
+
+                    # replace address with pod IP
+                    rule {
+                      source_labels = ["__meta_kubernetes_pod_ip"]
+                      regex         = "(.+)"
+                      replacement   = "$1:9121"
+                      target_label  = "__address__"
+                    }
+                  }
+
+                  prometheus.scrape "falkordb_pods" {
+                    targets           = discovery.relabel.falkordb_pods.output
+                    scrape_interval   = "60s"
+                    forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
+
+                    job_name = "falkordb-pods"
                   }
 
                   prometheus.scrape "alloy" {
