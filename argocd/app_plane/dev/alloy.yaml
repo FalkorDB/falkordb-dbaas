@@ -181,7 +181,6 @@ spec:
                   discovery.relabel "falkordb_pods" {
                     targets = discovery.kubernetes.falkordb_pods.targets
 
-                    # replace address with pod IP
                     rule {
                       source_labels = ["__meta_kubernetes_pod_ip"]
                       regex         = "(.+)"
