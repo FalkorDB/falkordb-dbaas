@@ -187,6 +187,12 @@ spec:
                       replacement   = "$1:9121"
                       target_label  = "__address__"
                     }
+
+                    rule {
+                      source_labels     = ["__meta_kubernetes_pod_container_name"]
+                      action            = "keep"
+                      regex             = "service"
+                    }
                   }
 
                   prometheus.scrape "falkordb_pods" {
