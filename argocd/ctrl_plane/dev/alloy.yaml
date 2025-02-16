@@ -60,8 +60,6 @@ spec:
 
                   ksm.kubernetes "targets" { }
 
-                  prometheus.exporter.unix "node_exporter" { }
-
                   prometheus.exporter.self "alloy" { }
 
                   discovery.relabel "metrics_cadvisor" {
@@ -142,6 +140,18 @@ spec:
                     job_name = "kubernetes-kubelet"
                   }
 
+                  discovery.relabel "node_exporter" {
+                    targets = discovery.kubernetes.nodes.targets
+
+                    rule {
+                      source_labels = ["__meta_kubernetes_node_name"]
+                      regex = "(.+)"
+                      replacement = "$1:9100" // Node Exporter port
+                      target_label = "__address__"
+                    }
+
+                  }
+
                   prometheus.scrape "node_exporter" {
                     scheme = "https"
 
@@ -151,7 +161,7 @@ spec:
                       insecure_skip_verify = false
                     }
                     bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-                    targets           = prometheus.exporter.unix.node_exporter.targets
+                    targets           = discovery.relabel.node_exporter.output
                     scrape_interval   = "60s"
                     forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
