@@ -199,6 +199,17 @@ spec:
                       target_label = "namespace"
                       source_labels = ["__meta_kubernetes_namespace"]
                     }
+
+                    rule {
+                      action = "labeldrop"
+                      target_label = "instance"
+                    }
+
+                    rule {
+                      source_labels = ["__meta_kubernetes_pod_name"]
+                      regex         = "(.+)"
+                      target_label  = "pod"
+                    }
                   }
 
                   prometheus.scrape "falkordb_pods" {
