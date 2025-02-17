@@ -49,6 +49,17 @@ spec:
                 runAsUser: 1001
                 runAsGroup: 1001
                 runAsNonRoot: true
+              env:
+                - name: GF_AUTH_GOOGLE_CLIENT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: grafana-google-credentials
+                      key: client-id
+                - name: GF_AUTH_GOOGLE_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: grafana-google-credentials
+                      key: client-secret
           volumes:
             - name: grafana-data
               persistentVolumeClaim:
@@ -58,6 +69,15 @@ spec:
       mode: "console"
     auth:
       disable_login_form: "false"
+    auth.google:
+      enabled: "true"
+      scopes: https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email
+      auth_url: https://accounts.google.com/o/oauth2/auth
+      token_url: https://accounts.google.com/o/oauth2/token
+      allowed_domains: "falkordb.cloud"
+      allow_sign_up: "false"
+    server:
+      root_url: "https://grafana.observability.dev.internal.falkordb.cloud"
   ingress:
     metadata:
       annotations:
