@@ -23,3 +23,7 @@ output "argocd_ip" {
 output "grafana_ip" {
   value = module.grafana_ip.addresses[0]
 }
+
+output "vmauth_ip" {
+  value = module.vmauth_ip.addresses[0]
+}

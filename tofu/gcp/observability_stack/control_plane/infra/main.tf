@@ -222,3 +222,18 @@ module "grafana_ip" {
 
   names = ["grafana-ip"]
 }
+
+# VMAuth IP address
+module "vmauth_ip" {
+  source  = "terraform-google-modules/address/google"
+  version = "~> 3.2"
+
+  project_id = var.project_id
+  region     = var.region
+
+  global       = true
+  address_type = "EXTERNAL"
+  network_tier = "PREMIUM"
+
+  names = ["vmauth-ip"]
+}
