@@ -49,6 +49,9 @@ variable "dex_google_client_id" {
 variable "dex_google_client_secret" {
   type = string
 }
+variable "dex_google_admin_email" {
+  type = string
+}
 
 variable "argocd_groups_sa_json" {
   type = string

@@ -94,6 +94,7 @@ resource "kubernetes_secret" "argocd-secret" {
     "server.secretkey"    = random_id.argocd.hex
     "dex.google.clientId" : var.dex_google_client_id
     "dex.google.clientSecret" : var.dex_google_client_secret
+    "dex.google.adminEmail" : var.dex_google_admin_email
   }
 
   lifecycle {

@@ -34,7 +34,7 @@ configs:
           clientID: $dex.google.clientId
           clientSecret: $dex.google.clientSecret
           serviceAccountFilePath: /tmp/oidc/googleAuth.json
-          adminEmail: guy.korland@falkordb.com
+          adminEmail: $dex.google.adminEmail
           fetchTransitiveGroupMembership: True
         type: oidc
         id: google
