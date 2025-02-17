@@ -14,6 +14,8 @@ server:
     gke:
       managedCertificate:
         create: true
+    annotations:
+      kubernetes.io/ingress.global-static-ip-name: "argocd-ip"
 
 cmp:
   repositories:

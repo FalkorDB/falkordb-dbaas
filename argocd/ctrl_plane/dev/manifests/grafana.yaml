@@ -63,6 +63,7 @@ spec:
       annotations:
         networking.gke.io/managed-certificates: grafana-managed-cert
         kubernetes.io/ingress.class: "gce" # Updated annotation
+        kubernetes.io/ingress.global-static-ip-name: "grafana-ip"
     spec:
       rules:
         - host: grafana.observability.dev.internal.falkordb.cloud

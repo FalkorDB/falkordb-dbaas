@@ -15,3 +15,11 @@ output "cluster_name" {
 output "metrics_bucket" {
   value = google_storage_bucket.metrics_bucket.name
 }
+
+output "argocd_ip" {
+  value = module.argocd_ip.addresses[0]
+}
+
+output "grafana_ip" {
+  value = module.grafana_ip.addresses[0]
+}
