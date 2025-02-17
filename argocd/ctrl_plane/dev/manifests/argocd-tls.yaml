@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: argocd-server-tls
-  namespace: observability
+  namespace: argocd
 type: kubernetes.io/tls
 stringData:
   tls.key: ""
