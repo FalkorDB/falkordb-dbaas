@@ -89,12 +89,12 @@ resource "kubernetes_secret" "argocd-secret" {
   }
 
   data = {
-    "admin.password"      = var.argocd_admin_password
-    "admin.passwordMtime" = timestamp()
-    "server.secretkey"    = random_id.argocd.hex
-    "dex.google.clientId" : var.dex_google_client_id
-    "dex.google.clientSecret" : var.dex_google_client_secret
-    "dex.google.adminEmail" : var.dex_google_admin_email
+    "admin.password"          = var.argocd_admin_password
+    "admin.passwordMtime"     = timestamp()
+    "server.secretkey"        = random_id.argocd.hex
+    "dex.google.clientId"     = var.dex_google_client_id
+    "dex.google.clientSecret" = var.dex_google_client_secret
+    "dex.google.adminEmail"   = var.dex_google_admin_email
   }
 
   lifecycle {
@@ -111,7 +111,7 @@ resource "kubernetes_secret" "argocd-google-groups" {
   }
 
   data = {
-    "googleAuth.json" : var.argocd_groups_sa_json
+    "googleAuth.json" = var.argocd_groups_sa_json
   }
 
   depends_on = [kubernetes_namespace.argocd]
