@@ -237,3 +237,15 @@ module "vmauth_ip" {
 
   names = ["vmauth-ip"]
 }
+
+# ArgoCD DWD Service account
+resource "google_service_account" "argocd_dwd" {
+  account_id   = "argocd-dwd"
+  display_name = "ArgoCD DWD Service Account"
+  project      = var.project_id
+}
+
+# SA Json Key
+resource "google_service_account_key" "argocd_dwd_key" {
+  service_account_id = google_service_account.argocd_dwd.name
+}

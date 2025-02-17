@@ -72,6 +72,9 @@ resource "github_repository_deploy_key" "this" {
 resource "kubernetes_namespace" "argocd" {
   metadata {
     name = "argocd"
+    labels = {
+      name = "argocd"
+    }
   }
 }
 
@@ -86,11 +89,28 @@ resource "kubernetes_secret" "argocd-secret" {
   }
 
   data = {
-    "admin.password"      = base64encode(var.argocd_admin_password)
-    "admin.passwordMtime" = base64encode(timestamp())
-    "server.secretkey"    = base64encode(random_id.argocd.hex)
-    "dex.google.clientId" : base64encode(var.dex_google_client_id)
-    "dex.google.clientSecret" : base64encode(var.dex_google_client_secret)
+    "admin.password"      = var.argocd_admin_password
+    "admin.passwordMtime" = timestamp()
+    "server.secretkey"    = random_id.argocd.hex
+    "dex.google.clientId" : var.dex_google_client_id
+    "dex.google.clientSecret" : var.dex_google_client_secret
+  }
+
+  lifecycle {
+    ignore_changes = [data]
+  }
+
+  depends_on = [kubernetes_namespace.argocd]
+}
+
+resource "kubernetes_secret" "argocd-google-groups" {
+  metadata {
+    name      = "argocd-google-groups"
+    namespace = kubernetes_namespace.argocd.metadata.0.name
+  }
+
+  data = {
+    "googleAuth.json" : var.argocd_groups_sa_json
   }
 
   depends_on = [kubernetes_namespace.argocd]

@@ -33,9 +33,29 @@ configs:
           issuer: https://accounts.google.com
           clientID: $dex.google.clientId
           clientSecret: $dex.google.clientSecret
+          serviceAccountFilePath: /tmp/oidc/googleAuth.json
+          adminEmail: guy.korland@falkordb.com
+          fetchTransitiveGroupMembership: True
         type: oidc
         id: google
         name: Google
+  rbac:
+    create: true
+    policy.default: role:readonly
+    policy.csv: |
+      g, devops@falkordb.com, role:org-admin
+    scopes: "[groups, email]"
+
+dex:
+  volumeMounts:
+    - mountPath: /tmp/oidc
+      name: google-json
+      readOnly: true
+  volumes:
+    - name: google-json
+      secret:
+        defaultMode: 420
+        secretName: argocd-google-groups
 
 extraObjects:
   - apiVersion: argoproj.io/v1alpha1

@@ -27,3 +27,12 @@ output "grafana_ip" {
 output "vmauth_ip" {
   value = module.vmauth_ip.addresses[0]
 }
+
+output "argocd_dwd" {
+  value = google_service_account.argocd_dwd.email
+}
+
+output "argocd_dwd_sa_key" {
+  value     = google_service_account_key.argocd_dwd_key.private_key
+  sensitive = true
+}
