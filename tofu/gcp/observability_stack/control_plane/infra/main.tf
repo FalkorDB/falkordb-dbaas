@@ -3,6 +3,11 @@ provider "google" {
   region  = var.region
 }
 
+resource "google_project_service" "cloud_identity" {
+  project = var.project_id
+  service = "cloudidentity.googleapis.com"
+}
+
 module "vpc" {
   source  = "terraform-google-modules/network/google"
   version = "~> 9.0"

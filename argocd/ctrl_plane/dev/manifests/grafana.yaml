@@ -78,6 +78,9 @@ spec:
       allow_sign_up: "false"
       role_attribute_path: email=="david.zimberknopf@falkordb.com" && 'Admin' || contains(groups[*], 'devops@falkordb.com') && 'Admin' || 'Viewer'
       skip_org_role_sync: "false"
+      hosted_domain: "falkordb.com"
+      allow_assign_grafana_admin: "true"
+      allowed_groups: "devops@falkordb.com"
     server:
       root_url: "https://grafana.observability.dev.internal.falkordb.cloud"
   ingress:
