@@ -18,7 +18,7 @@ spec:
       project: default
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
-        targetRevision: dev
+        targetRevision: prod
         path: argocd/kustomize/vmuser
         kustomize:
           patches:
