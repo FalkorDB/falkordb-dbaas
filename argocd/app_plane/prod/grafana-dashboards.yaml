@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: grafana-dashboards
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: app-plane
+  template:
+    metadata:
+      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-grafana-dashb'
+    spec:
+      project: default
+      source:
+        path: observability/grafana
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: main
+        kustomize:
+          patches:
+            # remove vmauth dashboard
+            - target:
+                kind: GrafanaDashboard
+                name: vmauth
+              patch: |-
+                $patch: delete
+                apiVersion: grafana.integreatly.org/v1beta1
+                kind: GrafanaDashboard
+                metadata:
+                  name: vmauth
+      destination:
+        server: "{{.server}}"
+        namespace: observability
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+        automated:
+          prune: true
+          selfHeal: true
