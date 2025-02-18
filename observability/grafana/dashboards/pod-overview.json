@@ -29,6 +29,86 @@
   "links": [],
   "panels": [
     {
+      "type": "timeseries",
+      "title": "Pod Restart Alerts",
+      "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total[5m])) >= 2",
+          "legendFormat": "Pod Restart Warning",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total[10m])) >= 5",
+          "legendFormat": "Pod Restart Critical",
+          "refId": "B"
+        },
+        {
+          "expr": "sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total[1h])) >= 10",
+          "legendFormat": "Pod Restart Info",
+          "refId": "C"
+        },
+        {
+          "expr": "sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=~\"instance-.*\"}[5m])) >= 2",
+          "legendFormat": "Pod Restart Instance",
+          "refId": "D"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 2,
+                "color": "orange"
+              },
+              {
+                "value": 5,
+                "color": "red"
+              },
+              {
+                "value": 10,
+                "color": "purple"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "auto",
+        "fill": 1,
+        "lineWidth": 2,
+        "pointSize": 5,
+        "stack": false
+      },
+      "timeFrom": null,
+      "timeShift": null,
+      "grid": {
+        "leftMax": 1,
+        "rightMax": 1,
+        "thresholds": []
+      },
+      "legend": {
+        "show": true,
+        "values": false,
+        "min": false,
+        "max": false,
+        "current": true,
+        "avg": false
+      },
+      "refresh": "5s"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
