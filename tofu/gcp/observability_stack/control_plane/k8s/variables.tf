@@ -37,3 +37,22 @@ variable "environment" {
     error_message = "Environment must be either 'production' or 'development'"
   }
 }
+
+variable "argocd_admin_password" {
+  type = string
+}
+
+variable "dex_google_client_id" {
+  type = string
+}
+
+variable "dex_google_client_secret" {
+  type = string
+}
+variable "dex_google_admin_email" {
+  type = string
+}
+
+variable "argocd_groups_sa_json" {
+  type = string
+}

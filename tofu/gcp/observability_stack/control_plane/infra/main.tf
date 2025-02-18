@@ -57,21 +57,6 @@ resource "google_compute_router_nat" "nat" {
 
 }
 
-# Reserve premium IP Address for the Grafana Load Balancer
-module "lb_ip" {
-  source  = "terraform-google-modules/address/google"
-  version = "~> 3.2"
-
-  project_id = var.project_id
-  region     = var.region
-
-  global       = false
-  address_type = "EXTERNAL"
-  network_tier = "PREMIUM"
-
-  names = ["falkordb-grafana-ip"]
-}
-
 resource "random_string" "cluster_suffix" {
   keepers = {
     project_id = var.project_id
@@ -205,4 +190,62 @@ resource "google_storage_bucket" "metrics_bucket" {
       age = 365
     }
   }
+}
+
+
+# ArgoCD IP Address
+module "argocd_ip" {
+  source  = "terraform-google-modules/address/google"
+  version = "~> 3.2"
+
+  project_id = var.project_id
+  region     = var.region
+
+  global       = true
+  address_type = "EXTERNAL"
+  network_tier = "PREMIUM"
+
+  names = ["argocd-ip"]
+}
+
+# Grafana IP address
+module "grafana_ip" {
+  source  = "terraform-google-modules/address/google"
+  version = "~> 3.2"
+
+  project_id = var.project_id
+  region     = var.region
+
+  global       = true
+  address_type = "EXTERNAL"
+  network_tier = "PREMIUM"
+
+  names = ["grafana-ip"]
+}
+
+# VMAuth IP address
+module "vmauth_ip" {
+  source  = "terraform-google-modules/address/google"
+  version = "~> 3.2"
+
+  project_id = var.project_id
+  region     = var.region
+
+  global       = true
+  address_type = "EXTERNAL"
+  network_tier = "PREMIUM"
+
+  names = ["vmauth-ip"]
+}
+
+# ArgoCD DWD Service account
+resource "google_service_account" "argocd_dwd" {
+  account_id   = "argocd-dwd"
+  display_name = "ArgoCD DWD Service Account"
+  project      = var.project_id
+}
+
+# SA Json Key
+resource "google_service_account_key" "argocd_dwd_key" {
+  service_account_id = google_service_account.argocd_dwd.name
 }

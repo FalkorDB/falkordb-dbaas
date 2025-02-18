@@ -26,3 +26,8 @@ spec:
         - /data
       kind: Secret
       name: vmauth-tls
+    - jsonPointers:
+        - /stringData
+        - /data
+      kind: Secret
+      name: argocd-server-tls
