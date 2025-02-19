@@ -21,14 +21,14 @@ jobs:
           TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
           TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
         run: |
-          apt-get update && apt-get install -y jq gettext
+          sudo apt-get update && sudo apt-get install -y jq gettext
           echo matrix=$(jq -r tojson .github/workflows/plan-jobs.json | envsubst) >> $GITHUB_OUTPUT
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
   plan:
     needs: load-matrix
-    name: Plan Tofu Stack ${{ matrix }}
+    name: Plan Tofu Stack ${{ matrix.stack.name }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
