@@ -7,6 +7,10 @@ on:
       - main
       - dev
 
+permissions:
+  contents: "read"
+  id-token: "write"
+
 jobs:
   load-matrix:
     runs-on: ubuntu-latest
@@ -61,6 +65,17 @@ jobs:
             value=$(jq -r --arg key "$key" '.[$key]' <<< '${{ toJson(matrix.stack.variables) }}')
             echo "$key=${!value}" >> $GITHUB_ENV
           done
+
+      - name: Setup GCloud
+        uses: "google-github-actions/auth@v2.1.2"
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: "google-github-actions/setup-gcloud@v2.1.0"
+        with:
+          version: ">= 363.0.0"
 
       - name: Setup Tofu workspace
         run: |
