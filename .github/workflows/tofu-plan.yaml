@@ -30,7 +30,7 @@ jobs:
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
       - name: print
         run: |
-          echo "${{ fromJson(steps.set-matrix.outputs.matrix) }}"
+          echo "${{ toJson(fromJson(steps.set-matrix.outputs.matrix)) }}"
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
