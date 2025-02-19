@@ -7,34 +7,24 @@ on:
       - main
       - dev
 
-env:
-  TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
-  TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
-  TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
-
 jobs:
   load-matrix:
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Read plan-jobs.json
         id: set-matrix
-        run: |
-          echo matrix="$(jq -r tojson .github/workflows/plan-jobs.json)" >> $GITHUB_OUTPUT
-      - name: print matrix
         env:
-          TF_CTRL_PLANE_DEV_PROJECT_ID: 'a'
-          TF_CTRL_PLANE_DEV_REGION: 'a'
-          TF_CTRL_PLANE_IP_RANGE_SUBNET: 'a'
-          TF_CTRL_PLANE_IP_RANGE_PODS: 'a'
-          TF_CTRL_PLANE_IP_RANGE_SERVICES: a
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+          TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
+          TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
         run: |
-          echo "${{ toJson(steps.set-matrix.outputs.matrix) }}"
-    
+          apt-get update && apt-get install -y jq gettext
+          echo matrix=$(jq -r tojson .github/workflows/plan-jobs.json | envsubst) >> $GITHUB_OUTPUT
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix || '["a"]' }}
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
 
   plan:
     needs: load-matrix

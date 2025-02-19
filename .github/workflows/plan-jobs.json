@@ -3,12 +3,12 @@
     "name": "observability_stack_ctrl_plane_infra",
     "path": "tofu/gcp/observability_stack/control_plane/infra",
     "variables": {
-      "TF_VAR_project_id": "${{ github.env.TF_CTRL_PLANE_DEV_PROJECT_ID }}",
-      "TF_VAR_region": "${{ github.env.TF_CTRL_PLANE_DEV_REGION }}",
-      "TF_VAR_ip_range_subnet": "${{ github.env.TF_CTRL_PLANE_IP_RANGE_SUBNET }}",
-      "TF_VAR_ip_range_pods": "${{ github.env.TF_CTRL_PLANE_IP_RANGE_PODS }}",
-      "TF_VAR_ip_range_services": "${{ github.env.TF_CTRL_PLANE_IP_RANGE_SERVICES }}"
+      "TF_VAR_project_id": "$TF_CTRL_PLANE_DEV_PROJECT_ID",
+      "TF_VAR_region": "$TF_CTRL_PLANE_DEV_REGION",
+      "TF_VAR_ip_range_subnet": "$TF_CTRL_PLANE_IP_RANGE_SUBNET",
+      "TF_VAR_ip_range_pods": "$TF_CTRL_PLANE_IP_RANGE_PODS",
+      "TF_VAR_ip_range_services": "$TF_CTRL_PLANE_IP_RANGE_SERVICES"
     },
-    "init_param": "-backend-config=bucket=${{ github.env.TF_STATE_BUCKET }}" 
+    "init_param": "-backend-config=bucket=$TF_STATE_BUCKET" 
   }
 ]
