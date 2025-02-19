@@ -20,9 +20,14 @@ jobs:
           TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
           TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
           TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
+          TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ env.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
+          TF_CTRL_PLANE_IP_RANGE_PODS: 'a'
         run: |
+          env
           sudo apt-get update && sudo apt-get install -y jq gettext
-          echo matrix=$(jq -r tojson .github/workflows/plan-jobs.json | envsubst) >> $GITHUB_OUTPUT
+          matrix=$(jq -r tojson .github/workflows/plan-jobs.json | envsubst)
+          echo $matrix
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
@@ -30,6 +35,7 @@ jobs:
     needs: load-matrix
     name: Plan Tofu Stack ${{ matrix.stack.name }}
     runs-on: ubuntu-latest
+    environment: dev
     strategy:
       matrix:
         stack: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
