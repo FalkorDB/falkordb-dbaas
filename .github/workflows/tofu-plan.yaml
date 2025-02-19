@@ -23,7 +23,10 @@ jobs:
 
       - name: Read plan-jobs.json
         id: set-matrix
-        run: echo "matrix=$(jq -c . .github/workflows/plan-jobs.json)" >> $GITHUB_ENV
+        run: |
+          matrix=$(jq -c . .github/workflows/plan-jobs.json)" 
+          echo $matrix
+          echo $matrix >> $GITHUB_ENV
 
   plan:
     needs: load-matrix
