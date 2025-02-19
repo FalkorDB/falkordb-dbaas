@@ -9,7 +9,7 @@ on:
       - 'observability/tests/**'
   push:
     branches:
-      - 119-create-unit-tests-for-the-alert-rules
+      - "*"
   workflow_dispatch:
 
 concurrency:
