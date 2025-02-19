@@ -1,0 +1,66 @@
+name: Tofu Plan
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - dev
+
+env:
+  TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+  TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
+  TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
+
+jobs:
+  load-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read plan-jobs.json
+        id: set-matrix
+        run: echo "matrix=$(jq -c . .github/workflows/plan-jobs.json)" >> $GITHUB_ENV
+
+  plan:
+    needs: load-matrix
+    name: Plan Tofu Stacks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install OpenTofu
+        run: |
+          curl -L https://github.com/opentofu/opentofu/releases/latest/download/tofu-linux-amd64 -o /usr/local/bin/tofu
+          chmod +x /usr/local/bin/tofu
+          tofu --version
+
+      - name: Setup environment variables
+        run: |
+          for key in $(jq -r 'keys[]' <<< '${{ toJson(matrix.stack.variables) }}'); do
+            value=$(jq -r --arg key "$key" '.[$key]' <<< '${{ toJson(matrix.stack.variables) }}')
+            echo "$key=$value" >> $GITHUB_ENV
+          done
+
+      - name: Setup Tofu workspace
+        run: |
+          cd ${{ matrix.stack.path }}
+          tofu init ${{ matrix.stack.init_param }}
+
+      - name: Plan Tofu
+        run: |
+          cd ${{ matrix.stack.path }}
+          tofu plan -out=tfplan
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tofu-plan-${{ matrix.stack.name }}
+          path: ${{ matrix.stack.path }}/tfplan
