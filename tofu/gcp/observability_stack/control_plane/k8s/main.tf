@@ -75,7 +75,7 @@ resource "kubernetes_secret" "argocd-secret" {
   }
 
   lifecycle {
-    ignore_changes = [data["admin.passwordMtime"]]
+    ignore_changes = [data]
   }
 
   depends_on = [kubernetes_namespace.argocd]
