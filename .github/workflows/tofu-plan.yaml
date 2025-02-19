@@ -33,7 +33,7 @@ jobs:
         run: |
           echo "${{ toJson(fromJson(steps.set-matrix.outputs.matrix)) }}"
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix: ${{ steps.set-matrix.outputs.matrix || '[]' }}
 
   plan:
     needs: load-matrix
