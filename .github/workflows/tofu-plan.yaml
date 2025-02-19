@@ -20,8 +20,9 @@ jobs:
           TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
           TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
           TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
-          TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ env.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
-          TF_CTRL_PLANE_IP_RANGE_PODS: 'a'
+          TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ github.env.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
+          TF_CTRL_PLANE_IP_RANGE_PODS: ${{ github.env.TF_CTRL_PLANE_IP_RANGE_PODS }}
+          TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ github.env.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
         run: |
           env
           sudo apt-get update && sudo apt-get install -y jq gettext
