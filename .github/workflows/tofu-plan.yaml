@@ -59,7 +59,7 @@ jobs:
         run: |
           for key in $(jq -r 'keys[]' <<< '${{ toJson(matrix.stack.variables) }}'); do
             value=$(jq -r --arg key "$key" '.[$key]' <<< '${{ toJson(matrix.stack.variables) }}')
-            echo "$key=$value" >> $GITHUB_ENV
+            echo "$key=${!value}" >> $GITHUB_ENV
           done
 
       - name: Setup Tofu workspace
