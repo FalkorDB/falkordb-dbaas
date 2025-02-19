@@ -9,7 +9,7 @@ on:
       - 'observability/tests/**'
   push:
     branches:
-      - "*"
+      - '*'
   workflow_dispatch:
 
 concurrency:
