@@ -24,11 +24,12 @@ jobs:
           TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
           TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
         run: |
-          env
           sudo apt-get update && sudo apt-get install -y jq gettext
-          matrix=$(jq -r tojson .github/workflows/plan-jobs.json | envsubst)
-          echo $matrix
-          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          delimiter="$(openssl rand -hex 8)"
+          JSON="$(cat .github/workflows/plan-jobs.json | envsubst)"
+          echo "matrix<<${delimiter}" >> "${GITHUB_OUTPUT}"
+          echo "$JSON" >> "${GITHUB_OUTPUT}"
+          echo "${delimiter}" >> "${GITHUB_OUTPUT}"
       - name: print
         run: |
           echo "${{ toJson(fromJson(steps.set-matrix.outputs.matrix)) }}"
