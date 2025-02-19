@@ -1,0 +1,136 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: victoriametrics
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: app-plane
+  template:
+    metadata:
+      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-victoriametrics'
+    spec:
+      project: default
+      source:
+        chart: victoria-metrics-k8s-stack
+        repoURL: https://victoriametrics.github.io/helm-charts
+        targetRevision: 0.35.1
+        helm:
+          releaseName: vm
+          valuesObject:
+            defaultDashboards:
+              enabled: true
+              annotations:
+                argocd.argoproj.io/sync-options: ServerSideApply=true
+              dashboards:
+                victoriametrics-vmagent:
+                  enabled: false
+              grafanaOperator:
+                enabled: true
+                spec:
+                  allowCrossNamespaceImport: false
+                  instanceSelector:
+                    matchLabels:
+                      dashboards: grafana
+            defaultRules:
+              create: false
+            victoria-metrics-operator:
+              operator:
+                disable_prometheus_converter: true
+              nodeSelector:
+                node_pool: observability
+            vmsingle:
+              spec:
+                retentionPeriod: 3d
+                logFormat: json
+                nodeSelector:
+                  node_pool: observability
+            storage:
+              resources:
+                requests:
+                  storage: 50Gi
+            alertmanager:
+              spec:
+                nodeSelector:
+                  node_pool: observability
+                secrets:
+                  - pagerduty-service-key
+                configSecret: null
+              config:
+                global:
+                  resolve_timeout: 5m
+                route:
+                  group_by: ["alertname", "namespace", "pod"]
+                  group_wait: 30s
+                  group_interval: 5m
+                  repeat_interval: 12h
+                  receiver: "pagerduty"
+                  routes:
+                    - match:
+                        alertname: Watchdog
+                      receiver: "blackhole"
+                    - receiver: "pagerduty"
+                receivers:
+                  - name: blackhole
+                  - name: "pagerduty"
+                    pagerduty_configs:
+                      - service_key_file: "/etc/vm/secrets/pagerduty-service-key/api-key"
+                        url: https://events.pagerduty.com/generic/2010-04-15/create_event.json
+                        send_resolved: true
+            vmalert:
+              spec:
+                nodeSelector:
+                  node_pool: observability
+            vmagent:
+              enabled: false
+            grafana:
+              enabled: false
+            prometheus-node-exporter:
+              enabled: false
+            kube-state-metrics:
+              enabled: false
+            kubeScheduler:
+              enabled: false
+            kubelet:
+              enabled: false
+            kubeApiServer:
+              enabled: false
+            kubeControllerManager:
+              enabled: false
+            kubeDns:
+              enabled: false
+            coreDns:
+              enabled: false
+            kubeEtcd:
+              enabled: false
+            enabled:
+              enabled: false
+            kubeProxy:
+              enabled: false
+      destination:
+        server: "{{.server}}"
+        namespace: observability
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - RespectIgnoreDifferences=true
+        automated:
+          prune: true
+          selfHeal: true
+      ignoreDifferences:
+        - group: ""
+          kind: Secret
+          name: victoria-metrics-k8s-stack-vm-validation
+          namespace: observability
+          jsonPointers:
+            - /data
+        - group: admissionregistration.k8s.io
+          kind: ValidatingWebhookConfiguration
+          name: victoria-metrics-k8s-stack-vm-admission
+          jqPathExpressions:
+            - ".webhooks[]?.clientConfig.caBundle"

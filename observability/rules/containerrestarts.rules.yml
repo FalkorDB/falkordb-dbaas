@@ -1,0 +1,70 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  namespace: observability
+  name: k8s.rules.container_restarts
+spec:
+  groups:
+    - name: k8s.rules.container_restarts
+      params: {}
+      rules:
+        # Recording Rule: Precomputes container restarts per namespace and pod for 5m
+        - record: namespace_pod:container_restarts_total
+          expr: |
+            sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total[5m]))
+
+        # Warning Alert: Pods restarting 2+ times in 5 minutes
+        - alert: PodRestartWarning
+          expr: |
+            namespace_pod:container_restarts_total >= 2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod Restart Warning"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted at least 2 times in the last 5 minutes."
+
+        # Critical Alert: Pods restarting 5+ times in 10 minutes (potential crash-loop)
+        - record: namespace_pod:container_restarts_10m
+          expr: |
+            sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total[10m]))
+
+        - alert: PodRestartCritical
+          expr: |
+            namespace_pod:container_restarts_10m >= 5
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod Restart Critical"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 5 or more times in the last 10 minutes. Possible crash-loop detected."
+
+        # Informational Alert: High restart count in the last hour
+        - record: namespace_pod:container_restarts_1h
+          expr: |
+            sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total[1h]))
+
+        - alert: PodRestartInfo
+          expr: |
+            namespace_pod:container_restarts_1h >= 10
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            summary: "Pod Restart Info"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 10 or more times in the last hour. Investigate potential instability."
+
+        # Specific Alert: Namespaces starting with "instance-*"
+        - record: namespace_pod:container_restarts_instance_5m
+          expr: |
+            sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=~"instance-.*"}[5m]))
+
+        - alert: PodRestartInstanceWarning
+          expr: |
+            namespace_pod:container_restarts_instance_5m >= 2
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Instance Namespace Pod Restart"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 2 or more times in 5 minutes."

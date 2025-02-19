@@ -29,6 +29,90 @@
   "links": [],
   "panels": [
     {
+      "type": "timeseries",
+      "title": "Pod Restart Alerts",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "expr": "namespace_pod:container_restarts_total >= 2",
+          "legendFormat": "Pod Restart Warning",
+          "refId": "A"
+        },
+        {
+          "expr": "namespace_pod:container_restarts_10m >= 5",
+          "legendFormat": "Pod Restart Critical",
+          "refId": "B"
+        },
+        {
+          "expr": "namespace_pod:container_restarts_1h >= 10",
+          "legendFormat": "Pod Restart Info",
+          "refId": "C"
+        },
+        {
+          "expr": "namespace_pod:container_restarts_instance_5m >= 2",
+          "legendFormat": "Pod Restart Instance",
+          "refId": "D"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": 0,
+                "color": "green"
+              },
+              {
+                "value": 2,
+                "color": "orange"
+              },
+              {
+                "value": 5,
+                "color": "red"
+              },
+              {
+                "value": 10,
+                "color": "purple"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "auto",
+        "fill": 1,
+        "lineWidth": 2,
+        "pointSize": 5,
+        "stack": false
+      },
+      "timeFrom": null,
+      "timeShift": null,
+      "grid": {
+        "thresholds": []
+      },
+      "legend": {
+        "show": true,
+        "values": false,
+        "min": false,
+        "max": false,
+        "current": true,
+        "avg": false
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "refresh": "5s"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,

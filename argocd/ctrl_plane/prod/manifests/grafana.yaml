@@ -71,19 +71,13 @@ spec:
       disable_login_form: "false"
     auth.google:
       enabled: "true"
-      scopes: openid email profile https://www.googleapis.com/auth/cloud-identity.groups.readonly
+      scopes: https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email
       auth_url: https://accounts.google.com/o/oauth2/auth
       token_url: https://accounts.google.com/o/oauth2/token
       allowed_domains: "falkordb.cloud"
       allow_sign_up: "false"
-      role_attribute_path: email=="david.zimberknopf@falkordb.com" && 'Admin' || contains(groups[*], 'devops@falkordb.com') && 'Admin' || 'Viewer'
-      skip_org_role_sync: "false"
-      hosted_domain: "falkordb.com"
-      allow_assign_grafana_admin: "true"
-      allowed_groups: "devops@falkordb.com"
-      auto_login: "false"
     server:
-      root_url: "https://grafana.observability.dev.internal.falkordb.cloud"
+      root_url: "https://grafana.observability.internal.falkordb.cloud"
   ingress:
     metadata:
       annotations:
@@ -92,7 +86,7 @@ spec:
         kubernetes.io/ingress.global-static-ip-name: "grafana-ip"
     spec:
       rules:
-        - host: grafana.observability.dev.internal.falkordb.cloud
+        - host: grafana.observability.internal.falkordb.cloud
           http:
             paths:
               - backend:
