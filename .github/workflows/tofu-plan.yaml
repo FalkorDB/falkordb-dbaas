@@ -27,6 +27,7 @@ jobs:
           matrix=$(jq -c . .github/workflows/plan-jobs.json)
           echo $matrix
           echo "matrix=$matrix" >> $GITHUB_ENV
+          echo $GITHUB_ENV
 
   plan:
     needs: load-matrix
