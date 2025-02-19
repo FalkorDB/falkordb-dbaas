@@ -28,6 +28,9 @@ jobs:
           matrix=$(jq -r tojson .github/workflows/plan-jobs.json | envsubst)
           echo $matrix
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
+      - name: print
+        run: |
+          echo "${{ fromJson(steps.set-matrix.outputs.matrix) }}"
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
