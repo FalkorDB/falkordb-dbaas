@@ -1,0 +1,94 @@
+name: Tofu Plan
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - dev
+
+permissions:
+  contents: "read"
+  id-token: "write"
+
+jobs:
+  load-matrix:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Read plan-jobs.json
+        id: set-matrix
+        env:
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+          TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
+          TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
+          TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
+          TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
+          TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq gettext
+          delimiter="$(openssl rand -hex 8)"
+          JSON="$(cat .github/workflows/plan-jobs.json)"
+          echo "matrix<<${delimiter}" >> "${GITHUB_OUTPUT}"
+          echo "$JSON" >> "${GITHUB_OUTPUT}"
+          echo "${delimiter}" >> "${GITHUB_OUTPUT}"
+      - name: print
+        run: |
+          echo "${{ toJson(fromJson(steps.set-matrix.outputs.matrix)) }}"
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix || '[]' }}
+
+  plan:
+    needs: load-matrix
+    name: Plan Tofu Stack ${{ matrix.stack.name }}
+    runs-on: ubuntu-latest
+    environment: dev
+    strategy:
+      matrix:
+        stack: ${{fromJson(needs.load-matrix.outputs.matrix)}}
+    steps:
+      - name: print matrix values
+        run: |
+          echo "${{ toJson(matrix) }}"
+          echo "${{ toJson(fromJson(needs.load-matrix.outputs.matrix)) }}"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install OpenTofu
+        uses: opentofu/setup-opentofu@v1
+
+      - name: Setup environment variables
+        run: |
+          for key in $(jq -r 'keys[]' <<< '${{ toJson(matrix.stack.variables) }}'); do
+            value=$(jq -r --arg key "$key" '.[$key]' <<< '${{ toJson(matrix.stack.variables) }}')
+            echo "$key=${!value}" >> $GITHUB_ENV
+          done
+
+      - name: Setup GCloud
+        uses: "google-github-actions/auth@v2.1.2"
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: "google-github-actions/setup-gcloud@v2.1.0"
+        with:
+          version: ">= 363.0.0"
+
+      - name: Setup Tofu workspace
+        run: |
+          cd ${{ matrix.stack.path }}
+          tofu init ${{ matrix.stack.init_param }}
+
+      - name: Plan Tofu
+        run: |
+          cd ${{ matrix.stack.path }}
+          tofu plan -out=tfplan
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tofu-plan-${{ matrix.stack.name }}
+          path: ${{ matrix.stack.path }}/tfplan
