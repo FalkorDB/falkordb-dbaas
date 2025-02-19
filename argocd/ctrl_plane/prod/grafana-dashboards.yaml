@@ -8,7 +8,7 @@ spec:
   source:
     path: observability/grafana
     repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
-    targetRevision: prod
+    targetRevision: main
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
