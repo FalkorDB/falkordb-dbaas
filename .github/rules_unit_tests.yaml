@@ -1,0 +1,69 @@
+name: Run unit tests for Alerts
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    branches:
+      - dev
+    paths:
+      - 'observability/rules/**'
+      - 'observability/tests/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # define-matrix:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     rule_files: ${{ steps.rule_files.outputs.rule_files }}
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+
+  #     - name: generate rule files
+  #       id: rule_files
+  #       run: |
+  #         rule_files=$(find ./observability/rules -type f -exec basename {} \; | jq -R -s -c 'split("\n")[:-1]')
+  #         echo "rule_files=$rule_files"  >> "$GITHUB_OUTPUTS"
+
+  unit_tests:
+    runs-on: ubuntu-latest
+    # needs: define-matrix
+    # strategy:
+    #   matrix:
+    #     files: ${{ fromJSON(needs.define-matrix.outputs.rule_files) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: install PromTool
+        run: |
+          curl -O https://github.com/prometheus/prometheus/releases/download/v3.2.0/prometheus-3.2.0.linux-amd64.tar.gz
+          tar -xvf prometheus-3.2.0.linux-amd64.tar.gz
+          sudo cp prometheus-3.2.0.linux-amd64/promtool /usr/local/bin/
+          chmod +x /usr/local/bin/promtool
+          rm -rf prometheus*
+
+      - name: Format rule files with yq and remove unwanted fields for testing
+        run: |
+          for rule in "$(find ./observability/rules -type f -exec basename {} \;)" ; do
+            yq eval -i 'del(.apiVersion, .kind, .metadata, .spec.groups[].params)' ./observability/rules/$rule
+          done
+
+      - name: Run syntax check on rule files
+        run: |
+          for rule in "$(find ./observability/rules -type f -exec basename {} \;)" ; do
+            /usr/local/bin/promtool check rules ./observability/rules/$rule
+          done
+      
+      - name: Run unit tests
+        run: |
+          for test in "$(find ./observability/tests -type f -exec basename {} \;)" ; do
+            /usr/local/bin/promtool test rules ./observability/tests/$test
+          done
+
+      
+          
