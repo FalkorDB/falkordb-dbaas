@@ -125,9 +125,17 @@ module "gke" {
       max_count          = 20
       image_type         = "COS_CONTAINERD"
       initial_node_count = 0
-
     },
   ]
+  node_pools_resource_labels = {
+    "default-pool" = {
+      "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
+    "observability-resources" = {
+      "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
+
+  }
 }
 
 # Public node pool
@@ -146,6 +154,9 @@ resource "google_container_node_pool" "public" {
     labels = {
       "node_pool" = "public-pool"
     }
+    resource_labels = {
+      "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
   }
 
   autoscaling {
@@ -158,45 +169,6 @@ resource "google_container_node_pool" "public" {
   }
 
 }
-
-# Storage bucket for metrics
-resource "google_storage_bucket" "metrics_bucket" {
-  name                     = "falkordb-observability-metrics"
-  location                 = var.region
-  project                  = var.project_id
-  force_destroy            = true
-  public_access_prevention = "enforced"
-
-  lifecycle_rule {
-    action {
-      type          = "SetStorageClass"
-      storage_class = "NEARLINE"
-    }
-    condition {
-      age = 30
-    }
-  }
-
-  lifecycle_rule {
-    action {
-      type          = "SetStorageClass"
-      storage_class = "COLDLINE"
-    }
-    condition {
-      age = 90
-    }
-  }
-
-  lifecycle_rule {
-    action {
-      type = "Delete"
-    }
-    condition {
-      age = 365
-    }
-  }
-}
-
 
 # ArgoCD IP Address
 module "argocd_ip" {
