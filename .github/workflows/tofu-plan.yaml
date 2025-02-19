@@ -15,8 +15,6 @@ env:
 jobs:
   load-matrix:
     runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,27 +22,37 @@ jobs:
       - name: Read plan-jobs.json
         id: set-matrix
         run: |
-          matrix=$(jq -c . .github/workflows/plan-jobs.json)
-          echo $matrix
-          echo "matrix=$matrix" >> $GITHUB_ENV
-          echo $GITHUB_ENV
+          echo matrix="$(jq -r tojson .github/workflows/plan-jobs.json)" >> $GITHUB_OUTPUT
+      - name: print matrix
+        env:
+          TF_CTRL_PLANE_DEV_PROJECT_ID: 'a'
+          TF_CTRL_PLANE_DEV_REGION: 'a'
+          TF_CTRL_PLANE_IP_RANGE_SUBNET: 'a'
+          TF_CTRL_PLANE_IP_RANGE_PODS: 'a'
+          TF_CTRL_PLANE_IP_RANGE_SERVICES: a
+        run: |
+          echo "${{ toJson(steps.set-matrix.outputs.matrix) }}"
+    
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix || '["a"]' }}
 
   plan:
     needs: load-matrix
-    name: Plan Tofu Stacks
+    name: Plan Tofu Stack ${{ matrix }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
         stack: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
     steps:
+      - name: print matrix values
+        run: |
+          echo "${{ toJson(matrix) }}"
+          echo "${{ toJson(fromJson(needs.load-matrix.outputs.matrix)) }}"
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install OpenTofu
-        run: |
-          curl -L https://github.com/opentofu/opentofu/releases/latest/download/tofu-linux-amd64 -o /usr/local/bin/tofu
-          chmod +x /usr/local/bin/tofu
-          tofu --version
+        uses: opentofu/setup-opentofu@v1
 
       - name: Setup environment variables
         run: |
