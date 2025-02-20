@@ -19,3 +19,4 @@ spec:
         - "/prometheus/api/v1/write"
         - "/api/v1/query"
         - "/api/v1/query_range"
+        - "/vmui.*"
