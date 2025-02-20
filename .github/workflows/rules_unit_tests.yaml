@@ -53,17 +53,14 @@ jobs:
       - name: Format rule files with yq and remove unwanted fields for testing
         run: |
             for file in $(ls observability/rules);do yq eval -i '.spec | del(.groups[].params)' ./observability/rules/$file ;done
+            
       - name: Run syntax check on rule files
         run: |
-          for file in "$(ls observability/rules)" ;do
-            /usr/local/bin/promtool check rules ./observability/rules/$file
-          done
+          for file in $(ls observability/rules);do /usr/local/bin/promtool check rules ./observability/rules/$file ;done
       
       - name: Run unit tests
         run: |
-          for test in "$(ls ./observability/tests)" ; do
-            /usr/local/bin/promtool test rules ./observability/tests/$test
-          done
+          for test in $(ls observability/tests);do /usr/local/bin/promtool test rules ./observability/tests/$test ;done
 
       
           
