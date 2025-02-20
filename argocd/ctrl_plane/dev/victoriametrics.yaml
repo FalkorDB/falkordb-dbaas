@@ -90,7 +90,10 @@ spec:
             userSelector: {}
             nodeSelector:
               node_pool: public-pool
-            unauthorizedUserAccessSpec: []
+            unauthorizedUserAccessSpec: 
+              - src_paths: ["/notfound"]
+                url_prefix:
+                  - https://vmauth.observability.dev.internal.falkordb.cloud
             ingress:
               annotations:
                 cert-manager.io/issuer: letsencrypt
