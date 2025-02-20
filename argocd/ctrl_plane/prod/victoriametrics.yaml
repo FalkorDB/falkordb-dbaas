@@ -91,7 +91,7 @@ spec:
             nodeSelector:
               node_pool: public-pool
             unauthorizedUserAccessSpec:
-              discover_backend_ips: false
+              discover_backend_ips: true
               url_map:
                 - src_paths: ["/notfound"]
                   url_prefix:
