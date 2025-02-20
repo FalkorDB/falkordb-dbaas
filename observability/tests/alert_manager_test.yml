@@ -1,0 +1,51 @@
+rule_files:
+  - "../rules/alertmanager.rules.yml"
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'alertmanager_config_last_reload_successful{job="vm-alertmanager",namespace="default"}'
+        values: '0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0'
+      - series: 'alertmanager_cluster_members{job="vm-alertmanager",namespace="default"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'
+      - series: 'alertmanager_notifications_failed_total{job="vm-alertmanager",namespace="default"}'
+        values: '0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0'
+      - series: 'alertmanager_notifications_total{job="vm-alertmanager",namespace="default"}'
+        values: '100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100 100'
+      - series: 'up{job="vm-alertmanager",namespace="default"}'
+        values: '1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'
+      - series: 'process_start_time_seconds{job="vm-alertmanager",namespace="default"}'
+        values: '0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0'
+    alert_rule_test:
+      - alertname: AlertmanagerFailedReload
+        eval_time: 10m
+        exp_alerts:
+          - exp_labels:
+              alertname: AlertmanagerFailedReload
+              job: vm-alertmanager
+              namespace: default
+              severity: critical
+            exp_annotations:
+              description: Configuration has failed to load for default/.
+              runbook_url: https://runbooks.prometheus-operator.dev/runbooks/alertmanager/alertmanagerfailedreload
+              summary: Reloading an Alertmanager configuration has failed.
+      - alertname: AlertmanagerMembersInconsistent
+        eval_time: 15m
+        exp_alerts: []
+      - alertname: AlertmanagerFailedToSendAlerts
+        eval_time: 5m
+        exp_alerts: []
+      - alertname: AlertmanagerClusterFailedToSendAlerts
+        eval_time: 5m
+        exp_alerts: []
+      - alertname: AlertmanagerConfigInconsistent
+        eval_time: 20m
+        exp_alerts: []
+      - alertname: AlertmanagerClusterDown
+        eval_time: 5m
+        exp_alerts: []
+      - alertname: AlertmanagerClusterCrashlooping
+        eval_time: 5m
+        exp_alerts: []
