@@ -90,11 +90,12 @@ spec:
             userSelector: {}
             nodeSelector:
               node_pool: public-pool
+            unauthorizedUserAccessSpec: []
             ingress:
               annotations:
                 cert-manager.io/issuer: letsencrypt
                 kubernetes.io/ingress.class: gce
-                kubernetes.io/ingress.allow-http: "false"
+                kubernetes.io/ingress.allow-http: "true"
                 kubernetes.io/ingress.global-static-ip-name: "vmauth-ip"
               tlsSecretName: vmauth-tls
               tlsHosts:
