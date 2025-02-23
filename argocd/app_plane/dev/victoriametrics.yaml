@@ -50,10 +50,17 @@ spec:
                 logFormat: json
                 nodeSelector:
                   node_pool: observability
-            storage:
-              resources:
-                requests:
-                  storage: 50Gi
+                resources:
+                  requests:
+                    memory: "1Gi"
+                    cpu: "1"
+                  limits:
+                    memory: "4Gi"
+                    cpu: "2"
+                storage:
+                  resources:
+                    requests:
+                      storage: 50Gi
             alertmanager:
               spec:
                 nodeSelector:

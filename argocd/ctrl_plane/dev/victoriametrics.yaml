@@ -40,6 +40,13 @@ spec:
             logFormat: json
             nodeSelector:
               node_pool: observability-resources
+            resources:
+              requests:
+                memory: "2Gi"
+                cpu: "1200m"
+              limits:
+                memory: "4Gi"
+                cpu: "2"
             storage:
               resources:
                 requests:
