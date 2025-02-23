@@ -13,40 +13,23 @@ spec:
           expr: |
             sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total[5m]))
 
-        # Warning Alert: Pods restarting 2+ times in 5 minutes
-        - alert: PodRestartWarning
-          expr: |
-            namespace_pod:container_restarts_total >= 2
-          for: 5m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Pod Restart Warning"
-            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted at least 2 times in the last 5 minutes."
-
         # Critical Alert: Pods restarting 5+ times in 10 minutes (potential crash-loop)
         - record: namespace_pod:container_restarts_10m
           expr: |
             sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total[10m]))
 
-        - alert: PodRestartCritical
-          expr: |
-            namespace_pod:container_restarts_10m >= 5
-          for: 5m
-          labels:
-            severity: critical
-          annotations:
-            summary: "Pod Restart Critical"
-            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 5 or more times in the last 10 minutes. Possible crash-loop detected."
-
-        # Informational Alert: High restart count in the last hour
         - record: namespace_pod:container_restarts_1h
           expr: |
             sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total[1h]))
 
+        - record: namespace_pod:container_restarts_24h
+          expr: |
+            sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total[24h]))
+
+        # Informational Alert: High restart count in the last hour
         - alert: PodRestartInfo
           expr: |
-            namespace_pod:container_restarts_1h >= 10
+            namespace_pod:container_restarts_1h >= 10 and max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff", job="kube-state-metrics"}[1h]) == 0
           for: 5m
           labels:
             severity: info
@@ -54,17 +37,34 @@ spec:
             summary: "Pod Restart Info"
             description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 10 or more times in the last hour. Investigate potential instability."
 
-        # Specific Alert: Namespaces starting with "instance-*"
-        - record: namespace_pod:container_restarts_instance_5m
+        # Warning Alert: Pods restarting 2+ times in 5 minutes
+        - alert: PodRestartWarning
           expr: |
-            sum by(namespace, pod) (increase(kube_pod_container_status_restarts_total{namespace=~"instance-.*"}[5m]))
+            namespace_pod:container_restarts_total >= 2 and max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff", job="kube-state-metrics"}[5m]) == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod Restart Warning"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted at least 2 times in the last 5 minutes."
 
-        - alert: PodRestartInstanceWarning
+        - alert: PodRestartCritical
           expr: |
-            namespace_pod:container_restarts_instance_5m >= 2
+            namespace_pod:container_restarts_10m >= 5 and max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff", job="kube-state-metrics"}[10m]) == 0
           for: 5m
           labels:
             severity: critical
           annotations:
-            summary: "Instance Namespace Pod Restart"
-            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 2 or more times in 5 minutes."
+            summary: "Pod Restart Critical"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 5 or more times in the last 10 minutes. Possible crash-loop detected."
+
+        - alert: PodRestartWarning24H
+          expr: |
+            namespace_pod:container_restarts_24h >= 5 and max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff", job="kube-state-metrics"}[24h]) == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod Restart Warning 24H"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 5 or more times in the last 24 hours. Investigate potential instability."
+
