@@ -90,11 +90,17 @@ spec:
             userSelector: {}
             nodeSelector:
               node_pool: public-pool
+            unauthorizedUserAccessSpec:
+              discover_backend_ips: true
+              url_map:
+                - src_paths: ["/notfound"]
+                  url_prefix:
+                    - https://vmauth.observability.internal.falkordb.cloud
             ingress:
               annotations:
                 cert-manager.io/issuer: letsencrypt
                 kubernetes.io/ingress.class: gce
-                kubernetes.io/ingress.allow-http: "false"
+                kubernetes.io/ingress.allow-http: "true"
                 kubernetes.io/ingress.global-static-ip-name: "vmauth-ip"
               tlsSecretName: vmauth-tls
               tlsHosts:
