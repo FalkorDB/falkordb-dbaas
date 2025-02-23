@@ -100,7 +100,7 @@ module "gke" {
   enable_private_nodes                 = true
   http_load_balancing                  = true
 
-  default_max_pods_per_node = 110
+  default_max_pods_per_node = 25
 
   monitoring_enabled_components = ["SYSTEM_COMPONENTS"]
 
