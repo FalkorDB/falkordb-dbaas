@@ -182,7 +182,6 @@ spec:
 
                     rule {
                       source_labels = ["__meta_kubernetes_node_label_k8s_io_cloud_provider_aws"]
-                      regex = "()"
                       target_label = "platform"
                       regex = "(.+)"
                       replacement = "eks"
