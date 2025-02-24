@@ -1,0 +1,43 @@
+rule_files:
+  - test.yml
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'redis_up{namespace="instance-abc123"}'
+        values: '0+0x10'
+      - series: 'redis_instance_info{namespace="instance-abc1234", role="master"} 0'
+        values: '0+0x100'
+      - series: 'redis_instance_info{namespace="instance-abc1234", role="master", redis_mode="replication"}'
+        values: '3+1x10'
+    
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: FalkorDBDown
+        exp_alerts:
+        - exp_labels:
+            severity: critical
+            namespace: "instance-abc123"
+          exp_annotations:
+            summary: "FalkorDB down (instance instance-abc123)"
+            description: "FalkorDB instance is down\n  VALUE = 0\n  LABELS = map[__name__:redis_up namespace:instance-abc123]"
+
+      - eval_time: 5m
+        alertname: FalkorDBMissingMaster
+        exp_alerts:
+        - exp_labels:
+            severity: critical
+            namespace: "instance-abc1234"
+          exp_annotations:
+            summary: "FalkorDB missing master (instance instance-abc1234)"
+            description: "FalkorDB has no node marked as master.\n  VALUE = 0\n  LABELS = map[__name__:redis_instance_info namespace:instance-abc1234 role:master]"
+
+      - eval_time: 2m
+        alertname: FalkorDBTooManyMasters
+        exp_alerts:
+        - exp_labels:
+            severity: critical
+            namespace: "instance-abc1234"
+          exp_annotations:
+            summary: "FalkorDB too many masters (instance instance-abc1234)"
+            description: "FalkorDB has too many nodes marked as master.\n  VALUE = 2\n  LABELS = 'map[__name__:redis_instance_info namespace:instance-abc1234 role:master]'"
