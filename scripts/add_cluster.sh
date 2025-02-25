@@ -18,10 +18,11 @@
 #    cluster_name: x
 #    node_role: x
 #    aws_profile: x
+#    region: x
+#    network_id: x
 
 # Require yq
-if ! command -v yq &> /dev/null
-then
+if ! command -v yq &>/dev/null; then
     echo "yq could not be found. Please install it before running this script."
     exit 1
 fi
@@ -53,7 +54,7 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
     APP_PLANE_CTX=$(echo "$cluster_json" | jq -r '.context')
 
     echo "Setting up observability stack for $CLUSTER..."
-    
+
     if [ "$PLATFORM" == "gcp" ]; then
         PROJECT=$(echo "$cluster_json" | jq -r '.project')
         if ! gcloud container node-pools list --cluster=$CLUSTER --region=$REGION --project=$PROJECT | grep -q "observability"; then
@@ -64,6 +65,7 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
                 --disk-size=50 \
                 --enable-autoscaling \
                 --max-nodes=10 \
+                --max-pods-per-node=25 \
                 --project=$PROJECT \
                 --node-labels=node_pool=observability
         fi
@@ -71,13 +73,17 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
     else
         export AWS_PAGER=""
         AWS_PROFILE=$(echo "$cluster_json" | jq -r '.aws_profile')
+        NETWORK_ID=$(echo "$cluster_json" | jq -r '.network_id')
         NODE_ROLE=$(echo "$cluster_json" | jq -r '.node_role')
 
         VPC_ID=$(aws ec2 describe-vpcs --region $REGION --profile $AWS_PROFILE --filters "Name=tag:Name,Values=omnistrate-vpc-$CLUSTER" | jq -r '.Vpcs[0].VpcId')
-        
-        if [[ -z "$VPC_ID" ]]; then
-            echo "VPC not found for $CLUSTER."
-            exit 1
+
+        if [[ -z "$VPC_ID" || "$VPC_ID" == "null" ]]; then
+            VPC_ID=$(aws ec2 describe-vpcs --region $REGION --profile $AWS_PROFILE --filters "Name=tag:Name,Values=omnistrate-vpc-$NETWORK_ID" | jq -r '.Vpcs[0].VpcId')
+            if [[ -z "$VPC_ID" || "$VPC_ID" == "null" ]]; then
+                echo "VPC not found for $NETWORK_ID."
+                exit 1
+            fi
         fi
 
         SUBNET_IDS=$(aws ec2 describe-subnets --region $REGION --profile $AWS_PROFILE --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag:Name,Values=${REGION}a,${REGION}b,${REGION}c" | jq -r '.Subnets[].SubnetId' | tr '\n' ' ')
@@ -86,7 +92,7 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
             echo "Subnet not found for $CLUSTER."
             exit 1
         fi
-        
+
         if ! aws eks list-nodegroups --cluster-name $CLUSTER --region $REGION --profile $AWS_PROFILE | grep -q "observability"; then
             command="aws eks create-nodegroup --cluster-name $CLUSTER --region $REGION --nodegroup-name observability --node-role $NODE_ROLE --subnets $SUBNET_IDS --instance-types m5.large --disk-size 50 --scaling-config minSize=1,maxSize=10,desiredSize=1 --labels node_pool=observability --profile $AWS_PROFILE --output text"
             echo "Running $command"
@@ -99,12 +105,12 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
     argocd login $ARGOCD_SERVER --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD
 
     # Create observability namespace
-    if ! kubectl get namespace observability &> /dev/null; then
+    if ! kubectl get namespace observability &>/dev/null; then
         kubectl create namespace observability
     fi
 
     # Create PagerDuty secret
-    if ! kubectl get secret pagerduty-service-key --namespace=observability &> /dev/null; then
+    if ! kubectl get secret pagerduty-service-key --namespace=observability &>/dev/null; then
         kubectl create secret generic pagerduty-service-key \
             --from-literal=api-key=$PAGERDUTY_API_KEY \
             --namespace=observability
@@ -117,14 +123,14 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
 
     # Wait for vmuser secret
     echo "Waiting for vmuser secret..."
-    while ! kubectl get secret $CLUSTER-vmuser -n observability --context $CTRL_PLANE_CTX &> /dev/null; do
+    while ! kubectl get secret $CLUSTER-vmuser -n observability --context $CTRL_PLANE_CTX &>/dev/null; do
         sleep 2
         echo -n "."
     done
     echo "vmuser secret created."
 
     # Create vmuser secret
-    if ! kubectl get secret vmuser --namespace=observability &> /dev/null; then
+    if ! kubectl get secret vmuser --namespace=observability &>/dev/null; then
         kubectl create secret generic vmuser \
             --from-literal=password=$(kubectl get secret $CLUSTER-vmuser -n observability -o jsonpath="{.data.password}" --context $CTRL_PLANE_CTX | base64 --decode) \
             --namespace=observability
