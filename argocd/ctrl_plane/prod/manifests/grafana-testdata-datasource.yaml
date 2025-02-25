@@ -13,4 +13,4 @@ spec:
     access: proxy
     database: ""
     name: testdata
-    type: TestData
+    type: grafana-testdata-datasource
