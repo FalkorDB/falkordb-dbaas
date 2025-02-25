@@ -1,0 +1,414 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 22,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "-- Mixed --"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [
+            {
+              "options": {
+                "gke": {
+                  "index": 0,
+                  "text": "GCP"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 15,
+        "x": 0,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "basemap": {
+          "config": {},
+          "name": "Layer 0",
+          "type": "default"
+        },
+        "controls": {
+          "mouseWheelZoom": true,
+          "showAttribution": true,
+          "showDebug": false,
+          "showMeasure": false,
+          "showScale": false,
+          "showZoom": true
+        },
+        "layers": [
+          {
+            "config": {
+              "showLegend": true,
+              "style": {
+                "color": {
+                  "field": "alerts",
+                  "fixed": "dark-green"
+                },
+                "opacity": 0,
+                "rotation": {
+                  "fixed": 0,
+                  "max": 360,
+                  "min": -360,
+                  "mode": "mod"
+                },
+                "size": {
+                  "fixed": 1,
+                  "max": 15,
+                  "min": 2
+                },
+                "symbol": {
+                  "fixed": "img/icons/marker/circle.svg",
+                  "mode": "fixed"
+                },
+                "symbolAlign": {
+                  "horizontal": "center",
+                  "vertical": "center"
+                },
+                "text": {
+                  "field": "cluster",
+                  "fixed": "",
+                  "mode": "field"
+                },
+                "textConfig": {
+                  "fontSize": 10,
+                  "offsetX": 0,
+                  "offsetY": 0,
+                  "textAlign": "center",
+                  "textBaseline": "middle"
+                }
+              }
+            },
+            "location": {
+              "latitude": "latitude",
+              "longitude": "longitude",
+              "mode": "coords"
+            },
+            "name": "Cluster",
+            "tooltip": true,
+            "type": "markers"
+          }
+        ],
+        "tooltip": {
+          "mode": "details"
+        },
+        "view": {
+          "allLayers": true,
+          "id": "zero",
+          "lat": 0,
+          "lon": 0,
+          "zoom": 1
+        }
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "csvContent": "region,latitude,longitude\nus-central1,41.236844,-95.851875\nus-east-1,38.9940541,-77.4524237\nus-east-2,40.0946354,-82.7541337\nus-west-1,37.443680,-122.153664\nus-west-2,45.9174667,-119.2684488\neu-west-1,53.4056545,-6.224503\neu-west-2,51.5085036,-0.0609266\neu-west-3,48.6009709,2.2976644\neu-central-1,50.0992094,8.6303932\nsa-east-1,-23.4925798,-46.8105593\nap-southeast-1,1.3218269,103.6930643\nap-southeast-2,-33.9117717,151.1907535\nap-northeast-1,35.617436,139.7459176\nap-northeast-2,37.5616592,126.8736237\nap-south-1,19.2425503,72.9667878\nca-central-1,45.5,-73.6\naf-south-1,-33.914651,18.3758801\neu-north-1,59.326242,17.8419717\neu-south-1,45.4628328,9.1076927\nme-south-1,25.941298,50.3073907\nap-east-1,22.2908475,114.2723379\ncn-north-1,39.8094478,116.5783234\ncn-northwest-1,37.5024418,105.1627193",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "cee3tlfjcfo5cd"
+          },
+          "refId": "Regions",
+          "scenarioId": "csv_content"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "f3a88fe0-7ba6-4674-ad85-088e7ec9d712"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "(max by (cluster, platform, region) (max(kube_pod_info) by (cluster, node) * on (node) group_left(platform, region) label_replace(up{job=\"node-exporter\"}, \"node\", \"$1\", \"instance\", \"(.*)\")) * 0) + on(cluster) group_left sum(ALERTS{cluster!=\"\", alertstate=\"firing\"}) by (cluster)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "Cluster alerts"
+        }
+      ],
+      "title": "Clusters",
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "equal",
+                  "options": {
+                    "value": ""
+                  }
+                },
+                "fieldName": "region"
+              }
+            ],
+            "match": "any",
+            "type": "exclude"
+          }
+        },
+        {
+          "id": "labelsToFields",
+          "options": {
+            "keepLabels": [
+              "cluster",
+              "namespace",
+              "platform",
+              "region"
+            ],
+            "mode": "columns"
+          }
+        },
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "region",
+            "mode": "outerTabular"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": false,
+              "longitude": false
+            },
+            "includeByName": {},
+            "indexByName": {
+              "Time": 5,
+              "Value": 6,
+              "cluster": 4,
+              "latitude": 0,
+              "longitude": 1,
+              "platform": 2,
+              "region": 3
+            },
+            "renameByName": {
+              "Value": "alerts",
+              "Value #Cluster alerts": "Alerts",
+              "Value #Clusters": "alerts"
+            }
+          }
+        },
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "isNull",
+                  "options": {}
+                },
+                "fieldName": "cluster"
+              }
+            ],
+            "match": "any",
+            "type": "exclude"
+          }
+        }
+      ],
+      "type": "geomap"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "f3a88fe0-7ba6-4674-ad85-088e7ec9d712"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FalkorDB Deployments"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 179
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Alerts"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 14,
+        "w": 9,
+        "x": 15,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": [
+            "Value #deployments",
+            "Value #alerts"
+          ],
+          "reducer": [
+            "sum"
+          ],
+          "show": true
+        },
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(kube_pod_info{namespace=~\"instance-.+\"}) by (cluster)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "deployments"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "85602c04-b342-424d-a97c-dfed2cd61c97"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(ALERTS{cluster!=\"\", alertstate=\"firing\"}) by (cluster)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "alerts"
+        }
+      ],
+      "title": "Overview",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": false
+            },
+            "includeByName": {},
+            "indexByName": {},
+            "renameByName": {
+              "Value #alerts": "Alerts",
+              "Value #deployments": "FalkorDB Deployments"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+  "preload": false,
+  "refresh": "",
+  "schemaVersion": 40,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Overview",
+  "uid": "eee0z51djuigwf",
+  "version": 14,
+  "weekStart": ""
+}
