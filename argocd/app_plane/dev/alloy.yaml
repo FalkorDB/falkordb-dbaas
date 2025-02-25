@@ -168,6 +168,25 @@ spec:
                       target_label = "__address__"
                     }
 
+                    rule {
+                      source_labels = ["__meta_kubernetes_node_label_topology_kubernetes_io_region"]
+                      target_label = "region"
+                    }
+
+                    rule {
+                      source_labels = ["__meta_kubernetes_node_annotation_node_gke_io_last_applied_node_labels"]
+                      target_label = "platform"
+                      regex = "(.+)"
+                      replacement = "gke"
+                    }
+
+                    rule {
+                      source_labels = ["__meta_kubernetes_node_label_k8s_io_cloud_provider_aws"]
+                      target_label = "platform"
+                      regex = "(.+)"
+                      replacement = "eks"
+                    }
+
                   }
 
                   prometheus.scrape "node_exporter" {

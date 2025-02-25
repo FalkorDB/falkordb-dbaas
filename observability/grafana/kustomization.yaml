@@ -15,6 +15,9 @@ configMapGenerator:
   # Views Dashboards
   #################################################
 
+  - name: dashboards-k8s-views-overview
+    files: [json=./dashboards/overview.json]
+
   - name: dashboards-k8s-views-cluster
     files: [json=./dashboards/cluster-overview.json]
 
