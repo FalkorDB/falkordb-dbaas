@@ -20,19 +20,12 @@ jobs:
         uses: actions/checkout@v4
       - name: Read plan-jobs.json
         id: set-matrix
-        env:
-          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
-          TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
-          TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
-          TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
-          TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
-          TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
         run: |
           sudo apt-get update && sudo apt-get install -y jq gettext
           delimiter="$(openssl rand -hex 8)"
           JSON="$(cat .github/workflows/plan-jobs.json)"
           # Replace strings starting with TF_ with their respective environment variables
-          JSON=$(echo "$JSON" | sed -e "s/TF_STATE_BUCKET/\$TF_STATE_BUCKET/g" | sed -e "s/TF_CTRL_PLANE_DEV_PROJECT_ID/\$TF_CTRL_PLANE_DEV_PROJECT_ID/g" | sed -e "s/TF_CTRL_PLANE_DEV_REGION/\$TF_CTRL_PLANE_DEV_REGION/g" | sed -e "s/TF_CTRL_PLANE_IP_RANGE_SUBNET/\$TF_CTRL_PLANE_IP_RANGE_SUBNET/g" | sed -e "s/TF_CTRL_PLANE_IP_RANGE_PODS/\$TF_CTRL_PLANE_IP_RANGE_PODS/g" | sed -e "s/TF_CTRL_PLANE_IP_RANGE_SERVICES/\$TF_CTRL_PLANE_IP_RANGE_SERVICES/g" | envsubst)
+          JSON=$(echo "$JSON" | sed -e "s/TF_STATE_BUCKET/\$TF_STATE_BUCKET/g" | sed -e "s/TF_CTRL_PLANE_DEV_PROJECT_ID/\$TF_CTRL_PLANE_DEV_PROJECT_ID/g" | sed -e "s/TF_CTRL_PLANE_DEV_REGION/\$TF_CTRL_PLANE_DEV_REGION/g" | sed -e "s/TF_CTRL_PLANE_IP_RANGE_SUBNET/\$TF_CTRL_PLANE_IP_RANGE_SUBNET/g" | sed -e "s/TF_CTRL_PLANE_IP_RANGE_PODS/\$TF_CTRL_PLANE_IP_RANGE_PODS/g" | sed -e "s/TF_CTRL_PLANE_IP_RANGE_SERVICES/\$TF_CTRL_PLANE_IP_RANGE_SERVICES/g")
           echo "matrix<<${delimiter}" >> "${GITHUB_OUTPUT}"
           echo "$JSON" >> "${GITHUB_OUTPUT}"
           echo "${delimiter}" >> "${GITHUB_OUTPUT}"
@@ -52,9 +45,15 @@ jobs:
         stack: ${{fromJson(needs.load-matrix.outputs.matrix)}}
     steps:
       - name: print matrix values
+        env:
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+          TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
+          TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
+          TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
+          TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
+          TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
         run: |
-          echo "${{ toJson(matrix) }}"
-          echo "${{ toJson(fromJson(needs.load-matrix.outputs.matrix)) }}"
+          echo "$(echo '${{ toJson(matrix) }}' | envsubst)"
       - name: Checkout repository
         uses: actions/checkout@v4
 
