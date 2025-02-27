@@ -11,6 +11,10 @@ permissions:
   contents: "read"
   id-token: "write"
 
+concurrency:
+  group: tofu-plan
+  cancel-in-progress: true
+
 jobs:
   load-matrix:
     runs-on: ubuntu-latest
@@ -53,7 +57,7 @@ jobs:
           json=$(echo '${{ toJson(matrix) }}' | envsubst)
           # set the matrix values as environment variables
           for key in $(echo $json | jq -r '.stack.variables | to_entries[] | "\(.key)=\(.value)"'); do
-            echo "$key=$(echo $json | jq -r '.$key')" >> $GITHUB_ENV
+            echo "$key" >> $GITHUB_ENV
           done
           # set init_param variable
           echo "init_param=$(echo $json | jq -r '.stack.init_param')" >> $GITHUB_ENV
