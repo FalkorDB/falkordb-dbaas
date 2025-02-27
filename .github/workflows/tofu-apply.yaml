@@ -1,8 +1,8 @@
-name: Tofu Plan
+name: Tofu Apply
 
 on:
   workflow_dispatch:
-  pull_request:
+  push:
     branches:
       - main
       - dev
@@ -12,14 +12,13 @@ permissions:
   id-token: "write"
 
 concurrency:
-  group: tofu-plan-${{ github.event.pull_request.base.ref }}
+  group: tofu-apply-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   load-stack-matrix:
     runs-on: ubuntu-latest
-    # if the pr is to the main branch, set the environment to prod, otherwise dev
-    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || 'dev' }}
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -37,11 +36,11 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix || '[]' }}
 
-  plan:
+  apply:
     needs: load-stack-matrix
-    name: Plan stack ${{ matrix.stack.name }}
+    name: Apply stack ${{ matrix.stack.name }}
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || 'dev' }}
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     strategy:
       matrix:
         stack: ${{fromJson(needs.load-matrix.outputs.matrix)}}
@@ -80,18 +79,16 @@ jobs:
         with:
           version: ">= 363.0.0"
 
-      - name: Setup Tofu workspace
-        run: |
-          cd ${{ matrix.stack.path }}
-          tofu init ${{ env.init_param }}
-
-      - name: Plan Tofu
-        run: |
-          cd ${{ matrix.stack.path }}
-          tofu plan -out=tfplan
-
-      - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v4
+      - name: Download plan from artifacts
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v6
         with:
           name: tofu-plan-${{ matrix.stack.name }}
           path: ${{ matrix.stack.path }}/tfplan
+          workflow: tofu-plan.yaml
+          workflow_conclusion: success
+          if_no_artifact_found: error
+
+      - name: Apply stack
+        run: |
+          tofu apply -auto-approve -f ${{ matrix.stack.path }}/tfplan
