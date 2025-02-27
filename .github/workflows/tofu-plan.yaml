@@ -23,7 +23,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Read plan-jobs.json
+
+      - name: Read stacks.json
         id: set-matrix
         run: |
           sudo apt-get update && sudo apt-get install -y jq gettext
@@ -44,7 +45,7 @@ jobs:
     environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || 'dev' }}
     strategy:
       matrix:
-        stack: ${{fromJson(needs.load-matrix.outputs.matrix)}}
+        stack: ${{fromJson(needs.load-stack-matrix.outputs.matrix)}}
     steps:
       - name: Set environment vars
         env:

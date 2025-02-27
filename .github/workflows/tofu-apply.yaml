@@ -43,7 +43,7 @@ jobs:
     environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     strategy:
       matrix:
-        stack: ${{fromJson(needs.load-matrix.outputs.matrix)}}
+        stack: ${{fromJson(needs.load-stack-matrix.outputs.matrix)}}
     steps:
       - name: Set environment vars
         env:
