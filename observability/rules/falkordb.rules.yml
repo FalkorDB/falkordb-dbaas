@@ -35,8 +35,8 @@ spec:
           description: "FalkorDB has too many nodes marked as master.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
       - alert: FalkorDBMissingBackup
-        expr: time() - redis_rdb_last_save_timestamp_seconds > 60 * 60 * 24
-        for: 0m
+        expr: time() - redis_rdb_last_save_timestamp_seconds > 60 * 60 * 24 and rate(redis_commands_processed_total[5m]) < (rate(redis_commands_processed_total[15m]) * 0.2)
+        for: 1h
         labels:
           severity: critical
         annotations:

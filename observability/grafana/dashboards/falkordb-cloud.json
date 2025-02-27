@@ -95,7 +95,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "max(max_over_time(redis_uptime_in_seconds{pod=~\"$pod\"}[$__interval]))",
+          "expr": "max(max_over_time(redis_uptime_in_seconds{pod=~\"$pod\", namespace=~\"$namespace\"}[$__interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -182,7 +182,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(redis_connected_clients{pod=~\"$pod\"})",
+          "expr": "sum(redis_connected_clients{pod=~\"$pod\", namespace=~\"$namespace\"})",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -272,7 +272,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(100 * sum(redis_memory_used_bytes{pod=~\"$pod\"})  / sum(redis_memory_max_bytes{pod=~\"$pod\"}))",
+          "expr": "sum(100 * sum(redis_memory_used_bytes{pod=~\"$pod\", namespace=~\"$namespace\"})  / sum(redis_memory_max_bytes{pod=~\"$pod\", namespace=~\"$namespace\"}))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "",
@@ -374,7 +374,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(redis_commands_total{pod=~\"$pod\"} [1m])) by (cmd)",
+          "expr": "sum(rate(redis_commands_total{pod=~\"$pod\", namespace=~\"$namespace\"} [1m])) by (cmd)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -492,7 +492,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "redis_memory_used_bytes{pod=~\"$pod\"}",
+          "expr": "redis_memory_used_bytes{pod=~\"$pod\", namespace=~\"$namespace\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "used, {{ pod }}",
@@ -506,7 +506,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "redis_memory_max_bytes{pod=~\"$pod\"}",
+          "expr": "redis_memory_max_bytes{pod=~\"$pod\", namespace=~\"$namespace\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
@@ -606,7 +606,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(redis_net_input_bytes_total{pod=~\"$pod\"}[5m]))",
+          "expr": "sum(rate(redis_net_input_bytes_total{pod=~\"$pod\", namespace=~\"$namespace\"}[5m]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{ input }}",
@@ -618,7 +618,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(redis_net_output_bytes_total{pod=~\"$pod\"}[5m]))",
+          "expr": "sum(rate(redis_net_output_bytes_total{pod=~\"$pod\", namespace=~\"$namespace\"}[5m]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -741,7 +741,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum (redis_db_keys{pod=~\"$pod\"}) by (db, pod)",
+          "expr": "sum (redis_db_keys{pod=~\"$pod\", namespace=~\"$namespace\"}) by (db, pod)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -842,7 +842,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(redis_connected_clients{pod=~\"$pod\"})",
+          "expr": "sum(redis_connected_clients{pod=~\"$pod\", namespace=~\"$namespace\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "connected",
@@ -853,7 +853,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(redis_blocked_clients{pod=~\"$pod\"})",
+          "expr": "sum(redis_blocked_clients{pod=~\"$pod\", namespace=~\"$namespace\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "blocked",
@@ -972,7 +972,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(irate(redis_commands_duration_seconds_total{pod =~ \"$pod\"}[1m])) by (cmd)\n  /\nsum(irate(redis_commands_total{pod =~ \"$pod\"}[1m])) by (cmd)\n",
+          "expr": "sum(irate(redis_commands_duration_seconds_total{pod =~ \"$pod\", namespace=~\"$namespace\"}[1m])) by (cmd)\n  /\nsum(irate(redis_commands_total{pod =~ \"$pod\", namespace=~\"$namespace\"}[1m])) by (cmd)\n",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1073,7 +1073,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(irate(redis_commands_duration_seconds_total{pod=~\"$pod\"}[1m])) by (cmd) != 0",
+          "expr": "sum(irate(redis_commands_duration_seconds_total{pod=~\"$pod\", namespace=~\"$namespace\"}[1m])) by (cmd) != 0",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,

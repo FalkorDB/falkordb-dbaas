@@ -40,6 +40,13 @@ spec:
             logFormat: json
             nodeSelector:
               node_pool: observability-resources
+            resources:
+              requests:
+                memory: "2Gi"
+                cpu: "1200m"
+              limits:
+                memory: "4Gi"
+                cpu: "2"
             storage:
               resources:
                 requests:
@@ -70,6 +77,9 @@ spec:
                 - match:
                     alertname: Watchdog
                   receiver: "blackhole"
+                # route infoinhibitor to blackhole
+                - match:
+                    alertname: InfoInhibitor
                 - receiver: "pagerduty"
             receivers:
               - name: blackhole
@@ -90,6 +100,12 @@ spec:
             userSelector: {}
             nodeSelector:
               node_pool: public-pool
+            unauthorizedUserAccessSpec:
+              discover_backend_ips: true
+              url_map:
+                - src_paths: ["/notfound"]
+                  url_prefix:
+                    - https://vmauth.observability.dev.internal.falkordb.cloud
             ingress:
               annotations:
                 cert-manager.io/issuer: letsencrypt

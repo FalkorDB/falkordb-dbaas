@@ -1,0 +1,16 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: testdata
+  namespace: observability
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  allowCrossNamespaceImport: false
+  datasource:
+    isDefault: true
+    access: proxy
+    database: ""
+    name: testdata
+    type: grafana-testdata-datasource

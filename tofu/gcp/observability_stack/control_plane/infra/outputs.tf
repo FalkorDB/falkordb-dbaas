@@ -12,10 +12,6 @@ output "cluster_name" {
   value = module.gke.name
 }
 
-output "metrics_bucket" {
-  value = google_storage_bucket.metrics_bucket.name
-}
-
 output "argocd_ip" {
   value = module.argocd_ip.addresses[0]
 }
