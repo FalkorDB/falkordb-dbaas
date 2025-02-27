@@ -52,7 +52,7 @@ jobs:
         run: |
           json=$(echo '${{ toJson(matrix) }}' | envsubst)
           # set the matrix values as environment variables
-          for key in $(echo $json | jq -r '.stack.variables[]'); do
+          for key in $(echo $json | jq -r '.stack.variables | to_entries[] | "\(.key)=\(.value)"'); do
             echo "$key=$(echo $json | jq -r '.$key')" >> $GITHUB_ENV
           done
           # set init_param variable
