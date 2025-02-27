@@ -1,0 +1,26 @@
+rule_files:
+  - "../rules/node_network.rules.yml"
+
+tests:
+  - interval: 30s
+    input_series:
+      - series: 'node_network_up{job="node-exporter", device="eth0", namespace="default", pod="node-1"}'
+        values: '1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0'
+
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: NodeNetworkInterfaceFlapping
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              device: eth0
+              job: node-exporter
+              namespace: default
+              pod: node-1
+            exp_annotations:
+              description: Network interface "eth0" changing its up status often on node-exporter default/node-1
+              runbook_url: https://runbooks.prometheus-operator.dev/runbooks/general/nodenetworkinterfaceflapping
+              summary: Network interface is often changing its status
+      - eval_time: 1m
+        alertname: NodeNetworkInterfaceFlapping
+        exp_alerts: []
