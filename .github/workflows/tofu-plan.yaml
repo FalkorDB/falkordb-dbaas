@@ -41,7 +41,7 @@ jobs:
       matrix:
         stack: ${{fromJson(needs.load-matrix.outputs.matrix)}}
     steps:
-      - name: print matrix values
+      - name: Set environment vars
         env:
           TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
           TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
@@ -52,7 +52,7 @@ jobs:
         run: |
           json=$(echo '${{ toJson(matrix) }}' | envsubst)
           # set the matrix values as environment variables
-          for key in $(echo $json | jq -r 'stack.variables[]'); do
+          for key in $(echo $json | jq -r '.stack.variables[]'); do
             echo "$key=$(echo $json | jq -r '.$key')" >> $GITHUB_ENV
           done
           # set init_param variable
