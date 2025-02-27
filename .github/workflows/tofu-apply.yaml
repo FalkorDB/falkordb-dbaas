@@ -83,8 +83,9 @@ jobs:
         id: download-artifact
         uses: dawidd6/action-download-artifact@v6
         with:
-          name: tofu-plan-${{ matrix.stack.name }}
+          name: tofu-plan-${{ github.ref_name == 'main' && 'prod' || 'dev' }}-${{ matrix.stack.name }}
           path: ${{ matrix.stack.path }}/tfplan
+          branch: ${{ github.ref_name }}
           workflow: tofu-plan.yaml
           workflow_conclusion: success
           if_no_artifact_found: error
