@@ -29,9 +29,6 @@ jobs:
           echo "matrix<<${delimiter}" >> "${GITHUB_OUTPUT}"
           echo "$JSON" >> "${GITHUB_OUTPUT}"
           echo "${delimiter}" >> "${GITHUB_OUTPUT}"
-      - name: print
-        run: |
-          echo "${{ toJson(fromJson(steps.set-matrix.outputs.matrix)) }}"
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix || '[]' }}
 
@@ -53,19 +50,19 @@ jobs:
           TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
           TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
         run: |
-          echo "$(echo '${{ toJson(matrix) }}' | envsubst)"
+          json=$(echo '${{ toJson(matrix) }}' | envsubst)
+          # set the matrix values as environment variables
+          for key in $(echo $json | jq -r 'stack.variables[]'); do
+            echo "$key=$(echo $json | jq -r '.$key')" >> $GITHUB_ENV
+          done
+          # set init_param variable
+          echo "init_param=$(echo $json | jq -r '.stack.init_param')" >> $GITHUB_ENV
+          
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install OpenTofu
         uses: opentofu/setup-opentofu@v1
-
-      - name: Setup environment variables
-        run: |
-          for key in $(jq -r 'keys[]' <<< '${{ toJson(matrix.stack.variables) }}'); do
-            value=$(jq -r --arg key "$key" '.[$key]' <<< '${{ toJson(matrix.stack.variables) }}')
-            echo "$key=${!value}" >> $GITHUB_ENV
-          done
 
       - name: Setup GCloud
         uses: "google-github-actions/auth@v2.1.2"
@@ -81,7 +78,7 @@ jobs:
       - name: Setup Tofu workspace
         run: |
           cd ${{ matrix.stack.path }}
-          tofu init ${{ matrix.stack.init_param }}
+          tofu init ${{ env.init_param }}
 
       - name: Plan Tofu
         run: |
