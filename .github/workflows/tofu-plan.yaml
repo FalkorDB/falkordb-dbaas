@@ -29,7 +29,7 @@ jobs:
           delimiter="$(openssl rand -hex 8)"
           JSON="$(cat .github/workflows/plan-jobs.json)"
           # Replace strings starting with TF_ with their respective environment variables
-          JSON=$(echo "$JSON" | sed -e "s/TF_/\$TF_/g")
+          JSON=$(echo "$JSON" | sed -e "s/TF_STATE_BUCKET/\$TF_STATE_BUCKET/g" | sed -e "s/: \"TF_/: \"$TF_/g")
           echo "matrix<<${delimiter}" >> "${GITHUB_OUTPUT}"
           echo "$JSON" >> "${GITHUB_OUTPUT}"
           echo "${delimiter}" >> "${GITHUB_OUTPUT}"
