@@ -13,7 +13,7 @@ permissions:
 
 concurrency:
   group: tofu-plan
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   load-matrix:
