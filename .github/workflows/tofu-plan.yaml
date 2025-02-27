@@ -31,6 +31,8 @@ jobs:
           sudo apt-get update && sudo apt-get install -y jq gettext
           delimiter="$(openssl rand -hex 8)"
           JSON="$(cat .github/workflows/plan-jobs.json)"
+          # Replace strings starting with TF_ with their respective environment variables
+          JSON=$(echo "$JSON" | sed -e "s/TF_STATE_BUCKET/$TF_STATE_BUCKET/g" | sed -e "s/TF_CTRL_PLANE_DEV_PROJECT_ID/$TF_CTRL_PLANE_DEV_PROJECT_ID/g" | sed -e "s/TF_CTRL_PLANE_DEV_REGION/$TF_CTRL_PLANE_DEV_REGION/g" | sed -e "s/TF_CTRL_PLANE_IP_RANGE_SUBNET/$TF_CTRL_PLANE_IP_RANGE_SUBNET/g" | sed -e "s/TF_CTRL_PLANE_IP_RANGE_PODS/$TF_CTRL_PLANE_IP_RANGE_PODS/g" | sed -e "s/TF_CTRL_PLANE_IP_RANGE_SERVICES/$TF_CTRL_PLANE_IP_RANGE_SERVICES/g")
           echo "matrix<<${delimiter}" >> "${GITHUB_OUTPUT}"
           echo "$JSON" >> "${GITHUB_OUTPUT}"
           echo "${delimiter}" >> "${GITHUB_OUTPUT}"

@@ -9,6 +9,6 @@
       "TF_VAR_ip_range_pods": "TF_CTRL_PLANE_IP_RANGE_PODS",
       "TF_VAR_ip_range_services": "TF_CTRL_PLANE_IP_RANGE_SERVICES"
     },
-    "init_param": "-backend-config=bucket=$TF_STATE_BUCKET" 
+    "init_param": "-backend-config=bucket=TF_STATE_BUCKET" 
   }
 ]

@@ -70,6 +70,15 @@ resource "google_secret_manager_secret" "mongodb_uri" {
     }
   }
 
+  rotation {
+    rotation_period    = "15552000s"
+    next_rotation_time = "2025-05-21T21:00:00Z"
+  }
+
+  topics {
+    name = "projects/${var.project_id}/topics/secrets-changes"
+  }
+
   secret_id = "MONGODB_URI"
 
   depends_on = [module.project]
@@ -96,4 +105,32 @@ resource "google_service_account_iam_member" "provisioning_sa_user" {
   role               = "roles/iam.serviceAccountUser"
 
   member = "serviceAccount:${module.tenant_provision.provisioning_sa_email}"
+}
+# Create SA for github action pipeline
+resource "google_service_account" "github_action_sa" {
+  project      = module.project.project_id
+  account_id   = "falkordb-github-action-sa"
+  display_name = "FalkorDB Github Action SA"
+}
+
+# Add service account owne role to the service account
+resource "google_project_iam_member" "github_action_sa" {
+  project = module.project.project_id
+  role    = "roles/editor"
+  member  = "serviceAccount:${google_service_account.github_action_sa.email}"
+}
+
+module "gh_oidc" {
+  source                = "terraform-google-modules/github-actions-runners/google//modules/gh-oidc"
+  project_id            = module.project.project_id
+  pool_id               = "github-actions-pool"
+  provider_id           = "github-actions"
+  provider_display_name = "github-actions"
+  sa_mapping = {
+    "falkordb-github-action-sa" = {
+      sa_name   = google_service_account.github_action_sa.name
+      attribute = "attribute.repository/${var.repo_name}"
+    }
+  }
+  attribute_condition = "assertion.repository_owner=='FalkorDB'"
 }

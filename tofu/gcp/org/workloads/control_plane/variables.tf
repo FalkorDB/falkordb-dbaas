@@ -24,6 +24,10 @@ variable "state_bucket_name" {
   type = string
 }
 
+variable "repo_name" {
+  type = string
+}
+
 ###### NETWORKING ######
 
 variable "public_network_name" {

@@ -85,6 +85,7 @@ module "gh_oidc" {
   project_id  = module.project.project_id
   pool_id     = "github-actions-pool"
   provider_id = "github-actions"
+  provider_display_name = "github-actions"
   sa_mapping = {
     "falkordb-github-action-sa" = {
       sa_name   = google_service_account.github_action_sa.name
