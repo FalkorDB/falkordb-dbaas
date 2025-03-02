@@ -88,7 +88,7 @@ resource "kubernetes_secret" "argocd-google-groups" {
   }
 
   data = {
-    "googleAuth.json" = var.argocd_groups_sa_json
+    "googleAuth.json" = base64decode(var.argocd_groups_sa_json)
   }
 
   depends_on = [kubernetes_namespace.argocd]
