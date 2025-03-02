@@ -17,3 +17,4 @@ backend.conf
 
 node_modules
 dist
+clusters.yml

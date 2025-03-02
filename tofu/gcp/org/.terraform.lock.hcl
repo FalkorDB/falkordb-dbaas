@@ -22,9 +22,10 @@ provider "registry.opentofu.org/hashicorp/google" {
 
 provider "registry.opentofu.org/hashicorp/google-beta" {
   version     = "5.16.0"
-  constraints = ">= 3.43.0, >= 3.50.0, >= 3.64.0, >= 4.11.0, >= 4.28.0, >= 4.64.0, < 6.0.0"
+  constraints = ">= 3.43.0, >= 3.50.0, >= 4.11.0, >= 4.28.0, < 6.0.0"
   hashes = [
     "h1:9SI2UHUTzo0ALEpvgyA0NvK7YJs4xN78vmXAZaVAxkk=",
+    "h1:yKNDu65r0ld1S7iMzgBC3Z8kOH/SIeWhIKyUriLcNg0=",
     "zh:15dab6ba8d5ffa5bec04a16d773f0ca3f00e70bf48fa0b8f40cc9bd1a6369f60",
     "zh:2edfea9e4d03f83d200ccd25f8bab4487fdc541160dc75233e1913b66498b0a1",
     "zh:41f951233355a6162a9dbcf45d2d3738e3b7b513d1b3b1e1706b4af91b487c15",

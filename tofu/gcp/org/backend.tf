@@ -1,3 +1,5 @@
 terraform {
-  backend "gcs" {}
+  backend "gcs" {
+    prefix = "org"
+  }
 }

@@ -1,0 +1,95 @@
+name: Tofu Apply
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev
+
+permissions:
+  contents: "read"
+  id-token: "write"
+
+concurrency:
+  group: tofu-apply-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  load-stack-matrix:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Read plan-jobs.json
+        id: set-matrix
+        run: |
+          sudo apt-get update && sudo apt-get install -y jq gettext
+          delimiter="$(openssl rand -hex 8)"
+          JSON="$(cat .github/workflows/stacks.json)"
+          # Replace strings starting with TF_ with their respective environment variables
+          JSON=$(echo "$JSON" | sed -e "s/TF_STATE_BUCKET/\$TF_STATE_BUCKET/g" | sed -e "s/: \"TF_/: \"\$TF_/g")
+          echo "matrix<<${delimiter}" >> "${GITHUB_OUTPUT}"
+          echo "$JSON" >> "${GITHUB_OUTPUT}"
+          echo "${delimiter}" >> "${GITHUB_OUTPUT}"
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix || '[]' }}
+
+  apply:
+    needs: load-stack-matrix
+    name: Apply stack ${{ matrix.stack.name }}
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+    strategy:
+      matrix:
+        stack: ${{fromJson(needs.load-stack-matrix.outputs.matrix)}}
+    steps:
+      - name: Set environment vars
+        env:
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+          TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
+          TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
+          TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
+          TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
+          TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
+        run: |
+          json=$(echo '${{ toJson(matrix) }}' | envsubst)
+          # set the matrix values as environment variables
+          for key in $(echo $json | jq -r '.stack.variables | to_entries[] | "\(.key)=\(.value)"'); do
+            echo "$key" >> $GITHUB_ENV
+          done
+          # set init_param variable
+          echo "init_param=$(echo $json | jq -r '.stack.init_param')" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install OpenTofu
+        uses: opentofu/setup-opentofu@v1
+
+      - name: Setup GCloud
+        uses: "google-github-actions/auth@v2.1.2"
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: "google-github-actions/setup-gcloud@v2.1.0"
+        with:
+          version: ">= 363.0.0"
+
+      - name: Download plan from artifacts
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          name: tofu-plan-${{ github.ref_name == 'main' && 'prod' || 'dev' }}-${{ matrix.stack.name }}
+          path: ${{ matrix.stack.path }}/tfplan
+          branch: ${{ github.ref_name }}
+          workflow: tofu-plan.yaml
+          workflow_conclusion: success
+          if_no_artifact_found: error
+
+      - name: Apply stack
+        run: |
+          tofu apply -auto-approve -f ${{ matrix.stack.path }}/tfplan
