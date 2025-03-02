@@ -10,5 +10,25 @@
       "TF_VAR_ip_range_services": "TF_CTRL_PLANE_IP_RANGE_SERVICES"
     },
     "init_param": "-backend-config=bucket=TF_STATE_BUCKET" 
+  },
+  {
+    "name": "observability_stack_ctrl_plane_k8s",
+    "path": "tofu/gcp/observability_stack/control_plane/k8s",
+    "variables": {
+      "TF_VAR_project_id": "TF_CTRL_PLANE_DEV_PROJECT_ID",
+      "TF_VAR_region": "TF_CTRL_PLANE_DEV_REGION",
+      "TF_VAR_cluster_endpoint": "TF_CLUSTER_ENDPOINT",
+      "TF_VAR_cluster_ca_certificate": "TF_CLUSTER_CA_CERTIFICATE",
+      "TF_VAR_cluster_name": "TF_CLUSTER_NAME",
+      "TF_VAR_environment": "TF_ENVIRONMENT",
+      "TF_VAR_argocd_admin_password": "TF_ARGOCD_ADMIN_PASSWORD",
+      "TF_VAR_dex_google_client_id": "TF_DEX_GOOGLE_CLIENT_ID",
+      "TF_VAR_dex_google_client_secret": "TF_DEX_GOOGLE_CLIENT_SECRET",
+      "TF_VAR_dex_google_admin_email": "TF_DEX_GOOGLE_ADMIN_EMAIL",
+      "TF_VAR_argocd_groups_sa_json": "TF_ARGOCD_GROUPS_SA_JSON",
+      "TF_VAR_grafana_google_client_id": "TF_GRAFANA_GOOGLE_CLIENT_ID",
+      "TF_VAR_grafana_google_client_secret": "TF_GRAFANA_GOOGLE_CLIENT_SECRET"
+    },
+    "init_param": "-backend-config=bucket=TF_STATE_BUCKET" 
   }
 ]
