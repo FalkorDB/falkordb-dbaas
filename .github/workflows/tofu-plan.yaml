@@ -6,6 +6,10 @@ on:
     branches:
       - main
       - dev
+  push:
+    branches:
+      - main
+      - dev
 
 permissions:
   contents: "read"

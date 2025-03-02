@@ -2,7 +2,10 @@ name: Tofu Apply
 
 on:
   workflow_dispatch:
-  push:
+  workflow_run: 
+    workflows: ["Tofu Plan"]
+    types:
+      - completed
     branches:
       - main
       - dev
