@@ -28,7 +28,15 @@ jobs:
             const { owner, repo, sha } = context.repo;
             const run_id = context.runId;
             const workflow_name = 'Tofu Plan';
-            const branch = context.ref;
+            const branch = context.ref_name;
+
+            // Log values
+            console.log(`Owner: ${owner}`);
+            console.log(`Repo: ${repo}`);
+            console.log(`SHA: ${sha}`);
+            console.log(`Run ID: ${run_id}`);
+            console.log(`Workflow Name: ${workflow_name}`);
+            console.log(`Branch: ${branch}`);
 
             async function checkStatus() {
               const runs = await github.rest.actions.listWorkflowRunsForRepo({
@@ -38,6 +46,8 @@ jobs:
                 branch,
                 per_page: 10,
               });
+
+              console.log('Workflow Runs:', runs.data.workflow_runs);
 
               const matchingRun = runs.data.workflow_runs.find(run => run.head_sha === context.sha && run.status === 'completed' && run.conclusion === 'success');
 
