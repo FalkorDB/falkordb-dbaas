@@ -51,12 +51,24 @@ jobs:
     steps:
       - name: Set environment vars
         env:
-          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+          TF_ARGOCD_ADMIN_PASSWORD: ${{ secrets.TF_ARGOCD_ADMIN_PASSWORD }}
+          TF_ARGOCD_GROUPS_SA_JSON: ${{ secrets.TF_ARGOCD_GROUPS_SA_JSON }}
+          TF_CLUSTER_CA_CERTIFICATE: ${{ secrets.TF_CLUSTER_CA_CERTIFICATE }}
+          TF_CLUSTER_ENDPOINT: ${{ secrets.TF_CLUSTER_ENDPOINT }}
+          TF_CLUSTER_NAME: ${{ secrets.TF_CLUSTER_NAME }}
           TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
           TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
-          TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
           TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
           TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
+          TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
+          TF_DEFAULT_MAX_PODS_PER_NODE: ${{ vars.TF_DEFAULT_MAX_PODS_PER_NODE }}
+          TF_DEX_GOOGLE_ADMIN_EMAIL: ${{ secrets.TF_DEX_GOOGLE_ADMIN_EMAIL }}
+          TF_DEX_GOOGLE_CLIENT_ID: ${{ secrets.TF_DEX_GOOGLE_CLIENT_ID }}
+          TF_DEX_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_DEX_GOOGLE_CLIENT_SECRET }}
+          TF_ENVIRONMENT: ${{ vars.TF_ENVIRONMENT }}
+          TF_GRAFANA_GOOGLE_CLIENT_ID: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_ID }}
+          TF_GRAFANA_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_SECRET }}
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
         run: |
           json=$(echo '${{ toJson(matrix) }}' | envsubst)
           # set the matrix values as environment variables
