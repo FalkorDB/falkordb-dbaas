@@ -59,6 +59,17 @@ jobs:
           TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
           TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
           TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
+          TF_CLUSTER_ENDPOINT: ${{ vars.TF_CLUSTER_ENDPOINT }}
+          TF_CLUSTER_CA_CERTIFICATE: ${{ vars.TF_CLUSTER_CA_CERTIFICATE }}
+          TF_CLUSTER_NAME: ${{ vars.TF_CLUSTER_NAME }}
+          TF_ENVIRONMENT: ${{ vars.TF_ENVIRONMENT }}
+          TF_ARGOCD_ADMIN_PASSWORD: ${{ vars.TF_ARGOCD_ADMIN_PASSWORD }}
+          TF_DEX_GOOGLE_CLIENT_ID: ${{ vars.TF_DEX_GOOGLE_CLIENT_ID }}
+          TF_DEX_GOOGLE_CLIENT_SECRET: ${{ vars.TF_DEX_GOOGLE_CLIENT_SECRET }}
+          TF_DEX_GOOGLE_ADMIN_EMAIL: ${{ vars.TF_DEX_GOOGLE_ADMIN_EMAIL }}
+          TF_ARGOCD_GROUPS_SA_JSON: ${{ vars.TF_ARGOCD_GROUPS_SA_JSON }}
+          TF_GRAFANA_GOOGLE_CLIENT_ID: ${{ vars.TF_GRAFANA_GOOGLE_CLIENT_ID }}
+          TF_GRAFANA_GOOGLE_CLIENT_SECRET: ${{ vars.TF_GRAFANA_GOOGLE_CLIENT_SECRET }}
         run: |
           json=$(echo '${{ toJson(matrix) }}' | envsubst)
           # set the matrix values as environment variables
