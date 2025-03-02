@@ -19,6 +19,7 @@ module "control_plane" {
   project_name       = var.control_plane_project_name
   project_parent_id  = google_folder.root_folder.id
   billing_account_id = var.billing_account_id
+  repo_name          = var.pipelines_development_repo_name
 
   state_bucket_name = var.state_bucket_name
 

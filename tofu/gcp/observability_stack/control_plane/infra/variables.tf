@@ -17,3 +17,8 @@ variable "ip_range_pods" {
 variable "ip_range_services" {
   type = string
 }
+
+variable "default_max_pods_per_node" {
+  type    = number
+  default = 25
+}

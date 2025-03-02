@@ -100,7 +100,7 @@ module "gke" {
   enable_private_nodes                 = true
   http_load_balancing                  = true
 
-  default_max_pods_per_node = 25
+  default_max_pods_per_node = var.default_max_pods_per_node
 
   monitoring_enabled_components = ["SYSTEM_COMPONENTS"]
 
@@ -116,6 +116,7 @@ module "gke" {
       max_count          = 100
       image_type         = "COS_CONTAINERD"
       initial_node_count = 0
+      max_pods_per_node  = 25
     },
     {
       name               = "observability-resources"
@@ -125,6 +126,7 @@ module "gke" {
       max_count          = 20
       image_type         = "COS_CONTAINERD"
       initial_node_count = 0
+      max_pods_per_node  = 25
     },
   ]
   node_pools_resource_labels = {

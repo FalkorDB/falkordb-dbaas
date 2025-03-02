@@ -17,3 +17,11 @@ output "pipelines_development_tenant_provision_sa" {
 output "velero_role_id" {
   value = local.velero_role_id
 }
+
+output "ctrl_plane_github_sa_email" {
+  value = module.control_plane.github_sa_email
+}
+
+output "ctrl_plane_gh_workload_identity_provider" {
+  value = module.control_plane.gh_workload_identity_provider
+}
