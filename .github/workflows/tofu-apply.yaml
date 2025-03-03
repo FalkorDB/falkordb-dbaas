@@ -91,6 +91,11 @@ jobs:
         with:
           version: ">= 363.0.0"
 
+      - name: Setup Tofu workspace
+        run: |
+          cd ${{ matrix.stack.path }}
+          tofu init ${{ env.init_param }}
+
       - name: Apply stack
         run: |
           cd ${{ matrix.stack.path }}
