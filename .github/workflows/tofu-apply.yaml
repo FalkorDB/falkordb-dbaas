@@ -93,4 +93,5 @@ jobs:
 
       - name: Apply stack
         run: |
+          cd ${{ matrix.stack.path }}
           tofu apply -auto-approve
