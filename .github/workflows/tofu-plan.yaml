@@ -108,7 +108,7 @@ jobs:
         id: plan-run
         run: |
           cd ${{ matrix.stack.path }}
-          tofu plan -out=tfplan
+          tofu plan -no-color -out=tfplan
           plan=$(tofu show tfplan)
           delimiter="$(openssl rand -hex 8)"
           echo "PLAN_OUTPUT<<EOF-$delimiter" >> "$GITHUB_OUTPUT"
