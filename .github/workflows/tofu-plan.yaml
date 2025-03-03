@@ -111,9 +111,9 @@ jobs:
           tofu plan -out=tfplan
           plan=$(tofu show tfplan)
           delimiter="$(openssl rand -hex 8)"
-          echo "matrix<<${delimiter}" >> "${GITHUB_OUTPUT}"
-          echo "$plan" >> "${GITHUB_OUTPUT}"
-          echo "${delimiter}" >> "${GITHUB_OUTPUT}"
+          echo "PLAN_START<<${delimiter}" >> "$GITHUB_OUTPUT"
+          echo "$plan" >> "$GITHUB_OUTPUT"
+          echo "${delimiter}>>PLAN_END" >> "$GITHUB_OUTPUT"
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
