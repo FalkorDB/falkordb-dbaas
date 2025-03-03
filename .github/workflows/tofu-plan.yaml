@@ -8,8 +8,11 @@ on:
       - dev
 
 permissions:
-  contents: "read"
-  id-token: "write"
+  contents: read
+  id-token: write
+  actions: read
+  checks: write
+  pull-requests: write
 
 concurrency:
   group: tofu-plan-${{ github.event.pull_request.base.ref || github.ref_name }}
@@ -49,11 +52,6 @@ jobs:
     strategy:
       matrix:
         stack: ${{fromJson(needs.load-stack-matrix.outputs.matrix)}}
-    permissions:
-      actions: read # Required to identify workflow run.
-      checks: write # Required to add status summary.
-      contents: read # Required to checkout repository.
-      pull-requests: write # Required to add comment and label.
     steps:
       - name: Set environment vars
         env:
