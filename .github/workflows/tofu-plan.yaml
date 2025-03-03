@@ -109,7 +109,8 @@ jobs:
         run: |
           cd ${{ matrix.stack.path }}
           tofu plan -out=tfplan
-          echo 'plan="$(tofu show tfplan)"' >> $GITHUB_OUTPUT
+          plan=$(tofu show tfplan)
+          echo "plan='$plan'" >> $GITHUB_OUTPUT
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
@@ -134,7 +135,7 @@ jobs:
             });
             const output = `#### Tofu Plan Output - ${{ matrix.stack.name }}
                 \`\`\`
-                Plan: ${{ steps.plan-run.outputs.plan }}
+                ${{ steps.plan-run.outputs.plan }}
                 \`\`\`
                 `;
             // 3. Delete previous comment so PR timeline makes sense
