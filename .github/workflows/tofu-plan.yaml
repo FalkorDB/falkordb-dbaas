@@ -132,9 +132,9 @@ jobs:
               issue_number: context.issue.number,
             });
             const botComment = comments.find(comment => {
-              return comment.user.type === 'Bot' && comment.body.includes('Tofu Plan Output')
+              return comment.user.type === 'Bot' && comment.body.includes('Tofu Plan Output - ${{ matrix.stack.name }}');
             });
-            const output = `#### Tofu Plan Output
+            const output = `#### Tofu Plan Output - ${{ matrix.stack.name }}
                 \`\`\`
                 Plan: ${{ steps.plan-run.outputs.add }} to add, ${{ steps.plan-run.outputs.change }} to change, ${{ steps.plan-run.outputs.destroy }} to destroy.
                 \`\`\`
