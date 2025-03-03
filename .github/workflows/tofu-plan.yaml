@@ -110,7 +110,10 @@ jobs:
           cd ${{ matrix.stack.path }}
           tofu plan -out=tfplan
           plan=$(tofu show tfplan)
-          echo "plan='$plan'" >> $GITHUB_OUTPUT
+          delimiter="$(openssl rand -hex 8)"
+          echo "matrix<<${delimiter}" >> "${GITHUB_OUTPUT}"
+          echo "$plan" >> "${GITHUB_OUTPUT}"
+          echo "${delimiter}" >> "${GITHUB_OUTPUT}"
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
