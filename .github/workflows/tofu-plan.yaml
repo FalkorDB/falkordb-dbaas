@@ -109,9 +109,7 @@ jobs:
         run: |
           cd ${{ matrix.stack.path }}
           tofu plan -out=tfplan
-          echo "add=$(tofu show -json tfplan | jq '.add')" >> $GITHUB_OUTPUT
-          echo "change=$(tofu show -json tfplan | jq '.change')" >> $GITHUB_OUTPUT
-          echo "destroy=$(tofu show -json tfplan | jq '.destroy')" >> $GITHUB_OUTPUT
+          echo "plan=$(tofu show tfplan)" >> $GITHUB_OUTPUT
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
@@ -136,7 +134,7 @@ jobs:
             });
             const output = `#### Tofu Plan Output - ${{ matrix.stack.name }}
                 \`\`\`
-                Plan: ${{ steps.plan-run.outputs.add }} to add, ${{ steps.plan-run.outputs.change }} to change, ${{ steps.plan-run.outputs.destroy }} to destroy.
+                Plan: ${{ steps.plan-run.outputs.plan }}
                 \`\`\`
                 `;
             // 3. Delete previous comment so PR timeline makes sense
