@@ -138,7 +138,7 @@ jobs:
             });
             const output = `#### Tofu Plan Output - ${{ matrix.stack.name }}
                 \`\`\`
-                ${{ steps.plan-run.outputs.plan }}
+                ${{ steps.plan-run.outputs.PLAN_OUTPUT }}
                 \`\`\`
                 `;
             // 3. Delete previous comment so PR timeline makes sense
