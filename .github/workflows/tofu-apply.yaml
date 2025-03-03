@@ -2,12 +2,10 @@ name: Tofu Apply
 
 on:
   workflow_dispatch:
-  pull_request: 
+  push:
     branches:
       - main
       - dev
-    types: 
-      - closed
 
 permissions:
   contents: "read"
@@ -20,7 +18,7 @@ concurrency:
 jobs:
   load-stack-matrix:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+    environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,7 +40,7 @@ jobs:
     needs: load-stack-matrix
     name: Apply stack ${{ matrix.stack.name }}
     runs-on: ubuntu-latest
-    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+    environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
     strategy:
       matrix:
         stack: ${{fromJson(needs.load-stack-matrix.outputs.matrix)}}
@@ -93,17 +91,12 @@ jobs:
         with:
           version: ">= 363.0.0"
 
-      - name: Download plan from artifacts
-        id: download-artifact
-        uses: dawidd6/action-download-artifact@v6
-        with:
-          name: tofu-plan-${{ github.ref_name == 'main' && 'prod' || 'dev' }}-${{ matrix.stack.name }}
-          path: ${{ matrix.stack.path }}/tfplan
-          branch: ${{ github.ref_name }}
-          workflow: tofu-plan.yaml
-          workflow_conclusion: success
-          if_no_artifact_found: error
+      - name: Setup Tofu workspace
+        run: |
+          cd ${{ matrix.stack.path }}
+          tofu init ${{ env.init_param }}
 
       - name: Apply stack
         run: |
-          tofu apply -auto-approve -f ${{ matrix.stack.path }}/tfplan
+          cd ${{ matrix.stack.path }}
+          tofu apply -auto-approve
