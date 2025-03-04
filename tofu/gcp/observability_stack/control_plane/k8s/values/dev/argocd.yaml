@@ -44,7 +44,7 @@ configs:
     policy.default: role:readonly
     policy.csv: |
       g, devops@falkordb.com, role:org-admin
-    scopes: '[groups, email]'
+    scopes: "[groups, email]"
 
 dex:
   volumeMounts:
@@ -56,6 +56,10 @@ dex:
       secret:
         defaultMode: 420
         secretName: argocd-google-groups
+
+controller:
+  metrics:
+    enabled: true
 
 extraObjects:
   - apiVersion: argoproj.io/v1alpha1
