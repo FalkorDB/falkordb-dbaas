@@ -120,6 +120,13 @@ resource "google_project_iam_member" "github_action_sa" {
   member  = "serviceAccount:${google_service_account.github_action_sa.email}"
 }
 
+# Add kubernetes admin role to the service account
+resource "google_project_iam_member" "github_action_sa_k8s_admin" {
+  project = module.project.project_id
+  role    = "roles/container.admin"
+  member  = "serviceAccount:${google_service_account.github_action_sa.email}"
+}
+
 module "gh_oidc" {
   source                = "terraform-google-modules/github-actions-runners/google//modules/gh-oidc"
   project_id            = module.project.project_id
