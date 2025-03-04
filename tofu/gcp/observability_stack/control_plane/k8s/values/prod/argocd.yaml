@@ -68,6 +68,8 @@ applicationSet:
 
 controller:
   replicas: 2
+  metrics:
+    enabled: true
   template:
     spec: 
       containers:
