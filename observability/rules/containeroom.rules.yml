@@ -1,0 +1,17 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  namespace: observability
+  name: k8s.rules.containeroom
+spec:
+  groups:
+    - name: k8s.rules.container_oom
+      rules:
+        - alert: ContainerOOMKilled
+          expr: kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1
+          for: 0m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Container OOMKilled"
+            description: "Container {{ $labels.pod }} ({{ $labels.container }}) in namespace {{ $labels.namespace }} was terminated due to OOMKilled."
