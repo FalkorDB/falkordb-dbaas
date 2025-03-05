@@ -1,0 +1,24 @@
+rule_files:
+  - "./rules/containeroom.rules.yml"
+
+evaluation_interval: 10m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'kube_pod_container_status_last_terminated_reason{reason="OOMKilled", pod="test-pod", namespace="test-ns", container="test-container"}'
+        values: "1 1 1 1 1"
+
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: ContainerOOMKilled
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              pod: "test-pod"
+              namespace: "test-ns"
+              container: "test-container"
+              reason: "OOMKilled"
+            exp_annotations:
+              summary: "Container OOMKilled"
+              description: "Container test-pod (test-container) in namespace test-ns was terminated due to OOMKilled."
