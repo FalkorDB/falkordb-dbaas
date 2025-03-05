@@ -1,4 +1,4 @@
-name: Run tests for alert rules
+name: Test alert rules
 on:
   workflow_dispatch:
   pull_request:
