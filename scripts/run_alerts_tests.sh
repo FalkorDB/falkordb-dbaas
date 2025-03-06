@@ -20,7 +20,7 @@ done
 errors=0
 for test_file in observability/rules/tests/*.test.yml
 do
-  promtool test rules $test_file
+  promtool test rules --debug $test_file
   if [ $? -ne 0 ]; then
     errors=$((errors+1))
   fi
