@@ -17,6 +17,12 @@ do
   yq eval -i '.groups = .spec.groups | del(.apiVersion, .kind, .metadata, .groups[].params, .spec)' observability/rules/tests/rules/$(basename $file)
 done
 
+# skip if there are no tests
+if [ ! -d observability/rules/tests ]; then
+  echo "No tests found"
+  exit 0
+fi
+
 errors=0
 for test_file in observability/rules/tests/*.test.yml
 do
