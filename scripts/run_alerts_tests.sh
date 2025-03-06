@@ -8,7 +8,7 @@ then
 fi
 
 # skip if there are no tests
-if [ ! -d observability/rules/tests ] || [ -n "$( ls -A observability/rules/tests )" ]; then
+if [ ! -d observability/rules/tests ] || [ -z "$( ls -A observability/rules/tests )" ]; then
   echo "No tests found"
   exit 0
 fi
