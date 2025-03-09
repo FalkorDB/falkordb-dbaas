@@ -1,0 +1,38 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: cloudlogging
+  namespace: observability
+spec:
+  valuesFrom:
+    - targetPath: "secureJsonData.clientEmail"
+      valueFrom:
+        secretKeyRef:
+          name: google-cloud-logging-credentials
+          key: GOOGLE_CLIENT_EMAIL
+    - targetPath: "secureJsonData.privateKey"
+      valueFrom:
+        secretKeyRef:
+          name: google-cloud-logging-credentials
+          key: GOOGLE_PRIVATE_KEY
+    - targetPath: "jsonData.defaultProject"
+      valueFrom:
+        secretKeyRef:
+          name: google-cloud-logging-credentials
+          key: GOOGLE_PROJECT_ID
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  allowCrossNamespaceImport: false
+  datasource:
+    access: proxy
+    name: Google Cloud Logging
+    type: googlecloud-logging-datasource
+    authenticationType: gce
+    jsonData:
+      tokenUri: https://oauth2.googleapis.com/token
+      authenticationType: jwt
+    secureJsonData:
+      clientEmail: ${GOOGLE_CLIENT_EMAIL}
+      privateKey: ${GOOGLE_PRIVATE_KEY}
+      defaultProject: ${GOOGLE_PROJECT_ID}

@@ -63,3 +63,15 @@ variable "grafana_google_client_id" {
 variable "grafana_google_client_secret" {
   type = string
 }
+
+variable "app_plane_logging_read_sa_email" {
+  type = string
+}
+
+variable "app_plane_logging_read_sa_key" {
+  type = string
+}
+
+variable "app_plane_project_id" {
+  type = string
+}

@@ -25,3 +25,10 @@ output "ctrl_plane_github_sa_email" {
 output "ctrl_plane_gh_workload_identity_provider" {
   value = module.control_plane.gh_workload_identity_provider
 }
+output "ctrl_plane_cloud_logging_reader_email" {
+  value = module.control_plane.cloud_logging_reader_email
+}
+
+output "ctrl_plane_cloud_logging_reader_key" {
+  value = module.control_plane.cloud_logging_reader_key
+}

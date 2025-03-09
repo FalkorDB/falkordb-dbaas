@@ -141,3 +141,23 @@ module "gh_oidc" {
   }
   attribute_condition = "assertion.repository_owner=='FalkorDB'"
 }
+
+
+# Cloud logging reader SA
+resource "google_service_account" "cloud_logging_reader" {
+  project      = var.project_id
+  account_id   = "cloud-logging-reader"
+  display_name = "Cloud Logging Reader"
+}
+
+# add logging reader role to the service account
+resource "google_project_iam_member" "cloud_logging_reader" {
+  project = var.project_id
+  role    = "roles/logging.viewer"
+  member  = "serviceAccount:${google_service_account.cloud_logging_reader.email}"
+}
+
+# create key for the service account
+resource "google_service_account_key" "cloud_logging_reader_key" {
+  service_account_id = google_service_account.cloud_logging_reader.id
+}

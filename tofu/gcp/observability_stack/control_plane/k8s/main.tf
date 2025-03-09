@@ -126,3 +126,17 @@ resource "kubernetes_secret" "grafana-google-credentials" {
     "client-secret" = var.grafana_google_client_secret
   }
 }
+
+
+resource "kubernetes_secret" "google-cloud-logging-credentials" {
+  metadata {
+    name      = "google-cloud-logging-credentials"
+    namespace = kubernetes_namespace.observability.metadata.0.name
+  }
+
+  data = {
+    "GOOGLE_CLIENT_EMAIL" : var.app_plane_logging_read_sa_email,
+    "GOOGLE_PRIVATE_KEY" : base64decode(var.app_plane_logging_read_sa_key),
+    "GOOGLE_PROJECT_ID" : var.app_plane_project_id,
+  }
+}
