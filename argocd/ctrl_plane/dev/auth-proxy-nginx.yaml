@@ -1,0 +1,104 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: auth-proxy-nginx-ctrl-plane
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: ctrl-plane
+  template:
+    metadata:
+      name: "alloy"
+    spec:
+      project: default
+      source:
+        chart: oci://registry-1.docker.io/bitnamicharts/nginx
+        targetRevision: 19.0.2
+      destination:
+        server: "{{.server}}"
+        namespace: customer-observability
+        helm:
+          valuesObject:
+            fullnameOverride: auth-proxy-nginx
+            nodeSelector:
+              node_pool: observability-resources
+            serverBlock: |-
+              server {
+                listen 80;
+                server_name grafana.dev.falkordb.cloud;
+
+                location = /grafana/login {
+                  proxy_pass http://grafana.customer-observability.svc.cluster.local/login;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  break;
+                }
+
+                location /grafana/public {
+                  proxy_pass http://grafana.customer-observability.svc.cluster.local/public;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  break;
+                }
+
+                location /grafana/api {
+                  proxy_pass http://grafana.customer-observability.svc.cluster.local/api;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  break;
+                }
+                  
+                location /grafana/ {
+                  auth_request /auth;
+
+                  # Capture headers from the auth subrequest
+                  auth_request_set $user $upstream_http_x_webauth_user;
+
+                  # Forward captured headers to Grafana
+                  proxy_set_header X-WEBAUTH-USER $user;
+
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+
+                  error_page 401 = @error401;
+
+                  proxy_pass http://grafana.customer-observability.svc.cluster.local/;
+                }
+
+                location /auth {
+                  internal;
+                  proxy_pass http://auth-proxy.customer-observability.svc.cluster.local/api/verify;
+                  proxy_pass_request_body off;
+                  proxy_set_header Content-Length "";
+                  proxy_set_header X-Original-URI $request_uri;
+                }
+
+                location @error401 {
+                  return 302 /signin;
+                }
+
+                location /_next/webpack-hmr {
+                  proxy_pass http://auth-proxy.customer-observability.svc.cluster.local;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                }
+
+                location / {
+                  proxy_pass http://auth-proxy.customer-observability.svc.cluster.local/;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                }
+              }
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+        automated:
+          prune: true
+          selfHeal: true

@@ -15,7 +15,18 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "NEXTAUTH_URL",
+        "NEXT_PUBLIC_GRAFANA_URL",
+        "NEXTAUTH_JWT_SECRET",
+        "OMNISTRATE_USER",
+        "OMNISTRATE_PASSWORD",
+        "GRAFANA_WEBHOOK_API_TOKEN",
+        "GRAFANA_SA_USERNAME",
+        "GRAFANA_SA_PASSWORD",
+        "GRAFANA_URL"
+      ]
     }
   }
 }

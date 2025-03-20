@@ -21,6 +21,8 @@
     "typescript": "5.8.2"
   },
   "dependencies": {
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^6.4.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   }

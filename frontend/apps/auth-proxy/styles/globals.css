@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+:root {
+  height: 100%;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: "Inter", Arial, sans-serif;
+  color: #111827;
+  background: white;
+  height: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+#__next {
+  height: 100%;
+}
+
+img {
+  display: inline-block;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}

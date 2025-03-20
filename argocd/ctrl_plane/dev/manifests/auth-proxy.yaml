@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-proxy
+  namespace: customer-observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-proxy
+  template:
+    metadata:
+      labels:
+        app: auth-proxy
+    spec:
+      containers:
+        - name: auth-proxy-web
+          image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/frontend/auth-proxy-web:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      imagePullSecrets:
+        - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-proxy
+  namespace: customer-observability
+spec:
+  selector:
+    app: auth-proxy
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: LoadBalancer
