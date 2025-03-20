@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    chart: nginx
+    chart: ingress-nginx
     repoURL: https://charts.bitnami.com/bitnami
-    targetRevision: 19.0.2
+    targetRevision: 18.2.6
   destination:
     server: https://kubernetes.default.svc
     namespace: customer-observability
