@@ -48,6 +48,24 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
     needs: build
     steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x.x"
+          cache: "pnpm"
+          cache-dependency-path: frontend
+
+      - name: Install pnpm
+        working-directory: frontend
+        run: pnpm i --frozen-lockfile
+
       - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@v1

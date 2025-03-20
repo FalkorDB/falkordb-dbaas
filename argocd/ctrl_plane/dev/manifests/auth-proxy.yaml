@@ -26,8 +26,9 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
-      imagePullSecrets:
-        - name: regcred
+          envFrom:
+            - secretRef:
+                name: auth-proxy-web
 ---
 apiVersion: v1
 kind: Service
