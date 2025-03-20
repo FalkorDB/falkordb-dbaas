@@ -23,16 +23,18 @@ jobs:
           cache: "pnpm"
 
       - name: Install pnpm
+        working-directory: frontend
         run: pnpm i --frozen-lockfile
 
       - name: Build Next.js App
+        working-directory: frontend
         run: pnpm run build
 
       - name: Docker Build
         id: build-push
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
           push: false
           tags: |
@@ -64,7 +66,7 @@ jobs:
         id: build-push
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
           push: true
           tags: |
