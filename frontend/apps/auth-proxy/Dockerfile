@@ -34,7 +34,7 @@ RUN adduser --system --uid 1001 nextjs
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=installer --chown=nextjs:nodejs /app/apps/auth-proxy/.next/standalone/apps/auth-proxy ./next/standalone
+COPY --from=installer --chown=nextjs:nodejs /app/apps/auth-proxy/.next/standalone ./next/standalone
 COPY --from=installer --chown=nextjs:nodejs /app/apps/auth-proxy/.next/static ./next/standalone/apps/app/.next/static
 COPY --from=installer --chown=nextjs:nodejs /app/apps/auth-proxy/public ./next/standalone/apps/app/public
 
@@ -44,5 +44,5 @@ EXPOSE 3000
 ENV PORT 3000
 
 ENV HOSTNAME "0.0.0.0"
-CMD node next/standalone/apps/app/server.js
+CMD node next/standalone/apps/auth-proxy/server.js
 
