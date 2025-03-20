@@ -5,14 +5,14 @@ metadata:
   namespace: argocd
 spec:
   project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: customer-observability
   source:
     chart: nginx
     path: nginx
     repoURL: registry-1.docker.io/bitnamicharts
     targetRevision: 18.2.6
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: customer-observability
     helm:
       valuesObject:
         fullnameOverride: auth-proxy-nginx
@@ -24,21 +24,21 @@ spec:
             server_name grafana.dev.falkordb.cloud;
 
             location = /grafana/login {
-              proxy_pass http://grafana.customer-observability.svc.cluster.local/login;
+              proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/login;
               proxy_set_header Host $host;
               proxy_set_header X-Real-IP $remote_addr;
               break;
             }
 
             location /grafana/public {
-              proxy_pass http://grafana.customer-observability.svc.cluster.local/public;
+              proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/public;
               proxy_set_header Host $host;
               proxy_set_header X-Real-IP $remote_addr;
               break;
             }
 
             location /grafana/api {
-              proxy_pass http://grafana.customer-observability.svc.cluster.local/api;
+              proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/api;
               proxy_set_header Host $host;
               proxy_set_header X-Real-IP $remote_addr;
               break;
@@ -58,7 +58,7 @@ spec:
 
               error_page 401 = @error401;
 
-              proxy_pass http://grafana.customer-observability.svc.cluster.local/;
+              proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/;
             }
 
             location /auth {
