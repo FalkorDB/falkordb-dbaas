@@ -27,10 +27,6 @@ jobs:
         working-directory: frontend
         run: pnpm i --frozen-lockfile
 
-      - name: Build Next.js App
-        working-directory: frontend
-        run: pnpm run build
-
       - name: Docker Build
         id: build-push
         uses: docker/build-push-action@v6
