@@ -5,6 +5,7 @@ provider "registry.opentofu.org/hashicorp/google" {
   version     = "5.45.0"
   constraints = ">= 3.33.0, >= 3.53.0, >= 3.83.0, >= 4.25.0, >= 4.64.0, >= 5.0.0, 5.45.0, < 6.0.0, < 7.0.0"
   hashes = [
+    "h1:5yNsxer0hDyiDkwmaqR6biJXaKO78GRYH1qbaTG9YyE=",
     "h1:i+v9EZbFRgLj1/Q+j71Z/V79ghSJnINQFq+uZEzDvTg=",
     "zh:3abbc9944211da9027c69dde78b00430a7e2171ceb0c725c5b0d095f3f47f116",
     "zh:42e4f1ccde4798b0ef769931f64fdc72ee6b6da33e560d697bd11ce2a94a973a",
@@ -24,6 +25,7 @@ provider "registry.opentofu.org/hashicorp/google-beta" {
   constraints = ">= 4.64.0, < 7.0.0"
   hashes = [
     "h1:aLZkZyKHdOPUapzl9NSIv6QCcwf6onny86wxr3MUrGg=",
+    "h1:e4sfVhxOyt9Xg2d+m9jWYb7XsuqRAzEB9ak6kLxrhtk=",
     "zh:088f8b7b1c17df88a8e86a8a5fba02c8150f03a31e8eb47de7eeba2228a79dae",
     "zh:1bf6a798f1d5be3019d5387c792940c324d72adf8020285561eea6428cad9d60",
     "zh:2f5b18f40fb75b81dd51463510beccbea20bf9c629a98f675da3d80bf3cab305",
@@ -41,6 +43,7 @@ provider "registry.opentofu.org/hashicorp/kubernetes" {
   version     = "2.35.1"
   constraints = "~> 2.10"
   hashes = [
+    "h1:3kVDveERi2qDyLY8zCz/rGmxlGiCAUyJEQR/QiZEIsA=",
     "h1:B2Z0iwnPv88NPJuJSswPo87ZCqXmVMv/G/tbfwEt/EI=",
     "zh:0a569918d9e81755bdacb2380e70ed304c442e957a029984cbcd9ec88e5d3635",
     "zh:1d4d1241cf51d7d4a036c774add1384bb1ba9ca16146334d17c730e1b41ad3e0",
@@ -59,6 +62,7 @@ provider "registry.opentofu.org/hashicorp/random" {
   version     = "3.6.3"
   constraints = ">= 2.1.0"
   hashes = [
+    "h1:32/UZofQoXk8zPj9vpIDiSEmERA3Mx2VPvk1lHTTHvw=",
     "h1:ohM08k4QVd81oVSJnFI53wJjPcH23XlYG4WslS9og2Q=",
     "zh:1bfd2e54b4eee8c761a40b6d99d45880b3a71abc18a9a7a5319204da9c8363b2",
     "zh:21a15ac74adb8ba499aab989a4248321b51946e5431219b56fc827e565776714",

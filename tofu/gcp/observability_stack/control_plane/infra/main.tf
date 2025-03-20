@@ -228,3 +228,35 @@ resource "google_service_account" "argocd_dwd" {
 resource "google_service_account_key" "argocd_dwd_key" {
   service_account_id = google_service_account.argocd_dwd.name
 }
+
+# Create frontend artifact registry
+resource "google_artifact_registry_repository" "frontend" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "frontend"
+  format        = "DOCKER"
+}
+
+# Create backend artifact registry
+resource "google_artifact_registry_repository" "backend" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "backend"
+  format        = "DOCKER"
+}
+
+# Create jobs artifact registry
+resource "google_artifact_registry_repository" "jobs" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "jobs"
+  format        = "DOCKER"
+}
+
+# add permission to pull images from artifact registry
+resource "google_project_iam_member" "frontend" {
+  project = var.project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${module.gke.service_account}"
+}
+
