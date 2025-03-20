@@ -18,7 +18,7 @@ importers:
         specifier: 5.8.2
         version: 5.8.2
 
-  apps/web:
+  apps/auth-proxy:
     dependencies:
       '@emotion/cache':
         specifier: ^11.14.0
