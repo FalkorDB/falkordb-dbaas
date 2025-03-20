@@ -98,14 +98,6 @@ jobs:
           IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:${{ github.sha }})
           echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
 
-      - name: Checkout Infra Repository
-        uses: actions/checkout@v4
-        with:
-          repository: <YOUR_USERNAME>/infrastructure
-          ref: "main"
-          token: ${{ secrets.INFRASTRUCTURE_TOKEN }}
-          path: infrastructure
-
       - name: Verify File Presence
         run: |
           echo "Checking file presence:"
