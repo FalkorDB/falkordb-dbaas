@@ -7,9 +7,8 @@ spec:
   project: default
   source:
     chart: nginx
-    repoURL: oci://registry-1.docker.io/bitnamicharts/nginx
+    repoURL: https://charts.bitnami.com/bitnami
     targetRevision: 18.2.6
-    type: helm
   destination:
     server: https://kubernetes.default.svc
     namespace: customer-observability
