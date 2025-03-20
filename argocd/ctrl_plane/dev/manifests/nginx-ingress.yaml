@@ -22,8 +22,6 @@ spec:
                 name: customer-grafana-service
                 port:
                   number: 80
-            annotations:
-              nginx.ingress.kubernetes.io/auth-type: "none" # No auth required
           - path: /grafana/public
             pathType: Prefix
             backend:
@@ -31,8 +29,6 @@ spec:
                 name: customer-grafana-service
                 port:
                   number: 80
-            annotations:
-              nginx.ingress.kubernetes.io/auth-type: "none" # No auth required
           - path: /grafana/api
             pathType: Prefix
             backend:
@@ -40,8 +36,6 @@ spec:
                 name: customer-grafana-service
                 port:
                   number: 80
-            annotations:
-              nginx.ingress.kubernetes.io/auth-type: "none" # No auth required
           - path: /grafana/
             pathType: Prefix
             backend:
@@ -56,8 +50,6 @@ spec:
                 name: auth-proxy
                 port:
                   number: 80
-            annotations:
-              nginx.ingress.kubernetes.io/auth-type: "none" # No auth required
           - path: /
             pathType: Prefix
             backend:
@@ -65,5 +57,3 @@ spec:
                 name: auth-proxy
                 port:
                   number: 80
-            annotations:
-              nginx.ingress.kubernetes.io/auth-type: "none" # No auth required
