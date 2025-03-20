@@ -7,6 +7,7 @@ on:
 permissions:
   contents: "read"
   id-token: "write"
+  pull-requests: "write"
 
 jobs:
   build:
@@ -91,44 +92,3 @@ jobs:
           tags: |
             us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:${{ github.sha }}
             us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:latest
-
-      - name: Get Docker Image Digest
-        id: digest
-        run: |
-          IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:${{ github.sha }})
-          echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_ENV
-
-      - name: Verify File Presence
-        run: |
-          echo "Checking file presence:"
-          ls -la argocd/ctrl_plane/${{ github.ref_name == 'main' && 'prod' || 'dev' }}/manifests/
-          cat argocd/ctrl_plane/${{ github.ref_name == 'main' && 'prod' || 'dev' }}/manifests/auth-proxy.yaml
-
-      - name: Update Deployment Manifest
-        run: |
-          echo "Updating deployment manifest:"
-          # Print the file content before changes
-          echo "Before update:"
-          cat argocd/ctrl_plane/${{ github.ref_name == 'main' && 'prod' || 'dev' }}/manifests/auth-proxy.yaml
-
-          # Update the image tag in the deployment manifest with the digest
-          sed -i "s|image: us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:.*|image: us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:${{ github.sha }}|g" argocd/ctrl_plane/${{ github.ref_name == 'main' && 'prod' || 'dev' }}/manifests/auth-proxy.yaml
-
-          # Print the file content after changes
-          echo "After update:"
-          cat argocd/ctrl_plane/${{ github.ref_name == 'main' && 'prod' || 'dev' }}/manifests/auth-proxy.yaml
-
-      - name: Stage and Commit Changes
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add argocd/ctrl_plane/${{ github.ref_name == 'main' && 'prod' || 'dev' }}/manifests/auth-proxy.yaml
-          # Verify the staging
-          git status
-          # Commit and push changes if there are modifications
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Update auth-proxy-web image to version ${{ github.sha }}"
-            git push origin ${{ github.ref }}
-          fi
