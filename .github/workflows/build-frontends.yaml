@@ -21,6 +21,7 @@ jobs:
         with:
           node-version: "22.x.x"
           cache: "pnpm"
+          cache-dependency-path: frontend
 
       - name: Install pnpm
         working-directory: frontend
