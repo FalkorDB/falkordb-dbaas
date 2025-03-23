@@ -51,7 +51,7 @@ spec:
           volumes:
             - name: grafana-data
               persistentVolumeClaim:
-                claimName: grafana-pvc
+                claimName: customer-grafana-pvc
   config:
     log:
       mode: "console"
