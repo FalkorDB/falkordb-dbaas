@@ -33,7 +33,7 @@ spec:
             - containerPort: 3000
           volumeMounts:
             - name: nginx-config
-              mountPath: /opt/bitnami/nginx/conf/nginx.conf
+              mountPath: /opt/bitnami/nginx/conf/
               readOnly: true
           resources:
             requests:
