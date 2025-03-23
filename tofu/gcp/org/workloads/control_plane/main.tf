@@ -127,6 +127,13 @@ resource "google_project_iam_member" "github_action_sa_k8s_admin" {
   member  = "serviceAccount:${google_service_account.github_action_sa.email}"
 }
 
+# add iam role update to the service account
+resource "google_project_iam_member" "github_action_sa_iam_role_update" {
+  project = module.project.project_id
+  role    = "roles/iam.roleAdmin"
+  member  = "serviceAccount:${google_service_account.github_action_sa.email}"
+}
+
 module "gh_oidc" {
   source                = "terraform-google-modules/github-actions-runners/google//modules/gh-oidc"
   project_id            = module.project.project_id
