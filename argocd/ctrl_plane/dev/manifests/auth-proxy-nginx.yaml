@@ -30,6 +30,11 @@ spec:
       containers:
         - name: nginx
           image: bitnami/nginx:1.21.1
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
           ports:
             - containerPort: 3000
           volumeMounts:
@@ -62,7 +67,7 @@ data:
     http {
 
       server {
-        listen 3000;
+        listen 80;
         server_name grafana.dev.falkordb.cloud;
 
         location = /grafana/login {
