@@ -69,21 +69,21 @@ data:
         server_name grafana.dev.falkordb.cloud;
 
         location = /grafana/login {
-          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/login;
+          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local:3000/login;
           proxy_set_header Host $host;
           proxy_set_header X-Real-IP $remote_addr;
           break;
         }
 
         location /grafana/public {
-          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/public;
+          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local:3000/public;
           proxy_set_header Host $host;
           proxy_set_header X-Real-IP $remote_addr;
           break;
         }
 
         location /grafana/api {
-          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/api;
+          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local:3000/api;
           proxy_set_header Host $host;
           proxy_set_header X-Real-IP $remote_addr;
           break;
@@ -103,7 +103,7 @@ data:
 
           error_page 401 = @error401;
 
-          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/;
+          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local:3000/;
         }
 
         location /auth {
