@@ -56,7 +56,7 @@ spec:
     log:
       mode: "console"
     auth:
-      signout_redirect_url: http://grafana.dev.falkordb.cloud/signout
+      signout_redirect_url: https://grafana.dev.falkordb.cloud/signout
     auth.proxy:
       enabled: "true"
       header_name: X-WEBAUTH-USER
@@ -64,6 +64,6 @@ spec:
       auto_sign_up: "true"
       enable_login_token: "false"
     server:
-      root_url: "http://grafana.dev.falkordb.cloud/grafana"
+      root_url: "https://grafana.dev.falkordb.cloud/grafana"
     users:
       auto_assign_org: "false"
