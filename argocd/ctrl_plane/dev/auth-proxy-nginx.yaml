@@ -20,7 +20,7 @@ spec:
           node_pool: observability-resources
         serverBlock: |-
           server {
-            listen 80;
+            listen 3000;
             server_name grafana.dev.falkordb.cloud;
 
             location = /grafana/login {
