@@ -40,6 +40,13 @@ spec:
                 name: customer-grafana-service
                 port:
                   number: 3000
+          - path: /grafana/api
+            pathType: Prefix
+            backend:
+              service:
+                name: customer-grafana-service
+                port:
+                  number: 3000
           - path: /auth
             pathType: Prefix
             backend:
@@ -73,13 +80,6 @@ spec:
                 port:
                   number: 3000
           - path: /grafana/public
-            pathType: Prefix
-            backend:
-              service:
-                name: customer-grafana-service
-                port:
-                  number: 3000
-          - path: /grafana/api
             pathType: Prefix
             backend:
               service:
