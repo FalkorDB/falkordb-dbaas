@@ -54,70 +54,77 @@ metadata:
   namespace: customer-observability
 data:
   nginx.conf: |-
-    server {
-      listen 3000;
-      server_name grafana.dev.falkordb.cloud;
+    events {
+      worker_connections 4096;
+    }
 
-      location = /grafana/login {
-        proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/login;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        break;
-      }
+    http {
 
-      location /grafana/public {
-        proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/public;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        break;
-      }
+      server {
+        listen 3000;
+        server_name grafana.dev.falkordb.cloud;
 
-      location /grafana/api {
-        proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/api;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        break;
-      }
-        
-      location /grafana/ {
-        auth_request /auth;
+        location = /grafana/login {
+          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/login;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          break;
+        }
 
-        # Capture headers from the auth subrequest
-        auth_request_set $user $upstream_http_x_webauth_user;
+        location /grafana/public {
+          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/public;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          break;
+        }
 
-        # Forward captured headers to Grafana
-        proxy_set_header X-WEBAUTH-USER $user;
+        location /grafana/api {
+          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/api;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          break;
+        }
+          
+        location /grafana/ {
+          auth_request /auth;
 
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
+          # Capture headers from the auth subrequest
+          auth_request_set $user $upstream_http_x_webauth_user;
 
-        error_page 401 = @error401;
+          # Forward captured headers to Grafana
+          proxy_set_header X-WEBAUTH-USER $user;
 
-        proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/;
-      }
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
 
-      location /auth {
-        internal;
-        proxy_pass http://auth-proxy.customer-observability.svc.cluster.local/api/verify;
-        proxy_pass_request_body off;
-        proxy_set_header Content-Length "";
-        proxy_set_header X-Original-URI $request_uri;
-      }
+          error_page 401 = @error401;
 
-      location @error401 {
-        return 302 /signin;
-      }
+          proxy_pass http://customer-grafana-service.customer-observability.svc.cluster.local/;
+        }
 
-      location /_next/webpack-hmr {
-        proxy_pass http://auth-proxy.customer-observability.svc.cluster.local;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-      }
+        location /auth {
+          internal;
+          proxy_pass http://auth-proxy.customer-observability.svc.cluster.local/api/verify;
+          proxy_pass_request_body off;
+          proxy_set_header Content-Length "";
+          proxy_set_header X-Original-URI $request_uri;
+        }
 
-      location / {
-        proxy_pass http://auth-proxy.customer-observability.svc.cluster.local/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
+        location @error401 {
+          return 302 /signin;
+        }
+
+        location /_next/webpack-hmr {
+          proxy_pass http://auth-proxy.customer-observability.svc.cluster.local;
+          proxy_http_version 1.1;
+          proxy_set_header Upgrade $http_upgrade;
+          proxy_set_header Connection "upgrade";
+        }
+
+        location / {
+          proxy_pass http://auth-proxy.customer-observability.svc.cluster.local/;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+        }
       }
     }
