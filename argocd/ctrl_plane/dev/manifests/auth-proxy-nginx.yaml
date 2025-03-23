@@ -25,6 +25,7 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: nginx
+        app.kubernetes.io/instance: auth-proxy-nginx-ctrl-plane
     spec:
       containers:
         - name: nginx
