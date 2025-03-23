@@ -64,6 +64,8 @@ spec:
       auto_sign_up: "true"
       enable_login_token: "false"
     server:
-      root_url: "https://grafana.dev.falkordb.cloud/grafana"
+      domain: grafana.dev.falkordb.cloud
+      root_url: "https://grafana.dev.falkordb.cloud/grafana/"
+      serve_from_sub_path: "true"
     users:
       auto_assign_org: "false"
