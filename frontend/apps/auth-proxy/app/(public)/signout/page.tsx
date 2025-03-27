@@ -11,6 +11,9 @@ export default function Page() {
     signOut().then(() => {
       redirect("/signin");
     });
+  } else {
+    console.warn("No session found, redirecting to /signin");
+    redirect("/signin");
   }
 
   return (

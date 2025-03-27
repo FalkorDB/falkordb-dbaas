@@ -2,6 +2,7 @@ import { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { axiosClient } from "../axios";
 import { jwtDecode } from "jwt-decode";
+import { verifyRecaptchaToken } from '../lib/utils/verifyRecaptchaToken';
 
 export const authOptions: AuthOptions = {
   providers: [
@@ -11,8 +12,11 @@ export const authOptions: AuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, req) => {
         try {
+
+          await verifyRecaptchaToken(req.body?.reCaptchaToken ?? '');
+
           const res = await axiosClient.post(
             "https://api.omnistrate.cloud/2022-09-01-00/customer-user-signin",
             {

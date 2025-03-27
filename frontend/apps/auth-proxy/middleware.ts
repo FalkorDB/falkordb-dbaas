@@ -4,8 +4,9 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const redirectToSignIn = () => {
     // Prevent Redirecting to the Same Page
-    if (path.startsWith("/signin")) return;
+    if (path.startsWith("/signin") || path.startsWith("/reset-password")) return;
 
+    console.log(`Redirecting to /signin from ${path}`);
     const redirectPath = "/signin";
 
     const response = NextResponse.redirect(new URL(redirectPath, request.url));
@@ -28,5 +29,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api/|_next/).*)"],
+  matcher: ["/((?!api/|_next/|assets).*)"],
 };

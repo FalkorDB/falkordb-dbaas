@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import * as yup from "yup";
 import { AxiosError } from "axios";
 import { readFile } from "node:fs/promises";
-import { OpenAPIClientAxios } from "openapi-client-axios";
-import { Client } from "../../../../lib/types/grafana-api";
+import { Document, OpenAPIClientAxios } from "openapi-client-axios";
+import { Client } from "../types/grafana-api";
 import axios from "axios";
 
 const CreateGrafanaFolderSchema = yup.object({
@@ -11,22 +11,8 @@ const CreateGrafanaFolderSchema = yup.object({
   folderName: yup.string().required().min(3).max(256),
 });
 
-const DeleteGrafanaFolderSchema = yup.object({
-  orgName: yup.string().required().min(3).max(256),
-  folderName: yup.string().required().min(3).max(256),
-});
-
-export const POST = async (req: NextRequest) => {
-  // 1. Check request authentication (static token)
-  const token = req.headers.get("Authorization");
-  if (!token || token !== process.env.GRAFANA_WEBHOOK_API_TOKEN) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // 2. Validate body
-  const { orgName, folderName } = await CreateGrafanaFolderSchema.validate(
-    await req.json()
-  );
+export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGrafanaFolderSchema>) => {
+  const { orgName, folderName } = CreateGrafanaFolderSchema.validateSync(data);
 
   // 3. Create grafana folder
   let client: Client;
@@ -34,7 +20,7 @@ export const POST = async (req: NextRequest) => {
     const api = new OpenAPIClientAxios({
       definition: JSON.parse(
         await readFile("./lib/openapi/grafana-api.json", "utf-8")
-      ) as any,
+      ) as unknown as Document,
       axiosConfigDefaults: {
         baseURL: process.env.GRAFANA_URL,
         auth: {
@@ -129,6 +115,7 @@ export const POST = async (req: NextRequest) => {
   return NextResponse.json({}, { status: 200 });
 };
 
+
 const getDashboard = async (uid: string) => {
   const dashboard = await axios
     .get(
@@ -139,7 +126,7 @@ const getDashboard = async (uid: string) => {
   dashboard.title = "FalkorDB dashboard for " + uid;
 
   const nsTemplatingIdx = dashboard.templating.list.findIndex(
-    (v: any) => v.name === "namespace"
+    (v: { name: string }) => v.name === "namespace"
   );
   if (nsTemplatingIdx !== -1) {
     dashboard.templating.list[nsTemplatingIdx] = {
@@ -156,89 +143,4 @@ const getDashboard = async (uid: string) => {
   }
 
   return dashboard;
-};
-
-export const DELETE = async (req: NextRequest) => {
-  // 1. Check request authentication (static token)
-  const token = req.headers.get("Authorization");
-  if (!token || token !== process.env.GRAFANA_WEBHOOK_API_TOKEN) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // 2. Validate body
-  const { orgName, folderName } = await DeleteGrafanaFolderSchema.validate(
-    await req.json()
-  );
-
-  // 3. Delete grafana folder
-  let client: Client;
-  try {
-    const api = new OpenAPIClientAxios({
-      definition: JSON.parse(
-        await readFile("./lib/openapi/grafana-api.json", "utf-8")
-      ) as any,
-      axiosConfigDefaults: {
-        baseURL: process.env.GRAFANA_URL,
-        auth: {
-          username: process.env.GRAFANA_SA_USERNAME ?? "",
-          password: process.env.GRAFANA_SA_PASSWORD ?? "",
-        },
-      },
-    });
-    client = await api.init<Client>();
-  } catch (error) {
-    console.error("failed to initialize client", error);
-    return NextResponse.json(
-      { error: "Failed to create organization" },
-      { status: 500 }
-    );
-  }
-
-  let orgId = null;
-  try {
-    const existingOrg = await client.getOrgByName({ org_name: orgName });
-    if (!existingOrg.data.id) {
-      return NextResponse.json({}, { status: 200 });
-    }
-    orgId = existingOrg.data.id;
-  } catch (error) {
-    console.error("failed to get org", error);
-    return NextResponse.json(
-      { error: "Failed to get organization" },
-      { status: 500 }
-    );
-  }
-
-  let folderUid = null;
-  try {
-    const folders = await client.getFolders(null, null, {
-      params: { orgId },
-    });
-    const existingFolder = folders.data.filter(
-      (folder) => folder.title === folderName
-    )[0];
-    folderUid = existingFolder?.uid;
-  } catch (error) {
-    console.error("failed to get folders", error);
-    return NextResponse.json(
-      { error: "Failed to get folders" },
-      { status: 500 }
-    );
-  }
-
-  if (!folderUid) {
-    return NextResponse.json({}, { status: 200 });
-  }
-
-  try {
-    await client.deleteFolder({ folder_uid: folderUid }, { params: { orgId } });
-  } catch (error) {
-    console.error("failed to delete folder", error);
-    return NextResponse.json(
-      { error: "Failed to delete folder" },
-      { status: 500 }
-    );
-  }
-
-  return NextResponse.json({}, { status: 200 });
 };

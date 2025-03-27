@@ -81,6 +81,10 @@ jobs:
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
 
+      - name: Get version from package.json
+        id: version
+        run: echo "VERSION=$(node -p "require('./frontend/apps/auth-proxy/package.json').version")" >> "$GITHUB_OUTPUT"
+
       - name: Docker Build and Push
         id: build-push
         uses: docker/build-push-action@v6
@@ -90,6 +94,7 @@ jobs:
           push: true
           tags: |
             us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:${{ github.sha }}
+            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:${{ steps.version.outputs.VERSION }}
             us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:latest
 
       - name: Get Docker Image Digest
