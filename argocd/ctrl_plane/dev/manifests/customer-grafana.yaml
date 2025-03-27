@@ -51,19 +51,21 @@ spec:
           volumes:
             - name: grafana-data
               persistentVolumeClaim:
-                claimName: grafana-pvc
+                claimName: customer-grafana-pvc
   config:
     log:
       mode: "console"
     auth:
-      signout_redirect_url: http://grafana.dev.falkordb.cloud/signout
+      signout_redirect_url: https://grafana.dev.falkordb.cloud/signout
     auth.proxy:
-      enabled: true
+      enabled: "true"
       header_name: X-WEBAUTH-USER
       header_property: username
-      auto_sign_up: true
-      enable_login_token: false
+      auto_sign_up: "true"
+      enable_login_token: "false"
     server:
-      root_url: "http://grafana.dev.falkordb.cloud/grafana"
+      domain: grafana.dev.falkordb.cloud
+      root_url: "https://grafana.dev.falkordb.cloud/grafana/"
+      serve_from_sub_path: "true"
     users:
-      auto_assign_org: false
+      auto_assign_org: "false"

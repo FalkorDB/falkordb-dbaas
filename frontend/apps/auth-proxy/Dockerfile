@@ -20,7 +20,7 @@ COPY .gitignore .gitignore
 COPY --from=builder /app/out/full/ .
 COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 RUN corepack enable
-RUN pnpm i
+RUN pnpm i --frozen-lockfile
 
 # Build the project
 RUN pnpm run build --filter=auth-proxy...
@@ -35,8 +35,9 @@ RUN adduser --system --uid 1001 nextjs
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=installer --chown=nextjs:nodejs /app/apps/auth-proxy/.next/standalone ./next/standalone
-COPY --from=installer --chown=nextjs:nodejs /app/apps/auth-proxy/.next/static ./next/standalone/apps/app/.next/static
-COPY --from=installer --chown=nextjs:nodejs /app/apps/auth-proxy/public ./next/standalone/apps/app/public
+COPY --from=installer --chown=nextjs:nodejs /app/apps/auth-proxy/.next/static ./next/standalone/apps/auth-proxy/.next/static
+COPY --from=installer --chown=nextjs:nodejs /app/apps/auth-proxy/.next/types ./next/standalone/apps/auth-proxy/.next/types
+COPY --from=installer --chown=nextjs:nodejs /app/apps/auth-proxy/public ./next/standalone/apps/auth-proxy/public
 
 USER nextjs
 

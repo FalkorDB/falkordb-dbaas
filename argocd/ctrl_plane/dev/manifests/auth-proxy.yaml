@@ -17,6 +17,7 @@ spec:
       containers:
         - name: auth-proxy-web
           image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/frontend/auth-proxy-web:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           resources:
@@ -42,4 +43,4 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 3000
-  type: LoadBalancer
+  type: ClusterIP
