@@ -1,4 +1,4 @@
-function GithubLoginIcon(props) {
+function GithubLoginIcon(props: any) {
   const { disabled } = props;
 
   return (

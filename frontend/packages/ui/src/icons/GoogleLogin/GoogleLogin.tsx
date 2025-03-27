@@ -1,4 +1,4 @@
-function GoogleLoginIcon(props) {
+function GoogleLoginIcon(props: any) {
   const { disabled } = props;
 
   return (

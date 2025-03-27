@@ -1,31 +1,33 @@
 import MuiButton, { buttonClasses } from "@mui/material/Button";
-import { styled } from "@mui/material";
+import { styled } from "@mui/material/styles";
 import { textStyles, weights } from "../Typography/Typography";
 import LoadingSpinnerSmall from "../CircularProgress/CircularProgress";
 import Tooltip from "../Tooltip/Tooltip";
 import { colors } from "../../themeConfig";
 import { styleConfig } from "../../providerConfig";
 
-const Button = styled(
-  ({ children, isLoading, disabledMessage, ...restProps }) => {
-    const button = (
-      <MuiButton {...restProps}>
-        {children}
-        {isLoading && <LoadingSpinnerSmall />}
-      </MuiButton>
+const ButtonComponent = ({ children, isLoading, disabledMessage, ...restProps }: any) => {
+  const button = (
+    <MuiButton {...restProps}>
+      {children}
+      {isLoading && <LoadingSpinnerSmall />}
+    </MuiButton>
+  );
+
+  if (disabledMessage && restProps.disabled) {
+    return (
+      <Tooltip title={disabledMessage} placement="top" arrow>
+        {/* Wrapper Necessary for Tooltip */}
+        <span>{button}</span>
+      </Tooltip>
     );
+  }
 
-    if (disabledMessage && restProps.disabled) {
-      return (
-        <Tooltip title={disabledMessage} placement="top" arrow>
-          {/* Wrapper Necessary for Tooltip */}
-          <span>{button}</span>
-        </Tooltip>
-      );
-    }
+  return button;
+};
 
-    return button;
-  },
+const Button = styled(
+  ButtonComponent,
   {
     shouldForwardProp: (prop) => {
       return ![
@@ -34,7 +36,7 @@ const Button = styled(
         "outlineColor",
         "outlineBg",
         "bgColor",
-      ].includes(prop);
+      ].includes(String(prop));
     },
   }
 )(({ theme, outlineColor, fontColor, outlineBg, bgColor, size }) => {
@@ -74,7 +76,7 @@ const Button = styled(
   if (size === "create") {
     buttonStyles = {
       padding: "12px 20px",
-      ...textStyles.semibold,
+      ...textStyles.medium,
       fontWeight: weights.semibold,
     };
   }
@@ -85,7 +87,6 @@ const Button = styled(
     textTransform: "none",
     minWidth: "auto",
     [`&.${buttonClasses.contained}`]: {
-      color: "#FFF",
       background: bgColor ? bgColor : colors.success600,
       color: fontColor ? fontColor : styleConfig.primaryTextColor,
       boxShadow: "none",
@@ -128,9 +129,9 @@ const Button = styled(
     },
     [`&.${buttonClasses.sizeMedium}`]: {
       padding: "10px 16px",
-      fontSize: 16,
       fontWeight: 600,
       ...textStyles.small,
+      fontSize: 16,
     },
     [`&.${buttonClasses.sizeSmall}`]: {
       padding: "8px 14px",

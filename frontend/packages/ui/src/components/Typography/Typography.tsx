@@ -1,6 +1,7 @@
 "use client";
 
-import { Typography, styled } from "@mui/material";
+import { styled } from "@mui/material/styles";
+import { Typography } from "@mui/material";
 
 const variantTypes = {
   desktop: "desktop",
@@ -23,33 +24,36 @@ export const weights = {
   extrabold: 800,
 };
 
-const shouldForwardProp = (prop) => {
-  return (prop !== prop) !== "variant" && prop !== "weight";
+const shouldForwardProp = (prop: any) => {
+  return prop !== "variant" && prop !== "weight";
 };
 
 export const H3 = styled("h3", {
   shouldForwardProp,
+  //@ts-expect-error
 })(({ variant = variantTypes.desktop, weight = weightTypes.bold }) => ({
   fontSize: variant === variantTypes.desktop ? 32 : 28,
   lineHeight: variant === variantTypes.desktop ? 40 : 36,
-  fontWeight: weights[weight],
-}));
+  fontWeight: weights[weight as keyof typeof weightTypes],
+})) as React.ComponentType<any>;
 
 export const H5 = styled("h5", {
   shouldForwardProp,
+  //@ts-expect-error
 })(({ variant = variantTypes.desktop, weight = weightTypes.bold }) => ({
   fontSize: variant === variantTypes.desktop ? 24 : 20,
   lineHeight: variant === variantTypes.desktop ? "32px" : "28px",
-  fontWeight: weights[weight],
-}));
+  fontWeight: weights[weight as keyof typeof weightTypes],
+})) as React.ComponentType<any>;
 
 export const H6 = styled("h6", {
   shouldForwardProp,
+  //@ts-expect-error
 })(({ variant = variantTypes.desktop, weight = weightTypes.bold }) => ({
   fontSize: variant === variantTypes.desktop ? 20 : 18,
   lineHeight: variant === variantTypes.desktop ? "28px" : "24px",
-  fontWeight: weights[weight],
-}));
+  fontWeight: weights[weight as keyof typeof weightTypes],
+})) as React.ComponentType<any>;
 
 const paragraphSizeTypes = {
   large: "large",
@@ -100,13 +104,13 @@ export const P = styled("p", {
   shouldForwardProp: (prop) => prop !== "size" && prop !== "weight",
 })(
   ({
-    size = paragraphSizeTypes.medium,
-    weight = paragraphWeightTypes.medium,
+    //@ts-expect-error
+    size = paragraphSizeTypes.medium, weight = paragraphWeightTypes.medium,
   }) => ({
-    ...paragraphSizes[size],
-    fontWeight: paragraphWeights[weight],
+    ...paragraphSizes[size as keyof typeof paragraphSizeTypes],
+    fontWeight: paragraphWeights[weight as keyof typeof paragraphWeightTypes],
   })
-);
+) as React.ComponentType<any>;
 
 const displayTextSizeTypes = {
   xsmall: "xsmall",
@@ -141,11 +145,12 @@ const displayTextSizes = {
 
 export const DisplayText = styled("h2", {
   shouldForwardProp: (prop) =>
-    !["size", "weight", "sx", "color", "mt", "mb", "pt", "pb"].includes(prop),
+    !["size", "weight", "sx", "color", "mt", "mb", "pt", "pb"].includes(String(prop)),
+  //@ts-expect-error
 })(({ size = displayTextSizeTypes.small, weight = weightTypes.semibold }) => ({
   ...displayTextSizes[size],
-  fontWeight: weights[weight],
-}));
+  fontWeight: weights[weight as keyof typeof weightTypes],
+})) as React.ComponentType<any>;
 
 export const textSizeTypes = {
   xlarge: "xlarge",
@@ -195,10 +200,10 @@ export const Text = ({
   maxWidth = "auto", // Default value to avoid Typescript errors
   children,
   ...otherProps
-}) => {
+}: any) => {
   let marginTop = "0px";
   if (typeof mt === "number") {
-    marginTop = mt * 8;
+    marginTop = mt * 8 + "px";
   }
   if (typeof mt === "string") {
     marginTop = mt;
@@ -206,13 +211,13 @@ export const Text = ({
 
   let marginLeft = "0px";
   if (typeof ml === "number") {
-    marginLeft = ml * 8;
+    marginLeft = ml * 8 + "px";
   }
   if (typeof ml === "string") {
     marginLeft = ml;
   }
 
-  let ellipsisObj = {};
+  let ellipsisObj: any = {};
   if (ellipsis) {
     ellipsisObj = {
       textOverflow: "ellipsis",
@@ -235,7 +240,7 @@ export const Text = ({
       component="p"
       sx={{
         ...styles[size],
-        fontWeight: weights[weight],
+        fontWeight: weights[weight as keyof typeof weightTypes],
         color: color,
         marginTop: marginTop,
         marginLeft: marginLeft,

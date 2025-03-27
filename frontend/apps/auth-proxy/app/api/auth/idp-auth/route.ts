@@ -1,8 +1,10 @@
-import { NextApiRequest, NextApiResponse } from "next";
 import { axiosClient } from "../../../../axios";
+import { NextRequest, NextResponse } from "next/server";
 
-export const GET = async (nextRequest: NextApiRequest, nextResponse: NextApiResponse) => {
-  const { state, code } = nextRequest.query;
+export const GET = async (nextRequest: NextRequest) => {
+  const query = new URLSearchParams(nextRequest.url);
+  const code = query.get("code");
+  const state = query.get("state");
 
   let authRequestPayload = null;
 
@@ -30,9 +32,13 @@ export const GET = async (nextRequest: NextApiRequest, nextResponse: NextApiResp
       );
 
       const jwtToken = response.data.jwtToken;
-      nextResponse.setHeader("Set-Cookie", `token=${jwtToken}; Path=/`);
-      nextResponse.setHeader("Access-Control-Expose-Headers", "Set-Cookie");
-      nextResponse.redirect(307, "/signin");
+      return NextResponse.redirect("/signin", {
+        status: 302,
+        headers: {
+          "Set-Cookie": `token=${jwtToken}; Path=/`,
+          "Access-Control-Expose-Headers": "Set-Cookie",
+        },
+      });
     } catch (err) {
       console.log("IDP AUTH err", err);
     }
