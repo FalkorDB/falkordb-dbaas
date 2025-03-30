@@ -41,7 +41,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   }
 
   private _getSAEmail(id: string): string {
-    return `omnistrate-sa-${id}@falkordb.com`;
+    return `omnistrate-sa+${id}@falkordb.com`;
   }
 
   static _getBearerInterceptor(
@@ -94,7 +94,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     await OmnistrateRepository._client.post(`/2022-09-01-00/customer-user-signup`, {
       email,
       legalCompanyName: 'FalkorDB SA',
-      name: `FalkorDB Service Account ${id}`,
+      name: `FalkorDB Service Account ${id.replace(/-/g, '')}`,
       password: this._serviceAccountSecret,
     });
     return { email, password: this._serviceAccountSecret };

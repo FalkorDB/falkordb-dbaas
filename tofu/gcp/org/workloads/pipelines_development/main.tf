@@ -81,10 +81,11 @@ resource "google_project_iam_member" "github_action_sa" {
 }
 
 module "gh_oidc" {
-  source      = "terraform-google-modules/github-actions-runners/google//modules/gh-oidc"
-  project_id  = module.project.project_id
-  pool_id     = "github-actions-pool"
-  provider_id = "github-actions"
+  source                = "terraform-google-modules/github-actions-runners/google//modules/gh-oidc"
+  project_id            = module.project.project_id
+  pool_id               = "github-actions-pool"
+  provider_id           = "github-actions"
+  provider_display_name = "github-actions"
   sa_mapping = {
     "falkordb-github-action-sa" = {
       sa_name   = google_service_account.github_action_sa.name

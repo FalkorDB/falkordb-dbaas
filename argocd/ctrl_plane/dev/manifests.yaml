@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: observability-stack
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+    targetRevision: dev
+    path: argocd/ctrl_plane/dev/manifests
+    directory:
+      recurse: true
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
+  ignoreDifferences:
+    - jsonPointers:
+        - /stringData
+        - /data
+      kind: Secret
+      name: vmauth-tls
+    - jsonPointers:
+        - /stringData
+        - /data
+      kind: Secret
+      name: argocd-server-tls

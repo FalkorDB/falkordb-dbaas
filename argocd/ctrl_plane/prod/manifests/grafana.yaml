@@ -1,0 +1,104 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: Grafana
+metadata:
+  name: grafana
+  labels:
+    dashboards: "grafana"
+spec:
+  persistentVolumeClaim:
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+  deployment:
+    spec:
+      replicas: 1
+      strategy:
+        type: Recreate
+      template:
+        spec:
+          nodeSelector:
+            node_pool: observability-resources
+          securityContext: # Pod-level security context (important for initContainer)
+            runAsUser: 0 # Run initContainer as root
+            runAsGroup: 0
+          initContainers:
+            - name: init-grafana-data
+              image: busybox # Or any image with chown
+              command: ["chown", "-R", "1001:1001", "/var/lib/grafana"]
+              volumeMounts:
+                - name: grafana-data
+                  mountPath: /var/lib/grafana
+          containers:
+            - name: grafana
+              readinessProbe:
+                failureThreshold: 3
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "2"
+                  memory: "2Gi"
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+                runAsUser: 1001
+                runAsGroup: 1001
+                runAsNonRoot: true
+              env:
+                - name: GF_AUTH_GOOGLE_CLIENT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: grafana-google-credentials
+                      key: client-id
+                - name: GF_AUTH_GOOGLE_CLIENT_SECRET
+                  valueFrom:
+                    secretKeyRef:
+                      name: grafana-google-credentials
+                      key: client-secret
+          volumes:
+            - name: grafana-data
+              persistentVolumeClaim:
+                claimName: grafana-pvc
+  config:
+    log:
+      mode: "console"
+    auth:
+      disable_login_form: "false"
+    auth.google:
+      enabled: "true"
+      scopes: openid email profile https://www.googleapis.com/auth/cloud-identity.groups.readonly
+      auth_url: https://accounts.google.com/o/oauth2/auth
+      token_url: https://accounts.google.com/o/oauth2/token
+      allowed_domains: "falkordb.cloud,falkordb.com"
+      allow_sign_up: "true"
+      role_attribute_path: email=="david.zimberknopf@falkordb.com" && 'Admin' || contains(groups[*], 'devops@falkordb.com') && 'Admin' || 'Viewer'
+      skip_org_role_sync: "false"
+      hosted_domain: "falkordb.com"
+      allow_assign_grafana_admin: "true"
+      allowed_groups: "devops@falkordb.com"
+      auto_login: "false"
+    server:
+      root_url: "https://grafana.observability.internal.falkordb.cloud"
+  ingress:
+    metadata:
+      annotations:
+        networking.gke.io/managed-certificates: grafana-managed-cert
+        kubernetes.io/ingress.class: "gce" # Updated annotation
+        kubernetes.io/ingress.global-static-ip-name: "grafana-ip"
+    spec:
+      rules:
+        - host: grafana.observability.internal.falkordb.cloud
+          http:
+            paths:
+              - backend:
+                  service:
+                    name: grafana-service
+                    port:
+                      number: 3000
+                path: /
+                pathType: Prefix

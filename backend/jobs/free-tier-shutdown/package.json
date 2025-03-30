@@ -19,6 +19,8 @@
   "author": "",
   "license": "SSPL",
   "dependencies": {
+    "@aws-sdk/client-eks": "^3.735.0",
+    "@aws-sdk/client-sts": "^3.734.0",
     "@falkordb/configs": "workspace:*",
     "@getbrevo/brevo": "^2.2.0",
     "@google-cloud/cloudbuild": "^4.2.0",
@@ -27,6 +29,7 @@
     "@kubernetes/client-node": "^0.21.0",
     "@opentelemetry/exporter-jaeger": "^1.22.0",
     "@sinclair/typebox": "^0.32.14",
+    "aws-eks-token": "^1.0.5",
     "axios": "^1.6.7",
     "dotenv": "^16.4.5",
     "google-auth-library": "^9.7.0",

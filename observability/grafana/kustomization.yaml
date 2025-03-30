@@ -1,0 +1,37 @@
+# Global options
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    grafana_dashboard: "1"
+commonAnnotations:
+  grafana_folder: "Kubernetes"
+
+resources:
+  - base
+
+# Generate a ConfigMap for each dashboard
+configMapGenerator:
+  #################################################
+  # Views Dashboards
+  #################################################
+
+  - name: dashboards-k8s-views-overview
+    files: [json=./dashboards/overview.json]
+
+  - name: dashboards-k8s-views-cluster
+    files: [json=./dashboards/cluster-overview.json]
+
+  - name: dashboards-k8s-views-namespaces
+    files: [json=./dashboards/namespace-overview.json]
+
+  - name: dashboards-k8s-views-pods
+    files: [json=./dashboards/pod-overview.json]
+
+  - name: dashboards-k8s-views-falkordb
+    files: [json=./dashboards/falkordb-cloud.json]
+
+  - name: dashboards-k8s-views-prometheus
+    files: [json=./dashboards/prometheus-dashboard.json]
+
+  - name: dashboards-k8s-views-vmauth
+    files: [json=./dashboards/vmauth.json]

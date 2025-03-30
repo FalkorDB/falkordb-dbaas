@@ -1,0 +1,71 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: Grafana
+metadata:
+  name: customer-grafana
+  namespace: customer-observability
+spec:
+  persistentVolumeClaim:
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+  deployment:
+    spec:
+      replicas: 1
+      strategy:
+        type: Recreate
+      template:
+        spec:
+          nodeSelector:
+            node_pool: observability-resources
+          securityContext: # Pod-level security context (important for initContainer)
+            runAsUser: 0 # Run initContainer as root
+            runAsGroup: 0
+          initContainers:
+            - name: init-grafana-data
+              image: busybox # Or any image with chown
+              command: ["chown", "-R", "1001:1001", "/var/lib/grafana"]
+              volumeMounts:
+                - name: grafana-data
+                  mountPath: /var/lib/grafana
+          containers:
+            - name: grafana
+              readinessProbe:
+                failureThreshold: 3
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "2"
+                  memory: "2Gi"
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+                runAsUser: 1001
+                runAsGroup: 1001
+                runAsNonRoot: true
+          volumes:
+            - name: grafana-data
+              persistentVolumeClaim:
+                claimName: customer-grafana-pvc
+  config:
+    log:
+      mode: "console"
+    auth:
+      signout_redirect_url: https://grafana.dev.falkordb.cloud/signout
+    auth.proxy:
+      enabled: "true"
+      header_name: X-WEBAUTH-USER
+      header_property: username
+      auto_sign_up: "true"
+      enable_login_token: "false"
+    server:
+      domain: grafana.dev.falkordb.cloud
+      root_url: "https://grafana.dev.falkordb.cloud/grafana/"
+      serve_from_sub_path: "true"
+    users:
+      auto_assign_org: "false"

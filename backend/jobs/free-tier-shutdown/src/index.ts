@@ -20,10 +20,16 @@ async function handleFreeInstance(
   logger.info(`Handling free instance ${instance.id}`);
   try {
     // 2. For each instance, get the last used time from k8s
-    const { clusterId, region, id: instanceId } = instance;
+    const { cloudProvider, clusterId, region, id: instanceId } = instance;
 
     // 3. If the last used time is more than 24 hours, stop the instance in omnistrate, and send an email to the user
-    const lastUsedTime = await k8sRepo.getFalkorDBLastQueryTime(clusterId, region, instanceId, instance.tls);
+    const lastUsedTime = await k8sRepo.getFalkorDBLastQueryTime(
+      cloudProvider,
+      clusterId,
+      region,
+      instanceId,
+      instance.tls,
+    );
 
     if (Date.now() - lastUsedTime > LAST_USED_TIME_THRESHOLD) {
       logger.info(

@@ -1,0 +1,33 @@
+name: Test alert rules
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - dev
+      - main
+    paths:
+      - 'observability/rules/**'
+      - 'observability/tests/**'
+
+concurrency:
+  group: alert-rules-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install PromTool
+        run: |
+          VERSION=$(curl -Ls https://api.github.com/repos/prometheus/prometheus/releases/latest | jq ".tag_name" | xargs | cut -c2-)
+          wget -qO- "https://github.com/prometheus/prometheus/releases/download/v${VERSION}/prometheus-$VERSION.linux-amd64.tar.gz" \
+            | tar xvzf - "prometheus-$VERSION.linux-amd64"/promtool --strip-components=1
+          sudo mv promtool /usr/local/bin/promtool
+          promtool --version
+
+      - name: Run tests
+        run: ./scripts/run_alerts_tests.sh
+

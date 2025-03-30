@@ -1,0 +1,17 @@
+# Observability Stack - Application plane
+
+Defines the resources that will be deployed in each application cluster to monitor its contents.
+
+The application plane for the observability stack is composed of the following components:
+
+- VictoriaMetrics: Store metrics
+  - Alertmanager
+- Grafana Alloy: Scrape metrics from applications, and write them to the control plane
+- Pod Monitor: Scrape metrics from pods
+- Grafana Operator: Deploy grafana instance and dashboards
+- Kube State Metrics: Scrape metrics from kubernetes
+- VMRules
+
+## Adding clusters to be monitored
+
+Use the script `scripts/add_cluster.sh`

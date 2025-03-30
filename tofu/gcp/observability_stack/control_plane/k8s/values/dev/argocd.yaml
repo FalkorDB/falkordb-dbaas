@@ -1,0 +1,93 @@
+global:
+  image:
+    tag: "v2.13.3"
+  logging:
+    format: json
+  domain: "argocd.observability.dev.internal.falkordb.cloud"
+server:
+  extraArgs:
+    - --insecure
+  ingress:
+    enabled: true
+    controller: gke
+    tls: true
+    gke:
+      managedCertificate:
+        create: true
+    annotations:
+      kubernetes.io/ingress.global-static-ip-name: "argocd-ip"
+
+cmp:
+  repositories:
+    falkordb-dbaas:
+      url: https://github.com/FalkorDB/falkordb-dbaas
+
+configs:
+  secret:
+    createSecret: false
+  cm:
+    url: https://argocd.observability.dev.internal.falkordb.cloud
+    dex.config: |
+      connectors:
+      - config:
+          issuer: https://accounts.google.com
+          clientID: $dex.google.clientId
+          clientSecret: $dex.google.clientSecret
+          serviceAccountFilePath: /tmp/oidc/googleAuth.json
+          adminEmail: $dex.google.adminEmail
+          fetchTransitiveGroupMembership: True
+        type: oidc
+        id: google
+        name: Google
+  rbac:
+    create: true
+    policy.default: role:readonly
+    policy.csv: |
+      g, devops@falkordb.com, role:org-admin
+    scopes: "[groups, email]"
+
+dex:
+  volumeMounts:
+    - mountPath: /tmp/oidc
+      name: google-json
+      readOnly: true
+  volumes:
+    - name: google-json
+      secret:
+        defaultMode: 420
+        secretName: argocd-google-groups
+
+controller:
+  metrics:
+    enabled: true
+
+extraObjects:
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: ctrl-plane-observability-stack
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: dev
+        path: argocd/ctrl_plane/dev
+      destination:
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        automated: {}
+
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: app-plane-observability-stack
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: dev
+        path: argocd/app_plane/dev
+      destination:
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        automated: {}
