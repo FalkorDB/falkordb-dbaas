@@ -17,20 +17,35 @@ export const POST = async (req: NextRequest) => {
 
   console.log(`Received event of type ${eventType} with payload:`, payload);
 
-
   switch (eventType) {
     case "UserSubscription":
-      return subscriptionCreatedHandler(payload);
+      return subscriptionCreatedHandler({
+        orgName: payload.subscription_id
+      });
     case 'UserUnsubscribed':
-      return subscriptionDeletedHandler(payload);
+      return subscriptionDeletedHandler({
+        orgName: payload.subscription_id
+      });
     case 'UserSubscriptionInvite':
-      return userCreatedHandler(payload);
+      return userCreatedHandler({
+        orgName: payload.subscription_id,
+        email: payload.user_email
+      });
     case 'UserSubscriptionRevoked':
-      return userDeletedHandler(payload);
+      return userDeletedHandler({
+        orgName: payload.subscription_id,
+        email: payload.user_email
+      });
     case 'SuccessfulDeployment':
-      return instanceCreatedHandler(payload);
+      return instanceCreatedHandler({
+        orgName: payload.subscription_id,
+        folderName: payload.instance_id,
+      });
     case 'SuccessfulDelete':
-      return instanceDeletedHandler(payload);
+      return instanceDeletedHandler({
+        orgName: payload.subscription_id,
+        folderName: payload.instance_id,
+      });
   }
 
   return NextResponse.json({ error: "Unknown event type" }, { status: 400 });
