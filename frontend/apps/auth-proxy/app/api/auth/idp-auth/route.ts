@@ -1,20 +1,26 @@
 import { axiosClient } from "../../../../axios";
 import { NextRequest, NextResponse } from "next/server";
+import { jwtDecode } from 'jwt-decode';
 
 export const GET = async (nextRequest: NextRequest) => {
   const query = new URLSearchParams(nextRequest.url);
   const code = query.get("code");
   const state = query.get("state");
 
+  let payload: any;
+  try {
+    payload = jwtDecode(state ?? '');
+  } catch (err) { }
+
   let authRequestPayload = null;
 
-  if (state === "google-auth" && code) {
+  if ((state === "google-auth" || payload?.['identityProvider'] === "Google") && code) {
     const saasDomainURL = process.env.NEXT_PUBLIC_BASE_URL;
     const authorizationCode = code;
     authRequestPayload = {
       authorizationCode,
       identityProviderName: "Google",
-      redirectUri: `${saasDomainURL}/api/idp-auth`,
+      redirectUri: `${saasDomainURL}/api/auth/idp-auth`,
     };
   } else if (state === "github-auth" && code) {
     const authorizationCode = code;
@@ -43,4 +49,12 @@ export const GET = async (nextRequest: NextRequest) => {
       console.log("IDP AUTH err", err);
     }
   }
+
+  return NextResponse.redirect("/signin", {
+    status: 302,
+    headers: {
+      "Set-Cookie": `token=; Path=/; Max-Age=0`,
+      "Access-Control-Expose-Headers": "Set-Cookie",
+    },
+  });
 }
