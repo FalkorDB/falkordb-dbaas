@@ -14,8 +14,8 @@ export const GET = async (nextRequest: NextRequest) => {
 
   let authRequestPayload = null;
 
+  const saasDomainURL = process.env.NEXT_PUBLIC_BASE_URL;
   if ((state === "google-auth" || payload?.['identityProvider'] === "Google") && code) {
-    const saasDomainURL = process.env.NEXT_PUBLIC_BASE_URL;
     const authorizationCode = code;
     authRequestPayload = {
       authorizationCode,
@@ -38,7 +38,7 @@ export const GET = async (nextRequest: NextRequest) => {
       );
 
       const jwtToken = response.data.jwtToken;
-      return NextResponse.redirect("/signin", {
+      return NextResponse.redirect(saasDomainURL + "/signin", {
         status: 302,
         headers: {
           "Set-Cookie": `token=${jwtToken}; Path=/`,
@@ -50,7 +50,7 @@ export const GET = async (nextRequest: NextRequest) => {
     }
   }
 
-  return NextResponse.redirect("/signin", {
+  return NextResponse.redirect(saasDomainURL + "/signin", {
     status: 302,
     headers: {
       "Set-Cookie": `token=; Path=/; Max-Age=0`,
