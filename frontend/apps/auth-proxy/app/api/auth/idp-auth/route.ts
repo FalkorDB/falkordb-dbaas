@@ -3,9 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtDecode } from 'jwt-decode';
 
 export const GET = async (nextRequest: NextRequest) => {
-  const query = new URLSearchParams(nextRequest.url);
+  const query = new URLSearchParams(nextRequest.nextUrl.search);
   const code = query.get("code");
   const state = query.get("state");
+
+  console.log("IDP AUTH", { code, state });
 
   let payload: any;
   try {
