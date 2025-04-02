@@ -1,23 +1,17 @@
 import { axiosClient } from "../../../../axios";
 import { NextRequest, NextResponse } from "next/server";
-import { jwtDecode } from 'jwt-decode';
 
 export const GET = async (nextRequest: NextRequest) => {
   const query = new URLSearchParams(nextRequest.nextUrl.search);
   const code = query.get("code");
-  const state = query.get("state");
+  const state = JSON.parse(Buffer.from(query.get("state") ?? '', "base64").toString("utf-8"));
 
   console.log("IDP AUTH", { code, state });
-
-  let payload: any;
-  try {
-    payload = jwtDecode(state ?? '');
-  } catch (err) { }
 
   let authRequestPayload = null;
 
   const saasDomainURL = process.env.NEXT_PUBLIC_BASE_URL;
-  if ((state === "google-auth" || payload?.['identityProvider'] === "Google") && code) {
+  if ((state === "google-auth" || state?.['identityProvider'] === "Google") && code) {
     const authorizationCode = code;
     authRequestPayload = {
       authorizationCode,
