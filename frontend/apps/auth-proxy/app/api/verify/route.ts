@@ -7,7 +7,7 @@ export const GET = async (req: NextRequest) => {
 
   console.log("Session User: ", session?.user);
 
-  if (!session || !(session.user?.email || (session.user as any)?.id)) {
+  if (!session || !(session.user?.email || (session.user as any)?.id || (session.user as any)?.name)) {
     // check if grafana_session cookie is set
     const grafanaSession = req.cookies.get("grafana_session");
     if (grafanaSession) {
@@ -27,7 +27,7 @@ export const GET = async (req: NextRequest) => {
     {
       status: 200,
       headers: {
-        "x-webauth-user": (session.user as any)?.id || (session.user as any)?.email,
+        "x-webauth-user": (session.user as any)?.id || (session.user as any)?.email || (session.user as any)?.name,
       },
     }
   );

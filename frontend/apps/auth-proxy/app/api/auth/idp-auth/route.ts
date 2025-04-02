@@ -40,6 +40,7 @@ export const GET = async (nextRequest: NextRequest) => {
 
       const payload = {
         id: userID,
+        name: userID,
       }
       const jwtToken = sign(payload, process.env.NEXTAUTH_SECRET ?? '', {
         expiresIn: "1h",
