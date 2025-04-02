@@ -56,6 +56,7 @@ export default function Page() {
       try {
 
         let reCaptchaToken = "";
+        console.log({ googleReCaptchaSiteKey, reCaptchaRef, hasCaptchaErrored });
         if (!!googleReCaptchaSiteKey && reCaptchaRef.current && !hasCaptchaErrored) {
           reCaptchaToken = await reCaptchaRef.current.executeAsync() ?? "";
           reCaptchaRef.current.reset();
