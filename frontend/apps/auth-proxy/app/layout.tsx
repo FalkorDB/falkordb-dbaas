@@ -31,6 +31,7 @@ const RootLayout = async ({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
+        <script src="https://www.recaptcha.net/recaptcha/api.js" async defer></script>
       </head>
       <body>
         <AppRouterCacheProvider>

@@ -167,7 +167,6 @@ export default function Page() {
         </SubmitButton>
 
         {!!googleReCaptchaSiteKey && (
-          // @ts-ignore
           <ReCAPTCHA
             size="invisible"
             sitekey={googleReCaptchaSiteKey}
