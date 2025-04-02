@@ -34,7 +34,7 @@ export const GET = async (nextRequest: NextRequest) => {
       );
 
       const jwtToken = response.data.jwtToken;
-      return NextResponse.redirect(saasDomainURL + "/signin", {
+      return NextResponse.redirect(saasDomainURL + "/grafana", {
         status: 302,
         headers: {
           "Set-Cookie": `token=${jwtToken}; Path=/`,
