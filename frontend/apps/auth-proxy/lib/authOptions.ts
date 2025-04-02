@@ -52,9 +52,7 @@ export const authOptions: AuthOptions = {
       if (!token) {
         throw new Error("No token provided");
       }
-      const jwtToken = sign(token, secret, {
-        expiresIn: "1h",
-      });
+      const jwtToken = sign(token, secret);
       return jwtToken;
     },
     decode: async ({ secret, token }) => {
