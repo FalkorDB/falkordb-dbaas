@@ -37,7 +37,7 @@ function GithubLogin(props) {
     sessionStorage.setItem("authState", encodedLocalAuthState);
 
     router.push(
-      `https://github.com/login/oauth/authorize?client_id=${githubClientID}&scope=user:email&redirect_uri=${saasBuilderBaseURL}/auth/idp-auth&state=${encodedGithubAuthState}`
+      `https://github.com/login/oauth/authorize?client_id=${githubClientID}&scope=user:email&redirect_uri=${saasBuilderBaseURL}/api/auth/idp-auth&state=${encodedGithubAuthState}`
     );
   }
 
