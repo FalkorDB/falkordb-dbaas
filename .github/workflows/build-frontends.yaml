@@ -35,12 +35,6 @@ jobs:
       - name: Docker Build
         id: build-push
         uses: docker/build-push-action@v6
-        env:
-          NEXT_PUBLIC_GRAFANA_URL: ${{ vars.AUTH_PROXY_NEXT_PUBLIC_GRAFANA_URL }}
-          NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY: ${{ vars.AUTH_PROXY_NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY }}
-          NEXT_PUBLIC_BASE_URL: ${{ vars.AUTH_PROXY_NEXT_PUBLIC_BASE_URL }}
-          NEXT_PUBLIC_GOOGLE_IDP_CLIENT_ID: ${{ vars.AUTH_PROXY_NEXT_PUBLIC_GOOGLE_IDP_CLIENT_ID }}
-          NEXT_PUBLIC_GITHUB_IDP_CLIENT_ID: ${{ vars.AUTH_PROXY_NEXT_PUBLIC_GITHUB_IDP_CLIENT_ID }}
         with:
           context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
@@ -92,15 +86,18 @@ jobs:
         id: version
         run: echo "VERSION=$(node -p "require('./frontend/apps/auth-proxy/package.json').version")" >> "$GITHUB_OUTPUT"
 
+      - name: Create .env
+        working-directory: frontend/apps/auth-proxy
+        run: |
+          echo "NEXT_PUBLIC_GRAFANA_URL=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GRAFANA_URL }}" >> .env
+          echo "NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY }}" >> .env
+          echo "NEXT_PUBLIC_BASE_URL=${{ vars.AUTH_PROXY_NEXT_PUBLIC_BASE_URL }}" >> .env
+          echo "NEXT_PUBLIC_GOOGLE_IDP_CLIENT_ID=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GOOGLE_IDP_CLIENT_ID }}" >> .env
+          echo "NEXT_PUBLIC_GITHUB_IDP_CLIENT_ID=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GITHUB_IDP_CLIENT_ID }}" >> .env
+
       - name: Docker Build and Push
         id: build-push
         uses: docker/build-push-action@v6
-        env:
-          NEXT_PUBLIC_GRAFANA_URL: ${{ vars.AUTH_PROXY_NEXT_PUBLIC_GRAFANA_URL }}
-          NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY: ${{ vars.AUTH_PROXY_NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY }}
-          NEXT_PUBLIC_BASE_URL: ${{ vars.AUTH_PROXY_NEXT_PUBLIC_BASE_URL }}
-          NEXT_PUBLIC_GOOGLE_IDP_CLIENT_ID: ${{ vars.AUTH_PROXY_NEXT_PUBLIC_GOOGLE_IDP_CLIENT_ID }}
-          NEXT_PUBLIC_GITHUB_IDP_CLIENT_ID: ${{ vars.AUTH_PROXY_NEXT_PUBLIC_GITHUB_IDP_CLIENT_ID }}
         with:
           context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
