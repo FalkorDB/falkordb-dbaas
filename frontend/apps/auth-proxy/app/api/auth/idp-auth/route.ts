@@ -1,3 +1,4 @@
+import { decode, sign } from "jsonwebtoken";
 import { axiosClient } from "../../../../axios";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -33,7 +34,17 @@ export const GET = async (nextRequest: NextRequest) => {
         authRequestPayload
       );
 
-      const jwtToken = response.data.jwtToken;
+      const jwtTokenDecoded = decode(response.data.jwtToken) as any;
+
+      const userID = jwtTokenDecoded["userID"];
+
+      const payload = {
+        id: userID,
+      }
+      const jwtToken = sign(payload, process.env.NEXTAUTH_SECRET ?? '', {
+        expiresIn: "1h",
+      });
+
       return NextResponse.redirect(saasDomainURL + "/grafana", {
         status: 302,
         headers: {
