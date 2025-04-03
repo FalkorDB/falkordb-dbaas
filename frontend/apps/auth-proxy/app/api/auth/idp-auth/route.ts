@@ -7,8 +7,6 @@ export const GET = async (nextRequest: NextRequest) => {
   const code = query.get("code");
   const state = JSON.parse(Buffer.from(query.get("state") ?? '', "base64").toString("utf-8"));
 
-  console.log("IDP AUTH", { code, state });
-
   let authRequestPayload = null;
 
   const saasDomainURL = process.env.NEXT_PUBLIC_BASE_URL;

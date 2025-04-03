@@ -5,8 +5,6 @@ import { NextRequest, NextResponse } from "next/server";
 export const GET = async (req: NextRequest) => {
   const session = await getServerSession(authOptions);
 
-  console.log("Session User: ", session?.user);
-
   if (!session || !(session.user?.email || (session.user as any)?.id || (session.user as any)?.name)) {
     // check if grafana_session cookie is set
     const grafanaSession = req.cookies.get("grafana_session");

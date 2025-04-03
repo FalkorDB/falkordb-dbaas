@@ -1,18 +1,3 @@
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: letsencrypt
-  namespace: customer-observability
-spec:
-  acme:
-    email: devops+dev@falkordb.com
-    server: https://acme-staging-v02.api.letsencrypt.org/directory
-    privateKeySecretRef:
-      name: letsencrypt-private-key
-    solvers:
-      - http01:
-          ingress:
-            class: nginx
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
