@@ -50,13 +50,30 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
       name: orgName,
     });
   } catch (error) {
-    if ((error as any)?.response) {
-      console.error("failed to create org", (error as any).request);
-    } else {
-      console.error("failed to create org", error);
-    }
+    console.error("failed to create org", (error as any)?.response ?? error);
     return NextResponse.json(
       { error: "Failed to create organization" },
+      { status: 500 }
+    );
+  }
+
+  try {
+    await client.addDataSource({
+      "isDefault": "true",
+      "access": "proxy",
+      "database": "prometheus",
+      "jsonData": JSON.stringify({
+        "timeInterval": "5s",
+        "tlsSkipVerify": "true",
+      }),
+      "name": "VictoriaMetrics",
+      "type": "prometheus",
+      "url": "http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429"
+    })
+  } catch (error) {
+    console.error("failed to create org", (error as any)?.response ?? error);
+    return NextResponse.json(
+      { error: "Failed to create datasource" },
       { status: 500 }
     );
   }
