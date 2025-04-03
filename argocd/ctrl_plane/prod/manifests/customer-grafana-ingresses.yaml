@@ -1,0 +1,80 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-auth-ingress
+  namespace: customer-observability
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "http://auth-proxy.customer-observability.svc.cluster.local/api/verify"
+    nginx.ingress.kubernetes.io/auth-response-headers: "X-WEBAUTH-USER"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - grafana.falkordb.cloud
+      secretName: grafana-tls
+  rules:
+    - host: grafana.falkordb.cloud
+      http:
+        paths:
+          - path: /grafana/
+            pathType: Prefix
+            backend:
+              service:
+                name: customer-grafana-service
+                port:
+                  number: 3000
+          - path: /grafana/api
+            pathType: Prefix
+            backend:
+              service:
+                name: customer-grafana-service
+                port:
+                  number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-public-ingress
+  namespace: customer-observability
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - grafana.falkordb.cloud
+      secretName: grafana-tls
+  rules:
+    - host: grafana.falkordb.cloud
+      http:
+        paths:
+          - path: /grafana/login
+            pathType: Exact
+            backend:
+              service:
+                name: customer-grafana-service
+                port:
+                  number: 3000
+          - path: /grafana/public
+            pathType: Prefix
+            backend:
+              service:
+                name: customer-grafana-service
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-proxy
+                port:
+                  number: 80
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-proxy
+                port:
+                  number: 80
