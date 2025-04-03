@@ -17,6 +17,10 @@ export const POST = async (req: NextRequest) => {
 
   console.log(`Received event of type ${eventType} with payload:`, payload);
 
+  if (payload.ProductTier !== 'FalkorDB') {
+    return NextResponse.json({}, { status: 200 });
+  }
+
   switch (eventType) {
     case "UserSubscription":
       return subscriptionCreatedHandler({
