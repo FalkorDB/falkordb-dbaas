@@ -29,12 +29,13 @@ export const POST = async (req: NextRequest) => {
     case 'UserSubscriptionInvite':
       return userCreatedHandler({
         orgName: payload.subscription_id,
-        email: payload.user_email
+        email: payload.user_email,
+        id: payload.user_id
       });
     case 'UserSubscriptionRevoked':
       return userDeletedHandler({
         orgName: payload.subscription_id,
-        email: payload.user_email
+        id: payload.user_id
       });
     case 'SuccessfulDeployment':
       return instanceCreatedHandler({

@@ -25,7 +25,7 @@ export const GET = async (req: NextRequest) => {
     {
       status: 200,
       headers: {
-        "x-webauth-user": session.user?.email,
+        "x-webauth-user": (session.user as any)?.id || (session.user as any)?.email || (session.user as any)?.name,
       },
     }
   );

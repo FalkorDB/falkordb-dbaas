@@ -8,11 +8,12 @@ import { randomBytes } from "crypto";
 const AddUserAccessSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
   email: yup.string().required().email(),
+  id: yup.string().required(),
 });
 
 
 export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAccessSchema>) => {
-  const { email, orgName } = AddUserAccessSchema.validateSync(data);
+  const { email, orgName, id } = AddUserAccessSchema.validateSync(data);
 
   // 3. Check if user exists, create one if not
   let client: Client;
@@ -41,7 +42,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
   let existingUserId = null;
   try {
     existingUserId = await client
-      .getUserByLoginOrEmail({ loginOrEmail: email })
+      .getUserByLoginOrEmail({ loginOrEmail: id })
       .then((res) => res.data.id);
   } catch (error) {
     if ((error as AxiosError).response?.status === 404) {
@@ -49,6 +50,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
         .adminCreateUser(null, {
           name: email,
           email: email,
+          login: id,
           password: randomBytes(32).toString("hex"),
         })
         .then((res) => res.data.id);

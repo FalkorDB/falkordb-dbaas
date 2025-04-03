@@ -1,9 +1,8 @@
 import { AuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { axiosClient } from "../axios";
-import { jwtDecode } from "jwt-decode";
 import { verifyRecaptchaToken } from '../lib/utils/verifyRecaptchaToken';
-
+import { sign, decode, verify } from "jsonwebtoken";
 export const authOptions: AuthOptions = {
   providers: [
     CredentialsProvider({
@@ -26,10 +25,11 @@ export const authOptions: AuthOptions = {
           );
 
           if (res?.data?.jwtToken) {
-            const payload = jwtDecode(res.data.jwtToken) as any;
+            const payload = decode(res.data.jwtToken) as any;
             return {
               id: payload.userID,
               email: credentials?.email,
+              name: payload.userID,
             };
           }
           return null;
@@ -47,6 +47,22 @@ export const authOptions: AuthOptions = {
   },
   session: {
     strategy: "jwt",
+  },
+  jwt: {
+    encode: async ({ secret, token }) => {
+      if (!token) {
+        throw new Error("No token provided");
+      }
+      const jwtToken = sign(token, secret);
+      return jwtToken;
+    },
+    decode: async ({ secret, token }) => {
+      if (!token) {
+        return null;
+      }
+      const decoded = verify(token, secret) as any;
+      return decoded;
+    },
   },
   cookies: {
     sessionToken: {

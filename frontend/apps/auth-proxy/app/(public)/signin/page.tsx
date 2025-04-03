@@ -21,6 +21,7 @@ export default function Page() {
 
   const googleReCaptchaSiteKey = process.env.NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY ?? ""
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? ""
+  const saasBuilderBaseURL = process.env.NEXT_PUBLIC_SAAS_BUILDER_BASE_URL ?? ""
   const destination = "/grafana"
 
   const googleIDPClientID = process.env.NEXT_PUBLIC_GOOGLE_IDP_CLIENT_ID ?? ""
@@ -56,6 +57,7 @@ export default function Page() {
       try {
 
         let reCaptchaToken = "";
+        console.log({ googleReCaptchaSiteKey, reCaptchaRef, hasCaptchaErrored });
         if (!!googleReCaptchaSiteKey && reCaptchaRef.current && !hasCaptchaErrored) {
           reCaptchaToken = await reCaptchaRef.current.executeAsync() ?? "";
           reCaptchaRef.current.reset();
@@ -215,7 +217,7 @@ export default function Page() {
               {!!githubIDPClientID && (
                 <GithubLogin
                   githubClientID={githubIDPClientID}
-                  saasBuilderBaseURL={baseUrl}
+                  saasBuilderBaseURL={saasBuilderBaseURL}
                   destination={destination}
                   disabled={isLoading}
                 />

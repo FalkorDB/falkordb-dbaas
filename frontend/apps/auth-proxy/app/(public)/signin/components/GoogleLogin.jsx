@@ -21,7 +21,7 @@ function GoogleLogin(props) {
     onSuccess: async () => {},
     onError: () => {},
     onNonOAuthError: () => {},
-    redirect_uri: `${saasBuilderBaseURL}/auth/idp-auth`,
+    redirect_uri: `${saasBuilderBaseURL}/api/auth/idp-auth`,
     ux_mode: "redirect",
     flow: "auth-code",
     state: authState,
