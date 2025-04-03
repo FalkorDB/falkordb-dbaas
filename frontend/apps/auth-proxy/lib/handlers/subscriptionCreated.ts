@@ -59,17 +59,16 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
 
   try {
     await client.addDataSource({
-      "isDefault": "true",
+      "type": "prometheus",
       "access": "proxy",
-      "database": "prometheus",
-      "jsonData": JSON.stringify({
+      "isDefault": true,
+      "jsonData": {
         "timeInterval": "5s",
         "tlsSkipVerify": "true",
-      }),
+      },
       "name": "VictoriaMetrics",
-      "type": "prometheus",
       "url": "http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429"
-    })
+    } as any)
   } catch (error) {
     console.error("failed to create org", (error as any)?.response ?? error);
     return NextResponse.json(
