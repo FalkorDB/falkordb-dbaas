@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import * as yup from "yup";
 import { AxiosError } from "axios";
-import { readFile } from "node:fs/promises";
 import { Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "../types/grafana-api";
 import axios from "axios";
+import grafanaApi from '../../lib/openapi/grafana-api.json';
 
 const CreateGrafanaFolderSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
@@ -18,9 +18,7 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
   let client: Client;
   try {
     const api = new OpenAPIClientAxios({
-      definition: JSON.parse(
-        await readFile("./lib/openapi/grafana-api.json", "utf-8")
-      ) as unknown as Document,
+      definition: grafanaApi as unknown as Document,
       axiosConfigDefaults: {
         baseURL: process.env.GRAFANA_URL,
         auth: {

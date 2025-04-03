@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import * as yup from "yup";
 import { AxiosError, Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "..//types/grafana-api";
-import { readFile } from "node:fs/promises";
+import grafanaApi from '../../lib/openapi/grafana-api.json';
 import { randomBytes } from "crypto";
 
 const AddUserAccessSchema = yup.object({
@@ -19,9 +19,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
   let client: Client;
   try {
     const api = new OpenAPIClientAxios({
-      definition: JSON.parse(
-        await readFile("./lib/openapi/grafana-api.json", "utf-8")
-      ) as unknown as Document,
+      definition: grafanaApi as unknown as Document,
       axiosConfigDefaults: {
         baseURL: process.env.GRAFANA_URL,
         auth: {
