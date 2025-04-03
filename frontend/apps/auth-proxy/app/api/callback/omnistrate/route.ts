@@ -20,7 +20,9 @@ export const POST = async (req: NextRequest) => {
   switch (eventType) {
     case "UserSubscription":
       return subscriptionCreatedHandler({
-        orgName: payload.subscription_id
+        orgName: payload.subscription_id,
+        id: payload.user_id,
+        email: payload.user_email,
       });
     case 'UserUnsubscribed':
       return subscriptionDeletedHandler({

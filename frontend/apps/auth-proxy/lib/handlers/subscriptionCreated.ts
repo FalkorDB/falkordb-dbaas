@@ -3,9 +3,12 @@ import * as yup from "yup";
 import { Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "../types/grafana-api";
 import grafanaApi from '../../lib/openapi/grafana-api.json';
+import { userCreatedHandler } from "./userCreated";
 
 const CreateGrafanaOrgSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
+  id: yup.string().required(),
+  email: yup.string().required().email(),
 });
 
 export const subscriptionCreatedHandler = async (data: yup.InferType<typeof CreateGrafanaOrgSchema>) => {
@@ -46,12 +49,17 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
     await client.createOrg(null, {
       name: orgName,
     });
-    return NextResponse.json({}, { status: 200 });
   } catch (error) {
-    console.error("failed to create org", error);
+    if ((error as any)?.response) {
+      console.error("failed to create org", (error as any).request);
+    } else {
+      console.error("failed to create org", error);
+    }
     return NextResponse.json(
       { error: "Failed to create organization" },
       { status: 500 }
     );
   }
+
+  return userCreatedHandler(data)
 };
