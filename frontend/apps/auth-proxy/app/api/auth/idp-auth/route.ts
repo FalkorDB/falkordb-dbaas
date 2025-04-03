@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const GET = async (nextRequest: NextRequest) => {
   const query = new URLSearchParams(nextRequest.url);
   const code = query.get("code");
-  const state = query.get("state");
+  const state = JSON.parse(Buffer.from(query.get("state") ?? '', "base64").toString("utf-8"));
 
   let authRequestPayload = null;
 
