@@ -37,33 +37,6 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
     );
   }
 
-  let existingUserId = null;
-  try {
-    existingUserId = await client
-      .getUserByLoginOrEmail({ loginOrEmail: id })
-      .then((res) => res.data.id);
-  } catch (error) {
-    if ((error as AxiosError).response?.status === 404) {
-      existingUserId = await client
-        .adminCreateUser(null, {
-          name: email,
-          email: email,
-          login: id,
-          password: randomBytes(32).toString("hex"),
-        })
-        .then((res) => res.data.id);
-    } else {
-      console.error("failed to get user", error);
-    }
-  }
-
-  if (!existingUserId) {
-    return NextResponse.json(
-      { error: "Failed to create user" },
-      { status: 500 }
-    );
-  }
-
   let existingOrgId = null;
   try {
     existingOrgId = await client
@@ -82,6 +55,34 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
   if (!existingOrgId) {
     console.error("Failed to create org");
     return NextResponse.json({}, { status: 500 });
+  }
+
+  let existingUserId = null;
+  try {
+    existingUserId = await client
+      .getUserByLoginOrEmail({ loginOrEmail: id })
+      .then((res) => res.data.id);
+  } catch (error) {
+    if ((error as AxiosError).response?.status === 404) {
+      existingUserId = await client
+        .adminCreateUser(null, {
+          name: email,
+          email: email,
+          login: id,
+          orgId: existingOrgId,
+          password: randomBytes(32).toString("hex"),
+        })
+        .then((res) => res.data.id);
+    } else {
+      console.error("failed to get user", error);
+    }
+  }
+
+  if (!existingUserId) {
+    return NextResponse.json(
+      { error: "Failed to create user" },
+      { status: 500 }
+    );
   }
 
   // 4. Add user to organization
