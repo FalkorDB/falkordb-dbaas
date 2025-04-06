@@ -113,7 +113,7 @@ resource "google_service_account" "github_action_sa" {
   display_name = "FalkorDB Github Action SA"
 }
 
-# Add service account owne role to the service account
+# Add service account owner role to the service account
 resource "google_project_iam_member" "github_action_sa" {
   project = module.project.project_id
   role    = "roles/editor"
@@ -147,4 +147,46 @@ module "gh_oidc" {
     }
   }
   attribute_condition = "assertion.repository_owner=='FalkorDB'"
+}
+
+
+# Cloud storage  bucket for RDB exports
+resource "google_storage_bucket" "rdb_exports" {
+  name     = var.rdb_exports_bucket_name
+  location = var.rdb_exports_bucket_region
+  project  = var.project_id
+
+  lifecycle {
+    prevent_destroy = true
+  }
+  versioning {
+    enabled = true
+  }
+
+  lifecycle_rule {
+    action {
+      type = "Delete"
+    }
+    condition {
+      age = 7
+    }
+  }
+
+  uniform_bucket_level_access = true
+
+  depends_on = [module.project]
+}
+
+# Service account for the db exporter service
+resource "google_service_account" "db_exporter_sa" {
+  project      = var.project_id
+  account_id   = "db-exporter-sa"
+  display_name = "DB Exporter SA"
+}
+
+
+resource "google_storage_bucket_iam_member" "db_exporter_sa" {
+  bucket = google_storage_bucket.rdb_exports.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.db_exporter_sa.email}"
 }

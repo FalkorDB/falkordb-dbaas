@@ -1,11 +1,12 @@
 import { asClass, asFunction, Lifetime, createContainer } from 'awilix';
 import { ITasksDBRepository, TasksDBMongoRepository } from './repositories/tasks';
-import logger from './logger';
+import defaultLogger from './logger';
 import { K8sRepository } from './repositories/k8s/K8sRepository';
 import { IBlobStorageRepository } from './repositories/blob/IBlobStorageRepository';
 import { BlobStorageGCSRepository } from './repositories/blob/BlobStorageGCSRepository';
+import { Logger } from 'pino';
 
-export const setupContainer = () => {
+export const setupContainer = (logger: Logger = defaultLogger) => {
   // Register global dependencies here
   const container = createContainer({
     injectionMode: 'PROXY',

@@ -6,9 +6,8 @@ import { IBlobStorageRepository } from "../repositories/blob/IBlobStorageReposit
 const processor: Processor = async (job, token) => {
 
   const container = setupContainer();
-  const logger = container.resolve('logger');
 
-  logger.info(job.data, `Processing 'rdb-export-request-signed-url' job ${job.id} with data:`);
+  job.log(`Processing 'rdb-export-request-signed-url' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const blobRepository = container.resolve<IBlobStorageRepository>(IBlobStorageRepository.name);
@@ -34,7 +33,7 @@ const processor: Processor = async (job, token) => {
         task.payload.destination.bucketName,
         task.payload.destination.fileName,
         'application/octet-stream',
-        task.payload.destination.expiresIn
+        60 * 60 * 1000 // 1 hour
       )
     ])
 
@@ -50,8 +49,7 @@ const processor: Processor = async (job, token) => {
     }
 
   } catch (error) {
-
-    logger.error(`Error processing job ${job.id}: ${error}`);
+    job.log(`Error processing job ${job.id}: ${error}`);
     await tasksRepository.updateTask({
       taskId: job.data.taskId,
       error: error.message ?? error.toString(),

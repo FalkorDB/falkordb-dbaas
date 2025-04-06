@@ -12,9 +12,6 @@ export class BlobStorageGCSRepository implements IBlobStorageRepository {
     assert(projectId, 'Env var GOOGLE_CLOUD_PROJECT is required');
     this._client = new Storage({
       projectId,
-      credentials: {
-        client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-      }
     });
   }
 

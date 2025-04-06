@@ -1,4 +1,4 @@
-import { Queue } from 'bullmq';
+import { Queue, QueueEvents } from 'bullmq';
 import { FlowProducer } from 'bullmq';
 import { TasksDBMongoRepository } from '../repositories/tasks';
 import { ExportRDBTaskType } from '../schemas/export-rdb-task';
@@ -19,9 +19,9 @@ const task: ExportRDBTaskType = {
       hasTLS: false,
     },
     destination: {
-      bucketName: 'falkordb_rdbs_test_eu',
+      bucketName: 'falkordb-dev-rdb-exports-f7a2434f',
       fileName: 'exports/export_instance-n90jl2ndq.rdb',
-      expiresIn: 3600,
+      expiresIn: 7 * 24 * 60 * 60 * 1000,
     },
   },
 }
@@ -94,14 +94,14 @@ describe('export rdb test', () => {
       ]
     });
 
-    while (!(await chain.job.isCompleted()) && !(await chain.job.isFailed())) {
-      console.log('Job is in progress...', await chain.job.getState());
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
+    // Wait for the job to complete
+    const queue = new QueueEvents('rdb-export-copy-rdb-to-bucket');
+    await chain.job.waitUntilFinished(queue);
 
-    console.log('Job completed:', chain.job.returnvalue);
-    expect(chain.job.returnvalue).not.toBeNull();
+    const state = await chain.job.getState();
+    console.log('Job completed:', state);
+    expect(state === 'completed').toBe(true);
 
-  })
+  }, 60000)
 
 });

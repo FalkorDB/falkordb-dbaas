@@ -25,3 +25,7 @@ output "ctrl_plane_github_sa_email" {
 output "ctrl_plane_gh_workload_identity_provider" {
   value = module.control_plane.gh_workload_identity_provider
 }
+
+output "ctrl_plane_db_exporter_sa_email" {
+  value = module.control_plane.db_exporter_sa_email
+}

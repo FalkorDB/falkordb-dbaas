@@ -9,3 +9,7 @@ output "github_sa_email" {
 output "gh_workload_identity_provider" {
   value = module.gh_oidc.provider_name
 }
+
+output "db_exporter_sa_email" {
+  value = google_service_account.db_exporter_sa.email
+}

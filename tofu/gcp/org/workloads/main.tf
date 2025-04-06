@@ -27,6 +27,9 @@ module "control_plane" {
   public_network_subnets = var.control_plane_public_network_subnets
 
   cloud_build_push_endpoint = var.control_plane_cloud_build_push_endpoint
+
+  rdb_exports_bucket_name   = var.control_plane_rdb_exports_bucket_name
+  rdb_exports_bucket_region = var.control_plane_rdb_exports_bucket_region
 }
 
 
@@ -42,6 +45,8 @@ module "application_plane" {
   provisioning_sa = module.control_plane.provisioning_sa_email
 
   velero_role_id = local.velero_role_id
+
+  db_exporter_sa_email = module.control_plane.db_exporter_sa_email
 
 }
 

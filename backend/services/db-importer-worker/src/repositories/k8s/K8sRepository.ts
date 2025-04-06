@@ -2,7 +2,7 @@ import { Logger } from 'pino';
 import * as k8s from '@kubernetes/client-node';
 import { v1 as googleContainerV1 } from '@google-cloud/container';
 import assert = require('assert');
-import * as stream from 'stream';
+import { Writable } from 'stream';
 import { STSClient, AssumeRoleWithWebIdentityCommand } from '@aws-sdk/client-sts';
 import { EKSClient, DescribeClusterCommand } from '@aws-sdk/client-eks';
 import axios from 'axios';
@@ -133,7 +133,7 @@ export class K8sRepository {
       'cat',
       '/run/secrets/adminpassword',
     ]).catch((e) => {
-      console.error(e);
+      this._options.logger.error(e, 'Error getting deployment password');
       throw e;
     });
 
@@ -144,30 +144,60 @@ export class K8sRepository {
     return password.replace(/\n$/, '');
   }
 
-  private async _executeCommand(kubeConfig: k8s.KubeConfig, instanceId: string, podId: string, command: string[]): Promise<string> {
+  private async _executeCommand(kubeConfig: k8s.KubeConfig, instanceId: string, podId: string, command: string[], timeout = 60): Promise<string> {
     const exec = new k8s.Exec(kubeConfig);
-    let result = '';
-    // Create a new stream for the command output
-    const output = new stream.Writable({
-      write(chunk, encoding, callback) {
-        result += chunk.toString();
+
+    const stream = new Writable({
+      write: (chunk, encoding, callback) => {
         callback();
       },
     });
 
-    await exec.exec(instanceId, podId, 'service', command, output, null, null, false);
-
     return new Promise((resolve, reject) => {
-      output.on('finish', () => {
-        resolve(result);
-        output.end();
-      });
-      output.on('error', (error) => {
-        console.error(error);
-        reject(error);
-      });
+      let fullResponse = '';
+
+      exec.exec(
+        instanceId,
+        podId,
+        'service',
+        command,
+        stream,
+        null,
+        null, // Stdin
+        false // TTY
+      ).then(
+        (stream) => {
+          stream.on('message', (data: Buffer) => {
+            fullResponse += data.toString('utf8');
+          });
+
+          stream.on('close', (code: number, signal: string) => {
+
+            if (code === 0 || code === 1000) {
+              const successMarker = '{"metadata":{},"status":"Success"}';
+              // eslint-disable-next-line no-control-regex
+              fullResponse = fullResponse.replace(/(\x01)|(\x03)/g, '')
+              if (fullResponse.endsWith(successMarker)) {
+                resolve(fullResponse.slice(0, -successMarker.length));
+              } else {
+                resolve(fullResponse);
+              }
+            } else {
+              reject(`Command failed with code ${code}, signal ${signal}:\n${fullResponse}`);
+            }
+          });
+
+          stream.on('error', (err: Error) => {
+            reject(`Error executing command: ${err}`);
+          });
+        }
+      ).catch(
+        (err) => {
+          reject(`Error creating exec stream: ${err}`);
+        });
     });
   }
+
   async getFalkorDBDeploymentMode(
     cloudProvider: 'gcp' | 'aws',
     clusterId: string,
@@ -188,9 +218,13 @@ export class K8sRepository {
       podId,
       ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', 'info'].filter((c) => c),
     ).catch((e) => {
-      console.error(e);
+      this._options.logger.error(e, 'Error getting deployment mode');
       throw e;
     });
+
+    if (response.includes("NOAUTH")) {
+      throw new Error('Failed to authenticate to FalkorDB');
+    }
 
     return response.match(/redis_mode:(.*)/)[1].trim();
   }
@@ -209,15 +243,19 @@ export class K8sRepository {
 
     const password = await this._getDeploymentPassword(kubeConfig, instanceId, podId);
 
-    await this._executeCommand(
+    const response = await this._executeCommand(
       kubeConfig,
       instanceId,
       podId,
       ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', 'bgsave'].filter((c) => c),
     ).catch((e) => {
-      console.error(e);
+      this._options.logger.error(e, 'Error sending save command');
       throw e;
     });
+
+    if (response.includes("NOAUTH")) {
+      throw new Error('Failed to authenticate to FalkorDB');
+    }
   }
 
   async isSaving(
@@ -240,9 +278,13 @@ export class K8sRepository {
       podId,
       ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', 'info', 'persistence'].filter((c) => c),
     ).catch((e) => {
-      console.error(e);
+      this._options.logger.error(e, 'Error getting save status');
       throw e;
     });
+
+    if (response.includes("NOAUTH")) {
+      throw new Error('Failed to authenticate to FalkorDB');
+    }
 
     return response.includes('rdb_bgsave_in_progress:1');
   }
@@ -265,7 +307,7 @@ export class K8sRepository {
       podId,
       ['curl', '-X', 'PUT', '-H', 'Content-Type: application/octet-stream', '--upload-file', '/data/dump.rdb', signedWriteUrl],
     ).catch((e) => {
-      console.error(e);
+      this._options.logger.error(e, 'Error sending upload command');
       throw e;
     });
   }
