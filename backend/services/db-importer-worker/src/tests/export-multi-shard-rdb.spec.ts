@@ -6,8 +6,9 @@ import {
   RdbExportMonitorSaveProgressProcessor,
   RdbExportRequestReadSignedURLProcessor,
   RdbExportSendSaveCommandProcessor,
-  PlaceholderProcessor,
-  makeJobNode,
+  RdbExportMonitorRDBMergeProcessor,
+  RdbExportRequestRDBMergeProcessor,
+  makeJobNode
 } from '../processors';
 import { ExportRDBTask, TaskTypes } from '../schemas/export-rdb-task';
 
@@ -26,20 +27,21 @@ const task = {
     hasTLS: false,
     destination: {
       bucketName: 'falkordb-dev-rdb-exports-f7a2434f',
+      fileName: `exports/export_instance-841aeorbq_${taskId}.rdb`,
       expiresIn: 7 * 24 * 60 * 60 * 1000,
     },
     nodes: [
       {
         podId: 'cluster-mz-0',
-        partFileName: `exports/parts/export_instance-841aeorbq_${taskId}_0.rdb`,
+        partFileName: `exports/parts/export_instance-841aeorbq_${taskId}_part_cluster-mz-0.rdb`,
       },
       {
         podId: 'cluster-mz-2',
-        partFileName: `exports/parts/export_instance-841aeorbq_${taskId}_1.rdb`,
+        partFileName: `exports/parts/export_instance-841aeorbq_${taskId}_part_cluster-mz-2.rdb`,
       },
       {
         podId: 'cluster-mz-4',
-        partFileName: `exports/parts/export_instance-841aeorbq_${taskId}_2.rdb`,
+        partFileName: `exports/parts/export_instance-841aeorbq_${taskId}_part_cluster-mz-4.rdb`,
       },
     ],
   },
@@ -139,17 +141,55 @@ describe('export multi shard rdb test', () => {
 
     const chain = await producer.add(
       makeJobNode(
-        PlaceholderProcessor,
-        {},
+        RdbExportRequestReadSignedURLProcessor,
+        {
+          taskId,
+          bucketName: task.payload.destination.bucketName,
+          fileName: task.payload.destination.fileName,
+          expiresIn: task.payload.destination.expiresIn,
+        },
         {
           failParentOnFailure: true,
         },
-        task.payload.nodes.map(node => _makePodJob(node)),
+        [
+          makeJobNode(
+            RdbExportMonitorRDBMergeProcessor,
+            {
+              taskId: task.taskId,
+              cloudProvider: 'gcp',
+              projectId: process.env.CTRL_PLANE_PROJECT_ID,
+              clusterId: process.env.CTRL_PLANE_CLUSTER_ID,
+              region: process.env.CTRL_PLANE_REGION,
+              namespace: process.env.NAMESPACE,
+            },
+            {
+              failParentOnFailure: true
+            },
+            [
+              makeJobNode(
+                RdbExportRequestRDBMergeProcessor,
+                {
+                  taskId: task.taskId,
+                  cloudProvider: 'gcp',
+                  projectId: process.env.CTRL_PLANE_PROJECT_ID,
+                  clusterId: process.env.CTRL_PLANE_CLUSTER_ID,
+                  region: process.env.CTRL_PLANE_REGION,
+                  namespace: process.env.NAMESPACE,
+                  bucketName: task.payload.destination.bucketName,
+                  outputRdbFileName: task.payload.destination.fileName,
+                  rdbFileNames: task.payload.nodes.map(node => node.partFileName),
+                },
+                { failParentOnFailure: true },
+                task.payload.nodes.map(node => _makePodJob(node)),
+              )
+            ]
+          )
+        ]
       )
     );
 
     // Wait for the job to complete
-    const queue = new QueueEvents(PlaceholderProcessor.name);
+    const queue = new QueueEvents(RdbExportRequestReadSignedURLProcessor.name);
     await chain.job.waitUntilFinished(queue);
 
     const state = await chain.job.getState();
