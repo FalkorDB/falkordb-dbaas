@@ -7,21 +7,23 @@ import { Logger } from 'pino';
 
 const schema = Yup.object().shape({
   taskId: Yup.string().required(),
-  cloudProvider: Yup.string().oneOf(['gcp', 'aws']).required(),
+  projectId: Yup.string().required(),
+  cloudProvider: Yup.string().oneOf(['gcp']).required(),
   clusterId: Yup.string().required(),
   region: Yup.string().required(),
-  instanceId: Yup.string().required(),
-  podId: Yup.string().required(),
-  hasTLS: Yup.boolean().required(),
+  namespace: Yup.string().required(),
+  bucketName: Yup.string().required(),
+  rdbFileNames: Yup.array().of(Yup.string()).required(),
+  outputRdbFileName: Yup.string().required(),
 });
-export type RdbExportMonitorSaveProgressJobData = Yup.InferType<typeof schema>;
+export type RdbExportRequestRDBMergeJobData = Yup.InferType<typeof schema>;
 
-const processor: Processor<RdbExportMonitorSaveProgressJobData> = async (job, token) => {
+const processor: Processor<RdbExportRequestRDBMergeJobData> = async (job, token) => {
 
   const container = setupContainer();
-    const logger = container.resolve<Logger>('logger');
+  const logger = container.resolve<Logger>('logger');
 
-  job.log(`Processing 'rdb-export-monitor-save-progress' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
+  job.log(`Processing 'rdb-export-request-rdb-merge' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
   schema.validateSync(job.data);
 
@@ -30,23 +32,22 @@ const processor: Processor<RdbExportMonitorSaveProgressJobData> = async (job, to
 
   try {
 
-    const isSaving = await k8sRepository.isSaving(
+    await k8sRepository.createMergeRDBsJob(
+      job.data.projectId,
       job.data.cloudProvider,
       job.data.clusterId,
       job.data.region,
-      job.data.instanceId,
-      job.data.podId,
-      job.data.hasTLS,
+      job.data.namespace,
+      job.data.taskId,
+      job.data.bucketName,
+      job.data.rdbFileNames,
+      job.data.outputRdbFileName,
     )
 
-    if (isSaving) {
-      await job.moveToDelayed(Date.now() + 1000, token);
-      throw new DelayedError();
-    } else {
-      return {
-        success: true,
-      }
+    return {
+      success: true,
     }
+
   } catch (error) {
     logger.error(error, `Error processing job ${job.id}: ${error}`);
     await tasksRepository.updateTask({
@@ -59,7 +60,7 @@ const processor: Processor<RdbExportMonitorSaveProgressJobData> = async (job, to
 }
 
 export default {
-  name: 'rdb-export-monitor-save-progress',
+  name: 'rdb-export-request-rdb-merge',
   processor,
   concurrency: undefined,
   schema,

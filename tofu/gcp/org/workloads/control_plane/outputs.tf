@@ -13,3 +13,7 @@ output "gh_workload_identity_provider" {
 output "db_exporter_sa_email" {
   value = google_service_account.db_exporter_sa.email
 }
+
+output "db_exporter_sa_id" {
+  value = google_service_account.db_exporter_sa.id
+}

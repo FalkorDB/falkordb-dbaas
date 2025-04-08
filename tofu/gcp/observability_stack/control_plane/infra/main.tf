@@ -99,6 +99,7 @@ module "gke" {
   enable_private_endpoint              = false
   enable_private_nodes                 = true
   http_load_balancing                  = true
+  gcs_fuse_csi_driver                  = true
 
   default_max_pods_per_node = var.default_max_pods_per_node
 

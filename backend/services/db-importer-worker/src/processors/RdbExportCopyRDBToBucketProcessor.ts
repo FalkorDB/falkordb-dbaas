@@ -2,30 +2,51 @@ import { Processor } from "bullmq";
 import { setupContainer } from "../container";
 import { ITasksDBRepository } from "../repositories/tasks";
 import { K8sRepository } from "../repositories/k8s/K8sRepository";
+import * as Yup from 'yup';
+import { IBlobStorageRepository } from "../repositories/blob/IBlobStorageRepository";
+import { Logger } from 'pino';
 
-const processor: Processor = async (job, token) => {
+const schema = Yup.object().shape({
+  taskId: Yup.string().required(),
+  cloudProvider: Yup.string().oneOf(['gcp', 'aws']).required(),
+  clusterId: Yup.string().required(),
+  region: Yup.string().required(),
+  instanceId: Yup.string().required(),
+  podId: Yup.string().required(),
+  bucketName: Yup.string().required(),
+  fileName: Yup.string().required(),
+});
+export type RdbExportCopyRDBToBucketJobData = Yup.InferType<typeof schema>;
+
+const processor: Processor<RdbExportCopyRDBToBucketJobData> = async (job, token) => {
   const container = setupContainer();
+    const logger = container.resolve<Logger>('logger');
 
   job.log(`Processing 'rdb-export-copy-rdb-to-bucket' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
+  schema.validateSync(job.data);
+
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
+  const blobRepository = container.resolve<IBlobStorageRepository>(IBlobStorageRepository.name);
 
   try {
 
-    const task = await tasksRepository.getTaskById(job.data.taskId);
 
-    if (!task) {
-      throw new Error(`Task with ID ${job.data.taskId} not found`);
-    }
+    const writeUrl = await blobRepository.getWriteUrl(
+      job.data.bucketName,
+      job.data.fileName,
+      'application/octet-stream',
+      60 * 60 * 1000 // 1 hour
+    )
 
     await k8sRepository.sendUploadCommand(
-      task.payload.source.cloudProvider,
-      task.payload.source.clusterId,
-      task.payload.source.region,
-      task.payload.source.instanceId,
-      task.payload.source.podId,
-      task.output.writeUrl,
+      job.data.cloudProvider,
+      job.data.clusterId,
+      job.data.region,
+      job.data.instanceId,
+      job.data.podId,
+      writeUrl,
     )
 
     await tasksRepository.updateTask({
@@ -39,7 +60,7 @@ const processor: Processor = async (job, token) => {
       success: true,
     }
   } catch (error) {
-    job.log(`Error processing job ${job.id}: ${error}`);
+    logger.error(error, `Error processing job ${job.id}: ${error}`);
     await tasksRepository.updateTask({
       taskId: job.data.taskId,
       error: error.message ?? error.toString(),
@@ -52,4 +73,5 @@ const processor: Processor = async (job, token) => {
 export default {
   name: 'rdb-export-copy-rdb-to-bucket',
   processor,
+  schema,
 }

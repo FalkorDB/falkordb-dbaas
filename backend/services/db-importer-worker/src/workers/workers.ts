@@ -1,7 +1,10 @@
-import { Worker } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import processors from '../processors';
 import logger from '../logger';
 
+export const getQueues = () => {
+  return processors.map(({ name }) => new Queue(name));
+}
 
 export const setupWorkers = () => {
 

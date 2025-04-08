@@ -10,15 +10,17 @@ import axios from 'axios';
 export class K8sRepository {
   constructor(private _options: { logger: Logger }) { }
 
-  private async _getGKECredentials(clusterId: string, region: string) {
+  private async _getGKECredentials(clusterId: string, region: string, opts?: {
+    projectId?: string,
+  }) {
     const client = new googleContainerV1.ClusterManagerClient();
 
-    const projectId = process.env.APPLICATION_PLANE_PROJECT_ID;
+    const projectId = opts?.projectId ?? process.env.APPLICATION_PLANE_PROJECT_ID;
     assert(projectId, 'Env var APPLICATION_PLANE_PROJECT_ID is required');
     const accessToken = await client.auth.getAccessToken();
 
     const [response] = await client.getCluster({
-      name: `projects/${projectId}/locations/${region}/clusters/c-${clusterId.replace('-', '')}`,
+      name: `projects/${projectId}/locations/${region}/clusters/${clusterId}`,
     });
     // the following are the parameters added when a new k8s context is created
     return {
@@ -87,10 +89,13 @@ export class K8sRepository {
     cloudProvider: 'gcp' | 'aws',
     clusterId: string,
     region: string,
+    opts?: {
+      projectId?: string,
+    }
   ): Promise<k8s.KubeConfig> {
     const k8sCredentials =
       cloudProvider === 'gcp'
-        ? await this._getGKECredentials(clusterId, region)
+        ? await this._getGKECredentials(clusterId, region, opts)
         : await this._getEKSCredentials(clusterId, region);
 
     const kubeConfig = new k8s.KubeConfig();
@@ -311,4 +316,104 @@ export class K8sRepository {
       throw e;
     });
   }
+
+  async createMergeRDBsJob(
+    projectId: string,
+    cloudProvider: 'gcp',
+    clusterId: string,
+    region: string,
+    namespace: string,
+    jobId: string,
+    bucketName: string,
+    rdbFileNames: string[],
+    outputRdbFileName: string,
+  ): Promise<void> {
+    this._options.logger.info({ clusterId, region, namespace, rdbFileNames }, 'Creating merge RDBs job');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region, { projectId });
+
+    const jobManifest: k8s.V1Job = {
+      apiVersion: 'batch/v1',
+      kind: 'Job',
+      metadata: {
+        name: `merge-rdbs-job-${jobId}`,
+        namespace,
+      },
+      spec: {
+        maxFailedIndexes: 1,
+        backoffLimitPerIndex: 0,
+        completionMode: 'Indexed',
+        template: {
+          metadata: {
+            annotations: {
+              "gke-gcsfuse/volumes": "true",
+              // service account
+            }
+          },
+          spec: {
+            serviceAccountName: 'db-exporter-sa',
+            containers: [
+              {
+                name: 'merge-rdbs',
+                image: 'dudizimber/redis-rdb-cli:latest',
+                command: ['rdt', '-m', ...rdbFileNames.map(n => `/data/${n}`), '-o', `/data/${outputRdbFileName}`],
+                volumeMounts: [
+                  {
+                    name: 'gcsfuse',
+                    mountPath: '/data',
+                  }
+                ]
+              },
+            ],
+            restartPolicy: 'Never',
+            volumes: [
+              {
+                name: 'gcsfuse',
+                csi: {
+                  driver: 'gcsfuse.csi.storage.gke.io',
+                  volumeAttributes: {
+                    bucketName,
+                    mountOptions: 'implicit-dirs',
+                  },
+                }
+              }
+            ]
+          },
+        },
+      },
+    };
+
+    const k8sApi = kubeConfig.makeApiClient(k8s.BatchV1Api);
+    await k8sApi.createNamespacedJob(namespace, jobManifest);
+  }
+
+
+
+  async getJobStatus(
+    projectId: string,
+    cloudProvider: 'gcp',
+    clusterId: string,
+    region: string,
+    namespace: string,
+    jobId: string,
+  ): Promise<'pending' | 'completed' | 'failed'> {
+    this._options.logger.info({ clusterId, region, namespace, jobId }, 'Getting job status');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region, { projectId });
+
+    const k8sApi = kubeConfig.makeApiClient(k8s.BatchV1Api);
+    const { body } = await k8sApi.readNamespacedJob(`merge-rdbs-job-${jobId}`, namespace);
+    const { status } = body;
+
+    if (status?.failed > 0) {
+      return 'failed';
+    }
+
+    if (status?.succeeded > 0) {
+      return 'completed';
+    }
+
+    return 'pending';
+  }
+
 }

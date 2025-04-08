@@ -7,21 +7,20 @@ import { Logger } from 'pino';
 
 const schema = Yup.object().shape({
   taskId: Yup.string().required(),
-  cloudProvider: Yup.string().oneOf(['gcp', 'aws']).required(),
+  projectId: Yup.string().required(),
+  cloudProvider: Yup.string().oneOf(['gcp']).required(),
   clusterId: Yup.string().required(),
   region: Yup.string().required(),
-  instanceId: Yup.string().required(),
-  podId: Yup.string().required(),
-  hasTLS: Yup.boolean().required(),
+  namespace: Yup.string().required(),
 });
-export type RdbExportMonitorSaveProgressJobData = Yup.InferType<typeof schema>;
+export type RdbExportMonitorRDBMergeJobData = Yup.InferType<typeof schema>;
 
-const processor: Processor<RdbExportMonitorSaveProgressJobData> = async (job, token) => {
+const processor: Processor<RdbExportMonitorRDBMergeJobData> = async (job, token) => {
 
   const container = setupContainer();
     const logger = container.resolve<Logger>('logger');
 
-  job.log(`Processing 'rdb-export-monitor-save-progress' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
+  job.log(`Processing 'rdb-export-monitor-rdb-merge' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
   schema.validateSync(job.data);
 
@@ -30,17 +29,21 @@ const processor: Processor<RdbExportMonitorSaveProgressJobData> = async (job, to
 
   try {
 
-    const isSaving = await k8sRepository.isSaving(
+    const jobStatus = await k8sRepository.getJobStatus(
+      job.data.projectId,
       job.data.cloudProvider,
       job.data.clusterId,
       job.data.region,
-      job.data.instanceId,
-      job.data.podId,
-      job.data.hasTLS,
+      job.data.namespace,
+      job.data.taskId
     )
 
-    if (isSaving) {
-      await job.moveToDelayed(Date.now() + 1000, token);
+    if (jobStatus === 'failed') {
+      throw new Error(`K8s Job ${job.data.taskId} failed`);
+    }
+
+    if (jobStatus === 'pending') {
+      await job.moveToDelayed(Date.now() + 5000, token);
       throw new DelayedError();
     } else {
       return {
@@ -59,7 +62,7 @@ const processor: Processor<RdbExportMonitorSaveProgressJobData> = async (job, to
 }
 
 export default {
-  name: 'rdb-export-monitor-save-progress',
+  name: 'rdb-export-monitor-rdb-merge',
   processor,
   concurrency: undefined,
   schema,

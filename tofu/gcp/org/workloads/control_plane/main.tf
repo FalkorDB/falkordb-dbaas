@@ -184,9 +184,15 @@ resource "google_service_account" "db_exporter_sa" {
   display_name = "DB Exporter SA"
 }
 
-
 resource "google_storage_bucket_iam_member" "db_exporter_sa" {
   bucket = google_storage_bucket.rdb_exports.name
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.db_exporter_sa.email}"
+}
+
+# add container developer role to the service account
+resource "google_project_iam_member" "db_exporter_sa" {
+  project = module.project.project_id
+  role    = "roles/container.developer"
+  member  = "serviceAccount:${google_service_account.db_exporter_sa.email}"
 }
