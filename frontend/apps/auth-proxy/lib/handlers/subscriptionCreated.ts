@@ -5,6 +5,7 @@ import { Client } from "../types/grafana-api";
 import grafanaApi from '../../lib/openapi/grafana-api.json';
 import { userCreatedHandler } from "./userCreated";
 import axios from "axios";
+import curlirize from 'axios-curlirize';
 
 const CreateGrafanaOrgSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
@@ -30,6 +31,7 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
       },
     });
     client = await api.init<Client>();
+        curlirize(client)
   } catch (error) {
     console.error("failed to initialize client", error);
     return NextResponse.json(
@@ -62,6 +64,19 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
   }
 
   try {
+    await client.userSetUsingOrg({
+      org_id: existingOrgId,
+    })
+    console.log('set user using org', orgName, 'with id', existingOrgId);
+  } catch (error) {
+    console.error("failed to set user using org", (error as any)?.response ?? error);
+    return NextResponse.json(
+      { error: "Failed to set user using org" },
+      { status: 500 }
+    );
+  }
+
+  try {
     const response = await client.addDataSource(null,
       {
         "type": "prometheus",
@@ -74,11 +89,6 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
         "name": "VictoriaMetrics",
         "url": "http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429"
       },
-      {
-        params: {
-          orgId: existingOrgId,
-        }
-      }
     )
     console.log('created datasource for org', orgName, 'with id', existingOrgId, response.data);
   } catch (error) {

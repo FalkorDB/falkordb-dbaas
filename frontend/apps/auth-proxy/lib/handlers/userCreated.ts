@@ -4,6 +4,7 @@ import { AxiosError, Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "..//types/grafana-api";
 import grafanaApi from '../../lib/openapi/grafana-api.json';
 import { randomBytes } from "crypto";
+import curlirize from 'axios-curlirize';
 
 const AddUserAccessSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
@@ -31,6 +32,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
       },
     });
     client = await api.init<Client>();
+        curlirize(client)
   } catch (error) {
     console.error("failed to initialize client", error);
     return NextResponse.json(

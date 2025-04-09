@@ -3,6 +3,7 @@ import * as yup from "yup";
 import { Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "../types/grafana-api";
 import grafanaApi from '../../lib/openapi/grafana-api.json';
+import curlirize from 'axios-curlirize';
 
 const DeleteGrafanaFolderSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
@@ -28,6 +29,7 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
       },
     });
     client = await api.init<Client>();
+        curlirize(client)
   } catch (error) {
     console.error("failed to initialize client", error);
     return NextResponse.json(

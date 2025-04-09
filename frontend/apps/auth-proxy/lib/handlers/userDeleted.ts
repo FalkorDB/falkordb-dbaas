@@ -3,6 +3,7 @@ import * as yup from "yup";
 import { AxiosError, Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "..//types/grafana-api";
 import grafanaApi from '../../lib/openapi/grafana-api.json';
+import curlirize from 'axios-curlirize';
 
 const RemoveUserAccessSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
@@ -28,6 +29,7 @@ export const userDeletedHandler = async (data: yup.InferType<typeof RemoveUserAc
       },
     });
     client = await api.init<Client>();
+        curlirize(client)
   } catch (error) {
     console.error("failed to initialize client", error);
     return NextResponse.json(

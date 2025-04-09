@@ -5,6 +5,7 @@ import { Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "../types/grafana-api";
 import axios from "axios";
 import grafanaApi from '../../lib/openapi/grafana-api.json';
+import curlirize from 'axios-curlirize';
 
 const CreateGrafanaFolderSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
@@ -28,6 +29,7 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
       },
     });
     client = await api.init<Client>();
+    curlirize(client)
   } catch (error) {
     console.error("failed to initialize client", error);
     return NextResponse.json(
