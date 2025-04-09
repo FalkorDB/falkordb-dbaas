@@ -131,12 +131,12 @@ const getDashboard = async (uid: string) => {
   if (nsTemplatingIdx !== -1) {
     dashboard.templating.list[nsTemplatingIdx] = {
       current: {
-        text: "instance-y",
-        value: "instance-y",
+        text: uid,
+        value: uid,
       },
       hide: 2,
       name: "namespace",
-      query: "instance-y",
+      query: uid,
       skipUrlSync: true,
       type: "constant",
     };
