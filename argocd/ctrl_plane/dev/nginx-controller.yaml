@@ -16,6 +16,8 @@ spec:
         controller:
           replicaCount: 1
           allowSnippetAnnotations: true
+          config:
+            annotations-risk-level: Critical
           service:
             annotations:
               cloud.google.com/load-balancer-type: "External"
