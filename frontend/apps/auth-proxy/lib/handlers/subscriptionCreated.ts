@@ -87,7 +87,7 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
           "tlsSkipVerify": "true",
         },
         "name": "VictoriaMetrics",
-        "url": "http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429"
+        "url": "http://vmsingle-vm.observability.svc.cluster.local:8429"
       },
     )
     console.log('created datasource for org', orgName, 'with id', existingOrgId, response.data);

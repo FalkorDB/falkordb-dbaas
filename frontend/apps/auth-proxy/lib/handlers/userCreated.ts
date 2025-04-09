@@ -15,7 +15,7 @@ const AddUserAccessSchema = yup.object({
 
 
 export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAccessSchema>) => {
-  const { email, orgName, id, ...params } = AddUserAccessSchema.validateSync(data);
+  const { email, orgName, ...params } = AddUserAccessSchema.validateSync(data);
   let { existingOrgId } = params;
 
   // 3. Check if user exists, create one if not
@@ -80,7 +80,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
         .adminCreateUser(null, {
           name: email,
           email: email,
-          login: id,
+          login: email,
           orgId: existingOrgId,
           password: randomBytes(32).toString("hex"),
         })
