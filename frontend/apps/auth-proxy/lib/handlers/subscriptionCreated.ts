@@ -72,11 +72,16 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
         },
         "name": "VictoriaMetrics",
         "url": "http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429"
-      } as any, {
-      params: {
-        orgId: existingOrgId,
-      }
-    })
+      } as any,
+      {
+        params: {
+          orgId: existingOrgId,
+        },
+        auth: {
+          username: process.env.GRAFANA_SA_USERNAME ?? "",
+          password: process.env.GRAFANA_SA_PASSWORD ?? "",
+        }
+      })
     console.log('created datasource for org', orgName, 'with id', existingOrgId);
   } catch (error) {
     console.error("failed to create datasource", (error as any)?.response ?? error);

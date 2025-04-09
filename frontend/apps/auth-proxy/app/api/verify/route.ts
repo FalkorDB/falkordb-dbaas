@@ -8,11 +8,24 @@ export const GET = async (req: NextRequest) => {
   // get basic auth
   const basicAuth = req.headers.get("Authorization");
   if (basicAuth) {
+    console.log("Got authentication header");
     const [username, password] = Buffer.from(basicAuth.split(" ")[1] ?? "", "base64")
       .toString()
       .split(":");
     if (username !== process.env.GRAFANA_SA_USERNAME || password !== process.env.GRAFANA_SA_PASSWORD) {
+      console.log("Invalid authentication credentials");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    } else {
+      console.log("Valid authentication credentials");
+      return NextResponse.json(
+        {},
+        {
+          status: 200,
+          headers: {
+            "x-webauth-user": username || "sa",
+          },
+        }
+      );
     }
   }
 
