@@ -29,7 +29,7 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
       },
     });
     client = await api.init<Client>();
-        curlirize(client)
+    curlirize(client)
   } catch (error) {
     console.error("failed to initialize client", error);
     return NextResponse.json(
@@ -66,7 +66,7 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
     console.error("failed to get folders", (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to get folders" },
-      { status: 500 }
+      { status: 200 }
     );
   }
 
@@ -75,7 +75,7 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
   }
 
   try {
-    await client.deleteFolder({ folder_uid: folderUid }, { params: { orgId } });
+    await client.deleteFolder({ folder_uid: folderUid }, null, { params: { orgId } });
   } catch (error) {
     console.error("failed to delete folder", (error as any)?.response?.data ?? error);
     return NextResponse.json(
