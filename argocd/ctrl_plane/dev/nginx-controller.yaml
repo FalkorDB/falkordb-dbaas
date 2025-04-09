@@ -22,6 +22,8 @@ spec:
             type: LoadBalancer
           admissionWebhooks:
             enabled: true
+            annotations:
+              argocd.argoproj.io/hook: PostSync
           resources:
             requests:
               cpu: 100m
