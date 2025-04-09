@@ -68,4 +68,4 @@ spec:
       root_url: "https://grafana.dev.falkordb.cloud/grafana/"
       serve_from_sub_path: "true"
     users:
-      auto_assign_org: "false"
+      auto_assign_org: "true"
