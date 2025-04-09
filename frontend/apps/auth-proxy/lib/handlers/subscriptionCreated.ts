@@ -62,8 +62,8 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
   }
 
   try {
-    await axios.post(
-      `${process.env.NEXT_PUBLIC_GRAFANA_URL}/api/datasources`,
+    const response = await axios.post(
+      `${process.env.NEXT_PUBLIC_GRAFANA_URL}/api/datasources?orgId=${existingOrgId}`,
       {
         "type": "prometheus",
         "access": "proxy",
@@ -76,9 +76,6 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
         "url": "http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429"
       },
       {
-        params: {
-          orgId: existingOrgId,
-        },
         auth: {
           username: process.env.GRAFANA_SA_USERNAME ?? "",
           password: process.env.GRAFANA_SA_PASSWORD ?? "",
@@ -90,7 +87,7 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
         }
       }
     )
-    console.log('created datasource for org', orgName, 'with id', existingOrgId);
+    console.log('created datasource for org', orgName, 'with id', existingOrgId, response.data);
   } catch (error) {
     console.error("failed to create datasource", (error as any)?.response ?? error);
     return NextResponse.json(
