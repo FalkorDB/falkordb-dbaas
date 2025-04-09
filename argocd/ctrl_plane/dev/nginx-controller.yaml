@@ -15,6 +15,7 @@ spec:
       values: |
         controller:
           replicaCount: 1
+          allowSnippetAnnotations: true
           service:
             annotations:
               cloud.google.com/load-balancer-type: "External"
