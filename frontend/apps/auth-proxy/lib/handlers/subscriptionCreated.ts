@@ -37,18 +37,21 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
     );
   }
 
-  const existingOrgId = await client
+  let existingOrgId = await client
     .getOrgByName({ org_name: orgName })
     .then((res) => res.data.id)
     .catch(() => { return undefined });
   if (existingOrgId) {
+    console.log('org', orgName, 'already exists with id', existingOrgId);
     return userCreatedHandler({ ...data, existingOrgId });
   }
 
   try {
-    await client.createOrg(null, {
+    const response = await client.createOrg(null, {
       name: orgName,
     });
+    existingOrgId = response.data.orgId;
+    console.log('created org', orgName, 'with id', existingOrgId);
   } catch (error) {
     console.error("failed to create org", (error as any)?.response ?? error);
     return NextResponse.json(
@@ -74,11 +77,12 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
         orgId: existingOrgId,
       }
     })
+    console.log('created datasource for org', orgName, 'with id', existingOrgId);
   } catch (error) {
     console.error("failed to create datasource", (error as any)?.response ?? error);
     return NextResponse.json(
       { error: "Failed to create datasource" },
-      { status: 500 }
+      { status: 200 }
     );
   }
 

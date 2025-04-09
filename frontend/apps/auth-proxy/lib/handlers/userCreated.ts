@@ -44,6 +44,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
       existingOrgId = await client
         .getOrgByName({ org_name: orgName })
         .then((res) => res.data.id);
+      console.log('org', orgName, 'already exists with id', existingOrgId);
     } catch (error) {
       if ((error as AxiosError).response?.status === 404) {
         existingOrgId = await client
@@ -55,6 +56,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
             console.error("failed to create org", error);
             return undefined;
           });
+        console.log('created org', orgName, 'with id', existingOrgId);
       }
     }
   }
@@ -69,6 +71,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
     existingUserId = await client
       .getUserByLoginOrEmail({ loginOrEmail: email })
       .then((res) => res.data.id);
+    console.log('user', email, 'already exists with id', existingUserId);
   } catch (error) {
     if ((error as AxiosError).response?.status === 404) {
       existingUserId = await client
@@ -84,6 +87,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
           console.error("failed to create user", error);
           return undefined;
         });
+        console.log('created user', email, 'with id', existingUserId);
     } else {
       console.error("failed to get user", error);
     }
@@ -102,6 +106,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
       { org_id: existingOrgId },
       { loginOrEmail: email, role: "Viewer" }
     );
+    console.log('added user', email, 'to org', orgName);
   } catch (error) {
     console.error("failed to add user to org", error);
     return NextResponse.json(
