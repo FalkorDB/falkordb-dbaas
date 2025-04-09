@@ -41,6 +41,11 @@ export const subscriptionDeletedHandler = async (data: yup.InferType<typeof Dele
     }
     orgId = existingOrg.data.id;
   } catch (error) {
+
+    if ((error as any).response?.status === 404) {
+      return NextResponse.json({}, { status: 200 });
+    }
+    
     console.error(error);
     return NextResponse.json({}, { status: 200 });
   }
