@@ -62,8 +62,7 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
   }
 
   try {
-    const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_GRAFANA_URL}/api/datasources?orgId=${existingOrgId}`,
+    const response = await client.addDataSource(null,
       {
         "type": "prometheus",
         "access": "proxy",
@@ -76,14 +75,8 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
         "url": "http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429"
       },
       {
-        auth: {
-          username: process.env.GRAFANA_SA_USERNAME ?? "",
-          password: process.env.GRAFANA_SA_PASSWORD ?? "",
-        },
-        beforeRedirect: (options) => {
-          options.headers["Authorization"] = `Basic ${Buffer.from(
-            `${process.env.GRAFANA_SA_USERNAME}:${process.env.GRAFANA_SA_PASSWORD}`
-          ).toString("base64")}`;
+        params: {
+          orgId: existingOrgId,
         }
       }
     )
