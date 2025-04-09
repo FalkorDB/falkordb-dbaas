@@ -36,9 +36,14 @@ export const GET = async (nextRequest: NextRequest) => {
 
       const userID = jwtTokenDecoded["userID"];
 
+      const email = await axiosClient.get(
+        `https://api.omnistrate.cloud/2022-09-01-00/fleet/user/${userID}`,
+      ).then((res) => res.data.email);
+
       const payload = {
         id: userID,
-        name: userID,
+        name: email,
+        email,
       }
       const jwtToken = sign(payload, process.env.NEXTAUTH_SECRET ?? '', {
         expiresIn: "1h",
