@@ -63,7 +63,7 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
 
   try {
     await axios.post(
-      `${process.env.NEXT_PUBLIC_GRAFANA_URL}/grafana/api/datasources`,
+      `${process.env.NEXT_PUBLIC_GRAFANA_URL}/api/datasources`,
       {
         "type": "prometheus",
         "access": "proxy",
