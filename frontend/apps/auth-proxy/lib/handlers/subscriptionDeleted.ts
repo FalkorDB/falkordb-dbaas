@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import * as yup from "yup";
-import { Document, OpenAPIClientAxios } from "openapi-client-axios";
+import { AxiosError, Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "../types/grafana-api";
 import grafanaApi from '../../lib/openapi/grafana-api.json';
 
@@ -29,7 +29,7 @@ export const subscriptionDeletedHandler = async (data: yup.InferType<typeof Dele
     console.error("failed to initialize client", error);
     return NextResponse.json(
       { error: "Failed to create organization" },
-      { status: 500 }
+      { status: 200 }
     );
   }
 
@@ -42,11 +42,11 @@ export const subscriptionDeletedHandler = async (data: yup.InferType<typeof Dele
     orgId = existingOrg.data.id;
   } catch (error) {
 
-    if ((error as any).response?.status === 404) {
+    if ((error as AxiosError).response?.status === 404) {
       return NextResponse.json({}, { status: 200 });
     }
-    
-    console.error(error);
+
+    console.error('error getting org by name', error);
     return NextResponse.json({}, { status: 200 });
   }
 
@@ -54,10 +54,15 @@ export const subscriptionDeletedHandler = async (data: yup.InferType<typeof Dele
     await client.deleteOrgByID({ org_id: orgId });
     return NextResponse.json({}, { status: 200 });
   } catch (error) {
-    console.error(error);
+
+    if ((error as AxiosError).response?.status === 404) {
+      return NextResponse.json({}, { status: 200 });
+    }
+
+    console.error('error deleting org', error);
     return NextResponse.json(
       { error: "Failed to delete organization" },
-      { status: 500 }
+      { status: 200 }
     );
   }
 };
