@@ -3,10 +3,10 @@ import { authOptions } from "../../../lib/authOptions";
 import { NextRequest, NextResponse } from "next/server";
 
 export const GET = async (req: NextRequest) => {
-  const session = await getServerSession(authOptions);
 
   // get basic auth
   const basicAuth = req.headers.get("Authorization");
+  console.log('has authorization header', !!basicAuth);
   if (basicAuth) {
     console.log("Got authentication header");
     const [username, password] = Buffer.from(basicAuth.split(" ")[1] ?? "", "base64")
@@ -29,6 +29,7 @@ export const GET = async (req: NextRequest) => {
     }
   }
 
+  const session = await getServerSession(authOptions);
   if (!session || !(session.user?.email || (session.user as any)?.id || (session.user as any)?.name)) {
     // check if grafana_session cookie is set
     const grafanaSession = req.cookies.get("grafana_session");
