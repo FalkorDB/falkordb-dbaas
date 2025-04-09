@@ -267,7 +267,7 @@ module "customer_observability_ip" {
   project_id = var.project_id
   region     = var.region
 
-  global       = true
+  global       = false
   address_type = "EXTERNAL"
   network_tier = "PREMIUM"
 

@@ -22,6 +22,7 @@ spec:
             annotations:
               cloud.google.com/load-balancer-type: "External"
             type: LoadBalancer
+            loadBalancerIP: 34.45.219.11
           admissionWebhooks:
             enabled: true
             annotations:
