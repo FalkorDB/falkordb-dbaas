@@ -66,7 +66,7 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
     );
     folderUid = existingFolder?.uid;
   } catch (error) {
-    console.error(error);
+    console.error('error getting folders', (error as any)?.response?.data ?? error);
     return NextResponse.json({}, { status: 200 });
   }
 
@@ -81,7 +81,7 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
       );
       folderUid = data.uid;
     } catch (error) {
-      console.error(error);
+      console.error('error creating folder', (error as any)?.response?.data ?? error);
       return NextResponse.json(
         { error: "Failed to create folder" },
         { status: 500 }
@@ -103,7 +103,7 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
       }
     );
   } catch (error) {
-    console.error(error);
+    console.error('error creating dashboard', (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to create dashboard" },
       { status: 500 }

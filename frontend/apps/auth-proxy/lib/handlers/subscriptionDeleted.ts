@@ -46,7 +46,7 @@ export const subscriptionDeletedHandler = async (data: yup.InferType<typeof Dele
       return NextResponse.json({}, { status: 200 });
     }
 
-    console.error('error getting org by name', error);
+    console.error('error getting org by name', (error as any)?.response?.data ?? error);
     return NextResponse.json({}, { status: 200 });
   }
 
@@ -59,7 +59,7 @@ export const subscriptionDeletedHandler = async (data: yup.InferType<typeof Dele
       return NextResponse.json({}, { status: 200 });
     }
 
-    console.error('error deleting org', error);
+    console.error('error deleting org', (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to delete organization" },
       { status: 200 }

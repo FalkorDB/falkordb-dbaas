@@ -44,7 +44,7 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
     }
     orgId = existingOrg.data.id;
   } catch (error) {
-    console.error("failed to get org", error);
+    console.error("failed to get org", (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to get organization" },
       { status: 500 }
@@ -61,7 +61,7 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
     )[0];
     folderUid = existingFolder?.uid;
   } catch (error) {
-    console.error("failed to get folders", error);
+    console.error("failed to get folders", (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to get folders" },
       { status: 500 }
@@ -75,7 +75,7 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
   try {
     await client.deleteFolder({ folder_uid: folderUid }, { params: { orgId } });
   } catch (error) {
-    console.error("failed to delete folder", error);
+    console.error("failed to delete folder", (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to delete folder" },
       { status: 500 }

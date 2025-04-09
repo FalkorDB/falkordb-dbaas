@@ -53,7 +53,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
           })
           .then((res) => res.data.orgId)
           .catch((error) => {
-            console.error("failed to create org", error);
+            console.error("failed to create org", (error as any)?.response?.data ?? error);
             return undefined;
           });
         console.log('created org', orgName, 'with id', existingOrgId);
@@ -84,12 +84,12 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
         })
         .then((res) => res.data.id)
         .catch((error) => {
-          console.error("failed to create user", error);
+          console.error("failed to create user", (error as any)?.response?.data ?? error);
           return undefined;
         });
-        console.log('created user', email, 'with id', existingUserId);
+      console.log('created user', email, 'with id', existingUserId);
     } else {
-      console.error("failed to get user", error);
+      console.error("failed to get user", (error as any)?.response?.data ?? error);
     }
   }
 
@@ -108,7 +108,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
     );
     console.log('added user', email, 'to org', orgName);
   } catch (error) {
-    console.error("failed to add user to org", error);
+    console.error("failed to add user to org", (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to add user to organization" },
       { status: 500 }
