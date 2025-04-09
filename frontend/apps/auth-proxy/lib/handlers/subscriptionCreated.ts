@@ -82,10 +82,6 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
         "type": "prometheus",
         "access": "proxy",
         "isDefault": true,
-        "jsonData": {
-          "timeInterval": "5s",
-          "tlsSkipVerify": "true",
-        },
         "name": "VictoriaMetrics",
         "url": "http://vmsingle-vm.observability.svc.cluster.local:8429"
       },
