@@ -45,11 +45,17 @@ export const POST = async (req: NextRequest) => {
         id: payload.user_id
       });
     case 'SuccessfulDeployment':
+      if (payload.ProductTier === "FalkorDB Free") {
+        return NextResponse.json({}, { status: 200 });
+      }
       return instanceCreatedHandler({
         orgName: payload.subscription_id,
         folderName: payload.instance_id,
       });
     case 'SuccessfulDelete':
+      if (payload.ProductTier === "FalkorDB Free") {
+        return NextResponse.json({}, { status: 200 });
+      }
       return instanceDeletedHandler({
         orgName: payload.subscription_id,
         folderName: payload.instance_id,
