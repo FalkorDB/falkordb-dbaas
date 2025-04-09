@@ -29,7 +29,7 @@ export const authOptions: AuthOptions = {
             return {
               id: payload.userID,
               email: credentials?.email,
-              name: payload.userID,
+              name: payload.email,
             };
           }
           return null;

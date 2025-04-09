@@ -60,7 +60,7 @@ spec:
     auth.proxy:
       enabled: "true"
       header_name: X-WEBAUTH-USER
-      header_property: username
+      header_property: email
       auto_sign_up: "true"
       enable_login_token: "false"
     server:
