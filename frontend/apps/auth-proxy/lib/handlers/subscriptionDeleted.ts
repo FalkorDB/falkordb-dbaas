@@ -51,6 +51,20 @@ export const subscriptionDeletedHandler = async (data: yup.InferType<typeof Dele
   }
 
   try {
+    // remove users from org
+    const users = await client.getOrgUsers({ org_id: orgId });
+    for (const user of users.data) {
+      if (user.name === process.env.GRAFANA_SA_USERNAME) {
+        continue;
+      }
+      await client.removeOrgUser({ org_id: orgId, user_id: user.userId as number });
+    }
+  } catch (error) {
+    console.error('error removing users from org', (error as any)?.response?.data ?? error);
+    return NextResponse.json({}, { status: 200 });
+  }
+
+  try {
     await client.deleteOrgByID({ org_id: orgId });
     return NextResponse.json({}, { status: 200 });
   } catch (error) {
