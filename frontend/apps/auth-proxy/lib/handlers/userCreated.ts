@@ -67,7 +67,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
   let existingUserId = null;
   try {
     existingUserId = await client
-      .getUserByLoginOrEmail({ loginOrEmail: id })
+      .getUserByLoginOrEmail({ loginOrEmail: email })
       .then((res) => res.data.id);
   } catch (error) {
     if ((error as AxiosError).response?.status === 404) {
