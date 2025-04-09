@@ -63,7 +63,7 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
 
   try {
     await axios.post(
-      `${process.env.GRAFANA_URL}/datasources`,
+      `${process.env.NEXT_PUBLIC_GRAFANA_URL}/grafana/api/datasources`,
       {
         "type": "prometheus",
         "access": "proxy",
@@ -82,6 +82,11 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
         auth: {
           username: process.env.GRAFANA_SA_USERNAME ?? "",
           password: process.env.GRAFANA_SA_PASSWORD ?? "",
+        },
+        beforeRedirect: (options) => {
+          options.headers["Authorization"] = `Basic ${Buffer.from(
+            `${process.env.GRAFANA_SA_USERNAME}:${process.env.GRAFANA_SA_PASSWORD}`
+          ).toString("base64")}`;
         }
       }
     )
