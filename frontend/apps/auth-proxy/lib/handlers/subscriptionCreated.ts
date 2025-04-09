@@ -4,6 +4,7 @@ import { Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "../types/grafana-api";
 import grafanaApi from '../../lib/openapi/grafana-api.json';
 import { userCreatedHandler } from "./userCreated";
+import axios from "axios";
 
 const CreateGrafanaOrgSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
@@ -61,7 +62,8 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
   }
 
   try {
-    await client.addDataSource(null,
+    await axios.post(
+      `${process.env.GRAFANA_URL}/datasources`,
       {
         "type": "prometheus",
         "access": "proxy",
@@ -72,7 +74,7 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
         },
         "name": "VictoriaMetrics",
         "url": "http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429"
-      } as any,
+      },
       {
         params: {
           orgId: existingOrgId,
@@ -81,7 +83,8 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
           username: process.env.GRAFANA_SA_USERNAME ?? "",
           password: process.env.GRAFANA_SA_PASSWORD ?? "",
         }
-      })
+      }
+    )
     console.log('created datasource for org', orgName, 'with id', existingOrgId);
   } catch (error) {
     console.error("failed to create datasource", (error as any)?.response ?? error);
