@@ -12,6 +12,7 @@ metadata:
       proxy_set_header X-WEBAUTH-USER $http_x_webauth_user;
       proxy_set_header Cookie $http_cookie;
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    kubernetes.io/ingress.global-static-ip-name: 'customer-observability-ip'
 spec:
   ingressClassName: nginx
   tls:

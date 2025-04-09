@@ -32,3 +32,7 @@ output "argocd_dwd_sa_key" {
   value     = google_service_account_key.argocd_dwd_key.private_key
   sensitive = true
 }
+
+output "customer_observability_ip" {
+  value = module.customer_observability_ip.addresses[0]
+}
