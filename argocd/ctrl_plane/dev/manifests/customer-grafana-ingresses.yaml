@@ -5,7 +5,7 @@ metadata:
   name: grafana-auth-ingress
   namespace: customer-observability
   annotations:
-    nginx.ingress.kubernetes.io/auth-url: "https://grafana.dev.falkordb.cloud/api/verify"
+    nginx.ingress.kubernetes.io/auth-url: "http://auth-proxy.customer-observability.svc.cluster.local/api/verify"
     nginx.ingress.kubernetes.io/auth-response-headers: "X-WEBAUTH-USER"
     nginx.ingress.kubernetes.io/auth-snippet: |
       proxy_set_header Authorization $http_authorization;
