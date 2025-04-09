@@ -9,7 +9,7 @@ spec:
   project: default
   source:
     repoURL: https://kubernetes.github.io/ingress-nginx
-    targetRevision: helm-chart-4.10.0
+    targetRevision: 4.12.1
     chart: ingress-nginx
     helm:
       values: |
