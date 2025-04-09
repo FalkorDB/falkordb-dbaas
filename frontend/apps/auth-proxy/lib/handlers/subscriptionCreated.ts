@@ -37,12 +37,12 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
     );
   }
 
-  const existingOrg = await client
+  const existingOrgId = await client
     .getOrgByName({ org_name: orgName })
-    .then((res) => res.data)
-    .catch(() => { });
-  if (existingOrg?.id) {
-    return NextResponse.json({}, { status: 200 });
+    .then((res) => res.data.id)
+    .catch(() => { return undefined });
+  if (existingOrgId) {
+    return userCreatedHandler({ ...data, existingOrgId });
   }
 
   try {
@@ -58,7 +58,7 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
   }
 
   try {
-    await client.addDataSource({},
+    await client.addDataSource(null,
       {
         "type": "prometheus",
         "access": "proxy",
@@ -71,16 +71,16 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
         "url": "http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429"
       } as any, {
       params: {
-        orgId: existingOrg?.id,
+        orgId: existingOrgId,
       }
     })
   } catch (error) {
-    console.error("failed to create org", (error as any)?.response ?? error);
+    console.error("failed to create datasource", (error as any)?.response ?? error);
     return NextResponse.json(
       { error: "Failed to create datasource" },
       { status: 500 }
     );
   }
 
-  return userCreatedHandler(data)
+  return userCreatedHandler({ ...data, existingOrgId })
 };

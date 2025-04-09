@@ -9,11 +9,13 @@ const AddUserAccessSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
   email: yup.string().required().email(),
   id: yup.string().required(),
+  existingOrgId: yup.number().optional(),
 });
 
 
 export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAccessSchema>) => {
-  const { email, orgName, id } = AddUserAccessSchema.validateSync(data);
+  const { email, orgName, id, ...params } = AddUserAccessSchema.validateSync(data);
+  let { existingOrgId } = params;
 
   // 3. Check if user exists, create one if not
   let client: Client;
@@ -37,18 +39,23 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
     );
   }
 
-  let existingOrgId = null;
-  try {
-    existingOrgId = await client
-      .getOrgByName({ org_name: orgName })
-      .then((res) => res.data.id);
-  } catch (error) {
-    if ((error as AxiosError).response?.status === 404) {
+  if (!existingOrgId) {
+    try {
       existingOrgId = await client
-        .createOrg(null, {
-          name: orgName,
-        })
-        .then((res) => res.data.orgId);
+        .getOrgByName({ org_name: orgName })
+        .then((res) => res.data.id);
+    } catch (error) {
+      if ((error as AxiosError).response?.status === 404) {
+        existingOrgId = await client
+          .createOrg(null, {
+            name: orgName,
+          })
+          .then((res) => res.data.orgId)
+          .catch((error) => {
+            console.error("failed to create org", error);
+            return undefined;
+          });
+      }
     }
   }
 
@@ -72,7 +79,11 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
           orgId: existingOrgId,
           password: randomBytes(32).toString("hex"),
         })
-        .then((res) => res.data.id);
+        .then((res) => res.data.id)
+        .catch((error) => {
+          console.error("failed to create user", error);
+          return undefined;
+        });
     } else {
       console.error("failed to get user", error);
     }
