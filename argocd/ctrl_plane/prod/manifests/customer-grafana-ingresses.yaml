@@ -7,7 +7,12 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/auth-url: "http://auth-proxy.customer-observability.svc.cluster.local/api/verify"
     nginx.ingress.kubernetes.io/auth-response-headers: "X-WEBAUTH-USER"
+    nginx.ingress.kubernetes.io/auth-snippet: |
+      proxy_set_header Authorization $http_authorization;
+      proxy_set_header X-WEBAUTH-USER $http_x_webauth_user;
+      proxy_set_header Cookie $http_cookie;
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    kubernetes.io/ingress.global-static-ip-name: 'customer-observability-ip'
 spec:
   ingressClassName: nginx
   tls:
@@ -65,6 +70,13 @@ spec:
                 port:
                   number: 3000
           - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: auth-proxy
+                port:
+                  number: 80
+          - path: /api
             pathType: Prefix
             backend:
               service:
