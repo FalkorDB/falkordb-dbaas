@@ -70,7 +70,8 @@ export const authOptions: AuthOptions = {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: true
+        secure: true,
+        domain: process.env.ENV === "development" ? '.dev.falkordb.cloud' : ".falkordb.cloud"
       },
       name: "token",
     },
