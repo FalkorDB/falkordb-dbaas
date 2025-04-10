@@ -86,6 +86,16 @@ jobs:
         id: version
         run: echo "VERSION=$(node -p "require('./frontend/apps/auth-proxy/package.json').version")" >> "$GITHUB_OUTPUT"
 
+      - name: Create .env
+        working-directory: frontend/apps/auth-proxy
+        run: |
+          echo "NEXT_PUBLIC_GRAFANA_URL=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GRAFANA_URL }}" >> .env
+          echo "NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY }}" >> .env
+          echo "NEXT_PUBLIC_BASE_URL=${{ vars.AUTH_PROXY_NEXT_PUBLIC_BASE_URL }}" >> .env
+          echo "NEXT_PUBLIC_GOOGLE_IDP_CLIENT_ID=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GOOGLE_IDP_CLIENT_ID }}" >> .env
+          echo "NEXT_PUBLIC_GITHUB_IDP_CLIENT_ID=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GITHUB_IDP_CLIENT_ID }}" >> .env
+          echo "NEXT_PUBLIC_SAAS_BUILDER_BASE_URL=${{ vars.AUTH_PROXY_NEXT_PUBLIC_SAAS_BUILDER_BASE_URL }}" >> .env
+
       - name: Docker Build and Push
         id: build-push
         uses: docker/build-push-action@v6
@@ -94,6 +104,6 @@ jobs:
           file: ./frontend/apps/auth-proxy/Dockerfile
           push: true
           tags: |
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:${{ github.sha }}
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:${{ steps.version.outputs.VERSION }}
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:latest
+            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:${{ github.sha }}
+            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:${{ steps.version.outputs.VERSION }}
+            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:latest

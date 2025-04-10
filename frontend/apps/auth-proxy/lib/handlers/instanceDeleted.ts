@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import * as yup from "yup";
-import { readFile } from "node:fs/promises";
 import { Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "../types/grafana-api";
+import grafanaApi from '../../lib/openapi/grafana-api.json';
+import curlirize from 'axios-curlirize';
 
 const DeleteGrafanaFolderSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
@@ -18,9 +19,7 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
   let client: Client;
   try {
     const api = new OpenAPIClientAxios({
-      definition: JSON.parse(
-        await readFile("./lib/openapi/grafana-api.json", "utf-8")
-      ) as unknown as Document,
+      definition: grafanaApi as unknown as Document,
       axiosConfigDefaults: {
         baseURL: process.env.GRAFANA_URL,
         auth: {
@@ -30,6 +29,7 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
       },
     });
     client = await api.init<Client>();
+    curlirize(client)
   } catch (error) {
     console.error("failed to initialize client", error);
     return NextResponse.json(
@@ -46,7 +46,7 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
     }
     orgId = existingOrg.data.id;
   } catch (error) {
-    console.error("failed to get org", error);
+    console.error("failed to get org", (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to get organization" },
       { status: 500 }
@@ -63,10 +63,10 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
     )[0];
     folderUid = existingFolder?.uid;
   } catch (error) {
-    console.error("failed to get folders", error);
+    console.error("failed to get folders", (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to get folders" },
-      { status: 500 }
+      { status: 200 }
     );
   }
 
@@ -75,9 +75,9 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
   }
 
   try {
-    await client.deleteFolder({ folder_uid: folderUid }, { params: { orgId } });
+    await client.deleteFolder({ folder_uid: folderUid }, null, { params: { orgId } });
   } catch (error) {
-    console.error("failed to delete folder", error);
+    console.error("failed to delete folder", (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to delete folder" },
       { status: 500 }

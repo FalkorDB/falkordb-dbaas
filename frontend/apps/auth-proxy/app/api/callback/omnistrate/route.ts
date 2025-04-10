@@ -17,20 +17,48 @@ export const POST = async (req: NextRequest) => {
 
   console.log(`Received event of type ${eventType} with payload:`, payload);
 
+  if (payload.Service !== 'FalkorDB' && payload.service_name !== 'FalkorDB') {
+    console.log(`Ignoring event for service ${payload.Service}`);
+    return NextResponse.json({}, { status: 200 });
+  }
+
+  if (payload.product_tier_name === "FalkorDB Free" || payload.ProductTier === "FalkorDB Free") {
+    console.log(`Ignoring event for product tier ${payload.product_tier_name}`);
+    return NextResponse.json({}, { status: 200 });
+  }
 
   switch (eventType) {
     case "UserSubscription":
-      return subscriptionCreatedHandler(payload);
+      return subscriptionCreatedHandler({
+        orgName: payload.subscription_id,
+        id: payload.user_id,
+        email: payload.user_email,
+      });
     case 'UserUnsubscribed':
-      return subscriptionDeletedHandler(payload);
+      return subscriptionDeletedHandler({
+        orgName: payload.subscription_id
+      });
     case 'UserSubscriptionInvite':
-      return userCreatedHandler(payload);
+      return userCreatedHandler({
+        orgName: payload.subscription_id,
+        email: payload.user_email,
+        id: payload.user_id
+      });
     case 'UserSubscriptionRevoked':
-      return userDeletedHandler(payload);
+      return userDeletedHandler({
+        orgName: payload.subscription_id,
+        id: payload.user_id
+      });
     case 'SuccessfulDeployment':
-      return instanceCreatedHandler(payload);
+      return instanceCreatedHandler({
+        orgName: payload.subscription_id,
+        folderName: payload.instance_id,
+      });
     case 'SuccessfulDelete':
-      return instanceDeletedHandler(payload);
+      return instanceDeletedHandler({
+        orgName: payload.subscription_id,
+        folderName: payload.instance_id,
+      });
   }
 
   return NextResponse.json({ error: "Unknown event type" }, { status: 400 });

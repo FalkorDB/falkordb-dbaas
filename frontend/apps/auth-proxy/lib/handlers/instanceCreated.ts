@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import * as yup from "yup";
 import { AxiosError } from "axios";
-import { readFile } from "node:fs/promises";
 import { Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "../types/grafana-api";
 import axios from "axios";
+import grafanaApi from '../../lib/openapi/grafana-api.json';
+import curlirize from 'axios-curlirize';
 
 const CreateGrafanaFolderSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
@@ -18,9 +19,7 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
   let client: Client;
   try {
     const api = new OpenAPIClientAxios({
-      definition: JSON.parse(
-        await readFile("./lib/openapi/grafana-api.json", "utf-8")
-      ) as unknown as Document,
+      definition: grafanaApi as unknown as Document,
       axiosConfigDefaults: {
         baseURL: process.env.GRAFANA_URL,
         auth: {
@@ -30,6 +29,7 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
       },
     });
     client = await api.init<Client>();
+    curlirize(client)
   } catch (error) {
     console.error("failed to initialize client", error);
     return NextResponse.json(
@@ -68,7 +68,7 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
     );
     folderUid = existingFolder?.uid;
   } catch (error) {
-    console.error(error);
+    console.error('error getting folders', (error as any)?.response?.data ?? error);
     return NextResponse.json({}, { status: 200 });
   }
 
@@ -83,7 +83,7 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
       );
       folderUid = data.uid;
     } catch (error) {
-      console.error(error);
+      console.error('error creating folder', (error as any)?.response?.data ?? error);
       return NextResponse.json(
         { error: "Failed to create folder" },
         { status: 500 }
@@ -105,7 +105,7 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
       }
     );
   } catch (error) {
-    console.error(error);
+    console.error('error creating dashboard', (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to create dashboard" },
       { status: 500 }
@@ -131,12 +131,12 @@ const getDashboard = async (uid: string) => {
   if (nsTemplatingIdx !== -1) {
     dashboard.templating.list[nsTemplatingIdx] = {
       current: {
-        text: "instance-y",
-        value: "instance-y",
+        text: uid,
+        value: uid,
       },
       hide: 2,
       name: "namespace",
-      query: "instance-y",
+      query: uid,
       skipUrlSync: true,
       type: "constant",
     };

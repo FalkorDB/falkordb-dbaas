@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: auth-proxy-web
-          image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/frontend/auth-proxy-web-dev:latest
+          image: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/frontend/auth-proxy-web-prod:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000

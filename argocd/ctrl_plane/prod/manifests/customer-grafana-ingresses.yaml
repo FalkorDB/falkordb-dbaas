@@ -17,10 +17,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - grafana.dev.falkordb.cloud
+        - grafana.falkordb.cloud
       secretName: grafana-tls
   rules:
-    - host: grafana.dev.falkordb.cloud
+    - host: grafana.falkordb.cloud
       http:
         paths:
           - path: /grafana/
@@ -49,10 +49,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - grafana.dev.falkordb.cloud
+        - grafana.falkordb.cloud
       secretName: grafana-tls
   rules:
-    - host: grafana.dev.falkordb.cloud
+    - host: grafana.falkordb.cloud
       http:
         paths:
           - path: /grafana/login

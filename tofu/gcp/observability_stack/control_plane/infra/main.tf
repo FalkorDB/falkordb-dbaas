@@ -261,3 +261,16 @@ resource "google_project_iam_member" "frontend" {
   member  = "serviceAccount:${module.gke.service_account}"
 }
 
+module "customer_observability_ip" {
+  source  = "terraform-google-modules/address/google"
+  version = "~> 3.2"
+
+  project_id = var.project_id
+  region     = var.region
+
+  global       = false
+  address_type = "EXTERNAL"
+  network_tier = "PREMIUM"
+
+  names = ["customer-observability-ip"]
+}

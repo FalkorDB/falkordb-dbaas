@@ -2,25 +2,24 @@ import { NextResponse } from "next/server";
 import * as yup from "yup";
 import { AxiosError, Document, OpenAPIClientAxios } from "openapi-client-axios";
 import { Client } from "..//types/grafana-api";
-import { readFile } from "node:fs/promises";
+import grafanaApi from '../../lib/openapi/grafana-api.json';
+import curlirize from 'axios-curlirize';
 
 const RemoveUserAccessSchema = yup.object({
   orgName: yup.string().required().min(3).max(256),
-  email: yup.string().required().email(),
+  id: yup.string().required(),
 });
 
 
 export const userDeletedHandler = async (data: yup.InferType<typeof RemoveUserAccessSchema>) => {
 
-  const { email, orgName } = RemoveUserAccessSchema.validateSync(data);
+  const { id, orgName } = RemoveUserAccessSchema.validateSync(data);
 
   // 3. Check if user exists, create one if not
   let client: Client;
   try {
     const api = new OpenAPIClientAxios({
-      definition: JSON.parse(
-        await readFile("./lib/openapi/grafana-api.json", "utf-8")
-      ) as unknown as Document,
+      definition: grafanaApi as unknown as Document,
       axiosConfigDefaults: {
         baseURL: process.env.GRAFANA_URL,
         auth: {
@@ -30,6 +29,7 @@ export const userDeletedHandler = async (data: yup.InferType<typeof RemoveUserAc
       },
     });
     client = await api.init<Client>();
+        curlirize(client)
   } catch (error) {
     console.error("failed to initialize client", error);
     return NextResponse.json(
@@ -41,7 +41,7 @@ export const userDeletedHandler = async (data: yup.InferType<typeof RemoveUserAc
   let existingUserId: number | null = null;
   try {
     existingUserId = await client
-      .getUserByLoginOrEmail({ loginOrEmail: email })
+      .getUserByLoginOrEmail({ loginOrEmail: id })
       .then((res) => res.data.id ?? null);
   } catch (error) {
     if ((error as AxiosError).response?.status === 404) {
