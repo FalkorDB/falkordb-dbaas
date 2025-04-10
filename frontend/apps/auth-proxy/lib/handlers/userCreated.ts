@@ -113,7 +113,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
     console.error("failed to add user to org", (error as any)?.response?.data ?? error);
     return NextResponse.json(
       { error: "Failed to add user to organization" },
-      { status: 500 }
+      { status: 200 }
     );
   }
 
