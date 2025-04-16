@@ -2,6 +2,7 @@ apiVersion: networking.gke.io/v1
 kind: ManagedCertificate
 metadata:
   name: grafana-managed-cert
+  namespace: observability
 spec:
   domains:
     - "grafana.observability.dev.internal.falkordb.cloud"

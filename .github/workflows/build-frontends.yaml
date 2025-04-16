@@ -1,0 +1,109 @@
+name: Build frontends
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: "read"
+  id-token: "write"
+  pull-requests: "write"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x.x"
+          cache: "pnpm"
+          cache-dependency-path: frontend
+
+      - name: Install pnpm
+        working-directory: frontend
+        run: pnpm i --frozen-lockfile
+
+      - name: Docker Build
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/apps/auth-proxy/Dockerfile
+          push: false
+          tags: |
+            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:${{ github.sha }}
+            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:latest
+
+  push:
+    runs-on: ubuntu-latest
+    environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    needs: build
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x.x"
+          cache: "pnpm"
+          cache-dependency-path: frontend
+
+      - name: Install pnpm
+        working-directory: frontend
+        run: pnpm i --frozen-lockfile
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          registry: us-central1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Get version from package.json
+        id: version
+        run: echo "VERSION=$(node -p "require('./frontend/apps/auth-proxy/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Create .env
+        working-directory: frontend/apps/auth-proxy
+        run: |
+          echo "NEXT_PUBLIC_GRAFANA_URL=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GRAFANA_URL }}" >> .env
+          echo "NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY }}" >> .env
+          echo "NEXT_PUBLIC_BASE_URL=${{ vars.AUTH_PROXY_NEXT_PUBLIC_BASE_URL }}" >> .env
+          echo "NEXT_PUBLIC_GOOGLE_IDP_CLIENT_ID=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GOOGLE_IDP_CLIENT_ID }}" >> .env
+          echo "NEXT_PUBLIC_GITHUB_IDP_CLIENT_ID=${{ vars.AUTH_PROXY_NEXT_PUBLIC_GITHUB_IDP_CLIENT_ID }}" >> .env
+          echo "NEXT_PUBLIC_SAAS_BUILDER_BASE_URL=${{ vars.AUTH_PROXY_NEXT_PUBLIC_SAAS_BUILDER_BASE_URL }}" >> .env
+
+      - name: Docker Build and Push
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/apps/auth-proxy/Dockerfile
+          push: true
+          tags: |
+            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:${{ github.sha }}
+            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:${{ steps.version.outputs.VERSION }}
+            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:latest
