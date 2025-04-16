@@ -18,12 +18,12 @@ export const POST = async (req: NextRequest) => {
   console.log(`Received event of type ${eventType} with payload:`, payload);
 
   if (payload.Service !== 'FalkorDB' && payload.service_name !== 'FalkorDB') {
-    console.log(`Ignoring event for service ${payload.Service}`);
+    console.log(`Ignoring event for service ${payload.Service || payload.service_name}`);
     return NextResponse.json({}, { status: 200 });
   }
 
   if (payload.product_tier_name === "FalkorDB Free" || payload.ProductTier === "FalkorDB Free") {
-    console.log(`Ignoring event for product tier ${payload.product_tier_name}`);
+    console.log(`Ignoring event for product tier ${payload.product_tier_name || payload.ProductTier}`);
     return NextResponse.json({}, { status: 200 });
   }
 
