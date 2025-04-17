@@ -55,6 +55,8 @@ spec:
   config:
     log:
       mode: "console"
+    security:
+      allow_embedding: "true"
     auth:
       signout_redirect_url: https://grafana.dev.falkordb.cloud/signout
     auth.proxy:
