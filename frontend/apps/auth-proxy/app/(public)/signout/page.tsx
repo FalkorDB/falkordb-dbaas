@@ -8,7 +8,14 @@ import { useEffect } from "react";
 export default function Page() {
 
   useEffect(() => {
-    Cookie.remove("token");
+    console.log("Get cookie before", Cookie.get("token"));
+    Cookie.remove("token", {
+      domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+      sameSite: "Lax",
+      secure: true,
+      path: "/",
+    });
+    console.log("Get cookie after", Cookie.get("token"));
     redirect("/signin");
   }, []);
 
