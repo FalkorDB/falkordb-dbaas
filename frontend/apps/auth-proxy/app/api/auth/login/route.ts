@@ -4,8 +4,6 @@ import { AxiosError } from "axios";
 
 export const POST = async (nextRequest: NextRequest) => {
 
-  const saasDomainURL = process.env.NEXT_PUBLIC_BASE_URL;
-
   try {
     const response = await axiosClient.post(
       "https://api.omnistrate.cloud/2022-09-01-00/customer-user-signin",
@@ -21,7 +19,7 @@ export const POST = async (nextRequest: NextRequest) => {
     return NextResponse.json({}, {
       status: 200,
       headers: {
-        "Set-Cookie": `token=${response.data.jwtToken}; Path=/; Domain: ${process.env.NEXT_PUBLIC_COOKIE_DOMAIN};`,
+        "Set-Cookie": `token=${response.data.jwtToken}; Path=/; Domain: ${process.env.NEXT_PUBLIC_COOKIE_DOMAIN}; HttpOnly; Secure; SameSite=Lax;`,
         "Access-Control-Expose-Headers": "Set-Cookie",
       },
     });

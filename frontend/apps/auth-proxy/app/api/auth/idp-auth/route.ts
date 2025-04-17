@@ -34,7 +34,7 @@ export const GET = async (nextRequest: NextRequest) => {
       return NextResponse.redirect(saasDomainURL + "/grafana", {
         status: 302,
         headers: {
-          "Set-Cookie": `token=${response.data.jwtToken}; Path=/; Domain: ${process.env.NEXT_PUBLIC_COOKIE_DOMAIN}`,
+          "Set-Cookie": `token=${response.data.jwtToken}; Path=/; Domain: ${process.env.NEXT_PUBLIC_COOKIE_DOMAIN}; HttpOnly; Secure; SameSite=Lax`,
           "Access-Control-Expose-Headers": "Set-Cookie",
         },
       });
