@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { Box, Stack, Typography } from "@mui/material";
@@ -32,16 +32,18 @@ export default function Page() {
 
   const reCaptchaRef = useRef<ReCAPTCHA>(null);
 
-  const session = Cookie.get("token");
 
-  try {
-
-    if (session && jwtDecode(session)) {
-      redirect("/grafana");
+  useEffect(() => {
+    const session = Cookie.get("token");
+    try {
+      if (session && jwtDecode(session)) {
+        window.location.replace(process.env.NEXT_PUBLIC_GRAFANA_URL ?? window.location.origin + "/grafana");
+      }
+    } catch (_) {
+      //
     }
-  } catch (_) {
-    //
-  }
+  }, []);
+
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
