@@ -1,4 +1,3 @@
-import { decode, sign } from "jsonwebtoken";
 import { axiosClient } from "../../../../axios";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -32,27 +31,10 @@ export const GET = async (nextRequest: NextRequest) => {
         authRequestPayload
       );
 
-      const jwtTokenDecoded = decode(response.data.jwtToken) as any;
-
-      const userID = jwtTokenDecoded["userID"];
-
-      const email = await axiosClient.get(
-        `https://api.omnistrate.cloud/2022-09-01-00/fleet/user/${userID}`,
-      ).then((res) => res.data.email);
-
-      const payload = {
-        id: userID,
-        name: email,
-        email,
-      }
-      const jwtToken = sign(payload, process.env.NEXTAUTH_SECRET ?? '', {
-        expiresIn: "1h",
-      });
-
       return NextResponse.redirect(saasDomainURL + "/grafana", {
         status: 302,
         headers: {
-          "Set-Cookie": `token=${jwtToken}; Path=/`,
+          "Set-Cookie": `token=${response.data.jwtToken}; Path=/; Domain: ${process.env.NEXT_PUBLIC_COOKIE_DOMAIN}`,
           "Access-Control-Expose-Headers": "Set-Cookie",
         },
       });
