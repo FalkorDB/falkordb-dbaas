@@ -218,8 +218,10 @@ def get_omnistrate_subscriptions(
     res = omnistrate.get(
         f"https://api.omnistrate.cloud/2022-09-01-00/fleet/service/{service_id}/environment/{service_environment}/subscription",
     )
-    return res.json().get("subscriptions")
-
+    subscriptions = res.json().get("subscriptions")
+    return [
+        subscription for subscription in subscriptions if subscription.get("productTierName") != "FalkorDB Free"
+    ]
 
 def get_omnistrate_subscription_users(
     service_id: str, service_environment: str, subscription_id: str
@@ -228,7 +230,7 @@ def get_omnistrate_subscription_users(
         f"Getting users for subscription {subscription_id} in service {service_id} in environment {service_environment}"
     )
     res = omnistrate.get(
-        f"https://api.omnistrate.cloud/2022-09-01-00/fleet/service/{service_id}/environment/{service_environment}/users?SubscriptionId={subscription_id}"
+        f"https://api.omnistrate.cloud/2022-09-01-00/fleet/service/{service_id}/environment/{service_environment}/users?subscriptionId={subscription_id}"
     )
     return res.json().get("users")
 

@@ -169,7 +169,10 @@ def get_omnistrate_subscriptions(
     res = omnistrate.get(
         f"https://api.omnistrate.cloud/2022-09-01-00/fleet/service/{service_id}/environment/{service_environment}/subscription",
     )
-    return res.json().get("subscriptions")
+    subscriptions = res.json().get("subscriptions")
+    return [
+        subscription for subscription in subscriptions if subscription.get("productTierName") != "FalkorDB Free"
+    ]
 
 
 def get_omnistrate_subscription_instances(
