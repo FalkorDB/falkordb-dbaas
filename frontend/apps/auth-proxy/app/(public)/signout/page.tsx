@@ -3,12 +3,15 @@ import { Box, Stack, Typography, Link } from "@mui/material";
 import DisplayHeading from "@repo/ui/components/DisplayHeading/DisplayHeading";
 import { redirect } from "next/navigation";
 import Cookie from 'js-cookie';
+import { useEffect } from "react";
 
 export default function Page() {
 
-  Cookie.remove("token");
-  redirect("/signin");
-  
+  useEffect(() => {
+    Cookie.remove("token");
+    redirect("/signin");
+  }, []);
+
   return (
     <Box>
       <DisplayHeading mt="12px">Sign out</DisplayHeading>
