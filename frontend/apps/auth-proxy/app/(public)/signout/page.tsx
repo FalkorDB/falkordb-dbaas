@@ -11,6 +11,8 @@ export default function Page() {
     Cookie.remove("token", {
       path: '/',
       domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+      secure: true,
+      sameSite: 'Lax',
     });
     redirect("/signin");
   }, []);
