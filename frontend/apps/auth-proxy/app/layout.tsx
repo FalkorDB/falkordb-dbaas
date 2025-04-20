@@ -1,16 +1,12 @@
 import "../styles/globals.css";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
-import SessionProvider from "../providers/SessionProvider";
-import { getServerSession } from "next-auth";
 import SnackbarProvider from "../providers/SnackbarProvider";
-import { authOptions } from "../lib/authOptions";
 
 const RootLayout = async ({
   children,
 }: {
   children: React.ReactNode;
 }) => {
-  const session = await getServerSession(authOptions);
   return (
     <html lang="en">
       <head>
@@ -35,11 +31,9 @@ const RootLayout = async ({
       </head>
       <body>
         <AppRouterCacheProvider>
-          <SessionProvider session={session}>
-            <SnackbarProvider>
-              {children}
-            </SnackbarProvider>
-          </SessionProvider>
+          <SnackbarProvider>
+            {children}
+          </SnackbarProvider>
         </AppRouterCacheProvider>
       </body>
     </html>

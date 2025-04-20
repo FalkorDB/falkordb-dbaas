@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { Box, Stack, Typography } from "@mui/material";
@@ -9,13 +9,15 @@ import FieldLabel from "@repo/ui/components/FormElements/FieldLabel";
 import TextField from "@repo/ui/components/FormElements/TextField";
 import SubmitButton from "@repo/ui/components/FormElements/SubmitButton";
 import Logo from "@repo/ui/components/Logo/Logo";
-import { signIn, useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import ReCAPTCHA from "react-google-recaptcha";
 import GoogleLogin from "./components/GoogleLogin";
 import GithubLogin from "./components/GitHubLogin";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import axios, { AxiosError } from "axios";
+import Cookie from "js-cookie";
+import { jwtDecode } from "jwt-decode";
 
 export default function Page() {
 
@@ -30,11 +32,18 @@ export default function Page() {
 
   const reCaptchaRef = useRef<ReCAPTCHA>(null);
 
-  const { data: session } = useSession();
 
-  if (session) {
-    redirect("/grafana");
-  }
+  useEffect(() => {
+    const session = Cookie.get("token");
+    try {
+      if (session && jwtDecode(session)) {
+        window.location.replace(process.env.NEXT_PUBLIC_GRAFANA_URL ?? window.location.origin + "/grafana");
+      }
+    } catch (_) {
+      //
+    }
+  }, []);
+
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -65,26 +74,31 @@ export default function Page() {
           throw new Error("reCaptcha failed to load");
         }
 
-        const res = await signIn("credentials", {
+        await axios.post("/api/auth/login", {
           email: values.email,
           password: values.password,
           reCaptchaToken,
-          redirect: true,
-          callbackUrl: process.env.NEXT_PUBLIC_GRAFANA_URL ?? "/grafana",
         });
-        console.log({ res });
-        if (res?.error) {
+
+        window.location.replace(process.env.NEXT_PUBLIC_GRAFANA_URL ?? window.location.origin);
+
+      } catch (error) {
+        if (error instanceof AxiosError) {
+          console.error(error.response?.data);
           setErrorMessage(
-            res.error ? res.error : "An error occurred. Please try again later."
+            error.response?.data?.error
+              ? error.response?.data?.error
+              : "An error occurred. Please try again later."
+          );
+        } else {
+          console.error(error);
+          setErrorMessage(
+
+            (error as any).message
+              ? (error as any).message
+              : "An error occurred. Please try again later."
           );
         }
-      } catch (error) {
-        console.error(error);
-        setErrorMessage(
-          (error as any).message
-            ? (error as any).message
-            : "An error occurred. Please try again later."
-        );
       } finally {
         setIsLoading(false);
       }
