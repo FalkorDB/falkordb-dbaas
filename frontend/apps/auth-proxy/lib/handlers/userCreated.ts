@@ -24,7 +24,7 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
     const api = new OpenAPIClientAxios({
       definition: grafanaApi as unknown as Document,
       axiosConfigDefaults: {
-        baseURL: process.env.GRAFANA_URL,
+        baseURL: process.env.INTERNAL_GRAFANA_URL,
         auth: {
           username: process.env.GRAFANA_SA_USERNAME ?? "",
           password: process.env.GRAFANA_SA_PASSWORD ?? "",
