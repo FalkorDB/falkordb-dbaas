@@ -2,27 +2,18 @@ import { DelayedError, Processor } from "bullmq";
 import { setupContainer } from "../container";
 import { ITasksDBRepository } from "../repositories/tasks";
 import { K8sRepository } from "../repositories/k8s/K8sRepository";
-import * as Yup from 'yup';
 import { Logger } from 'pino';
+import { RdbExportMonitorRDBMergeProcessorDataSchema, RdbExportMonitorRDBMergeProcessorData, ExporterTaskNames } from '@falkordb/schemas/src/services/db-importer-worker/v1'
+import { Value } from '@sinclair/typebox/value'
 
-const schema = Yup.object().shape({
-  taskId: Yup.string().required(),
-  projectId: Yup.string().required(),
-  cloudProvider: Yup.string().oneOf(['gcp']).required(),
-  clusterId: Yup.string().required(),
-  region: Yup.string().required(),
-  namespace: Yup.string().required(),
-});
-export type RdbExportMonitorRDBMergeJobData = Yup.InferType<typeof schema>;
-
-const processor: Processor<RdbExportMonitorRDBMergeJobData> = async (job, token) => {
+const processor: Processor<RdbExportMonitorRDBMergeProcessorData> = async (job, token) => {
 
   const container = setupContainer();
-    const logger = container.resolve<Logger>('logger');
+  const logger = container.resolve<Logger>('logger');
 
   job.log(`Processing 'rdb-export-monitor-rdb-merge' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
-  schema.validateSync(job.data);
+  Value.Assert(RdbExportMonitorRDBMergeProcessorDataSchema, job.data);
 
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
@@ -51,6 +42,9 @@ const processor: Processor<RdbExportMonitorRDBMergeJobData> = async (job, token)
       }
     }
   } catch (error) {
+    if (error instanceof DelayedError) {
+      throw error;
+    }
     logger.error(error, `Error processing job ${job.id}: ${error}`);
     await tasksRepository.updateTask({
       taskId: job.data.taskId,
@@ -62,8 +56,8 @@ const processor: Processor<RdbExportMonitorRDBMergeJobData> = async (job, token)
 }
 
 export default {
-  name: 'rdb-export-monitor-rdb-merge',
+  name: ExporterTaskNames.RdbExportMonitorRDBMerge,
   processor,
   concurrency: undefined,
-  schema,
+  schema: RdbExportMonitorRDBMergeProcessorDataSchema,
 }

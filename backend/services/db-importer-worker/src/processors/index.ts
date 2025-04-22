@@ -6,13 +6,13 @@ import RdbExportMonitorRDBMergeProcessor from './RdbExportMonitorRDBMergeProcess
 import RdbExportRequestRDBMergeProcessor from './RdbExportRequestRDBMergeProcessor';
 import PlaceholderProcessor from './PlaceholderProcessor';
 import { FlowChildJob, FlowJob, JobsOptions, Processor } from 'bullmq';
-import { AnyObject, ObjectSchema, InferType } from 'yup'
+import { Static, TSchema } from '@sinclair/typebox';
 
 type IProcessorType = {
   name: string;
   processor: Processor;
   concurrency?: number;
-  schema: ObjectSchema<AnyObject>;
+  schema: TSchema;
 }
 
 export default [
@@ -27,7 +27,7 @@ export default [
 
 function makeJobNode<T extends IProcessorType>(
   processor: T,
-  data?: InferType<T['schema']>,
+  data?: Static<T['schema']>,
   opts: JobsOptions = { failParentOnFailure: true },
   children?: FlowChildJob[],
 ): FlowJob {

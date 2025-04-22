@@ -2,28 +2,18 @@ import { Processor } from "bullmq";
 import { setupContainer } from "../container";
 import { ITasksDBRepository } from "../repositories/tasks";
 import { K8sRepository } from "../repositories/k8s/K8sRepository";
-import * as Yup from 'yup';
 import { Logger } from 'pino';
+import { ExporterTaskNames, RdbExportSendSaveCommandProcessorData, RdbExportSendSaveCommandProcessorDataSchema } from "@falkordb/schemas/src/services/db-importer-worker/v1/processors/processors";
+import { Value } from "@sinclair/typebox/value";
 
-const schema = Yup.object().shape({
-  taskId: Yup.string().required(),
-  cloudProvider: Yup.string().oneOf(['gcp', 'aws']).required(),
-  clusterId: Yup.string().required(),
-  region: Yup.string().required(),
-  instanceId: Yup.string().required(),
-  podId: Yup.string().required(),
-  hasTLS: Yup.boolean().required(),
-});
-export type RdbExportSendSaveCommandJobData = Yup.InferType<typeof schema>;
-
-const processor: Processor<RdbExportSendSaveCommandJobData> = async (job, token) => {
+const processor: Processor<RdbExportSendSaveCommandProcessorData> = async (job, token) => {
 
   const container = setupContainer();
   const logger = container.resolve<Logger>('logger');
 
   job.log(`Processing 'rdb-export-send-save-command' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
-  schema.validateSync(job.data);
+  Value.Assert(RdbExportSendSaveCommandProcessorDataSchema, job.data);
 
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
@@ -56,8 +46,8 @@ const processor: Processor<RdbExportSendSaveCommandJobData> = async (job, token)
 }
 
 export default {
-  name: 'rdb-export-send-save-command',
+  name: ExporterTaskNames.RdbExportSendSaveCommand,
   processor,
   concurrency: undefined,
-  schema,
+  schema: RdbExportSendSaveCommandProcessorDataSchema,
 }

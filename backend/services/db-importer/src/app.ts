@@ -11,14 +11,14 @@ import Env from '@fastify/env';
 import Cors from '@fastify/cors';
 import { join } from 'path';
 import { EnvSchema } from './schemas/dotenv';
-import MongoDB from '@fastify/mongodb';
 import fastifyRequestContextPlugin from '@fastify/request-context';
 import { fastifyAwilixPlugin } from '@fastify/awilix';
 import { setupContainer, setupGlobalContainer } from './container';
-import { swaggerPlugin, pubsubDecodePlugin, falkordbClientPlugin } from '@falkordb/plugins';
+import { swaggerPlugin, omnistratePlugin } from '@falkordb/plugins';
 import openTelemetryPlugin from '@autotelic/fastify-opentelemetry';
 import { captchaPlugin } from '@falkordb/plugins';
 import { ICaptchaRepository } from './repositories/captcha/ICaptchaRepository';
+import { OmnistrateRepository } from './repositories/omnistrate/OmnistrateRepository';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   await fastify.register(Env, {
@@ -44,8 +44,6 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     },
   });
 
-  fastify.register(pubsubDecodePlugin);
-
   fastify.register(fastifyAwilixPlugin, {
     disposeOnClose: true,
     disposeOnResponse: true,
@@ -62,6 +60,10 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     captchaRepository: fastify.diContainer.resolve<ICaptchaRepository>(ICaptchaRepository.repositoryName),
   });
 
+  await fastify.register(omnistratePlugin, {
+    omnistrateRepository: fastify.diContainer.resolve<OmnistrateRepository>(OmnistrateRepository.name),
+  })
+
   await fastify.register(AutoLoad, {
     dir: join(__dirname, 'routes'),
     routeParams: true,
@@ -70,6 +72,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     autoHooksPattern: /.*hooks(\.js|\.cjs|\.ts)$/i,
     autoHooks: true,
     cascadeHooks: true,
+    dirNameRoutePrefix: true,
     options: Object.assign({}, opts),
   });
 

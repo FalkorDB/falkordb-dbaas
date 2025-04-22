@@ -4,28 +4,17 @@ import { ITasksDBRepository } from "../repositories/tasks";
 import { K8sRepository } from "../repositories/k8s/K8sRepository";
 import * as Yup from 'yup';
 import { Logger } from 'pino';
+import { Value } from "@sinclair/typebox/value";
+import { ExporterTaskNames, RdbExportRequestRDBMergeProcessorData, RdbExportRequestRDBMergeProcessorDataSchema } from "@falkordb/schemas/src/services/db-importer-worker/v1";
 
-const schema = Yup.object().shape({
-  taskId: Yup.string().required(),
-  projectId: Yup.string().required(),
-  cloudProvider: Yup.string().oneOf(['gcp']).required(),
-  clusterId: Yup.string().required(),
-  region: Yup.string().required(),
-  namespace: Yup.string().required(),
-  bucketName: Yup.string().required(),
-  rdbFileNames: Yup.array().of(Yup.string()).required(),
-  outputRdbFileName: Yup.string().required(),
-});
-export type RdbExportRequestRDBMergeJobData = Yup.InferType<typeof schema>;
-
-const processor: Processor<RdbExportRequestRDBMergeJobData> = async (job, token) => {
+const processor: Processor<RdbExportRequestRDBMergeProcessorData> = async (job, token) => {
 
   const container = setupContainer();
   const logger = container.resolve<Logger>('logger');
 
   job.log(`Processing 'rdb-export-request-rdb-merge' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
-  schema.validateSync(job.data);
+  Value.Assert(RdbExportRequestRDBMergeProcessorDataSchema, job.data);
 
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
@@ -49,6 +38,9 @@ const processor: Processor<RdbExportRequestRDBMergeJobData> = async (job, token)
     }
 
   } catch (error) {
+    if (error instanceof DelayedError) {
+      throw error;
+    }
     logger.error(error, `Error processing job ${job.id}: ${error}`);
     await tasksRepository.updateTask({
       taskId: job.data.taskId,
@@ -60,8 +52,8 @@ const processor: Processor<RdbExportRequestRDBMergeJobData> = async (job, token)
 }
 
 export default {
-  name: 'rdb-export-request-rdb-merge',
+  name: ExporterTaskNames.RdbExportRequestRDBMerge,
   processor,
   concurrency: undefined,
-  schema,
+  schema: RdbExportRequestRDBMergeProcessorDataSchema,
 }

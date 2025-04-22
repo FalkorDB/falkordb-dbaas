@@ -2,25 +2,18 @@ import { Processor } from "bullmq";
 import { ITasksDBRepository } from "../repositories/tasks";
 import { setupContainer } from "../container";
 import { IBlobStorageRepository } from "../repositories/blob/IBlobStorageRepository";
-import * as Yup from 'yup';
 import { Logger } from 'pino';
+import { ExporterTaskNames, RdbExportRequestReadSignedURLProcessorData, RdbExportRequestReadSignedURLProcessorDataSchema } from "@falkordb/schemas/src/services/db-importer-worker/v1/processors/processors";
+import { Value } from "@sinclair/typebox/value";
 
-const schema = Yup.object().shape({
-  taskId: Yup.string().required(),
-  bucketName: Yup.string().required(),
-  fileName: Yup.string().required(),
-  expiresIn: Yup.number().required(),
-});
-export type RdbExportRequestReadSignedURLJobData = Yup.InferType<typeof schema>;
-
-const processor: Processor<RdbExportRequestReadSignedURLJobData> = async (job, token) => {
+const processor: Processor<RdbExportRequestReadSignedURLProcessorData> = async (job, token) => {
 
   const container = setupContainer();
   const logger = container.resolve<Logger>('logger');
 
   job.log(`Processing 'rdb-export-request-read-signed-url' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
-  schema.validateSync(job.data);
+  Value.Assert(RdbExportRequestReadSignedURLProcessorDataSchema, job.data);
 
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const blobRepository = container.resolve<IBlobStorageRepository>(IBlobStorageRepository.name);
@@ -35,8 +28,9 @@ const processor: Processor<RdbExportRequestReadSignedURLJobData> = async (job, t
 
     await tasksRepository.updateTask({
       taskId: job.data.taskId,
+      status: 'completed',
       output: {
-        readUrls: [readUrl],
+        readUrl,
       }
     })
 
@@ -56,8 +50,8 @@ const processor: Processor<RdbExportRequestReadSignedURLJobData> = async (job, t
 }
 
 export default {
-  name: 'rdb-export-request-read-signed-url',
+  name: ExporterTaskNames.RdbExportRequestReadSignedURL,
   processor,
   concurrency: undefined,
-  schema,
+  schema: RdbExportRequestReadSignedURLProcessorDataSchema,
 }

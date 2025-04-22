@@ -22,7 +22,7 @@ export const SingleShardRDBExportPayload = Yup.object({
 export type SingleShardRDBExportPayloadType = Yup.InferType<typeof SingleShardRDBExportPayload>;
 
 export const RDBExportOutput = Yup.object({
-  readUrls: Yup.array().of(Yup.string()).optional(),
+  readUrl: Yup.string().optional(),
 }).strict().noUnknown().optional();
 export type RDBExportOutputType = Yup.InferType<typeof RDBExportOutput>;
 
@@ -36,6 +36,7 @@ export const MultiShardRDBExportPayload = Yup.object({
   destination: Yup.object({
     bucketName: Yup.string().required(),
     expiresIn: Yup.number().required(),
+    fileName: Yup.string().required(),
   }).required(),
   nodes: Yup.array().of(
     Yup.object({

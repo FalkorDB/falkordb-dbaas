@@ -2,28 +2,18 @@ import { DelayedError, Processor } from "bullmq";
 import { setupContainer } from "../container";
 import { ITasksDBRepository } from "../repositories/tasks";
 import { K8sRepository } from "../repositories/k8s/K8sRepository";
-import * as Yup from 'yup';
 import { Logger } from 'pino';
+import { RdbExportMonitorSaveProgressProcessorDataSchema, RdbExportMonitorSaveProgressProcessorData, ExporterTaskNames } from "@falkordb/schemas/src/services/db-importer-worker/v1";
+import { Value } from "@sinclair/typebox/value";
 
-const schema = Yup.object().shape({
-  taskId: Yup.string().required(),
-  cloudProvider: Yup.string().oneOf(['gcp', 'aws']).required(),
-  clusterId: Yup.string().required(),
-  region: Yup.string().required(),
-  instanceId: Yup.string().required(),
-  podId: Yup.string().required(),
-  hasTLS: Yup.boolean().required(),
-});
-export type RdbExportMonitorSaveProgressJobData = Yup.InferType<typeof schema>;
-
-const processor: Processor<RdbExportMonitorSaveProgressJobData> = async (job, token) => {
+const processor: Processor<RdbExportMonitorSaveProgressProcessorData> = async (job, token) => {
 
   const container = setupContainer();
-    const logger = container.resolve<Logger>('logger');
+  const logger = container.resolve<Logger>('logger');
 
   job.log(`Processing 'rdb-export-monitor-save-progress' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
-  schema.validateSync(job.data);
+  Value.Assert(RdbExportMonitorSaveProgressProcessorDataSchema, job.data);
 
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
@@ -48,6 +38,9 @@ const processor: Processor<RdbExportMonitorSaveProgressJobData> = async (job, to
       }
     }
   } catch (error) {
+    if (error instanceof DelayedError) {
+      throw error;
+    }
     logger.error(error, `Error processing job ${job.id}: ${error}`);
     await tasksRepository.updateTask({
       taskId: job.data.taskId,
@@ -59,8 +52,8 @@ const processor: Processor<RdbExportMonitorSaveProgressJobData> = async (job, to
 }
 
 export default {
-  name: 'rdb-export-monitor-save-progress',
+  name: ExporterTaskNames.RdbExportMonitorSaveProgress,
   processor,
   concurrency: undefined,
-  schema,
+  schema: RdbExportMonitorSaveProgressProcessorDataSchema,
 }
