@@ -76,7 +76,7 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
-          push: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+          push: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' }}
           build-args: |
             PROJECT=${{ matrix.service }}
           tags: |
