@@ -1,0 +1,87 @@
+name: Build backends
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: "read"
+  id-token: "write"
+  pull-requests: "write"
+
+jobs:
+  build-and-push-docker:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: db-importer-worker
+          - name: db-importer
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x.x"
+          cache: "pnpm"
+          cache-dependency-path: backend
+
+      - name: Install pnpm
+        working-directory: backend
+        run: pnpm i --frozen-lockfile
+
+      - name: Authenticate to Google Cloud
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+        id: auth
+        uses: google-github-actions/auth@v1
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Docker Login
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
+        uses: docker/login-action@v3
+        with:
+          registry: europe-west1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Get version from package.json
+        id: version
+        run: |
+          echo "VERSION=$(node -p "require('./backend/services/${{ matrix.service.name }}/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Set tags
+        id: set-tags
+        run: |
+          # If push is true, use the version from the package.json, latest, and the commit SHA
+          # Otherwise, just use the commit SHA and edge
+          if [ "${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' }}" = "true" ]; then
+            echo "TAG=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service.name }}:${{ steps.version.outputs.VERSION }}" >> "$GITHUB_OUTPUT"
+            echo "TAG_LATEST=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service.name }}:latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "TAG=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service.name }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "TAG_LATEST=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service.name }}:edge" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Docker Build
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') }}
+          build-args: |
+            PROJECT=${{ matrix.service.name }}
+          tags: |
+            ${{ steps.set-tags.outputs.TAG }}
+            ${{ steps.set-tags.outputs.TAG_LATEST }}

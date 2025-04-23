@@ -56,3 +56,12 @@ variable "artifact_registry_region" {
   type    = string
   default = "europe-west1"
 }
+
+###### DB EXPORTER ######
+variable "rdb_exports_bucket_name" {
+  type = string
+}
+
+variable "rdb_exports_bucket_region" {
+  type = string
+}
