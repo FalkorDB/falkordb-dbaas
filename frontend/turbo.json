@@ -25,7 +25,7 @@
         "GRAFANA_WEBHOOK_API_TOKEN",
         "GRAFANA_SA_USERNAME",
         "GRAFANA_SA_PASSWORD",
-        "GRAFANA_URL"
+        "INTERNAL_GRAFANA_URL"
       ]
     }
   }

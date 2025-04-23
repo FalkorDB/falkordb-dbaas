@@ -55,8 +55,10 @@ spec:
   config:
     log:
       mode: "console"
+    security:
+      allow_embedding: "true"
     auth:
-      signout_redirect_url: https://grafana.falkordb.cloud/signout
+      signout_redirect_url: https://grafana.falkordb.cloud/api/auth/signout
     auth.proxy:
       enabled: "true"
       header_name: X-WEBAUTH-USER

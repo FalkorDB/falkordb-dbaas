@@ -1,20 +1,21 @@
 "use client";
 import { Box, Stack, Typography, Link } from "@mui/material";
 import DisplayHeading from "@repo/ui/components/DisplayHeading/DisplayHeading";
-import { useSession, signOut } from "next-auth/react";
 import { redirect } from "next/navigation";
+import Cookie from 'js-cookie';
+import { useEffect } from "react";
 
 export default function Page() {
-  const { data: session } = useSession();
 
-  if (session) {
-    signOut().then(() => {
-      redirect("/signin");
+  useEffect(() => {
+    Cookie.remove("token", {
+      path: '/',
+      domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+      secure: true,
+      sameSite: 'Lax',
     });
-  } else {
-    console.warn("No session found, redirecting to /signin");
     redirect("/signin");
-  }
+  }, []);
 
   return (
     <Box>
