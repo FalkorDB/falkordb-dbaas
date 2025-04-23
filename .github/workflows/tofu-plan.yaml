@@ -107,6 +107,8 @@ jobs:
 
       - name: Plan Tofu
         id: plan-run
+        env:
+          TF_LOG: DEBUG
         run: |
           cd ${{ matrix.stack.path }}
           tofu plan -no-color -out=tfplan
