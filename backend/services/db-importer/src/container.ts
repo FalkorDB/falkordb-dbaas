@@ -36,7 +36,7 @@ export const setupGlobalContainer = (fastify: FastifyInstance) => {
 
     [OmnistrateRepository.name]: asFunction(() => {
       return new OmnistrateRepository(
-        process.env.OMNISTRATE_USER,
+        process.env.OMNISTRATE_EMAIL,
         process.env.OMNISTRATE_PASSWORD,
         process.env.OMNISTRATE_SERVICE_ID,
         process.env.OMNISTRATE_ENVIRONMENT_ID,

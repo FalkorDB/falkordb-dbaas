@@ -44,20 +44,20 @@ tags:
   - env-${_NODE_ENV}
 
 substitutions:
-  _PROJECT_ID: 'ctrl-plane-dev-f7a2434f'
-  _PROJECT_NUMBER: '425012726186'
+  _PROJECT_ID: 'ctrl-plane-prod-b1b92df2'
+  _PROJECT_NUMBER: '987165368882'
   _REPOSITORY: 'backend'
   _IMAGE_NAME: 'db-importer'
   _SERVICE_NAME: 'db-importer'
-  _NODE_ENV: 'development'
-  _APPLICATION_PLANE_PROJECT_ID: 'app-plane-dev-f7a2434f'
-  _EXPORT_BUCKET_NAME: 'falkordb-dev-rdb-exports-f7a2434f'
+  _NODE_ENV: 'production'
+  _APPLICATION_PLANE_PROJECT_ID: 'app-plane-prod-b1b92df2'
+  _EXPORT_BUCKET_NAME: 'falkordb-prod-rdb-exports-b1b92df2'
   _OMNISTRATE_SERVICE_ID: 's-KgFDwg5vBS'
-  _OMNISTRATE_ENVIRONMENT_ID: 'se-DC0AzhMHOD'
+  _OMNISTRATE_ENVIRONMENT_ID: 'se-1iyXYFtYfA'
   _TASKS_REPOSITORY_MONGODB_DB: 'db-exporter'
   _TASKS_REPOSITORY_MONGODB_COLLECTION: 'tasks'
-  _CTRL_PLANE_PROJECT_ID: 'ctrl-plane-dev-f7a2434f'
-  _CTRL_PLANE_CLUSTER_ID: 'observability-stack-a89z'
+  _CTRL_PLANE_PROJECT_ID: 'ctrl-plane-prod-b1b92df2'
+  _CTRL_PLANE_CLUSTER_ID: 'observability-stack-uvm2'
   _CTRL_PLANE_REGION: 'us-central1'
   _NAMESPACE: 'db-import-export'
 

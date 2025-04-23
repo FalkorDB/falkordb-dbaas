@@ -1,0 +1,33 @@
+steps:
+  - id: Build image
+    name: 'gcr.io/cloud-builders/docker'
+    env:
+      - 'DOCKER_BUILDKIT=1'
+    args:
+      - 'build'
+      - '-t'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - '--build-arg'
+      - 'PROJECT=${_SERVICE_NAME}'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+
+  - id: Push to Artifact Registry
+    name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+
+tags:
+  - backend
+  - service-db-importer-worker
+  - env-${_NODE_ENV}
+
+substitutions:
+  _PROJECT_ID: 'ctrl-plane-dev-f7a2434f'
+  _PROJECT_NUMBER: '425012726186'
+  _REPOSITORY: 'backend'
+  _IMAGE_NAME: 'db-importer-worker'
+  _SERVICE_NAME: 'db-importer'
+  _NODE_ENV: 'development'

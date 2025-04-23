@@ -2,8 +2,12 @@ import { type Static, Type } from '@sinclair/typebox';
 
 export const ExportRDBRequestBodySchema = Type.Object({
   instanceId: Type.String(),
-  username: Type.Optional(Type.String()),
-  password: Type.Optional(Type.String()),
+  username: Type.Optional(Type.String({
+    pattern: "^[a-zA-Z0-9._-]+$",
+  })),
+  password: Type.Optional(Type.String({
+    pattern: "^[a-zA-Z0-9._!\@\#\$\%\^\&\*]+$"
+  })),
   "g-recaptcha-response": Type.Optional(Type.String()),
 });
 
