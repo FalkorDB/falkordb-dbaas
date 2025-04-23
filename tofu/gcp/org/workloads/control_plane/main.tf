@@ -134,6 +134,13 @@ resource "google_project_iam_member" "github_action_sa_iam_role_update" {
   member  = "serviceAccount:${google_service_account.github_action_sa.email}"
 }
 
+# upload artifact registry permissions to the service account
+resource "google_artifact_registry_repository_iam_member" "github_action_sa" {
+  repository = google_artifact_registry_repository.backend_services.id
+  role       = "roles/artifactregistry.writer"
+  member     = "serviceAccount:${google_service_account.github_action_sa.email}"
+}
+
 module "gh_oidc" {
   source                = "terraform-google-modules/github-actions-runners/google//modules/gh-oidc"
   project_id            = module.project.project_id
