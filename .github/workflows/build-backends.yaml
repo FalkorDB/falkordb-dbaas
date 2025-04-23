@@ -18,9 +18,7 @@ jobs:
       matrix:
         service:
           - name: db-importer-worker
-            cloud_build: false
           - name: db-importer
-            cloud_build: true
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -87,9 +85,3 @@ jobs:
           tags: |
             ${{ steps.set-tags.outputs.TAG }}
             ${{ steps.set-tags.outputs.TAG_LATEST }}
-
-      - name: Run deploy
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && matrix.service.cloud_build == true
-        run: |
-          cd backend/services/${{ matrix.service.name }}
-          gcloud builds submit --config cloudbuild.${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}.yaml --substitutions _IMAGE_TAG=${{ steps.version.outputs.VERSION }} --project=${{ secrets.TF_CTRL_PLANE_PROJECT_ID }} ../..
