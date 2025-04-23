@@ -558,6 +558,12 @@ importers:
       '@autotelic/fastify-opentelemetry':
         specifier: ^0.20.0
         version: 0.20.0(@opentelemetry/api@1.9.0)
+      '@aws-sdk/client-eks':
+        specifier: ^3.735.0
+        version: 3.735.0
+      '@aws-sdk/client-sts':
+        specifier: ^3.734.0
+        version: 3.734.0
       '@falkordb/configs':
         specifier: workspace:*
         version: link:../../libs/configs
@@ -573,9 +579,15 @@ importers:
       '@falkordb/schemas':
         specifier: workspace:^
         version: link:../../libs/schemas
+      '@google-cloud/container':
+        specifier: ^5.16.0
+        version: 5.16.0
       '@google-cloud/storage':
         specifier: ^7.7.0
         version: 7.7.0
+      '@kubernetes/client-node':
+        specifier: ^0.21.0
+        version: 0.21.0
       '@opentelemetry/exporter-jaeger':
         specifier: ^1.22.0
         version: 1.26.0(@opentelemetry/api@1.9.0)
@@ -585,6 +597,9 @@ importers:
       '@sinclair/typebox':
         specifier: ^0.34.33
         version: 0.34.33
+      awilix:
+        specifier: ^10.0.1
+        version: 10.0.1
       bullmq:
         specifier: ^5.45.2
         version: 5.45.2
