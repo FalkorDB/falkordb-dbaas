@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress
+  namespace: api
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.dev.falkordb.cloud
+      secretName: api-tls
+  rules:
+    - host: api.dev.falkordb.cloud
+      http:
+        paths:
+          - path: /v1/db-importer
+            pathType: Prefix
+            backend:
+              service:
+                name: db-importer
+                port:
+                  number: 80
