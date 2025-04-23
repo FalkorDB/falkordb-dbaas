@@ -1,24 +1,4 @@
 steps:
-  - id: Build image
-    name: 'gcr.io/cloud-builders/docker'
-    env:
-      - 'DOCKER_BUILDKIT=1'
-    args:
-      - 'build'
-      - '-t'
-      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
-      - '--build-arg'
-      - 'PROJECT=${_SERVICE_NAME}'
-      - '-f'
-      - 'Dockerfile'
-      - '.'
-
-  - id: Push to Artifact Registry
-    name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
-
   - id: Deploy to Cloud Run
     name: 'gcr.io/cloud-builders/gcloud'
     args:
@@ -36,7 +16,7 @@ steps:
       - '--set-env-vars'
       - 'NODE_ENV=${_NODE_ENV},SERVICE_NAME=${_SERVICE_NAME},EXPORT_BUCKET_NAME=${_EXPORT_BUCKET_NAME},OMNISTRATE_SERVICE_ID=${_OMNISTRATE_SERVICE_ID},OMNISTRATE_ENVIRONMENT_ID=${_OMNISTRATE_ENVIRONMENT_ID},TASKS_REPOSITORY_MONGODB_DB=${_TASKS_REPOSITORY_MONGODB_DB},TASKS_REPOSITORY_MONGODB_COLLECTION=${_TASKS_REPOSITORY_MONGODB_COLLECTION},CTRL_PLANE_PROJECT_ID=${_CTRL_PLANE_PROJECT_ID},CTRL_PLANE_CLUSTER_ID=${_CTRL_PLANE_CLUSTER_ID},CTRL_PLANE_REGION=${_CTRL_PLANE_REGION},NAMESPACE=${_NAMESPACE},APPLICATION_PLANE_PROJECT_ID=${_APPLICATION_PLANE_PROJECT_ID}'
       - '--set-secrets'
-      - 'MONGODB_URI=projects/${_PROJECT_ID}/secrets/MONGODB_URI/versions/latest,GOOGLE_RECAPTCHA_SECRET_KEY=projects/${_PROJECT_ID}/secrets/RECAPTCHA_SECRET_KEY/versions/latest,OMNISTRATE_EMAIL=projects/${_PROJECT_ID}/secrets/OMNISTRATE_EMAIL/versions/latest,OMNISTRATE_PASSWORD=projects/${_PROJECT_ID}/secrets/OMNISTRATE_PASSWORD/versions/latest'
+      - 'MONGODB_URI=projects/${_PROJECT_ID}/secrets/MONGODB_URI/versions/latest,GOOGLE_RECAPTCHA_SECRET_KEY=projects/${_PROJECT_ID}/secrets/RECAPTCHA_SECRET_KEY/versions/latest,OMNISTRATE_EMAIL=projects/${_PROJECT_ID}/secrets/OMNISTRATE_EMAIL/versions/latest,OMNISTRATE_PASSWORD=projects/${_PROJECT_ID}/secrets/OMNISTRATE_PASSWORD/versions/latest,REDIS_URL=projects/${_PROJECT_ID}/secrets/REDIS_QUEUE_URL/versions/latest'
 
 tags:
   - backend

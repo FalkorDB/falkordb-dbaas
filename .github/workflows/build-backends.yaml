@@ -10,13 +10,17 @@ permissions:
   pull-requests: "write"
 
 jobs:
-  build-and-push:
+  build-and-push-docker:
     runs-on: ubuntu-latest
-    environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
     strategy:
       fail-fast: false
       matrix:
-        service: [db-importer, db-importer-worker]
+        service:
+          - name: db-importer-worker
+            cloud_build: false
+          - name: db-importer
+            cloud_build: true
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -37,7 +41,7 @@ jobs:
         run: pnpm i --frozen-lockfile
 
       - name: Authenticate to Google Cloud
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
         id: auth
         uses: google-github-actions/auth@v1
         with:
@@ -46,7 +50,7 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Docker Login
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
         uses: docker/login-action@v3
         with:
           registry: europe-west1-docker.pkg.dev
@@ -55,7 +59,8 @@ jobs:
 
       - name: Get version from package.json
         id: version
-        run: echo "VERSION=$(node -p "require('./backend/services/${{ matrix.service }}/package.json').version")" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "VERSION=$(node -p "require('./backend/services/${{ matrix.service.name }}/package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Set tags
         id: set-tags
@@ -63,11 +68,11 @@ jobs:
           # If push is true, use the version from the package.json, latest, and the commit SHA
           # Otherwise, just use the commit SHA and edge
           if [ "${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' }}" = "true" ]; then
-            echo "TAG=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service }}:${{ steps.version.outputs.VERSION }}" >> "$GITHUB_OUTPUT"
-            echo "TAG_LATEST=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service }}:latest" >> "$GITHUB_OUTPUT"
+            echo "TAG=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service.name }}:${{ steps.version.outputs.VERSION }}" >> "$GITHUB_OUTPUT"
+            echo "TAG_LATEST=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service.name }}:latest" >> "$GITHUB_OUTPUT"
           else
-            echo "TAG=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
-            echo "TAG_LATEST=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service }}:edge" >> "$GITHUB_OUTPUT"
+            echo "TAG=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service.name }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "TAG_LATEST=us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/${{ matrix.service.name }}:edge" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Docker Build
@@ -76,9 +81,15 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
-          push: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' }}
+          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') }}
           build-args: |
-            PROJECT=${{ matrix.service }}
+            PROJECT=${{ matrix.service.name }}
           tags: |
             ${{ steps.set-tags.outputs.TAG }}
             ${{ steps.set-tags.outputs.TAG_LATEST }}
+
+      - name: Run deploy
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev') && matrix.service.cloud_build == true
+        run: |
+          cd backend/services/${{ matrix.service.name }}
+          gcloud builds submit --config cloudbuild.${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}.yaml --substitutions _IMAGE_TAG=${{ steps.version.outputs.VERSION }} --project=${{ secrets.TF_CTRL_PLANE_PROJECT_ID }} ../..
