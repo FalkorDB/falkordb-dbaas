@@ -5,6 +5,8 @@ metadata:
   namespace: api
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   ingressClassName: nginx
   tls:
@@ -15,8 +17,8 @@ spec:
     - host: api.dev.falkordb.cloud
       http:
         paths:
-          - path: /v1/db-importer
-            pathType: Prefix
+          - path: /v1/db-importer(/|$)(.*)
+            pathType: ImplementationSpecific
             backend:
               service:
                 name: db-importer
