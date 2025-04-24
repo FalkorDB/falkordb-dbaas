@@ -6,7 +6,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: oci://registry-1.docker.io/bitnamicharts/redis
+    chart: redis
+    repoURL: oci://registry-1.docker.io/bitnamicharts
     targetRevision: 20.13.1
     helm:
       releaseName: redis
