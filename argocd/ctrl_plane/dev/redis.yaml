@@ -28,8 +28,10 @@ spec:
           node_pool: observability-resources
   destination:
     server: https://kubernetes.default.svc
-    namespace: redis
+    namespace: api
   syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
     automated:
       prune: true
       selfHeal: true
