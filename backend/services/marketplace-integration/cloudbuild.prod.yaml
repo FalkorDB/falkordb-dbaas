@@ -6,7 +6,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - 'us-central1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
       - '--build-arg'
       - 'PROJECT=${_SERVICE_NAME}'
       - '-f'
@@ -17,7 +17,7 @@ steps:
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - 'us-central1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
 
   - id: Deploy to Cloud Run
     name: 'gcr.io/cloud-builders/gcloud'
@@ -26,11 +26,11 @@ steps:
       - 'deploy'
       - '${_SERVICE_NAME}'
       - '--image'
-      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - 'us-central1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
       - '--platform'
       - 'managed'
       - '--region'
-      - 'europe-west1'
+      - 'us-central1'
       - '--set-env-vars'
       - NODE_ENV=${_NODE_ENV},OMNISTRATE_USER=${_OMNISTRATE_USER},OMNISTRATE_SERVICE_ID=${_OMNISTRATE_SERVICE_ID},OMNISTRATE_ENVIRONMENT_ID=${_OMNISTRATE_ENVIRONMENT_ID},OMNISTRATE_FREE_PRODUCT_TIER_ID=${_OMNISTRATE_FREE_PRODUCT_TIER_ID},OMNISTRATE_CREATE_FREE_INSTANCE_PATH=${_OMNISTRATE_CREATE_FREE_INSTANCE_PATH},OMNISTRATE_FREE_RESOURCE_ID=${_OMNISTRATE_FREE_RESOURCE_ID},COMMIT_BACKEND_BASE_URL=${_COMMIT_BACKEND_BASE_URL},DRY_RUN=${_DRY_RUN}
       - '--set-secrets'

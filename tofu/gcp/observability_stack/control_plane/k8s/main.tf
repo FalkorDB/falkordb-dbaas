@@ -127,16 +127,16 @@ resource "kubernetes_secret" "grafana-google-credentials" {
   }
 }
 
-resource "kubernetes_namespace" "db-import-export" {
+resource "kubernetes_namespace" "api" {
   metadata {
-    name = "db-import-export"
+    name = "api"
   }
 }
 
 resource "kubernetes_service_account" "db-exporter-sa" {
   metadata {
     name      = "db-exporter-sa"
-    namespace = kubernetes_namespace.db-import-export.id
+    namespace = kubernetes_namespace.api.id
 
     annotations = {
       "iam.gke.io/gcp-service-account" = replace(var.db_exporter_sa_id, "/projects/(.+)/serviceAccounts//", "")
@@ -150,6 +150,6 @@ resource "google_service_account_iam_binding" "db-exporter-sa-iam" {
   service_account_id = var.db_exporter_sa_id
   role               = "roles/iam.workloadIdentityUser"
   members = [
-    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.db-import-export.metadata.0.name}/${kubernetes_service_account.db-exporter-sa.metadata.0.name}]",
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.api.metadata.0.name}/${kubernetes_service_account.db-exporter-sa.metadata.0.name}]",
   ]
 }

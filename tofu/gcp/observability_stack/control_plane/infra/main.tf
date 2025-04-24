@@ -261,6 +261,12 @@ resource "google_project_iam_member" "frontend" {
   member  = "serviceAccount:${module.gke.service_account}"
 }
 
+resource "google_artifact_registry_repository_iam_member" "db_exporter_sa" {
+  repository = google_artifact_registry_repository.backend.id
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:db-exporter-sa@${var.project_id}.iam.gserviceaccount.com"
+}
+
 module "customer_observability_ip" {
   source  = "terraform-google-modules/address/google"
   version = "~> 3.2"

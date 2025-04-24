@@ -54,7 +54,7 @@ variable "cloud_build_push_endpoint" {
 
 variable "artifact_registry_region" {
   type    = string
-  default = "europe-west1"
+  default = "us-central1"
 }
 
 ###### DB EXPORTER ######
