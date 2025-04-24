@@ -20,7 +20,7 @@ spec:
           image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/db-importer:1.0.0
           imagePullPolicy: Always
           ports:
-            - containerPort: 80
+            - containerPort: 3000
           resources:
             requests:
               memory: "128Mi"
@@ -43,5 +43,5 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 80
+      targetPort: 3000
   type: ClusterIP
