@@ -1,4 +1,4 @@
-import { ExportRDBTaskType } from "@falkordb/schemas/src/global";
+import { ExportRDBTaskType } from "@falkordb/schemas/global";
 
 export abstract class ITaskQueueRepository {
   abstract submitTask(

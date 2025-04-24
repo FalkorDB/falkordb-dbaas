@@ -1,6 +1,6 @@
 import { ApiError } from '@falkordb/errors';
 import { RouteHandlerMethod } from 'fastify';
-import { GetOmnistrateTokenHeadersSchemaType } from '@falkordb/schemas/dist/services/auth/v1';
+import { GetOmnistrateTokenHeadersSchemaType } from '@falkordb/schemas/services/auth/v1';
 import assert from 'assert';
 import { IOmnistrateRepository } from '../../../../repositories/omnistrate/IOmnistrateRepository';
 

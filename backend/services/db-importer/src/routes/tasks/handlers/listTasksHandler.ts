@@ -1,5 +1,5 @@
 import { RouteHandlerMethod } from "fastify";
-import { ListExportRDBTasksRequestQueryType, ListExportRDBTasksResponseType } from '@falkordb/schemas/src/services/import-export-rdb/v1/tasks/list';
+import { ListExportRDBTasksRequestQueryType, ListExportRDBTasksResponseType } from '@falkordb/schemas/services/import-export-rdb/v1';
 import { ITasksDBRepository } from "../../../repositories/tasks";
 import { ApiError } from "@falkordb/errors";
 import { decode, JwtPayload } from 'jsonwebtoken';

@@ -1,4 +1,4 @@
-import { SupportedCloudProviderSchema } from '@falkordb/schemas/src/global';
+import { SupportedCloudProviderSchema } from '@falkordb/schemas/global';
 import { type Static, Type } from '@sinclair/typebox';
 
 export const OmnistrateInstanceSchema = Type.Object({

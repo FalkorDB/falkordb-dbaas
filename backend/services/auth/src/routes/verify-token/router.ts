@@ -1,4 +1,4 @@
-import { VerifyTokenRequestQuerySchema } from '@falkordb/schemas/dist/services/auth/v1';
+import { VerifyTokenRequestQuerySchema } from '@falkordb/schemas/services/auth/v1';
 import fp from 'fastify-plugin';
 import { verifyTokenHandler } from './handlers/verify';
 

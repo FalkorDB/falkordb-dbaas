@@ -3,7 +3,7 @@ import { OmnistrateRepository } from "../../../repositories/omnistrate/Omnistrat
 import { ITasksDBRepository } from "../../../repositories/tasks";
 import { K8sRepository } from "../../../repositories/k8s/K8sRepository";
 import { OmnistrateInstanceSchemaType } from "../../../schemas/omnistrate-instance";
-import { ExportRDBTaskType, MultiShardRDBExportPayloadType, RDBExportTaskPayloadType, SingleShardRDBExportPayloadType, TaskTypesType } from "@falkordb/schemas/src/global";
+import { ExportRDBTaskType, MultiShardRDBExportPayloadType, RDBExportTaskPayloadType, SingleShardRDBExportPayloadType, TaskTypesType } from "@falkordb/schemas/global";
 import { assert } from "console";
 import { ApiError } from "@falkordb/errors";
 import { ITaskQueueRepository } from "../../../repositories/tasksQueue/ITaskQueueRepository";

@@ -3,7 +3,7 @@ import { ITasksDBRepository } from "../repositories/tasks";
 import { setupContainer } from "../container";
 import { IBlobStorageRepository } from "../repositories/blob/IBlobStorageRepository";
 import { Logger } from 'pino';
-import { ExporterTaskNames, RdbExportRequestReadSignedURLProcessorData, RdbExportRequestReadSignedURLProcessorDataSchema } from "@falkordb/schemas/src/services/db-importer-worker/v1/processors/processors";
+import { ExporterTaskNames, RdbExportRequestReadSignedURLProcessorData, RdbExportRequestReadSignedURLProcessorDataSchema } from "@falkordb/schemas/services/db-importer-worker/v1";
 import { Value } from "@sinclair/typebox/value";
 
 const processor: Processor<RdbExportRequestReadSignedURLProcessorData> = async (job, token) => {

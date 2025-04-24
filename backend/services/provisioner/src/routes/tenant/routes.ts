@@ -11,7 +11,7 @@ import {
   TenantRefreshParamsSchema,
   TenantRefreshParamsSchemaType,
   TenantRefreshResponseSchema,
-} from '@falkordb/schemas/dist/services/provisioner/v1/tenant';
+} from '@falkordb/schemas/services/provisioner/v1';
 import { tenantDeprovisionHandler } from './handlers/deprovision';
 
 export default fp(

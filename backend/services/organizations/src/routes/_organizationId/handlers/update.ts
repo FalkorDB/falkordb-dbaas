@@ -3,7 +3,7 @@ import {
   UpdateOrganizationRequestBodyType,
   UpdateOrganizationRequestParamsType,
   UpdateOrganizationResponseSchemaType,
-} from '@falkordb/schemas/dist/services/organizations/v1';
+} from '@falkordb/schemas/services/organizations/v1';
 import { IOrganizationsRepository } from '../../../repositories/organizations/IOrganizationsRepository';
 import { ApiError } from '@falkordb/errors';
 

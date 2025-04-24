@@ -5,7 +5,7 @@ import { K8sRepository } from "../repositories/k8s/K8sRepository";
 import * as Yup from 'yup';
 import { Logger } from 'pino';
 import { Value } from "@sinclair/typebox/value";
-import { ExporterTaskNames, RdbExportRequestRDBMergeProcessorData, RdbExportRequestRDBMergeProcessorDataSchema } from "@falkordb/schemas/src/services/db-importer-worker/v1";
+import { ExporterTaskNames, RdbExportRequestRDBMergeProcessorData, RdbExportRequestRDBMergeProcessorDataSchema } from "@falkordb/schemas/services/db-importer-worker/v1";
 
 const processor: Processor<RdbExportRequestRDBMergeProcessorData> = async (job, token) => {
 

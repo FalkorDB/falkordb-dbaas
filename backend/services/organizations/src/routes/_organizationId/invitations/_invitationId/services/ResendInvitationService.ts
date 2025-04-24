@@ -3,7 +3,7 @@ import { ApiError } from '@falkordb/errors';
 import { IInvitationsRepository } from '../../../../../repositories/invitations/IInvitationsRepository';
 import { IMessagingRepository } from '../../../../../repositories/messaging/IMessagingRepository';
 import { IOrganizationsRepository } from '../../../../../repositories/organizations/IOrganizationsRepository';
-import { InvitationType } from '@falkordb/schemas/dist/global';
+import { InvitationType } from '@falkordb/schemas/global';
 
 export class ResendInvitationService {
   constructor(

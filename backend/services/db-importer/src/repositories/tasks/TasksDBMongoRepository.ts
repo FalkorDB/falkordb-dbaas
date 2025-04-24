@@ -1,7 +1,7 @@
 import { assert } from "console";
 import { ITasksDBRepository } from "./ITasksDBRepository";
 import { MongoClient } from 'mongodb';
-import { ExportRDBTaskSchema, ExportRDBTaskType, RDBExportTaskPayloadType, TaskStatusType, TaskTypesType } from "@falkordb/schemas/src/global";
+import { ExportRDBTaskSchema, ExportRDBTaskType, RDBExportTaskPayloadType, TaskStatusType, TaskTypesType } from "@falkordb/schemas/global";
 import { Value } from "@sinclair/typebox/value";
 import { FastifyBaseLogger } from "fastify";
 

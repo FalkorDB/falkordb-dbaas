@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { ListExportRDBTasksRequestQuerySchema, ListExportRDBTasksResponseSchema } from '@falkordb/schemas/src/services/import-export-rdb/v1/tasks/list';
+import { ListExportRDBTasksRequestQuerySchema, ListExportRDBTasksResponseSchema } from '@falkordb/schemas/services/import-export-rdb/v1';
 import { listTasksHandler } from './handlers/listTasksHandler';
 
 export default fp(

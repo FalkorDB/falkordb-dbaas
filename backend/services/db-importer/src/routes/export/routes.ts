@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { ExportRDBRequestBodySchema, ExportRDBResponseBodySchema } from '@falkordb/schemas/src/services/import-export-rdb/v1/export/post';
+import { ExportRDBRequestBodySchema, ExportRDBResponseBodySchema } from '@falkordb/schemas/services/import-export-rdb/v1';
 import { exportRDBHandler } from './handlers/exportRDBHandler';
 
 export default fp(

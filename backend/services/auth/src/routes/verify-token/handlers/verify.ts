@@ -2,7 +2,7 @@ import { ApiError } from '@falkordb/errors';
 import {
   VerifyTokenRequestQuerySchemaType,
   VerifyTokenResponseSuccessSchemaType,
-} from '@falkordb/schemas/dist/services/auth/v1';
+} from '@falkordb/schemas/services/auth/v1';
 import { RouteHandlerMethod } from 'fastify';
 import { IAuthRepository } from '../../../repositories/auth/IAuthRepository';
 
