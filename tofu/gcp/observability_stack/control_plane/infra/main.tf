@@ -147,7 +147,9 @@ module "gke" {
     "observability-resources" = {
       "goog-gke-node-pool-provisioning-model" = "on-demand"
     }
-
+    "backend" = {
+      "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
   }
 }
 
