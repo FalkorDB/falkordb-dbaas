@@ -8,7 +8,7 @@ spec:
   source:
     chart: mongodb
     repoURL: registry-1.docker.io/bitnamicharts
-    targetRevision: 20.13.1
+    targetRevision: 16.5.2
     helm:
       releaseName: mongodb
       valuesObject:
