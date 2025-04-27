@@ -122,7 +122,7 @@ export class OmnistrateRepository {
     subscriptionId: string,
   ): Promise<{ userId: string; email: string; role: 'root' | 'writer' | 'reader' }[]> {
     assert(subscriptionId, 'OmnistrateRepository: Subscription ID is required');
-    this._options.logger.info('Getting subscription users');
+    this._options.logger.info({ subscriptionId }, 'Getting subscription users');
 
     const response = await OmnistrateRepository._client.get(
       `/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/users?subscriptionId=${subscriptionId}`,

@@ -153,3 +153,12 @@ resource "google_service_account_iam_binding" "db-exporter-sa-iam" {
     "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.api.metadata.0.name}/${kubernetes_service_account.db-exporter-sa.metadata.0.name}]",
   ]
 }
+
+resource "google_service_account_iam_binding" "db-exporter-sa-token-creator" {
+  service_account_id = var.db_exporter_sa_id
+  role               = "roles/iam.serviceAccountTokenCreator"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.api.metadata.0.name}/${kubernetes_service_account.db-exporter-sa.metadata.0.name}]",
+  ]
+}
+

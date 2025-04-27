@@ -104,3 +104,27 @@ module "aws-s3-bucket-access-logs" {
     aws = aws.app-plane-account
   }
 }
+
+# Role Cluster Reader
+data "aws_iam_policy_document" "import_export_job_assume_role_policy" {
+  statement {
+    effect    = "Allow"
+    actions   = ["eks:DescribeCluster", "eks:ListClusters"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role" "import_export_job" {
+  name               = "ImportExportJobRole"
+  assume_role_policy = data.aws_iam_policy_document.import_export_job_assume_role_policy.json
+}
+
+data "aws_eks_clusters" "all_clusters" {}
+
+resource "aws_iam_role_policy_attachment" "import_export_job" {
+  for_each = toset(data.aws_eks_clusters.all_clusters.names)
+
+  role       = aws_iam_role.import_export_job.name
+  # Add pod execution role policy
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterAdminPolicy"
+}
