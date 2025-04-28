@@ -1,8 +1,8 @@
 import { ApiError } from '@falkordb/errors';
-import { TenantGroupSchemaType } from '@falkordb/schemas/dist/global/tenantGroup';
+import { TenantGroupSchemaType } from '@falkordb/schemas/global';
 import { TenantGroupProvisioner } from '../TenantGroupProvisioner';
 import { TenantGroupGCPProvisionerV1 } from './TenantGroupGCPProvisionerV1';
-import { CloudProvisionGCPConfigSchemaType, OperationProviderSchemaType, SupportedRegionsSchemaType } from '@falkordb/schemas/dist/global';
+import { CloudProvisionGCPConfigSchemaType, OperationProviderSchemaType, SupportedRegionsSchemaType } from '@falkordb/schemas/global';
 
 export class TenantGroupGCPProvisioner implements TenantGroupProvisioner {
   static provisionerVersions = {

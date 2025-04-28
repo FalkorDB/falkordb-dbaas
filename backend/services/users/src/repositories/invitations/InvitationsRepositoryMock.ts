@@ -1,4 +1,4 @@
-import { InvitationType } from '@falkordb/schemas/dist/global';
+import { InvitationType } from '@falkordb/schemas/global';
 import { IInvitationsRepository } from './IInvitationsRepository';
 
 export class InvitationsRepositoryMock implements IInvitationsRepository {

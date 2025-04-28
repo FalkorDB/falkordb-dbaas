@@ -23,7 +23,7 @@ env:
 
 jobs:
   load-stack-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     # if the pr is to the main branch, set the environment to prod. If the event is workflow_dispatch, set the environment to the base branch
     environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
     steps:
@@ -47,7 +47,7 @@ jobs:
   plan:
     needs: load-stack-matrix
     name: Plan stack ${{ matrix.stack.name }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
     strategy:
       matrix:
@@ -65,6 +65,7 @@ jobs:
           TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
           TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
           TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
+          TF_DB_EXPORTER_SA: ${{ secrets.TF_DB_EXPORTER_SA }}
           TF_DEFAULT_MAX_PODS_PER_NODE: ${{ vars.TF_DEFAULT_MAX_PODS_PER_NODE }}
           TF_DEX_GOOGLE_ADMIN_EMAIL: ${{ secrets.TF_DEX_GOOGLE_ADMIN_EMAIL }}
           TF_DEX_GOOGLE_CLIENT_ID: ${{ secrets.TF_DEX_GOOGLE_CLIENT_ID }}
@@ -106,6 +107,8 @@ jobs:
 
       - name: Plan Tofu
         id: plan-run
+        env:
+          TF_LOG: DEBUG
         run: |
           cd ${{ matrix.stack.path }}
           tofu plan -no-color -out=tfplan

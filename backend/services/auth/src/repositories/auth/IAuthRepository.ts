@@ -1,4 +1,4 @@
-import { AuthTokenSchemaType } from '@falkordb/schemas/dist/global';
+import { AuthTokenSchemaType } from '@falkordb/schemas/global';
 
 export interface SignUpResponse {
   email: string;

@@ -9,7 +9,7 @@ import {
   RejectOrganizationInvitationRequestParamsSchema,
   ResendOrganizationInvitationRequestParamsSchema,
   ResendOrganizationInvitationResponseSchema,
-} from '@falkordb/schemas/dist/services/organizations/v1';
+} from '@falkordb/schemas/services/organizations/v1';
 import { acceptInvitationHandler } from './handlers/accept';
 import { rejectInvitationHandler } from './handlers/reject';
 
