@@ -8,6 +8,8 @@ import { CommitRepositoryMock } from './repositories/commit/CommitRepositoryMock
 import { IMailRepository } from './repositories/mail/IMailRepository';
 import { MailRepository } from './repositories/mail/MailRepository';
 import { CommitRepository } from './repositories/commit/CommitRepository';
+import { ISecretsRepository } from './repositories/secrets/ISecretsRepository';
+import { SecretsGCPRepository } from './repositories/secrets/SecretsGCPRepository';
 
 export const setupGlobalContainer = (fastify: FastifyInstance) => {
   diContainer.register({
@@ -39,6 +41,10 @@ export const setupGlobalContainer = (fastify: FastifyInstance) => {
         dryRun: fastify.config.DRY_RUN,
         logger: fastify.log,
       });
+    }),
+
+    [ISecretsRepository.repositoryName]: asFunction(() => {
+      return new SecretsGCPRepository();
     }),
   });
 };

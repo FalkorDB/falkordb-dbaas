@@ -100,6 +100,57 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     return { email, password: this._serviceAccountSecret };
   }
 
+  private async _createAccount(
+    email: string,
+    password: string,
+    name: string,
+    companyName: string,
+  ): Promise<{ userId: string; }> {
+    this._opts.logger.info({ email, name, companyName, dryRun: this._opts.dryRun }, 'Creating account');
+    if (this._opts?.dryRun) {
+      return { userId: '123' };
+    }
+    return await OmnistrateRepository._client.post(`/2022-09-01-00/customer-user-signup`, {
+      email,
+      legalCompanyName: companyName,
+      name,
+      password,
+    }).then((response) => {
+      const user = response.data['user'];
+      if (!user) {
+        throw new Error('User not found');
+      }
+      return { userId: user['userId'] };
+    })
+  }
+
+  private async _createSubscription(
+    productTierId: string,
+    userId: string,
+    marketplaceEntitlementId: string,
+  ): Promise<{ subscriptionId: string }> {
+    this._opts.logger.info(
+      { productTierId, marketplaceEntitlementId, dryRun: this._opts.dryRun },
+      'Creating subscription',
+    );
+
+    if (this._opts?.dryRun) {
+      return { subscriptionId: '123' };
+    }
+    const response = await OmnistrateRepository._client.post(`/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/subscription`, {
+      productTierId,
+      onBehalfOfCustomerUserId: userId,
+      externalPayerId: marketplaceEntitlementId,
+    });
+
+    const subscription = response.data['subscription'];
+    if (!subscription) {
+      throw new Error('Subscription not found');
+    }
+
+    return { subscriptionId: subscription['subscriptionId'] };
+  }
+
   private async _getUser(email: string): Promise<{ userId: string; token?: string }> {
     this._opts.logger.info({ email, dryRun: this._opts.dryRun }, 'Getting user');
 
@@ -190,7 +241,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
         `/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/instances`,
       )
     ).data;
-    
+
     this._opts.logger.info({ name, response }, 'Getting instance with name');
 
     const instance = response['resourceInstances']?.find(
@@ -360,5 +411,63 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     const { instanceId } = await this._getInstanceWithName(params.entitlementId);
 
     await this._deleteInstance(instanceId);
+  }
+
+  async createAccount(params: {
+    email: string;
+    name: string;
+    companyName: string;
+    password: string;
+  }): Promise<{ userId: string }> {
+    this._opts.logger.info(
+      {
+        email: params.email,
+        name: params.name,
+        companyName: params.companyName,
+        dryRun: this._opts.dryRun,
+      },
+      'Creating account',
+    );
+
+    if (this._opts?.dryRun) {
+      return { userId: '123' };
+    }
+
+    try {
+      return await this._createAccount(
+        params.email,
+        params.password,
+        params.name,
+        params.companyName,
+      )
+    } catch (error) {
+      this._opts.logger.error({ error }, `Failed to create account: ${error}`);
+      throw new Error('Failed to create account');
+    }
+  }
+
+  async createSubscription(params: {
+    email: string,
+    productTierId: string;
+    entitlementId: string;
+  }): Promise<{ subscriptionId: string }> {
+    this._opts.logger.info(
+      {
+        email: params.email,
+        productTierId: params.productTierId,
+        entitlementId: params.entitlementId,
+        dryRun: this._opts.dryRun,
+      },
+      'Creating subscription',
+    );
+    if (this._opts?.dryRun) {
+      return { subscriptionId: '123' };
+    }
+    const { userId, token } = await this._getUser(params.email);
+    if (!userId || !token) {
+      throw new Error('User not found');
+    }
+
+
   }
 }

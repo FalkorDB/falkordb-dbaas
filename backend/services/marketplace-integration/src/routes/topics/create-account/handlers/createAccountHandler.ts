@@ -3,6 +3,8 @@ import { IOmnistrateRepository } from '../../../../repositories/omnistrate/IOmni
 import { ICommitRepository } from '../../../../repositories/commit/ICommitRepository';
 import { ApiError } from '@falkordb/errors';
 import { CreateAccountMessageSchema, CreateAccountMessageType } from '../../../../schemas/create-account';
+import { CreateAccountController } from '../controllers/createAccountController';
+import { ISecretsRepository } from '../../../../repositories/secrets/ISecretsRepository';
 
 export const createAccountHandler: RouteHandlerMethod<undefined, undefined, undefined, { Body: unknown }> = async (
   request,
@@ -11,28 +13,16 @@ export const createAccountHandler: RouteHandlerMethod<undefined, undefined, unde
 
   const omnistrateRepository = request.diScope.resolve<IOmnistrateRepository>(IOmnistrateRepository.repositoryName);
   const commitRepository = request.diScope.resolve<ICommitRepository>(ICommitRepository.repositoryName);
+  const secretsRepository = request.diScope.resolve<ISecretsRepository>(ISecretsRepository.repositoryName);
 
-  const { marketplaceAccountId, userEmail } = request.body as CreateAccountMessageType;
+  const { marketplaceAccountId, userEmail, companyName, name, passwordRef } = request.body as CreateAccountMessageType;
 
-  try {
-    await omnistrateRepository.createReadOnlySubscription({
-      marketplaceAccountId,
-      userEmail,
-    });
-  } catch (error) {
-    // Check if error is the account already exists
-    if (error instanceof Error && error.message.includes('already exists')) {
-      request.log.info({ marketplaceAccountId, userEmail }, 'Account already exists');
-      return;
-    }
-
-    request.log.error({ error, marketplaceAccountId, userEmail }, `Failed to create read-only subscription: ${error}`);
-    return;
-  }
-
-  try {
-    await commitRepository.verifyAccountCreated(marketplaceAccountId);
-  } catch (error) {
-    request.log.error({ error, marketplaceAccountId, userEmail }, `Failed to verify account creation: ${error}`);
-  }
+  return await new CreateAccountController(
+    omnistrateRepository,
+    commitRepository,
+    secretsRepository,
+    {
+      logger: request.log,
+    },
+  ).createAccount({ marketplaceAccountId, userEmail, companyName, name, passwordRef });
 };
