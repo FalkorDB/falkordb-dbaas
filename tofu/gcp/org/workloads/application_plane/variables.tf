@@ -26,3 +26,7 @@ variable "provisioning_sa" {
 variable "velero_role_id" {
   type = string
 }
+
+variable "db_exporter_sa_email" {
+  type = string
+}

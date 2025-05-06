@@ -1,6 +1,6 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
-import { CloudProvisionConfigDeleteParamsSchemaType } from '@falkordb/schemas/dist/services/provisioner/v1/cloud-provision-config';
+import { CloudProvisionConfigDeleteParamsSchemaType } from '@falkordb/schemas/services/provisioner/v1';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 
 export const cloudProvisionConfigDeleteHandler: RouteHandlerMethod<

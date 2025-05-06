@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: redis
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: redis
+    repoURL: registry-1.docker.io/bitnamicharts
+    targetRevision: 20.13.1
+    helm:
+      releaseName: redis
+      valuesObject:
+        fullnameOverride: "redis"
+        architecture: standalone
+        auth:
+          enabled: true
+        master:
+          resourcesPreset: "small"
+          persistence:
+            enabled: true
+            storageClass: "standard-rwo"
+            size: 10Gi
+        sentinel:
+          enabled: false
+        nodeSelector:
+          node_pool: backend
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: api
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true

@@ -63,3 +63,6 @@ variable "grafana_google_client_id" {
 variable "grafana_google_client_secret" {
   type = string
 }
+variable "db_exporter_sa_id" {
+  type = string
+}

@@ -1,7 +1,7 @@
 import {
   ListInvitationsRequestQuerySchema,
   ListInvitationsResponseSchema,
-} from '@falkordb/schemas/dist/services/organizations/v1';
+} from '@falkordb/schemas/services/organizations/v1';
 import fp from 'fastify-plugin';
 import { listInvitationsHandler } from './handlers/list';
 

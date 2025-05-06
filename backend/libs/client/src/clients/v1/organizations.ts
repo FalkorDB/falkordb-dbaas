@@ -31,7 +31,7 @@ import {
   UpdateOrganizationMemberResponseSchemaType,
   UpdateOrganizationRequestParamsType,
   UpdateOrganizationResponseSchemaType,
-} from '@falkordb/schemas/src/services/organizations/v1';
+} from '@falkordb/schemas/services/organizations/v1';
 import { Client } from '../../client';
 
 export const OrganizationsV1 = (client: Client) => ({
