@@ -10,7 +10,7 @@
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations \u0026 Alerts",
+        "name": "Annotations & Alerts",
         "type": "dashboard"
       }
     ]
@@ -19,7 +19,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
-  "id": 1,
+  "id": 50,
   "links": [],
   "panels": [
     {
@@ -1421,27 +1421,94 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "redis_slowlog_history_last_ten{namespace=\"$namespace\", pod=\"$pod\"}",
-          "instant": false,
+          "format": "table",
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       ],
       "title": "Slowlog",
       "transformations": [
         {
+          "id": "calculateField",
+          "options": {
+            "alias": "Execution timestamp",
+            "binary": {
+              "left": {
+                "matcher": {
+                  "id": "byName",
+                  "options": "command_executed_timestamp"
+                }
+              },
+              "operator": "*",
+              "right": {
+                "fixed": "1000"
+              }
+            },
+            "mode": "binary",
+            "reduce": {
+              "include": [
+                "Execution timestamp"
+              ],
+              "reducer": "sum"
+            },
+            "unary": {
+              "fieldName": "Execution timestamp",
+              "operator": "exp"
+            },
+            "window": {
+              "reducer": "mean",
+              "windowAlignment": "trailing",
+              "windowSize": 0.1,
+              "windowSizeMode": "percentage"
+            }
+          }
+        },
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "destinationType": "time",
+                "targetField": "Execution timestamp"
+              }
+            ],
+            "fields": {}
+          }
+        },
+        {
           "id": "organize",
           "options": {
-            "excludeByName": {},
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "cluster": true,
+              "command_executed_timestamp": true,
+              "instance": true,
+              "job": true,
+              "namespace": true,
+              "pod": true
+            },
             "includeByName": {},
             "indexByName": {
+              "Execution timestamp": 1,
+              "Time": 4,
+              "Value": 11,
+              "__name__": 5,
               "client": 0,
-              "command": 2,
-              "command_executed_timestamp": 1,
-              "value": 3
+              "cluster": 6,
+              "command": 3,
+              "command_executed_timestamp": 2,
+              "instance": 7,
+              "job": 8,
+              "namespace": 9,
+              "pod": 10
             },
             "renameByName": {
+              "Value": "Duration in seconds",
               "client": "Client",
               "command": "Command",
               "command_executed_timestamp": "Execution timestamp",
@@ -1463,8 +1530,8 @@
     "list": [
       {
         "current": {
-          "text": "prometheus",
-          "value": "fe6kx1tpffym8a"
+          "text": "VictoriaMetrics",
+          "value": "f3a88fe0-7ba6-4674-ad85-088e7ec9d712"
         },
         "includeAll": false,
         "name": "datasource",
@@ -1517,6 +1584,6 @@
   "timezone": "browser",
   "title": "FalkorDB Dashboard",
   "uid": "e008bc3f-81a2-40f9-baf2-a33fd8dec7eg",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
