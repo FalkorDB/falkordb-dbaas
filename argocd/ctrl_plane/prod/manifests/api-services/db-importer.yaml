@@ -1,0 +1,47 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-importer
+  namespace: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db-importer
+  template:
+    metadata:
+      labels:
+        app: db-importer
+    spec:
+      serviceAccountName: db-exporter-sa
+      containers:
+        - name: db-importer
+          image: europe-west1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          envFrom:
+            - secretRef:
+                name: db-importer-env
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db-importer
+  namespace: api
+spec:
+  selector:
+    app: db-importer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
