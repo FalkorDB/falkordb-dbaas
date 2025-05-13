@@ -3,7 +3,7 @@ import { setupContainer } from "../container";
 import { ITasksDBRepository } from "../repositories/tasks";
 import { K8sRepository } from "../repositories/k8s/K8sRepository";
 import { Logger } from 'pino';
-import { RdbExportMonitorSaveProgressProcessorDataSchema, RdbExportMonitorSaveProgressProcessorData, ExporterTaskNames } from "@falkordb/schemas/src/services/db-importer-worker/v1";
+import { RdbExportMonitorSaveProgressProcessorDataSchema, RdbExportMonitorSaveProgressProcessorData, ExporterTaskNames } from "@falkordb/schemas/services/db-importer-worker/v1";
 import { Value } from "@sinclair/typebox/value";
 
 const processor: Processor<RdbExportMonitorSaveProgressProcessorData> = async (job, token) => {

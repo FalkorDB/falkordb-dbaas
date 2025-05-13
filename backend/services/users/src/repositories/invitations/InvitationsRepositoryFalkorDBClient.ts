@@ -1,5 +1,5 @@
 import { FalkorDBClient } from '@falkordb/rest-client';
-import { ListInvitationsResponseSchemaType } from '@falkordb/schemas/dist/services/organizations/v1';
+import { ListInvitationsResponseSchemaType } from '@falkordb/schemas/services/organizations/v1';
 import { IInvitationsRepository } from './IInvitationsRepository';
 import { context, propagation } from '@opentelemetry/api';
 

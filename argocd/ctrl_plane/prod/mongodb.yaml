@@ -1,31 +1,25 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: redis
+  name: mongodb
   namespace: argocd
 spec:
   project: default
   source:
-    chart: redis
+    chart: mongodb
     repoURL: registry-1.docker.io/bitnamicharts
-    targetRevision: 20.13.1
+    targetRevision: 16.5.2
     helm:
-      releaseName: redis
+      releaseName: mongodb
       valuesObject:
-        fullnameOverride: "redis"
+        fullnameOverride: "mongodb"
         architecture: standalone
-        auth:
-          enabled: true
-        master:
-          resourcesPreset: "small"
-          persistence:
-            enabled: true
-            storageClass: "standard-rwo"
-            size: 10Gi
-        sentinel:
-          enabled: false
         nodeSelector:
           node_pool: backend
+        persistence:
+          enabled: true
+          storageClass: "standard-rwo"
+          size: 50Gi
   destination:
     server: https://kubernetes.default.svc
     namespace: api

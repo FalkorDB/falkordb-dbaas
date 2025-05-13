@@ -1,5 +1,5 @@
 import { RouteHandlerMethod } from "fastify";
-import { ListExportRDBTasksRequestQueryType, ListExportRDBTasksResponseType } from '@falkordb/schemas/src/services/import-export-rdb/v1/tasks/list';
+import { ListExportRDBTasksRequestQueryType, ListExportRDBTasksResponseType } from '@falkordb/schemas/services/import-export-rdb/v1';
 import { ITasksDBRepository } from "../../../repositories/tasks";
 import { ApiError } from "@falkordb/errors";
 import { decode, JwtPayload } from 'jsonwebtoken';
@@ -20,7 +20,7 @@ export const listTasksHandler: RouteHandlerMethod<undefined, undefined, undefine
     const { userID } = decode(((request.headers as unknown)?.['authorization'] as string)?.split(' ').pop()) as JwtPayload;
     const hasAccess = await omnistrateRepository.checkIfUserHasWriteAccessToInstance(userID, null, instanceId);
     if (!hasAccess) {
-      throw ApiError.forbidden("You don't have access to this instance", "FORBIDDEN").toFastify(request.server);
+      throw ApiError.forbidden("You don't have access to this instance", "FORBIDDEN");
     }
   } catch (error) {
     if (error instanceof ApiError) {

@@ -2,7 +2,7 @@ import {
   CreateUserRequestBodySchemaType,
   CreateUserRequestParamsSchemaType,
   CreateUserResponseBodySchemaType,
-} from '@falkordb/schemas/dist/services/users/v1';
+} from '@falkordb/schemas/services/users/v1';
 import { IUsersRepository } from './IUsersRepository';
 import { FastifyBaseLogger } from 'fastify';
 import { FalkorDBClient } from '@falkordb/rest-client';

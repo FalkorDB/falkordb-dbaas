@@ -1,5 +1,5 @@
 import { RouteHandlerMethod } from "fastify";
-import { ExportRDBRequestBody, ExportRDBResponseBody } from '@falkordb/schemas/src/services/import-export-rdb/v1/export/post';
+import { ExportRDBRequestBody, ExportRDBResponseBody } from '@falkordb/schemas/services/import-export-rdb/v1';
 import { ApiError } from "@falkordb/errors";
 import { ExportRDBController } from "../controllers/ExportRDBController";
 import { ITasksDBRepository } from "../../../repositories/tasks";

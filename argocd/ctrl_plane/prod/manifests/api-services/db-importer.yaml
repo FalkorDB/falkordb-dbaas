@@ -17,10 +17,10 @@ spec:
       serviceAccountName: db-exporter-sa
       containers:
         - name: db-importer
-          image: europe-west1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer:1.0.0
+          image: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer:1.0.0
           imagePullPolicy: Always
           ports:
-            - containerPort: 80
+            - containerPort: 3000
           resources:
             requests:
               memory: "128Mi"
@@ -42,6 +42,6 @@ spec:
     app: db-importer
   ports:
     - protocol: TCP
-      port: 80
-      targetPort: 80
+      port: 3000
+      targetPort: 3000
   type: ClusterIP

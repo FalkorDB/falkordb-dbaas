@@ -1,8 +1,8 @@
-import { ExportRDBTaskType, MultiShardRDBExportPayloadType } from "@falkordb/schemas/src/global";
+import { ExportRDBTaskType, MultiShardRDBExportPayloadType } from "@falkordb/schemas/global";
 import { FastifyBaseLogger } from "fastify";
 import { FlowChildJob, FlowJob, FlowProducer, JobsOptions } from 'bullmq';
 import { Static, TSchema } from "@sinclair/typebox";
-import { ExporterSchemaMap, ExporterTaskNames } from "@falkordb/schemas/src/services/db-importer-worker/v1";
+import { ExporterSchemaMap, ExporterTaskNames } from "@falkordb/schemas/services/db-importer-worker/v1";
 import { Value } from "@sinclair/typebox/value";
 import { assert } from "console";
 

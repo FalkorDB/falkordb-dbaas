@@ -3,7 +3,11 @@ import processors from '../processors';
 import logger from '../logger';
 
 export const getQueues = () => {
-  return processors.map(({ name }) => new Queue(name));
+  return processors.map(({ name }) => new Queue(name, {
+    connection: {
+      url: process.env.REDIS_URL,
+    },
+  }));
 }
 
 export const setupWorkers = () => {

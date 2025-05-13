@@ -1,8 +1,8 @@
 import { CloudBuildClient } from '@google-cloud/cloudbuild';
 import { TenantGCPProvisioner } from './TenantGCPProvisioner';
-import { TenantGroupSchemaType } from '@falkordb/schemas/dist/global/tenantGroup';
-import { TenantProvisionBodySchemaType } from '@falkordb/schemas/dist/services/provisioner/v1/tenant';
-import { CloudProvisionGCPConfigSchemaType, OperationProviderSchemaType, TenantSchemaType } from '@falkordb/schemas/dist/global';
+import { TenantGroupSchemaType } from '@falkordb/schemas/global';
+import { TenantProvisionBodySchemaType } from '@falkordb/schemas/services/provisioner/v1';
+import { CloudProvisionGCPConfigSchemaType, OperationProviderSchemaType, TenantSchemaType } from '@falkordb/schemas/global';
 
 export class TenantGCPProvisionerV1 implements TenantGCPProvisioner {
   private _cloudbuild = new CloudBuildClient();

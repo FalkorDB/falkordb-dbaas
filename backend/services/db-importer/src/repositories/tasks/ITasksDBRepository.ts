@@ -1,4 +1,4 @@
-import { ExportRDBTaskType, RDBExportTaskPayloadType, TaskStatusType, TaskTypesType } from "@falkordb/schemas/src/global";
+import { ExportRDBTaskType, RDBExportTaskPayloadType, TaskStatusType, TaskTypesType } from "@falkordb/schemas/global";
 
 export abstract class ITasksDBRepository {
 
