@@ -1,130 +1,314 @@
-
-data "aws_organizations_organizational_unit" "ou" {
-  name      = var.workloads_ou_name
-  parent_id = var.workloads_ou_parent_id
+locals {
+  assume_role_arn = "arn:aws:iam::${var.app_plane_account_id}:role/OrganizationAccountAccessRole"
 }
-
-data "aws_organizations_organizational_unit_child_accounts" "children" {
-  parent_id = data.aws_organizations_organizational_unit.ou.id
-}
+#### PROVIDERS ####
+# provider "aws" {
+#   alias = "default"
+#   assume_role {
+#     role_arn = local.assume_role_arn
+#   }
+# }
 
 locals {
-  workload_accounts = try(
-    tomap({
-      for account in data.aws_organizations_organizational_unit_child_accounts.children.accounts : account.name => account
-    }),
-    {}
-  )
-  app_plane_account                 = local.workload_accounts[var.app_plane_account_name]
-  app_plane_trail_bucket_name       = nonsensitive("${lower(replace(var.app_plane_account_name, " ", "-"))}-cloudtrail-${random_bytes.suffix.hex}")
-  app_plane_access_logs_bucket_name = nonsensitive("${lower(replace(var.app_plane_account_name, " ", "-"))}-access-logs-${random_bytes.suffix.hex}")
+  regions = [
+    "af-south-1",
+    "ap-east-1",
+    "ap-northeast-1",
+    "ap-northeast-2",
+    "ap-northeast-3",
+    "ap-south-1",
+    "ap-south-2",
+    "ap-southeast-1",
+    "ap-southeast-2",
+    "ap-southeast-3",
+    "ap-southeast-4",
+    "ap-southeast-5",
+    "ap-southeast-7",
+    "ca-central-1",
+    "ca-west-1",
+    "eu-central-1",
+    "eu-central-2",
+    "eu-north-1",
+    "eu-south-1",
+    "eu-south-2",
+    "eu-west-1",
+    "eu-west-2",
+    "eu-west-3",
+    "il-central-1",
+    "me-central-1",
+    "me-south-1",
+    "mx-central-1",
+    "sa-east-1",
+    "us-east-1",
+    "us-east-2",
+    "us-west-1",
+    "us-west-2",
+  ]
 }
 
-resource "random_bytes" "suffix" {
-  length = 4
+module "global" {
+  source          = "./modules/global"
+  region          = "us-east-1"
+  account_id      = var.app_plane_account_id
+  assume_role_arn = local.assume_role_arn
+
+  google_client_ids          = var.google_client_ids
+  cluster_user_role_audience = var.cluster_user_role_audience
+
 }
 
+# module "region_af-south-1" {
+#   source = "./modules/region"
 
-provider "aws" {
-  alias = "app-plane-account"
-  assume_role {
-    role_arn = "arn:aws:iam::${local.app_plane_account.id}:role/OrganizationAccountAccessRole"
-  }
+#   region          = "af-south-1"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+# module "region_ap-east-1" {
+#   source = "./modules/region"
+
+#   region          = "ap-east-1"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+module "region_ap-northeast-1" {
+  source = "./modules/region"
+
+  region          = "ap-northeast-1"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
 }
 
-# Bucket policy to allow CloudTrail to write logs to the bucket
-data "aws_iam_policy_document" "cloudtrail_bucket_policy" {
-  statement {
-    effect    = "Allow"
-    actions   = ["s3:GetBucketAcl"]
-    resources = ["arn:aws:s3:::${local.app_plane_trail_bucket_name}"]
-    principals {
-      type        = "Service"
-      identifiers = ["cloudtrail.amazonaws.com"]
-    }
-  }
+module "region_ap-northeast-2" {
+  source = "./modules/region"
 
-  statement {
-    effect    = "Allow"
-    actions   = ["s3:PutObject"]
-    resources = ["arn:aws:s3:::${local.app_plane_trail_bucket_name}/*"]
-    principals {
-      type        = "Service"
-      identifiers = ["cloudtrail.amazonaws.com"]
-    }
-  }
+  region          = "ap-northeast-2"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
 }
 
+module "region_ap-northeast-3" {
+  source = "./modules/region"
 
-module "aws-s3-bucket" {
-  source                   = "trussworks/s3-private-bucket/aws"
-  bucket                   = local.app_plane_trail_bucket_name
-  use_account_alias_prefix = false
-  enable_analytics         = false
-
-  custom_bucket_policy = data.aws_iam_policy_document.cloudtrail_bucket_policy.json
-
-  providers = {
-    aws = aws.app-plane-account
-  }
+  region          = "ap-northeast-3"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
 }
 
-data "aws_iam_policy_document" "access_logs_bucket_policy" {
+module "region_ap-south-1" {
+  source = "./modules/region"
 
-  statement {
-    effect    = "Allow"
-    actions   = ["s3:GetBucketAcl"]
-    resources = ["arn:aws:s3:::${local.app_plane_access_logs_bucket_name}"]
-    principals {
-      type        = "Service"
-      identifiers = ["delivery.logs.amazonaws.com"]
-    }
-  }
-
-  statement {
-    effect    = "Allow"
-    actions   = ["s3:PutObject"]
-    resources = ["arn:aws:s3:::${local.app_plane_access_logs_bucket_name}/*"]
-    principals {
-      type        = "Service"
-      identifiers = ["delivery.logs.amazonaws.com"]
-    }
-  }
+  region          = "ap-south-1"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
 }
 
-module "aws-s3-bucket-access-logs" {
-  source                   = "trussworks/s3-private-bucket/aws"
-  bucket                   = local.app_plane_access_logs_bucket_name
-  use_account_alias_prefix = false
-  enable_analytics         = false
+# module "region_ap-south-2" {
+#   source = "./modules/region"
 
-  custom_bucket_policy = data.aws_iam_policy_document.access_logs_bucket_policy.json
+#   region          = "ap-south-2"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
 
-  providers = {
-    aws = aws.app-plane-account
-  }
+module "region_ap-southeast-1" {
+  source = "./modules/region"
+
+  region          = "ap-southeast-1"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
 }
 
-# Role Cluster Reader
-data "aws_iam_policy_document" "import_export_job_assume_role_policy" {
-  statement {
-    effect    = "Allow"
-    actions   = ["eks:DescribeCluster", "eks:ListClusters"]
-    resources = ["*"]
-  }
+module "region_ap-southeast-2" {
+  source = "./modules/region"
+
+  region          = "ap-southeast-2"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
 }
 
-resource "aws_iam_role" "import_export_job" {
-  name               = "ImportExportJobRole"
-  assume_role_policy = data.aws_iam_policy_document.import_export_job_assume_role_policy.json
+# module "region_ap-southeast-3" {
+#   source = "./modules/region"
+
+#   region          = "ap-southeast-3"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+# module "region_ap-southeast-4" {
+#   source = "./modules/region"
+
+#   region          = "ap-southeast-4"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+# module "region_ap-southeast-5" {
+#   source = "./modules/region"
+
+#   region          = "ap-southeast-5"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+# module "region_ap-southeast-7" {
+#   source = "./modules/region"
+
+#   region          = "ap-southeast-7"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+module "region_ca-central-1" {
+  source = "./modules/region"
+
+  region          = "ca-central-1"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
 }
 
-data "aws_eks_clusters" "all_clusters" {}
+# module "region_ca-west-1" {
+#   source = "./modules/region"
 
-resource "aws_iam_role_policy_attachment" "import_export_job" {
-  for_each = toset(data.aws_eks_clusters.all_clusters.names)
+#   region          = "ca-west-1"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
 
-  role       = aws_iam_role.import_export_job.name
-  # Add pod execution role policy
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterAdminPolicy"
+module "region_eu-central-1" {
+  source = "./modules/region"
+
+  region          = "eu-central-1"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
+}
+
+# module "region_eu-central-2" {
+#   source = "./modules/region"
+
+#   region          = "eu-central-2"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+module "region_eu-north-1" {
+  source = "./modules/region"
+
+  region          = "eu-north-1"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
+}
+
+# module "region_eu-south-1" {
+#   source = "./modules/region"
+
+#   region          = "eu-south-1"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+# module "region_eu-south-2" {
+#   source = "./modules/region"
+
+#   region          = "eu-south-2"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+module "region_eu-west-1" {
+  source = "./modules/region"
+
+  region          = "eu-west-1"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
+}
+
+module "region_eu-west-2" {
+  source = "./modules/region"
+
+  region          = "eu-west-2"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
+}
+
+module "region_eu-west-3" {
+  source = "./modules/region"
+
+  region          = "eu-west-3"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
+}
+
+module "region_il-central-1" {
+  source = "./modules/region"
+
+  region          = "il-central-1"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
+}
+
+# module "region_me-central-1" {
+#   source = "./modules/region"
+
+#   region          = "me-central-1"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+# module "region_me-south-1" {
+#   source = "./modules/region"
+
+#   region          = "me-south-1"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+# module "region_mx-central-1" {
+#   source = "./modules/region"
+
+#   region          = "mx-central-1"
+#   assume_role_arn = local.assume_role_arn
+#   role_arn        = module.global.cluster_user_role_arn
+# }
+
+module "region_sa-east-1" {
+  source = "./modules/region"
+
+  region          = "sa-east-1"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
+}
+
+module "region_us-east-1" {
+  source = "./modules/region"
+
+  region          = "us-east-1"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
+}
+
+module "region_us-east-2" {
+  source = "./modules/region"
+
+  region          = "us-east-2"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
+}
+
+module "region_us-west-1" {
+  source = "./modules/region"
+
+  region          = "us-west-1"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
+}
+
+module "region_us-west-2" {
+  source = "./modules/region"
+
+  region          = "us-west-2"
+  assume_role_arn = local.assume_role_arn
+  role_arn        = module.global.cluster_user_role_arn
 }

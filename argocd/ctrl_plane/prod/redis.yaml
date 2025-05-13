@@ -31,7 +31,4 @@ spec:
     namespace: api
   syncPolicy:
     syncOptions:
-      - CreateNamespace=true
-    automated:
-      prune: true
-      selfHeal: true
+      - CreateNamespace="true"

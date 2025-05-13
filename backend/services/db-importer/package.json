@@ -44,6 +44,7 @@
     "@opentelemetry/exporter-jaeger": "^1.22.0",
     "@sinclair/typebox": "^0.34.33",
     "awilix": "^10.0.1",
+    "aws-eks-token": "^1.0.5",
     "bullmq": "^5.45.2",
     "dotenv": "^16.4.5",
     "falkordb": "^6.2.7",

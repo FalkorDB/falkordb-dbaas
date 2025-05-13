@@ -32,3 +32,6 @@ output "ctrl_plane_db_exporter_sa_email" {
 output "ctrl_plane_db_exporter_sa_id" {
   value = module.control_plane.db_exporter_sa_id
 }
+output "ctrl_plane_db_exporter_sa_number" {
+  value = module.control_plane.db_exporter_sa_number
+}
