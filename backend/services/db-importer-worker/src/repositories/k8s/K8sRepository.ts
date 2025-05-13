@@ -242,7 +242,7 @@ export class K8sRepository {
     podId: string,
     hasTLS = false,
   ): Promise<void> {
-    this._options.logger.info({ clusterId, region, instanceId, podId }, 'Sending save command');
+    this._options.logger.info({ clusterId, region, instanceId, podId, cloudProvider }, 'Sending save command');
 
     const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
 
