@@ -1,9 +1,9 @@
 import { FastifyBaseLogger } from 'fastify';
 import { ITenantGroupRepository } from './ITenantGroupsRepository';
 import { MongoClient } from 'mongodb';
-import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '@falkordb/schemas/dist/global/tenantGroup';
+import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '@falkordb/schemas/global';
 import { ApiError } from '@falkordb/errors';
-import { SupportedCloudProviderSchemaType, SupportedRegionsSchemaType } from '@falkordb/schemas/dist/global';
+import { SupportedCloudProviderSchemaType, SupportedRegionsSchemaType } from '@falkordb/schemas/global';
 
 export class TenantGroupsMongoDB implements ITenantGroupRepository {
   collection = this._client.db().collection('tenantGroups');

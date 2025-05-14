@@ -1,4 +1,4 @@
-import { UserMembershipItemType } from '@falkordb/schemas/dist/global';
+import { UserMembershipItemType } from '@falkordb/schemas/global';
 import { IMembershipsRepository } from './IMembershipsRepository';
 
 export class MembershipsRepositoryMock implements IMembershipsRepository {

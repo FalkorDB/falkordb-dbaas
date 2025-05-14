@@ -1,4 +1,4 @@
-import { UserMembershipItemType } from '@falkordb/schemas/dist/global';
+import { UserMembershipItemType } from '@falkordb/schemas/global';
 
 export abstract class IMembershipsRepository {
   static repositoryName = 'MembershipsRepository';

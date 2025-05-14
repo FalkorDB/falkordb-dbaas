@@ -1,6 +1,6 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
-import { ResendOrganizationInvitationRequestParamsType } from '@falkordb/schemas/dist/services/organizations/v1';
+import { ResendOrganizationInvitationRequestParamsType } from '@falkordb/schemas/services/organizations/v1';
 import { IInvitationsRepository } from '../../../../../repositories/invitations/IInvitationsRepository';
 import { ResendInvitationService } from '../services/ResendInvitationService';
 import { IOrganizationsRepository } from '../../../../../repositories/organizations/IOrganizationsRepository';

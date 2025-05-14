@@ -1,4 +1,4 @@
-import { CreateOrganizationType, OrganizationType, UpdateOrganizationType } from '@falkordb/schemas/dist/global';
+import { CreateOrganizationType, OrganizationType, UpdateOrganizationType } from '@falkordb/schemas/global';
 
 export abstract class IOrganizationsRepository {
   static repositoryName = 'OrganizationsRepository';

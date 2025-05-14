@@ -1,7 +1,7 @@
 import {
   ListInvitationsRequestQueryType,
   ListInvitationsResponseSchemaType,
-} from '@falkordb/schemas/dist/services/organizations/v1';
+} from '@falkordb/schemas/services/organizations/v1';
 import { RouteHandlerMethod } from 'fastify';
 import { IInvitationsRepository } from '../../../repositories/invitations/IInvitationsRepository';
 import { ApiError } from '@falkordb/errors';

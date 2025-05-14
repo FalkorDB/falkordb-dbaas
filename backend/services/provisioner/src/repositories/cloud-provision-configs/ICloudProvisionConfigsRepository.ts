@@ -2,7 +2,7 @@ import {
   CloudProvisionConfigSchemaType,
   CreateCloudProvisionConfigParamsSchemaType,
   SupportedCloudProviderSchemaType,
-} from '@falkordb/schemas/dist/global';
+} from '@falkordb/schemas/global';
 
 export abstract class ICloudProvisionConfigsRepository {
   static repositoryName = 'CloudProvisionConfigsRepository';

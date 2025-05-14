@@ -1,4 +1,4 @@
-import { CreateOperationParamsSchemaType, OperationSchemaType, OperationStatusSchemaType } from "@falkordb/schemas/dist/global";
+import { CreateOperationParamsSchemaType, OperationSchemaType, OperationStatusSchemaType } from "@falkordb/schemas/global";
 
 
 export abstract class IOperationsRepository {

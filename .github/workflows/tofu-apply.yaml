@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   load-stack-matrix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
     steps:
       - name: Checkout repository
@@ -39,7 +39,7 @@ jobs:
   apply:
     needs: load-stack-matrix
     name: Apply stack ${{ matrix.stack.name }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
     strategy:
       matrix:
@@ -57,6 +57,7 @@ jobs:
           TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
           TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
           TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
+          TF_DB_EXPORTER_SA: ${{ secrets.TF_DB_EXPORTER_SA }}
           TF_DEFAULT_MAX_PODS_PER_NODE: ${{ vars.TF_DEFAULT_MAX_PODS_PER_NODE }}
           TF_DEX_GOOGLE_ADMIN_EMAIL: ${{ secrets.TF_DEX_GOOGLE_ADMIN_EMAIL }}
           TF_DEX_GOOGLE_CLIENT_ID: ${{ secrets.TF_DEX_GOOGLE_CLIENT_ID }}

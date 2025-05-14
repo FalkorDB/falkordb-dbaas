@@ -3,7 +3,7 @@ import {
   CreateOrganizationRequestBodyType,
   CreateOrganizationRequestHeadersType,
   CreateOrganizationResponseType,
-} from '@falkordb/schemas/dist/services/organizations/v1';
+} from '@falkordb/schemas/services/organizations/v1';
 import { IOrganizationsRepository } from '../../repositories/organizations/IOrganizationsRepository';
 import { CreateOrganizationService } from '../services/CreateOrganizationService';
 import { ApiError } from '@falkordb/errors';

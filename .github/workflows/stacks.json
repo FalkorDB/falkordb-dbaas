@@ -28,7 +28,8 @@
       "TF_VAR_dex_google_admin_email": "TF_DEX_GOOGLE_ADMIN_EMAIL",
       "TF_VAR_argocd_groups_sa_json": "TF_ARGOCD_GROUPS_SA_JSON",
       "TF_VAR_grafana_google_client_id": "TF_GRAFANA_GOOGLE_CLIENT_ID",
-      "TF_VAR_grafana_google_client_secret": "TF_GRAFANA_GOOGLE_CLIENT_SECRET"
+      "TF_VAR_grafana_google_client_secret": "TF_GRAFANA_GOOGLE_CLIENT_SECRET",
+      "TF_VAR_db_exporter_sa": "TF_DB_EXPORTER_SA"
     },
     "init_param": "-backend-config=bucket=TF_STATE_BUCKET" 
   }

@@ -1,12 +1,12 @@
 import { ApiError } from '@falkordb/errors';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
-import { OperationProviderSchemaType } from '@falkordb/schemas/dist/global/operation';
+import { OperationProviderSchemaType } from '@falkordb/schemas/global';
 import { TenantGroupGCPProvisioner } from '../provisioners/gcp/TenantGroupGCPProvisioner';
 import { FastifyBaseLogger } from 'fastify';
-import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '@falkordb/schemas/dist/global/tenantGroup';
+import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '@falkordb/schemas/global';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
-import { TenantGroupDeprovisionResponseSchemaType } from '@falkordb/schemas/dist/services/provisioner/v1/tenant-group/deprovision';
+import { TenantGroupDeprovisionResponseSchemaType } from '@falkordb/schemas/services/provisioner/v1';
 import ShortUniqueId from 'short-unique-id';
 import { TenantGroupProvisionerFactory } from '../provisioners/TenantGroupProvisioner';
 

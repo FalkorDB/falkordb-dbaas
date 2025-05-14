@@ -4,7 +4,7 @@ import { ApiError } from '@falkordb/errors';
 import {
   SignUpWithEmailRequestBodySchemaType,
   SignUpWithEmailResponseSuccessSchemaType,
-} from '@falkordb/schemas/dist/services/auth/v1';
+} from '@falkordb/schemas/services/auth/v1';
 import { IUsersRepository } from '../../../repositories/users/IUsersRepository';
 
 export class DeleteService {

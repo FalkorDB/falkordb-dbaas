@@ -59,6 +59,14 @@ variable "control_plane_cloud_build_push_endpoint" {
   nullable = true
 }
 
+variable "control_plane_rdb_exports_bucket_name" {
+  type = string
+}
+
+variable "control_plane_rdb_exports_bucket_region" {
+  type = string
+}
+
 ###### PIPELINES DEVELOPMENT ######
 variable "create_pipelines_development" {
   type = bool

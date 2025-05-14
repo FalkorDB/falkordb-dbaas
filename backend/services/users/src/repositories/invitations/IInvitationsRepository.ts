@@ -1,4 +1,4 @@
-import { InvitationType } from '@falkordb/schemas/dist/global';
+import { InvitationType } from '@falkordb/schemas/global';
 
 export abstract class IInvitationsRepository {
   static repositoryName = 'InvitationsRepository';

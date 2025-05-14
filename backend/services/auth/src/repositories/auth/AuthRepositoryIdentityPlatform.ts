@@ -3,7 +3,7 @@ import { IAuthRepository, SignUpResponse } from './IAuthRepository';
 import { GoogleAuth, AuthClient } from 'google-auth-library';
 import { FastifyBaseLogger } from 'fastify';
 import { GaxiosError } from 'gaxios';
-import { AuthTokenSchemaType } from '@falkordb/schemas/dist/global';
+import { AuthTokenSchemaType } from '@falkordb/schemas/global';
 import * as admin from 'firebase-admin';
 
 export class AuthRepositoryIdentityPlatform implements IAuthRepository {

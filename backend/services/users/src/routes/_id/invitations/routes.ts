@@ -3,7 +3,7 @@ import {
   GetUserInvitationsRequestParamsSchema,
   GetUserInvitationsRequestQuerySchema,
   GetUserInvitationsResponseBodySchema,
-} from '@falkordb/schemas/dist/services/users/v1';
+} from '@falkordb/schemas/services/users/v1';
 import { getInvitationsHandler } from './handlers/get';
 import { context as c } from '@opentelemetry/api';
 

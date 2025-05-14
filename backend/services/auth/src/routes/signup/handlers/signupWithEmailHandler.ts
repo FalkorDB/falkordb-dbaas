@@ -1,7 +1,7 @@
 import {
   SignUpWithEmailRequestBodySchemaType,
   SignUpWithEmailResponseSuccessSchemaType,
-} from '@falkordb/schemas/dist/services/auth/v1';
+} from '@falkordb/schemas/services/auth/v1';
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import { IAuthRepository } from '../../../repositories/auth/IAuthRepository';

@@ -6,7 +6,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - 'us-central1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
       - '--build-arg'
       - 'PROJECT=${_SERVICE_NAME}'
       - '--build-arg'
@@ -19,7 +19,7 @@ steps:
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - 'us-central1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
 
   - id: Deploy to Cloud Run
     name: 'gcr.io/cloud-builders/gcloud'
@@ -29,9 +29,9 @@ steps:
       - 'deploy'
       - '${_SERVICE_NAME}'
       - '--image'
-      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - 'us-central1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
       - '--region'
-      - 'europe-west1'
+      - 'us-central1'
       - '--set-env-vars'
       - NODE_ENV=${_NODE_ENV},OMNISTRATE_USER=${_OMNISTRATE_USER},OMNISTRATE_SERVICE_ID=${_OMNISTRATE_SERVICE_ID},OMNISTRATE_ENVIRONMENT_ID=${_OMNISTRATE_ENVIRONMENT_ID},OMNISTRATE_PRODUCT_TIER_ID=${_OMNISTRATE_PRODUCT_TIER_ID},OMNISTRATE_RESOURCE_ID=${_OMNISTRATE_RESOURCE_ID},APPLICATION_PLANE_PROJECT_ID=${_APPLICATION_PLANE_PROJECT_ID},LAST_USED_TIME_THRESHOLD=${_LAST_USED_TIME_THRESHOLD},AWS_ROLE_ARN=${_AWS_ROLE_ARN}
       - '--set-secrets'

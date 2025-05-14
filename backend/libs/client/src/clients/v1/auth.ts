@@ -7,7 +7,7 @@ import {
   SignUpWithEmailResponseSuccessSchemaType,
   VerifyTokenRequestQuerySchemaType,
   VerifyTokenResponseSuccessSchemaType,
-} from '@falkordb/schemas/src/services/auth/v1';
+} from '@falkordb/schemas/services/auth/v1';
 import { Client } from '../../client';
 
 export const AuthV1 = (client: Client) => ({

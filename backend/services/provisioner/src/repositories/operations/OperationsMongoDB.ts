@@ -7,7 +7,7 @@ import {
   CreateOperationParamsSchemaType,
   OperationSchemaType,
   OperationStatusSchemaType,
-} from '@falkordb/schemas/dist/global';
+} from '@falkordb/schemas/global';
 export class OperationsMongoDB implements IOperationsRepository {
   collection = this._client.db().collection('operations');
 

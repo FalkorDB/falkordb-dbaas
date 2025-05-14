@@ -1,4 +1,4 @@
-import { DeleteUserRequestParamsSchemaType } from '@falkordb/schemas/dist/services/auth/v1';
+import { DeleteUserRequestParamsSchemaType } from '@falkordb/schemas/services/auth/v1';
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import { IAuthRepository } from '../../../repositories/auth/IAuthRepository';

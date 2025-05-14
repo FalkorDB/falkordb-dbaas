@@ -1,4 +1,4 @@
-import { GetOmnistrateTokenHeadersSchema } from '@falkordb/schemas/dist/services/auth/v1';
+import { GetOmnistrateTokenHeadersSchema } from '@falkordb/schemas/services/auth/v1';
 import fp from 'fastify-plugin';
 import { getOmnistrateTokenHandler } from './handlers/getOmnistrateTokenHandler';
 

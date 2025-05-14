@@ -1,8 +1,8 @@
 
-import { OperationProviderSchemaType } from '@falkordb/schemas/dist/global/operation';
-import { TenantGroupSchemaType } from '@falkordb/schemas/dist/global/tenantGroup';
+import { OperationProviderSchemaType } from '@falkordb/schemas/global';
+import { TenantGroupSchemaType } from '@falkordb/schemas/global';
 import { TenantGroupGCPProvisioner } from './gcp/TenantGroupGCPProvisioner';
-import { CloudProvisionConfigSchemaType, SupportedRegionsSchemaType } from '@falkordb/schemas/dist/global';
+import { CloudProvisionConfigSchemaType, SupportedRegionsSchemaType } from '@falkordb/schemas/global';
 
 export abstract class TenantGroupProvisioner {
   abstract provision(

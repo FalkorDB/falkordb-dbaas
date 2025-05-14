@@ -13,6 +13,8 @@
   "dependencies": {
     "@falkordb/configs": "workspace:*",
     "@falkordb/errors": "workspace:*",
-    "@falkordb/rest-client": "workspace:^"
+    "@falkordb/rest-client": "workspace:^",
+    "@fastify/swagger": "^8.14.0",
+    "@fastify/swagger-ui": "^3.0.0"
   }
 }

@@ -9,3 +9,6 @@ export { captcha as captchaPlugin };
 
 import falkordbClient from './falkordbClient';
 export { falkordbClient as falkordbClientPlugin };
+
+import omnistrate from './omnistrate';
+export { omnistrate as omnistratePlugin };

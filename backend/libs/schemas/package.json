@@ -4,6 +4,29 @@
   "description": "",
   "main": "dist/index.js",
   "types": "src/index.ts",
+  "module": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./global": {
+      "import": "./dist/global/index.js",
+      "require": "./dist/global/index.js"
+    },
+    "./services": {
+      "import": "./dist/services/index.js",
+      "require": "./dist/services/index.js"
+    },
+    "./services/*": {
+      "import": "./dist/services/*.js",
+      "require": "./dist/services/*.js"
+    },
+    "./services/*/v1": {
+      "import": "./dist/services/*/v1/index.js",
+      "require": "./dist/services/*/v1/index.js"
+    }
+  },
   "scripts": {
     "jest": "jest",
     "test": "jest",
@@ -14,6 +37,7 @@
   "license": "SSPL",
   "dependencies": {
     "@falkordb/configs": "workspace:*",
-    "@falkordb/errors": "workspace:*"
+    "@falkordb/errors": "workspace:*",
+    "@sinclair/typebox": "^0.34.33"
   }
 }

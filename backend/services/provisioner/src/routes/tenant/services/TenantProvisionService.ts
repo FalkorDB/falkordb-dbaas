@@ -5,17 +5,16 @@ import ShortUniqueId from 'short-unique-id';
 import { FastifyBaseLogger } from 'fastify';
 import { ITenantsRepository } from '../../../repositories/tenants/ITenantRepository';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
-import { OperationProviderSchemaType } from '@falkordb/schemas/dist/global/operation';
-import { TenantGroupSchemaType } from '@falkordb/schemas/dist/global/tenantGroup';
-import { TenantGCPProvisioner } from '../provisioners/gcp/TenantGCPProvisioner';
+import { OperationProviderSchemaType } from '@falkordb/schemas/global';
+import { TenantGroupSchemaType } from '@falkordb/schemas/global';
 import { TenantProvisionerFactory } from '../provisioners/TenantProvisioner';
-import { TenantSchemaType, TenantStatusSchemaType } from '@falkordb/schemas/dist/global';
+import { TenantSchemaType, TenantStatusSchemaType } from '@falkordb/schemas/global';
 import {
   TenantProvisionBodySchemaType,
   TenantProvisionResponseSchemaType,
   TenantRefreshParamsSchemaType,
   TenantRefreshResponseSchemaType,
-} from '@falkordb/schemas/dist/services/provisioner/v1/tenant';
+} from '@falkordb/schemas/services/provisioner/v1';
 
 export class TenantProvisionService {
   private _operationsRepository: IOperationsRepository;

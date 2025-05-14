@@ -69,3 +69,9 @@ resource "google_project_iam_custom_role" "velero_role" {
     "iam.serviceAccounts.signBlob",
   ]
 }
+
+resource "google_project_iam_member" "db_exporter_sa_k8s_admin" {
+  project = module.project.project_id
+  role    = "roles/container.admin"
+  member  = "serviceAccount:${var.db_exporter_sa_email}"
+}

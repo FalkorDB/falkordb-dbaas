@@ -1,16 +1,16 @@
 import { ApiError } from '@falkordb/errors';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
-import { OperationProviderSchemaType } from '@falkordb/schemas/dist/global/operation';
+import { OperationProviderSchemaType } from '@falkordb/schemas/global';
 import { TenantGroupGCPProvisioner } from '../provisioners/gcp/TenantGroupGCPProvisioner';
 import ShortUniqueId from 'short-unique-id';
 import { FastifyBaseLogger, FastifyLogFn } from 'fastify';
 import { ITenantGroupRepository } from '../../../repositories/tenant-groups/ITenantGroupsRepository';
-import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '@falkordb/schemas/dist/global/tenantGroup';
+import { TenantGroupSchemaType, TenantGroupStatusSchemaType } from '@falkordb/schemas/global';
 import { uniqueNamesGenerator, adjectives, animals } from 'unique-names-generator';
 import { TenantGroupProvisionerFactory } from '../provisioners/TenantGroupProvisioner';
-import { CloudProvisionConfigSchemaType, SupportedCloudProviderSchemaType } from '@falkordb/schemas/dist/global';
-import { TenantGroupProvisionBodySchemaType, TenantGroupProvisionResponseSchemaType, TenantGroupRefreshParamsSchemaType, TenantGroupRefreshResponseSchemaType } from '@falkordb/schemas/dist/services/provisioner/v1/tenant-group';
+import { CloudProvisionConfigSchemaType, SupportedCloudProviderSchemaType } from '@falkordb/schemas/global';
+import { TenantGroupProvisionBodySchemaType, TenantGroupProvisionResponseSchemaType, TenantGroupRefreshParamsSchemaType, TenantGroupRefreshResponseSchemaType } from '@falkordb/schemas/services/provisioner/v1';
 
 export class TenantGroupProvisionService {
   private _operationsRepository: IOperationsRepository;

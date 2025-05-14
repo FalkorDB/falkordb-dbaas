@@ -7,13 +7,13 @@ import * as stream from 'stream';
 import { STSClient, AssumeRoleWithWebIdentityCommand } from '@aws-sdk/client-sts';
 import { EKSClient, DescribeClusterCommand } from '@aws-sdk/client-eks';
 import axios from 'axios';
-// Create the Cluster Manager Client
-const client = new googleContainerV1.ClusterManagerClient();
 
 export class K8sRepository {
-  constructor(private _options: { logger: Logger }) {}
+  constructor(private _options: { logger: Logger }) { }
 
   private async _getGKECredentials(clusterId: string, region: string) {
+    const client = new googleContainerV1.ClusterManagerClient();
+
     const projectId = process.env.APPLICATION_PLANE_PROJECT_ID;
     assert(projectId, 'Env var APPLICATION_PLANE_PROJECT_ID is required');
     const accessToken = await client.auth.getAccessToken();
@@ -35,7 +35,7 @@ export class K8sRepository {
 
     const res = await axios.get(
       'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=' +
-        targetAudience,
+      targetAudience,
       {
         headers: {
           'Metadata-Flavor': 'Google',

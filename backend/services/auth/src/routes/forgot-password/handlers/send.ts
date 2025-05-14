@@ -1,4 +1,4 @@
-import { SendForgotPasswordRequestBodySchemaType } from '@falkordb/schemas/dist/services/auth/v1';
+import { SendForgotPasswordRequestBodySchemaType } from '@falkordb/schemas/services/auth/v1';
 import { RouteHandlerMethod } from 'fastify';
 import { IAuthRepository } from '../../../repositories/auth/IAuthRepository';
 import { ForgotPasswordService } from '../services/ForgotPasswordService';

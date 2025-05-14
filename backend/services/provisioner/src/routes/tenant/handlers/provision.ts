@@ -1,5 +1,5 @@
 import { RouteHandlerMethod } from 'fastify';
-import { TenantProvisionBodySchemaType, TenantProvisionHeadersSchemaType } from '@falkordb/schemas/dist/services/provisioner/v1/tenant';
+import { TenantProvisionBodySchemaType, TenantProvisionHeadersSchemaType } from '@falkordb/schemas/services/provisioner/v1';
 import { TenantProvisionService } from '../services/TenantProvisionService';
 import { ApiError } from '@falkordb/errors';
 import { IOperationsRepository } from '../../../repositories/operations/IOperationsRepository';
