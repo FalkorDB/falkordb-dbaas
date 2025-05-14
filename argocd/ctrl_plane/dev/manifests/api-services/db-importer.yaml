@@ -34,7 +34,7 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthz
-              port: 3001
+              port: 3000
             initialDelaySeconds: 10
             periodSeconds: 30
             timeoutSeconds: 5
@@ -43,7 +43,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /healthz
-              port: 3001
+              port: 3000
             initialDelaySeconds: 10
             periodSeconds: 30
             timeoutSeconds: 5
@@ -52,7 +52,7 @@ spec:
           startupProbe:
             httpGet:
               path: /healthz
-              port: 3001
+              port: 3000
             initialDelaySeconds: 10
             periodSeconds: 30
             timeoutSeconds: 5

@@ -31,7 +31,7 @@ export const setupApp = () => {
     }
   });
 
-  const port = process.env.QUEUEDASH_PORT || 3000;
+  const port = process.env.PORT || 3000;
   app.listen(port, () => {
     logger.info("Listening on port " + port);
     logger.debug("Visit http://localhost:3000/queuedash");
