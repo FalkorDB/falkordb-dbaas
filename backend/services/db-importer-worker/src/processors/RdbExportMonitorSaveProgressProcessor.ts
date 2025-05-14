@@ -13,12 +13,12 @@ const processor: Processor<RdbExportMonitorSaveProgressProcessorData> = async (j
 
   job.log(`Processing 'rdb-export-monitor-save-progress' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
-  Value.Assert(RdbExportMonitorSaveProgressProcessorDataSchema, job.data);
-
+  
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
-
+  
   try {
+    Value.Assert(RdbExportMonitorSaveProgressProcessorDataSchema, job.data);
 
     const isSaving = await k8sRepository.isSaving(
       job.data.cloudProvider,
