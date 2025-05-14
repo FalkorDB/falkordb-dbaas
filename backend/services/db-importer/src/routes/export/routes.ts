@@ -3,7 +3,7 @@ import { ExportRDBRequestBodySchema, ExportRDBResponseBodySchema } from '@falkor
 import { exportRDBHandler } from './handlers/exportRDBHandler';
 
 export default fp(
-  async function signUp(fastify, opts) {
+  async function handler(fastify, opts) {
     fastify.addHook('preHandler', async (request) => {
       if (request.routerPath.startsWith('/export')) {
         await fastify.authenticateOmnistrate(request);
