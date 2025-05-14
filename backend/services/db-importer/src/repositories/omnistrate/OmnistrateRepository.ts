@@ -82,13 +82,15 @@ export class OmnistrateRepository {
 
     this._options.logger.info({ instanceId }, 'Getting instance');
 
-    const response = await OmnistrateRepository._client.get(
-      `/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/instances`,
-    );
-
-    const instance = response.data['resourceInstances']?.find(
-      (d: unknown) => d?.['consumptionResourceInstanceResult']?.['id'] === instanceId,
-    );
+    let instance = null;
+    try {
+      instance = await OmnistrateRepository._client.get(
+        `/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/instance/${instanceId}`,
+      ).then(response => response.data)
+    } catch (error) {
+      this._options.logger.error({ error }, 'Error getting instance');
+      throw new Error('Error getting instance');
+    }
 
     if (!instance) {
       throw new Error('Instance not found');
@@ -96,7 +98,7 @@ export class OmnistrateRepository {
 
     return {
       id: instance?.['consumptionResourceInstanceResult']?.['id'],
-      clusterId: `${instance.cloudProvider === 'gcp' ? 'c-' + instance?.['deploymentCellID'].replace(/-/g, '') : instance?.['deploymentCellID']}`,
+      clusterId: `${instance?.['cloudProvider'] === 'gcp' ? 'c-' + instance?.['deploymentCellID'].replace(/-/g, '') : instance?.['deploymentCellID']}`,
       region: instance?.['consumptionResourceInstanceResult']?.['region'],
       userId: instance?.['consumptionResourceInstanceResult']?.['createdByUserId'],
       createdDate: instance?.['consumptionResourceInstanceResult']?.['created_at'],
@@ -108,7 +110,7 @@ export class OmnistrateRepository {
       resourceId: Object.entries(
         instance?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology'],
       ).filter((ob) => (ob[1] as unknown)?.['main'])[0][0],
-      cloudProvider: instance?.['consumptionResourceInstanceResult']?.['cloud_provider'],
+      cloudProvider: instance?.['cloudProvider'],
       productTierName: instance?.['productTierName'],
       deploymentType: Object.values(instance?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology']).find(
         ob => (ob as any).main
