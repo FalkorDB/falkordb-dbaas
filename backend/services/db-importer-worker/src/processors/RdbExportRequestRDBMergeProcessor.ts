@@ -14,12 +14,12 @@ const processor: Processor<RdbExportRequestRDBMergeProcessorData> = async (job, 
 
   job.log(`Processing 'rdb-export-request-rdb-merge' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
-  Value.Assert(RdbExportRequestRDBMergeProcessorDataSchema, job.data);
-
+  
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
-
+  
   try {
+    Value.Assert(RdbExportRequestRDBMergeProcessorDataSchema, job.data);
 
     await k8sRepository.createMergeRDBsJob(
       job.data.projectId,

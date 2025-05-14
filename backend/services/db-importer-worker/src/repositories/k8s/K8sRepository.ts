@@ -319,7 +319,7 @@ export class K8sRepository {
 
   async createMergeRDBsJob(
     projectId: string,
-    cloudProvider: 'gcp',
+    cloudProvider: 'gcp' | 'aws',
     clusterId: string,
     region: string,
     namespace: string,
@@ -391,7 +391,7 @@ export class K8sRepository {
 
   async getJobStatus(
     projectId: string,
-    cloudProvider: 'gcp',
+    cloudProvider: 'gcp' | 'aws',
     clusterId: string,
     region: string,
     namespace: string,

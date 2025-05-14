@@ -13,12 +13,12 @@ const processor: Processor<RdbExportRequestReadSignedURLProcessorData> = async (
 
   job.log(`Processing 'rdb-export-request-read-signed-url' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
-  Value.Assert(RdbExportRequestReadSignedURLProcessorDataSchema, job.data);
 
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const blobRepository = container.resolve<IBlobStorageRepository>(IBlobStorageRepository.name);
 
   try {
+    Value.Assert(RdbExportRequestReadSignedURLProcessorDataSchema, job.data);
 
     const readUrl = await blobRepository.getReadUrl(
       job.data.bucketName,
