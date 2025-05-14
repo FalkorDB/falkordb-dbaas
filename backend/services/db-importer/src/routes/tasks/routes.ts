@@ -6,7 +6,6 @@ export default fp(
   async function signUp(fastify, opts) {
     fastify.addHook('preHandler', async (request) => {
       if (request.routerPath.startsWith('/tasks')) {
-        await fastify.validateCaptcha(request);
         await fastify.authenticateOmnistrate(request);
       }
     });

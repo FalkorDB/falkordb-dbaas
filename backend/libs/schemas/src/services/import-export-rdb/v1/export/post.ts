@@ -8,7 +8,6 @@ export const ExportRDBRequestBodySchema = Type.Object({
   password: Type.Optional(Type.String({
     pattern: "^[a-zA-Z0-9._!\@\#\$\%\^\&\*]+$"
   })),
-  "g-recaptcha-response": Type.Optional(Type.String()),
 });
 
 export type ExportRDBRequestBody = Static<typeof ExportRDBRequestBodySchema>;
