@@ -111,7 +111,7 @@ jobs:
           TF_LOG: DEBUG
         run: |
           cd ${{ matrix.stack.path }}
-          tofu plan -no-color -out=tfplan
+          tofu plan -no-color -input=false -out=tfplan
           plan=$(tofu show tfplan | sed -e "s/\`/'/g")
           delimiter="$(openssl rand -hex 8)"
           echo "PLAN_OUTPUT<<EOF-$delimiter" >> "$GITHUB_OUTPUT"
