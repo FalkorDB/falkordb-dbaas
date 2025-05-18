@@ -100,4 +100,4 @@ jobs:
       - name: Apply stack
         run: |
           cd ${{ matrix.stack.path }}
-          tofu apply -auto-approve
+          tofu apply -input=false -auto-approve
