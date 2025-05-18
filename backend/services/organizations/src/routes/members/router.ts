@@ -1,7 +1,7 @@
 import {
   ListMembersRequestQuerySchema,
   ListMembersResponseSchema,
-} from '@falkordb/schemas/dist/services/organizations/v1';
+} from '@falkordb/schemas/services/organizations/v1';
 import fp from 'fastify-plugin';
 import { listMembersHandler } from './handlers/list';
 

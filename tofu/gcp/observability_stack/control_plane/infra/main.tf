@@ -99,6 +99,7 @@ module "gke" {
   enable_private_endpoint              = false
   enable_private_nodes                 = true
   http_load_balancing                  = true
+  gcs_fuse_csi_driver                  = true
 
   default_max_pods_per_node = var.default_max_pods_per_node
 
@@ -128,6 +129,16 @@ module "gke" {
       initial_node_count = 0
       max_pods_per_node  = 25
     },
+    {
+      name               = "backend"
+      machine_type       = "e2-standard-2"
+      disk_size_gb       = 30
+      min_count          = 0
+      max_count          = 20
+      image_type         = "COS_CONTAINERD"
+      initial_node_count = 0
+      max_pods_per_node  = 25
+    },
   ]
   node_pools_resource_labels = {
     "default-pool" = {
@@ -136,7 +147,9 @@ module "gke" {
     "observability-resources" = {
       "goog-gke-node-pool-provisioning-model" = "on-demand"
     }
-
+    "backend" = {
+      "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
   }
 }
 
@@ -258,6 +271,16 @@ resource "google_project_iam_member" "frontend" {
   project = var.project_id
   role    = "roles/artifactregistry.reader"
   member  = "serviceAccount:${module.gke.service_account}"
+}
+
+data "google_service_account" "db_exporter_sa" {
+  account_id = var.db_exporter_sa_id
+}
+
+resource "google_artifact_registry_repository_iam_member" "db_exporter_sa" {
+  repository = google_artifact_registry_repository.backend.id
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${data.google_service_account.db_exporter_sa.email}"
 }
 
 module "customer_observability_ip" {

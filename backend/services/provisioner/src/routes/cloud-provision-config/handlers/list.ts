@@ -1,7 +1,7 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import { ICloudProvisionConfigsRepository } from '../../../repositories/cloud-provision-configs/ICloudProvisionConfigsRepository';
-import { CloudProvisionConfigListQuerySchemaType } from '@falkordb/schemas/dist/services/provisioner/v1/cloud-provision-config';
+import { CloudProvisionConfigListQuerySchemaType } from '@falkordb/schemas/services/provisioner/v1';
 
 export const cloudProvisionConfigListHandler: RouteHandlerMethod<
   undefined,
