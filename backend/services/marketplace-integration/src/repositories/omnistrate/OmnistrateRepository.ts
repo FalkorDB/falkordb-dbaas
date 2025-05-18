@@ -141,6 +141,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       productTierId,
       onBehalfOfCustomerUserId: userId,
       externalPayerId: marketplaceEntitlementId,
+      paymentChannelType: "CUSTOM",
     });
 
     const subscription = response.data['subscription'];
