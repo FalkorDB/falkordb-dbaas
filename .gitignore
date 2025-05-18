@@ -19,3 +19,5 @@ backend.conf
 node_modules
 dist
 clusters.yml
+.DS_Store
+**/.DS_Store
