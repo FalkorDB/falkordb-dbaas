@@ -210,7 +210,7 @@ export class TaskQueueBullMQRepository {
           ExporterSchemaMap[ExporterTaskNames.RdbExportMonitorRDBMerge],
           {
             taskId: task.taskId,
-            cloudProvider: 'gcp',
+            cloudProvider: task.payload.cloudProvider,
             projectId: process.env.CTRL_PLANE_PROJECT_ID,
             clusterId: process.env.CTRL_PLANE_CLUSTER_ID,
             region: process.env.CTRL_PLANE_REGION,
@@ -225,7 +225,7 @@ export class TaskQueueBullMQRepository {
               ExporterSchemaMap[ExporterTaskNames.RdbExportRequestRDBMerge],
               {
                 taskId: task.taskId,
-                cloudProvider: 'gcp',
+                cloudProvider: task.payload.cloudProvider,
                 projectId: process.env.CTRL_PLANE_PROJECT_ID,
                 clusterId: process.env.CTRL_PLANE_CLUSTER_ID,
                 region: process.env.CTRL_PLANE_REGION,

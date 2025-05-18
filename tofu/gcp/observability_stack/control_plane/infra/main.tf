@@ -273,10 +273,14 @@ resource "google_project_iam_member" "frontend" {
   member  = "serviceAccount:${module.gke.service_account}"
 }
 
+data "google_service_account" "db_exporter_sa" {
+  account_id = var.db_exporter_sa_id
+}
+
 resource "google_artifact_registry_repository_iam_member" "db_exporter_sa" {
   repository = google_artifact_registry_repository.backend.id
   role       = "roles/artifactregistry.reader"
-  member     = "serviceAccount:db-exporter-sa@${var.project_id}.iam.gserviceaccount.com"
+  member     = "serviceAccount:${data.google_service_account.db_exporter_sa.email}"
 }
 
 module "customer_observability_ip" {

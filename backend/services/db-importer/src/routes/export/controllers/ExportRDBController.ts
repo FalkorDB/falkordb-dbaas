@@ -97,11 +97,17 @@ export class ExportRDBController {
 
   async _getPendingExportTasks(instanceId: string): Promise<ExportRDBTaskType[]> {
     try {
-      return await this.tasksRepository.listTasks(instanceId, {
+      const tasks = await this.tasksRepository.listTasks(instanceId, {
         page: 1,
         pageSize: 1,
         status: ['created', 'pending', 'in_progress'],
       }).then((result) => result.data);
+      // filter out expired tasks
+      const now = Date.now();
+      const pendingTasks = tasks.filter((task) => {
+        return (new Date(task.createdAt).getTime() + 60 * 60 * 1000) > now; // 1 hour
+      });
+      return pendingTasks;
     } catch (error) {
       this._opts.logger.error({ error }, 'Error getting pending tasks');
       throw ApiError.internalServerError("Error getting pending tasks", 'PENDING_TASKS_ERROR');

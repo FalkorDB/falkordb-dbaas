@@ -3,10 +3,9 @@ import { ListExportRDBTasksRequestQuerySchema, ListExportRDBTasksResponseSchema 
 import { listTasksHandler } from './handlers/listTasksHandler';
 
 export default fp(
-  async function signUp(fastify, opts) {
+  async function handler(fastify, opts) {
     fastify.addHook('preHandler', async (request) => {
       if (request.routerPath.startsWith('/tasks')) {
-        await fastify.validateCaptcha(request);
         await fastify.authenticateOmnistrate(request);
       }
     });

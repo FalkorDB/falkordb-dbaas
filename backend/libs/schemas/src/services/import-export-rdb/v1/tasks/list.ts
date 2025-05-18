@@ -12,7 +12,6 @@ export const ListExportRDBTasksRequestQuerySchema = Type.Object({
   pageSize: Type.Integer({
     default: 10,
   }),
-  "g-recaptcha-response": Type.Optional(Type.String()),
 });
 
 export type ListExportRDBTasksRequestQueryType = Static<typeof ListExportRDBTasksRequestQuerySchema>;

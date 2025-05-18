@@ -20,7 +20,7 @@ spec:
           image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/db-importer-worker:1.0.0
           imagePullPolicy: Always
           ports:
-            - containerPort: 3001
+            - containerPort: 3000
           resources:
             requests:
               memory: "128Mi"
@@ -31,6 +31,33 @@ spec:
           envFrom:
             - secretRef:
                 name: db-importer-worker-env
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
 ---
 apiVersion: v1
 kind: Service
@@ -42,6 +69,6 @@ spec:
     app: db-importer-worker
   ports:
     - protocol: TCP
-      port: 3001
-      targetPort: 3001
+      port: 3000
+      targetPort: 3000
   type: ClusterIP

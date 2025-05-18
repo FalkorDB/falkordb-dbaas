@@ -13,15 +13,15 @@ const processor: Processor<RdbExportCopyRDBToBucketProcessorData> = async (job, 
   const logger = container.resolve<Logger>('logger');
 
   job.log(`Processing 'rdb-export-copy-rdb-to-bucket' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
-
-  Value.Assert(RdbExportCopyRDBToBucketProcessorDataSchema, job.data);
-
+  
+  
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
   const blobRepository = container.resolve<IBlobStorageRepository>(IBlobStorageRepository.name);
-
+  
   try {
-
+    Value.Assert(RdbExportCopyRDBToBucketProcessorDataSchema, job.data);
+    
 
     const writeUrl = await blobRepository.getWriteUrl(
       job.data.bucketName,

@@ -174,6 +174,13 @@ resource "google_service_account" "db_exporter_sa" {
   display_name = "DB Exporter SA"
 }
 
+# add token creator role to the service account
+resource "google_service_account_iam_member" "db_exporter_sa_token_creator" {
+  service_account_id = google_service_account.db_exporter_sa.id
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${module.tenant_provision.provisioning_sa_email}"
+}
+
 resource "google_storage_bucket_iam_member" "db_exporter_sa" {
   bucket = google_storage_bucket.rdb_exports.name
   role   = "roles/storage.objectAdmin"

@@ -13,12 +13,12 @@ const processor: Processor<RdbExportSendSaveCommandProcessorData> = async (job, 
 
   job.log(`Processing 'rdb-export-send-save-command' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
-  Value.Assert(RdbExportSendSaveCommandProcessorDataSchema, job.data);
 
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
 
   try {
+    Value.Assert(RdbExportSendSaveCommandProcessorDataSchema, job.data);
 
     await k8sRepository.sendSaveCommand(
       job.data.cloudProvider,

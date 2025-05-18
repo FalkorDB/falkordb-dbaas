@@ -17,3 +17,7 @@ output "db_exporter_sa_email" {
 output "db_exporter_sa_id" {
   value = google_service_account.db_exporter_sa.id
 }
+
+output "db_exporter_sa_number" {
+  value = google_service_account.db_exporter_sa.unique_id
+}

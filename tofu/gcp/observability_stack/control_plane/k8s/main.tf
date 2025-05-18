@@ -127,6 +127,10 @@ resource "kubernetes_secret" "grafana-google-credentials" {
   }
 }
 
+data "google_service_account" "db_exporter_sa" {
+  account_id = var.db_exporter_sa_id
+}
+
 resource "kubernetes_namespace" "api" {
   metadata {
     name = "api"
@@ -139,7 +143,7 @@ resource "kubernetes_service_account" "db-exporter-sa" {
     namespace = kubernetes_namespace.api.id
 
     annotations = {
-      "iam.gke.io/gcp-service-account" = replace(var.db_exporter_sa_id, "/projects/(.+)/serviceAccounts//", "")
+      "iam.gke.io/gcp-service-account" = data.google_service_account.db_exporter_sa.email
     }
   }
 
@@ -159,6 +163,7 @@ resource "google_service_account_iam_binding" "db-exporter-sa-token-creator" {
   role               = "roles/iam.serviceAccountTokenCreator"
   members = [
     "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.api.metadata.0.name}/${kubernetes_service_account.db-exporter-sa.metadata.0.name}]",
+    "serviceAccount:${data.google_service_account.db_exporter_sa.email}",
   ]
 }
 
