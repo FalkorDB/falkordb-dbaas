@@ -22,6 +22,17 @@ spec:
             enabled: true
             storageClass: "standard-rwo"
             size: 10Gi
+          extraVolumes:
+          - name: redis-acl
+            secret:
+              secretName: redis-acl
+          extraVolumeMounts:
+          - name: redis-acl
+            readOnly: true
+            subPath: users.acl
+            mountPath: "/etc/redis/users.acl"
+        commonConfiguration:
+          aclfile /etc/redis/users.acl
         sentinel:
           enabled: false
         nodeSelector:

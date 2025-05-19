@@ -20,6 +20,8 @@ spec:
           enabled: true
           storageClass: "standard-rwo"
           size: 50Gi
+        extraEnvVarsSecret: mongodb-env
+          
   destination:
     server: https://kubernetes.default.svc
     namespace: api
