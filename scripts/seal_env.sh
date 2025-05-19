@@ -13,6 +13,6 @@ ENV_FILE_DIR=$(dirname "$ENV_FILE")
 
 kubectl create secret generic $ENV_FILE_NAME --dry-run=client -n $NAMESPACE --from-env-file=$ENV_FILE -o yaml >"$ENV_FILE_DIR/$ENV_FILE_NAME.yaml"
 
-kubeseal --cert $CERT_FILE -o yaml -f "$ENV_FILE_DIR/$ENV_FILE_NAME.yaml" -w "$ENV_FILE_DIR/$ENV_FILE_NAME-secret.yaml"
+kubeseal --cert $CERT_FILE -o yaml -n $NAMESPACE -f "$ENV_FILE_DIR/$ENV_FILE_NAME.yaml" -w "$ENV_FILE_DIR/$ENV_FILE_NAME-secret.yaml"
 
 rm "$ENV_FILE_DIR/$ENV_FILE_NAME.yaml"
