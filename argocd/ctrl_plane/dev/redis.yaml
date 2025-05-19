@@ -16,6 +16,8 @@ spec:
         architecture: standalone
         auth:
           enabled: true
+          existingSecret: redis-acl
+          existingSecretPasswordKey: rootPassword
         master:
           resourcesPreset: "small"
           persistence:
