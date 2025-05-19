@@ -32,3 +32,4 @@ spec:
   syncPolicy:
     syncOptions:
       - CreateNamespace="true"
+      - DisableAutomatedSync=true
