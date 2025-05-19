@@ -33,12 +33,12 @@ spec:
             readOnly: true
             subPath: users.acl
             mountPath: "/etc/redis/users.acl"
+        nodeSelector:
+          node_pool: backend
         commonConfiguration:
           aclfile /etc/redis/users.acl
         sentinel:
           enabled: false
-        nodeSelector:
-          node_pool: backend
   destination:
     server: https://kubernetes.default.svc
     namespace: api
