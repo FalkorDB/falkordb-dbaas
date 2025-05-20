@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   load-stack-matrix:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
     steps:
       - name: Checkout repository
@@ -39,7 +39,7 @@ jobs:
   apply:
     needs: load-stack-matrix
     name: Apply stack ${{ matrix.stack.name }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
     strategy:
       matrix:

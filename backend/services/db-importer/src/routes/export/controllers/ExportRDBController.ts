@@ -202,6 +202,11 @@ export class ExportRDBController {
       await this.taskQueueRepository.submitTask(task);
     } catch (error) {
       this._opts.logger.error({ error }, 'Error submitting task');
+      this.tasksRepository.updateTask({
+        taskId: task.taskId,
+        status: 'failed',
+        error: 'Error submitting task',
+      });
       throw ApiError.internalServerError("Error submitting task", 'TASK_SUBMISSION_ERROR');
     }
 

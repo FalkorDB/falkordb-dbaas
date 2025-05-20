@@ -23,7 +23,7 @@ env:
 
 jobs:
   load-stack-matrix:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     # if the pr is to the main branch, set the environment to prod. If the event is workflow_dispatch, set the environment to the base branch
     environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
     steps:
@@ -47,7 +47,7 @@ jobs:
   plan:
     needs: load-stack-matrix
     name: Plan stack ${{ matrix.stack.name }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
     strategy:
       matrix:
