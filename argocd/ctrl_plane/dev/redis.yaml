@@ -16,16 +16,29 @@ spec:
         architecture: standalone
         auth:
           enabled: true
+          existingSecret: redis-acl
+          existingSecretPasswordKey: rootPassword
         master:
           resourcesPreset: "small"
           persistence:
             enabled: true
             storageClass: "standard-rwo"
             size: 10Gi
-        sentinel:
-          enabled: false
+          extraVolumes:
+          - name: redis-acl
+            secret:
+              secretName: redis-acl
+          extraVolumeMounts:
+          - name: redis-acl
+            readOnly: true
+            subPath: users.acl
+            mountPath: "/etc/redis/users.acl"
         nodeSelector:
           node_pool: backend
+        commonConfiguration:
+          aclfile /etc/redis/users.acl
+        sentinel:
+          enabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: api

@@ -58,6 +58,8 @@ spec:
             timeoutSeconds: 5
             successThreshold: 1
             failureThreshold: 3
+      nodeSelector:
+        node_pool: backend
 ---
 apiVersion: v1
 kind: Service
