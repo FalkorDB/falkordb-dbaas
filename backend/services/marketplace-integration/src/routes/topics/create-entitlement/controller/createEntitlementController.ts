@@ -73,7 +73,6 @@ export class CreateEntitlementController {
       await this.omnistrateRepository.createSubscription({
         productTierId: this.params.omnistrateFreeProductTierId,
         marketplaceAccountId,
-        entitlementId,
       }).then((result) => {
         subscriptionId = result.subscriptionId;
       });

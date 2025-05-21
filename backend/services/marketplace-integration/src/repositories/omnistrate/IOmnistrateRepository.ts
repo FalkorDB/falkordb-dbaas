@@ -7,7 +7,7 @@ export abstract class IOmnistrateRepository {
   }): Promise<void>;
 
 
-  abstract createSubscription(params: { productTierId: string, marketplaceAccountId: string; entitlementId: string }): Promise<{ subscriptionId: string }>;
+  abstract createSubscription(params: { productTierId: string, marketplaceAccountId: string; entitlementId?: string }): Promise<{ subscriptionId: string }>;
 
   abstract inviteUserToSubscription(params: {
     subscriptionId: string;

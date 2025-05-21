@@ -127,7 +127,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   private async _createSubscription(
     productTierId: string,
     userId: string,
-    marketplaceEntitlementId: string,
+    marketplaceEntitlementId?: string,
   ): Promise<{ subscriptionId: string }> {
     this._opts.logger.info(
       { productTierId, marketplaceEntitlementId, dryRun: this._opts.dryRun },
@@ -137,12 +137,20 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     if (this._opts?.dryRun) {
       return { subscriptionId: '123' };
     }
-    const response = await OmnistrateRepository._client.post(`/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/subscription`, {
+    const data = {
       productTierId,
       onBehalfOfCustomerUserId: userId,
       externalPayerId: marketplaceEntitlementId,
       paymentChannelType: "CUSTOM",
-    });
+    };
+
+    if (!marketplaceEntitlementId) {
+      delete data.externalPayerId;
+      delete data.paymentChannelType;
+    }
+
+    const response = await OmnistrateRepository._client.post(`/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/subscription`, data);
+
 
     const subscription = response.data['subscription'];
     if (!subscription) {
@@ -459,7 +467,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   async createSubscription(params: {
     productTierId: string,
     marketplaceAccountId: string
-    entitlementId: string
+    entitlementId?: string
   }): Promise<{ subscriptionId: string }> {
     this._opts.logger.info(
       {
