@@ -5,7 +5,6 @@ export const CreateAccountMessageSchema = Type.Object({
   userEmail: Type.String(),
   name: Type.String(),
   companyName: Type.String(),
-  passwordRef: Type.String(),
 });
 
 export type CreateAccountMessageType = Static<typeof CreateAccountMessageSchema>;

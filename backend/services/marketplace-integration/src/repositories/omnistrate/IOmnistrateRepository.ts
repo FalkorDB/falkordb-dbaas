@@ -1,13 +1,25 @@
 export abstract class IOmnistrateRepository {
   static repositoryName: string = 'IOmnistrateRepository';
 
-  abstract createReadOnlySubscription(params: { marketplaceAccountId: string; userEmail: string }): Promise<void>;
+  abstract createServiceAccount(params: {
+    marketplaceAccountId: string;
+    companyName: string;
+  }): Promise<void>;
 
-  abstract createFreeDeployment(params: { marketplaceAccountId: string; entitlementId: string }): Promise<{
+
+  abstract createSubscription(params: { productTierId: string, marketplaceAccountId: string; entitlementId: string }): Promise<{ subscriptionId: string }>;
+
+  abstract inviteUserToSubscription(params: {
+    subscriptionId: string;
+    email: string;
+    role: 'reader' | 'writer'
+  }): Promise<void>;
+
+  abstract createFreeDeployment(params: { marketplaceAccountId: string; }): Promise<{
     instanceId: string;
     username: string;
     password: string;
   }>;
 
-  abstract deleteDeployment(params: { marketplaceAccountId: string; entitlementId: string }): Promise<void>;
+  abstract deleteDeployments(params: { marketplaceAccountId: string }): Promise<void>;
 }

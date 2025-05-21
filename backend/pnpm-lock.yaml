@@ -804,7 +804,7 @@ importers:
         specifier: ^29.5.12
         version: 29.5.12
       '@types/node':
-        specifier: ^20.11.21
+        specifier: ^20.11.25
         version: 20.11.25
       '@typescript-eslint/eslint-plugin':
         specifier: ^7.1.0
