@@ -34,6 +34,33 @@ export const GET = async (req: NextRequest) => {
 
   // check if token is set
   if (!token) {
+
+    const grafana_session = req.cookies.get("grafana_session");
+    if (grafana_session) {
+      const response = await axios.get(process.env.INTERNAL_GRAFANA_URL + '/api/user', {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Cookie': `grafana_session=${grafana_session.value}`,
+        },
+      });
+      if (response.status === 200) {
+        const login = response.data.login;
+        if (login === process.env.GRAFANA_SA_USERNAME) {
+          return NextResponse.json(
+            {},
+            {
+              status: 200,
+              headers: {
+                "x-webauth-user": login,
+              },
+            }
+          );
+        }
+      }
+
+    }
+
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

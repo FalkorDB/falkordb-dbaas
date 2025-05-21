@@ -92,12 +92,11 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
   }
 
   try {
-    await client.postDashboard(
+    await client.importDashboard(
       null,
       {
         folderUid,
-        overwrite: false,
-        message: "Initial dashboard",
+        overwrite: true,
         dashboard: await getDashboard(folderName),
       },
       {
