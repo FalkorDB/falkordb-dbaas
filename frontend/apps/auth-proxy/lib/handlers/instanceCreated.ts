@@ -97,6 +97,7 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
       {
         folderUid,
         overwrite: true,
+        inputs: [],
         dashboard: await getDashboard(folderName),
       },
       {
@@ -123,6 +124,7 @@ const getDashboard = async (uid: string) => {
     .then((res) => res.data);
   dashboard.uid = uid;
   dashboard.title = "FalkorDB dashboard for " + uid;
+  dashboard.id = null;
 
   const nsTemplatingIdx = dashboard.templating.list.findIndex(
     (v: { name: string }) => v.name === "namespace"
