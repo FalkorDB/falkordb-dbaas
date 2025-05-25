@@ -2,7 +2,7 @@ import { ExportRDBTaskType, MultiShardRDBExportPayloadType } from "@falkordb/sch
 import { FastifyBaseLogger } from "fastify";
 import { FlowChildJob, FlowJob, FlowProducer, JobsOptions } from 'bullmq';
 import { Static, TSchema } from "@sinclair/typebox";
-import { ExporterSchemaMap, ExporterTaskNames } from "@falkordb/schemas/services/db-importer-worker/v1";
+import { ProcessorsSchemaMap, RdbExportTaskNames } from "@falkordb/schemas/services/db-importer-worker/v1";
 import { Value } from "@sinclair/typebox/value";
 import { assert } from "console";
 
@@ -23,7 +23,7 @@ export class TaskQueueBullMQRepository {
   }
 
   _makeJobNode<T extends TSchema>(
-    name: ExporterTaskNames,
+    name: RdbExportTaskNames,
     schema: T,
     data: Static<T>,
     opts: JobsOptions = { failParentOnFailure: true },
@@ -45,8 +45,8 @@ export class TaskQueueBullMQRepository {
   ): FlowJob {
     this._opts.logger.debug(`Creating single shard RDB export flow for task: ${task.taskId}`);
     return this._makeJobNode(
-      ExporterTaskNames.RdbExportCopyRdbToBucket,
-      ExporterSchemaMap[ExporterTaskNames.RdbExportCopyRdbToBucket],
+      RdbExportTaskNames.RdbExportCopyRdbToBucket,
+      ProcessorsSchemaMap[RdbExportTaskNames.RdbExportCopyRdbToBucket],
       {
         taskId: task.taskId,
         cloudProvider: task.payload.cloudProvider,
@@ -62,8 +62,8 @@ export class TaskQueueBullMQRepository {
       },
       [
         this._makeJobNode(
-          ExporterTaskNames.RdbExportRequestReadSignedURL,
-          ExporterSchemaMap[ExporterTaskNames.RdbExportRequestReadSignedURL],
+          RdbExportTaskNames.RdbExportRequestReadSignedURL,
+          ProcessorsSchemaMap[RdbExportTaskNames.RdbExportRequestReadSignedURL],
           {
             taskId: task.taskId,
             bucketName: task.payload.destination.bucketName,
@@ -75,8 +75,8 @@ export class TaskQueueBullMQRepository {
           },
           [
             this._makeJobNode(
-              ExporterTaskNames.RdbExportMonitorSaveProgress,
-              ExporterSchemaMap[ExporterTaskNames.RdbExportMonitorSaveProgress],
+              RdbExportTaskNames.RdbExportMonitorSaveProgress,
+              ProcessorsSchemaMap[RdbExportTaskNames.RdbExportMonitorSaveProgress],
               {
                 taskId: task.taskId,
                 podId: task.payload.podId,
@@ -91,8 +91,8 @@ export class TaskQueueBullMQRepository {
               },
               [
                 this._makeJobNode(
-                  ExporterTaskNames.RdbExportSendSaveCommand,
-                  ExporterSchemaMap[ExporterTaskNames.RdbExportSendSaveCommand],
+                  RdbExportTaskNames.RdbExportSendSaveCommand,
+                  ProcessorsSchemaMap[RdbExportTaskNames.RdbExportSendSaveCommand],
                   {
                     taskId: task.taskId,
                     podId: task.payload.podId,
@@ -123,8 +123,8 @@ export class TaskQueueBullMQRepository {
 
 
       return this._makeJobNode(
-        ExporterTaskNames.RdbExportCopyRdbToBucket,
-        ExporterSchemaMap[ExporterTaskNames.RdbExportCopyRdbToBucket],
+        RdbExportTaskNames.RdbExportCopyRdbToBucket,
+        ProcessorsSchemaMap[RdbExportTaskNames.RdbExportCopyRdbToBucket],
         {
           taskId: task.taskId,
           cloudProvider: task.payload.cloudProvider,
@@ -140,8 +140,8 @@ export class TaskQueueBullMQRepository {
         },
         [
           this._makeJobNode(
-            ExporterTaskNames.RdbExportRequestReadSignedURL,
-            ExporterSchemaMap[ExporterTaskNames.RdbExportRequestReadSignedURL],
+            RdbExportTaskNames.RdbExportRequestReadSignedURL,
+            ProcessorsSchemaMap[RdbExportTaskNames.RdbExportRequestReadSignedURL],
             {
               taskId: task.taskId,
               bucketName: task.payload.destination.bucketName,
@@ -153,8 +153,8 @@ export class TaskQueueBullMQRepository {
             },
             [
               this._makeJobNode(
-                ExporterTaskNames.RdbExportMonitorSaveProgress,
-                ExporterSchemaMap[ExporterTaskNames.RdbExportMonitorSaveProgress],
+                RdbExportTaskNames.RdbExportMonitorSaveProgress,
+                ProcessorsSchemaMap[RdbExportTaskNames.RdbExportMonitorSaveProgress],
                 {
                   taskId: task.taskId,
                   podId: node.podId,
@@ -169,8 +169,8 @@ export class TaskQueueBullMQRepository {
                 },
                 [
                   this._makeJobNode(
-                    ExporterTaskNames.RdbExportSendSaveCommand,
-                    ExporterSchemaMap[ExporterTaskNames.RdbExportSendSaveCommand],
+                    RdbExportTaskNames.RdbExportSendSaveCommand,
+                    ProcessorsSchemaMap[RdbExportTaskNames.RdbExportSendSaveCommand],
                     {
                       taskId: task.taskId,
                       podId: node.podId,
@@ -193,8 +193,8 @@ export class TaskQueueBullMQRepository {
     }
 
     return this._makeJobNode(
-      ExporterTaskNames.RdbExportRequestReadSignedURL,
-      ExporterSchemaMap[ExporterTaskNames.RdbExportRequestReadSignedURL],
+      RdbExportTaskNames.RdbExportRequestReadSignedURL,
+      ProcessorsSchemaMap[RdbExportTaskNames.RdbExportRequestReadSignedURL],
       {
         taskId: task.taskId,
         bucketName: task.payload.destination.bucketName,
@@ -206,8 +206,8 @@ export class TaskQueueBullMQRepository {
       },
       [
         this._makeJobNode(
-          ExporterTaskNames.RdbExportMonitorRDBMerge,
-          ExporterSchemaMap[ExporterTaskNames.RdbExportMonitorRDBMerge],
+          RdbExportTaskNames.RdbExportMonitorRDBMerge,
+          ProcessorsSchemaMap[RdbExportTaskNames.RdbExportMonitorRDBMerge],
           {
             taskId: task.taskId,
             cloudProvider: task.payload.cloudProvider,
@@ -221,8 +221,8 @@ export class TaskQueueBullMQRepository {
           },
           [
             this._makeJobNode(
-              ExporterTaskNames.RdbExportRequestRDBMerge,
-              ExporterSchemaMap[ExporterTaskNames.RdbExportRequestRDBMerge],
+              RdbExportTaskNames.RdbExportRequestRDBMerge,
+              ProcessorsSchemaMap[RdbExportTaskNames.RdbExportRequestRDBMerge],
               {
                 taskId: task.taskId,
                 cloudProvider: task.payload.cloudProvider,

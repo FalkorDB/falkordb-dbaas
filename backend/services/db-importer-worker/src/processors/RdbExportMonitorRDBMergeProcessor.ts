@@ -3,7 +3,7 @@ import { setupContainer } from "../container";
 import { ITasksDBRepository } from "../repositories/tasks";
 import { K8sRepository } from "../repositories/k8s/K8sRepository";
 import { Logger } from 'pino';
-import { RdbExportMonitorRDBMergeProcessorDataSchema, RdbExportMonitorRDBMergeProcessorData, ExporterTaskNames } from '@falkordb/schemas/services/db-importer-worker/v1'
+import { RdbExportMonitorRDBMergeProcessorDataSchema, RdbExportMonitorRDBMergeProcessorData, RdbExportTaskNames } from '@falkordb/schemas/services/db-importer-worker/v1'
 import { Value } from '@sinclair/typebox/value'
 
 const processor: Processor<RdbExportMonitorRDBMergeProcessorData> = async (job, token) => {
@@ -56,7 +56,7 @@ const processor: Processor<RdbExportMonitorRDBMergeProcessorData> = async (job, 
 }
 
 export default {
-  name: ExporterTaskNames.RdbExportMonitorRDBMerge,
+  name: RdbExportTaskNames.RdbExportMonitorRDBMerge,
   processor,
   concurrency: undefined,
   schema: RdbExportMonitorRDBMergeProcessorDataSchema,
