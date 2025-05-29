@@ -5,6 +5,7 @@ import { SupportedCloudProviderSchema } from '.';
 export const TaskTypesSchema = Type.Union([
   Type.Literal('SingleShardRDBExport'),
   Type.Literal('MultiShardRDBExport'),
+  Type.Literal('RDBImport')
 ]);
 export type TaskTypesType = Static<typeof TaskTypesSchema>;
 
@@ -64,7 +65,6 @@ export const TaskStatusSchema = Type.Union([
 ]);
 export type TaskStatusType = Static<typeof TaskStatusSchema>;
 
-
 export const ExportRDBTaskSchema = Type.Object({
   taskId: Type.String(),
   type: TaskTypesSchema,
@@ -76,3 +76,40 @@ export const ExportRDBTaskSchema = Type.Object({
   output: Type.Optional(RDBExportOutputSchema),
 });
 export type ExportRDBTaskType = Static<typeof ExportRDBTaskSchema>;
+
+export const RDBImportOutputSchema = Type.Object({
+  numberOfKeys: Type.Optional(Type.Number()),
+});
+export type RDBImportOutputType = Static<typeof RDBImportOutputSchema>;
+
+export const RDBImportTaskPayloadSchema = Type.Object({
+  cloudProvider: SupportedCloudProviderSchema,
+  region: Type.String(),
+  clusterId: Type.String(),
+  instanceId: Type.String(),
+  podIds: Type.Array(Type.String()),
+  hasTLS: Type.Boolean(),
+  bucketName: Type.String(),
+  fileName: Type.String(),
+  rdbSizeFileName: Type.String(),
+  rdbKeyNumberFileName: Type.String(),
+  deploymentSizeInMb: Type.Number(),
+  backupPath: Type.String(),
+  aofEnabled: Type.Boolean(),
+  isCluster: Type.Boolean(),
+});
+
+export const ImportRDBTaskSchema = Type.Object({
+  taskId: Type.String(),
+  type: TaskTypesSchema,
+  createdAt: Type.String(),
+  updatedAt: Type.String(),
+  status: TaskStatusSchema,
+  error: Type.Optional(Type.String()),
+  payload: RDBImportTaskPayloadSchema,
+  output: Type.Optional(RDBImportOutputSchema),
+});
+export type ImportRDBTaskType = Static<typeof ImportRDBTaskSchema>;
+
+
+export type TaskDocumentType = ExportRDBTaskType | ImportRDBTaskType;

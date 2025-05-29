@@ -1,5 +1,5 @@
 import { Type, type Static } from '@sinclair/typebox';
-import { ExportRDBTaskSchema } from '../../../../global/export-rdb-task';
+import { ExportRDBTaskSchema } from '../../../../global/rdb-task';
 
 /****** List export rdb task *****/
 

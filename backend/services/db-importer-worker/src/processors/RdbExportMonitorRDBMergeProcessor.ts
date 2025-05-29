@@ -13,10 +13,10 @@ const processor: Processor<RdbExportMonitorRDBMergeProcessorData> = async (job, 
 
   job.log(`Processing 'rdb-export-monitor-rdb-merge' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
-  
+
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
-  
+
   try {
     Value.Assert(RdbExportMonitorRDBMergeProcessorDataSchema, job.data);
 
@@ -26,7 +26,7 @@ const processor: Processor<RdbExportMonitorRDBMergeProcessorData> = async (job, 
       job.data.clusterId,
       job.data.region,
       job.data.namespace,
-      job.data.taskId
+      `merge-rdbs-job-${job.data.taskId}`
     )
 
     if (jobStatus === 'failed') {
