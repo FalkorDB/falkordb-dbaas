@@ -1,9 +1,9 @@
 import { Type, type Static } from '@sinclair/typebox';
-import { ExportRDBTaskSchema } from '../../../../global/rdb-task';
+import { TaskDocumentSchema } from '../../../../global/rdb-task';
 
-/****** List export rdb task *****/
+/****** List rdb task *****/
 
-export const ListExportRDBTasksRequestQuerySchema = Type.Object({
+export const ListRDBTasksRequestQuerySchema = Type.Object({
   instanceId: Type.String(),
   page: Type.Integer({
     minimum: 1,
@@ -14,13 +14,13 @@ export const ListExportRDBTasksRequestQuerySchema = Type.Object({
   }),
 });
 
-export type ListExportRDBTasksRequestQueryType = Static<typeof ListExportRDBTasksRequestQuerySchema>;
+export type ListRDBTasksRequestQueryType = Static<typeof ListRDBTasksRequestQuerySchema>;
 
-export const ListExportRDBTasksResponseSchema = Type.Object({
-  data: Type.Array(ExportRDBTaskSchema),
+export const ListRDBTasksResponseSchema = Type.Object({
+  data: Type.Array(TaskDocumentSchema),
   page: Type.Integer(),
   pageSize: Type.Integer(),
   total: Type.Integer(),
 });
 
-export type ListExportRDBTasksResponseType = Static<typeof ListExportRDBTasksResponseSchema>;
+export type ListRDBTasksResponseType = Static<typeof ListRDBTasksResponseSchema>;

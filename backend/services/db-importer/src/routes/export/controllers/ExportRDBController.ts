@@ -3,7 +3,7 @@ import { OmnistrateRepository } from "../../../repositories/omnistrate/Omnistrat
 import { ITasksDBRepository } from "../../../repositories/tasks";
 import { K8sRepository } from "../../../repositories/k8s/K8sRepository";
 import { OmnistrateInstanceSchemaType } from "../../../schemas/omnistrate-instance";
-import { ExportRDBTaskType, MultiShardRDBExportPayloadType, RDBExportTaskPayloadType, SingleShardRDBExportPayloadType, TaskTypesType } from "@falkordb/schemas/global";
+import { ExportRDBTaskType, MultiShardRDBExportPayloadType, RDBExportTaskPayloadType, SingleShardRDBExportPayloadType, TaskDocumentType, TaskTypesType } from "@falkordb/schemas/global";
 import { assert } from "console";
 import { ApiError } from "@falkordb/errors";
 import { ITaskQueueRepository } from "../../../repositories/tasksQueue/ITaskQueueRepository";
@@ -95,12 +95,13 @@ export class ExportRDBController {
     }
   }
 
-  async _getPendingExportTasks(instanceId: string): Promise<ExportRDBTaskType[]> {
+  async _getPendingExportTasks(instanceId: string): Promise<TaskDocumentType[]> {
     try {
       const tasks = await this.tasksRepository.listTasks(instanceId, {
         page: 1,
         pageSize: 1,
         status: ['created', 'pending', 'in_progress'],
+        types: ['SingleShardRDBExport', 'MultiShardRDBExport']
       }).then((result) => result.data);
       // filter out expired tasks
       const now = Date.now();
@@ -136,7 +137,7 @@ export class ExportRDBController {
       throw ApiError.internalServerError("Error getting instance", 'INSTANCE_ERROR');
     }
 
-    const hasAccess = await this.omnistrateRepository.checkIfUserHasWriteAccessToInstance(requestorId, instance);
+    const hasAccess = await this.omnistrateRepository.checkIfUserHasAccessToInstance(requestorId, instance);
 
     if (!hasAccess) {
       throw ApiError.unauthorized("User does not have access to this instance", 'USER_NOT_AUTHORIZED');
@@ -192,14 +193,14 @@ export class ExportRDBController {
     try {
       task = await this.tasksRepository.createTask(taskType,
         this._createTaskPayload(taskType, instance, podId),
-      );
+      ) as ExportRDBTaskType;
     } catch (error) {
       this._opts.logger.error({ error }, 'Error creating task');
       throw ApiError.internalServerError("Error creating task", 'TASK_CREATION_ERROR');
     }
 
     try {
-      await this.taskQueueRepository.submitTask(task);
+      await this.taskQueueRepository.submitExportRDBTask(task);
     } catch (error) {
       this._opts.logger.error({ error }, 'Error submitting task');
       this.tasksRepository.updateTask({

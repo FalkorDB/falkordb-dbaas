@@ -98,6 +98,7 @@ export const RDBImportTaskPayloadSchema = Type.Object({
   aofEnabled: Type.Boolean(),
   isCluster: Type.Boolean(),
 });
+export type RDBImportTaskPayloadType = Static<typeof RDBImportTaskPayloadSchema>;
 
 export const ImportRDBTaskSchema = Type.Object({
   taskId: Type.String(),
@@ -111,5 +112,9 @@ export const ImportRDBTaskSchema = Type.Object({
 });
 export type ImportRDBTaskType = Static<typeof ImportRDBTaskSchema>;
 
+export const TaskDocumentSchema = Type.Union([
+  ExportRDBTaskSchema,
+  ImportRDBTaskSchema,
+]);
 
 export type TaskDocumentType = ExportRDBTaskType | ImportRDBTaskType;
