@@ -21,9 +21,9 @@ export const getQueues = () => {
   return queues;
 }
 
+const workers: Worker[] = []
 export const setupWorkers = () => {
 
-  const workers: Worker[] = []
   // Setup the workers
   for (const { name, processor, concurrency } of processors) {
     const w = new Worker(name, processor, {
@@ -44,4 +44,19 @@ export const setupWorkers = () => {
     });
   }
 
+}
+
+export const shutdownWorkers = async () => {
+  logger.info('Shutting down workers...');
+
+  for (const w of workers) {
+    try {
+      await w.close();
+      logger.info(`Worker ${w.name} closed successfully`);
+    } catch (error) {
+      logger.error(`Error closing worker ${w.name}: ${error}`);
+    }
+  }
+
+  logger.info('All workers shut down');
 }

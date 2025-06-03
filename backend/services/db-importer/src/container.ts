@@ -9,6 +9,8 @@ import { K8sRepository } from './repositories/k8s/K8sRepository';
 import { CaptchaRepositoryMock } from './repositories/captcha/CaptchaRepositoryMock';
 import { ITaskQueueRepository } from './repositories/tasksQueue/ITaskQueueRepository';
 import { TaskQueueBullMQRepository } from './repositories/tasksQueue/TaskQueueBullMQRepository';
+import { IBlobStorageRepository } from './repositories/blob/IBlobStorageRepository';
+import { BlobStorageGCSRepository } from './repositories/blob/BlobStorageGCSRepository';
 
 export const setupGlobalContainer = (fastify: FastifyInstance) => {
   diContainer.register({
@@ -60,6 +62,14 @@ export const setupGlobalContainer = (fastify: FastifyInstance) => {
           logger: fastify.log,
         },
       );
+    }).singleton(),
+
+    [IBlobStorageRepository.name]: asFunction(() => {
+      return new BlobStorageGCSRepository(
+        {
+          logger: fastify.log,
+        }
+      )
     }).singleton(),
   });
 };

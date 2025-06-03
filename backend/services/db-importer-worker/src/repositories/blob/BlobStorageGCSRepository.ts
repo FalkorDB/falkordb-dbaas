@@ -51,4 +51,13 @@ export class BlobStorageGCSRepository implements IBlobStorageRepository {
     return signedUrls[0];
   }
 
+  async readFileContent(
+    bucket: string,
+    file: string
+  ): Promise<string> {
+    const fileHandle = this._client.bucket(bucket).file(file);
+    const [content] = await fileHandle.download();
+    return content.toString('utf-8');
+  }
+
 }

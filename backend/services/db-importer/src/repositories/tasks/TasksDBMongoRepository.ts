@@ -1,7 +1,7 @@
 import { assert } from "console";
 import { ITasksDBRepository } from "./ITasksDBRepository";
 import { MongoClient } from 'mongodb';
-import { ExportRDBTaskSchema, ExportRDBTaskType, RDBExportTaskPayloadType, TaskStatusType, TaskTypesType } from "@falkordb/schemas/global";
+import { TaskDocumentType, TaskDocumentSchema, RDBExportTaskPayloadType, TaskStatusType, TaskTypesType, RDBImportTaskPayloadType } from "@falkordb/schemas/global";
 import { Value } from "@sinclair/typebox/value";
 import { FastifyBaseLogger } from "fastify";
 
@@ -23,9 +23,9 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
 
   }
 
-  async createTask(type: TaskTypesType, payload: RDBExportTaskPayloadType): Promise<ExportRDBTaskType> {
+  async createTask(type: TaskTypesType, payload: RDBExportTaskPayloadType | RDBImportTaskPayloadType): Promise<TaskDocumentType> {
     this._options.logger.info({ type, payload }, 'Creating task');
-    return await this._client.db(this._db).collection<ExportRDBTaskType>(this._collection).findOneAndUpdate({
+    return await this._client.db(this._db).collection<TaskDocumentType>(this._collection).findOneAndUpdate({
       type,
       payload,
       status: 'created',
@@ -35,13 +35,13 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     }, {
       $set: {},
     }, { upsert: true, returnDocument: 'after', },)
-      .then((result) => Value.Cast(ExportRDBTaskSchema, result))
+      .then((result) => Value.Cast(TaskDocumentSchema, result))
   }
 
-  async listTasks(instanceId: string, opts: { page?: number; pageSize?: number; status?: TaskStatusType[] } = {
+  async listTasks(instanceId: string, opts: { page?: number; pageSize?: number; status?: TaskStatusType[], types?: TaskTypesType[] } = {
     page: 1,
     pageSize: 10,
-  }): Promise<{ data: ExportRDBTaskType[]; page: number; pageSize: number; total: number; }> {
+  }): Promise<{ data: TaskDocumentType[]; page: number; pageSize: number; total: number; }> {
     this._options.logger.info({ instanceId, opts }, 'Listing tasks');
     const { page, pageSize } = opts;
     const skip = (page - 1) * pageSize;
@@ -51,12 +51,15 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     if (opts.status) {
       query['status'] = { $in: opts.status };
     }
+    if (opts.types) {
+      query['type'] = { $in: opts.types };
+    }
     const [total, data] = await Promise.all([
-      this._client.db(this._db).collection<ExportRDBTaskType>(this._collection).countDocuments(query),
-      this._client.db(this._db).collection<ExportRDBTaskType>(this._collection).find(query).sort(
+      this._client.db(this._db).collection<TaskDocumentType>(this._collection).countDocuments(query),
+      this._client.db(this._db).collection<TaskDocumentType>(this._collection).find(query).sort(
         { updatedAt: -1 }
       ).skip(skip).limit(pageSize).toArray()
-        .then((result) => result.map((task) => Value.Cast(ExportRDBTaskSchema, task)))
+        .then((result) => result.map((task) => Value.Cast(TaskDocumentSchema, task)))
         .catch((err) => {
           this._options.logger.error({ err }, 'Error listing tasks');
           return [];
@@ -70,10 +73,10 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     };
   }
 
-  async updateTask(task: Partial<ExportRDBTaskType> & { taskId: string; }): Promise<ExportRDBTaskType> {
+  async updateTask(task: Partial<TaskDocumentType> & { taskId: string; }): Promise<TaskDocumentType> {
     this._options.logger.info({ task }, 'Updating task');
     const { taskId, ...update } = task;
-    const result = await this._client.db(this._db).collection<ExportRDBTaskType>(this._collection).findOneAndUpdate({
+    const result = await this._client.db(this._db).collection<TaskDocumentType>(this._collection).findOneAndUpdate({
       taskId,
     }, {
       $set: {
@@ -84,6 +87,18 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     if (!result) {
       throw new Error(`Task ${taskId} not found`);
     }
-    return Value.Cast(ExportRDBTaskSchema, result);
+    return Value.Cast(TaskDocumentSchema, result);
+  }
+
+  async getTaskById(taskId: string): Promise<TaskDocumentType | null> {
+    this._options.logger.info({ taskId }, 'Getting task by ID');
+    assert(taskId, 'TasksDBMongoRepository: Task ID is required');
+    const task = await this._client.db(this._db).collection<TaskDocumentType>(this._collection).findOne({
+      taskId,
+    });
+    if (!task) {
+      return null;
+    }
+    return Value.Cast(TaskDocumentSchema, task);
   }
 }

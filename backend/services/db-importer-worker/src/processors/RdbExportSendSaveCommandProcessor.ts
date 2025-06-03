@@ -3,7 +3,7 @@ import { setupContainer } from "../container";
 import { ITasksDBRepository } from "../repositories/tasks";
 import { K8sRepository } from "../repositories/k8s/K8sRepository";
 import { Logger } from 'pino';
-import { ExporterTaskNames, RdbExportSendSaveCommandProcessorData, RdbExportSendSaveCommandProcessorDataSchema } from "@falkordb/schemas/services/db-importer-worker/v1";
+import { RdbExportTaskNames, RdbExportSendSaveCommandProcessorData, RdbExportSendSaveCommandProcessorDataSchema } from "@falkordb/schemas/services/db-importer-worker/v1";
 import { Value } from "@sinclair/typebox/value";
 
 const processor: Processor<RdbExportSendSaveCommandProcessorData> = async (job, token) => {
@@ -46,7 +46,7 @@ const processor: Processor<RdbExportSendSaveCommandProcessorData> = async (job, 
 }
 
 export default {
-  name: ExporterTaskNames.RdbExportSendSaveCommand,
+  name: RdbExportTaskNames.RdbExportSendSaveCommand,
   processor,
   concurrency: undefined,
   schema: RdbExportSendSaveCommandProcessorDataSchema,

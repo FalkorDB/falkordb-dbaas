@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, isAxiosError } from 'axios';
 import { OmnistrateInstanceSchemaType } from '../../schemas/omnistrate-instance';
 import { decode, JwtPayload } from 'jsonwebtoken';
 import assert = require('assert');
@@ -57,22 +57,29 @@ export class OmnistrateRepository {
   async validate(token: string): Promise<boolean> {
     assert(token, 'OmnistrateRepository: Token is required');
 
-    const response = await axios.get(
-      `https://api.omnistrate.cloud/2022-09-01-00/user`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          'Authorization': `Bearer ${token}`,
-        },
+    try {
+
+      const response = await axios.get(
+        `https://api.omnistrate.cloud/2022-09-01-00/user`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      )
+
+      return true;
+    } catch (error) {
+      if (isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          this._options.logger.error({ error }, 'Invalid token');
+          return false;
+        }
+        this._options.logger.error({ error }, 'Error validating token');
       }
-    )
-
-    if (response.status !== 200) {
-      return false;
     }
-
-    return true;
   }
 
   async getInstance(
@@ -116,6 +123,10 @@ export class OmnistrateRepository {
         ob => (ob as any).main
       )['resourceName'],
       subscriptionId: instance?.['subscriptionId'],
+      aofEnabled: instance?.['consumptionResourceInstanceResult']?.['result_params']?.['AOFPersistenceConfig'] !== 'no',
+      podIds: Object.values(instance?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology']).find(
+        ob => (ob as any).hasCompute && !(ob as any).resourceKey?.includes('rebalance') && !(ob as any).resourceKey?.includes('sentinel')
+      )['nodes']?.map((node: any) => node['id']) || [],
     } as OmnistrateInstanceSchemaType
 
   }
@@ -137,7 +148,7 @@ export class OmnistrateRepository {
     })) as { userId: string; email: string; role: 'root' | 'writer' | 'reader' }[];
   }
 
-  async checkIfUserHasWriteAccessToInstance(
+  async checkIfUserHasAccessToInstance(
     userId: string,
     instance?: OmnistrateInstanceSchemaType,
     instanceId?: string,
@@ -161,7 +172,7 @@ export class OmnistrateRepository {
       return false;
     }
 
-    if (['root', 'writer'].includes(user.role)) {
+    if (['root', 'writer', 'reader'].includes(user.role)) {
       return true;
     }
 

@@ -4,7 +4,7 @@ import { ITasksDBRepository } from "../repositories/tasks";
 import { K8sRepository } from "../repositories/k8s/K8sRepository";
 import { IBlobStorageRepository } from "../repositories/blob/IBlobStorageRepository";
 import { Logger } from 'pino';
-import { RdbExportCopyRDBToBucketProcessorDataSchema, RdbExportCopyRDBToBucketProcessorData, ExporterTaskNames } from '@falkordb/schemas/services/db-importer-worker/v1'
+import { RdbExportCopyRDBToBucketProcessorDataSchema, RdbExportCopyRDBToBucketProcessorData, RdbExportTaskNames } from '@falkordb/schemas/services/db-importer-worker/v1'
 import { Value } from '@sinclair/typebox/value'
 
 
@@ -54,7 +54,7 @@ const processor: Processor<RdbExportCopyRDBToBucketProcessorData> = async (job, 
 }
 
 export default {
-  name: ExporterTaskNames.RdbExportCopyRdbToBucket,
+  name: RdbExportTaskNames.RdbExportCopyRdbToBucket,
   processor,
   schema: RdbExportCopyRDBToBucketProcessorDataSchema,
 }
