@@ -52,7 +52,7 @@ const processor: Processor<RdbImportValidateImportKeyNumberProcessorData> = asyn
         aofEnabled: job.data.aofEnabled,
         backupPath: job.data.backupPath,
       } as Static<typeof RdbImportRecoverFailedImportProcessor.schema>);
-      throw new Error(`Key count mismatch: expected ${job.data.expectedKeyCount}, got ${keyCount}`);
+      throw new Error(`Key count mismatch: expected ${(task.output as RDBImportOutputType).numberOfKeys}, got ${keyCount}`);
     }
 
     const queue = new Queue(RdbImportDeleteLocalBackupProcessor.name, {

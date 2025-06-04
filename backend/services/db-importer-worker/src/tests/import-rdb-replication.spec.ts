@@ -75,7 +75,6 @@ describe('import rdb test', () => {
           instanceId: task.payload.instanceId,
           podIds: task.payload.podIds,
           hasTLS: task.payload.hasTLS,
-          expectedKeyCount: 2,
           aofEnabled: task.payload.aofEnabled,
           backupPath: task.payload.backupPath,
           isCluster: task.payload.isCluster,

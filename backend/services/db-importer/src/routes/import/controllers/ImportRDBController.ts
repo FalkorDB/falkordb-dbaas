@@ -197,7 +197,7 @@ export class ImportRDBController {
 
     const uploadUrl = await this.storageRepository.getWriteUrl(
       this._importBucketName,
-      `imports/${instance.id}/${crypto.randomUUID()}.rdb`,
+      payload.fileName,
       'application/octet-stream',
       60 * 60, // 1 hour
     );
