@@ -11,7 +11,7 @@ const processor: Processor<RdbExportRequestReadSignedURLProcessorData> = async (
   const container = setupContainer();
   const logger = container.resolve<Logger>('logger');
 
-  job.log(`Processing 'rdb-export-request-read-signed-url' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
+  logger.debug(`Processing 'rdb-export-request-read-signed-url' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
 
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);

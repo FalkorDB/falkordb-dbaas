@@ -13,7 +13,7 @@ const processor: Processor<RdbImportMonitorImportRDBProcessorData> = async (job,
   const container = setupContainer();
   const logger = container.resolve<Logger>('logger');
 
-  job.log(`Processing 'rdb-import-monitor-import-rdb' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
+  logger.debug(`Processing 'rdb-import-monitor-import-rdb' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
 
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
