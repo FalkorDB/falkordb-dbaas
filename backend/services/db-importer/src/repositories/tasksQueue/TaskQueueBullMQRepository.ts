@@ -211,7 +211,7 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
           ProcessorsSchemaMap[RdbExportTaskNames.RdbExportMonitorRDBMerge],
           {
             taskId: task.taskId,
-            cloudProvider: task.payload.cloudProvider,
+            cloudProvider: 'gcp',
             projectId: process.env.CTRL_PLANE_PROJECT_ID,
             clusterId: process.env.CTRL_PLANE_CLUSTER_ID,
             region: process.env.CTRL_PLANE_REGION,
@@ -226,7 +226,7 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
               ProcessorsSchemaMap[RdbExportTaskNames.RdbExportRequestRDBMerge],
               {
                 taskId: task.taskId,
-                cloudProvider: task.payload.cloudProvider,
+                cloudProvider: 'gcp',
                 projectId: process.env.CTRL_PLANE_PROJECT_ID,
                 clusterId: process.env.CTRL_PLANE_CLUSTER_ID,
                 region: process.env.CTRL_PLANE_REGION,
@@ -390,7 +390,7 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
                                   ProcessorsSchemaMap[RdbImportTaskNames.RdbImportMonitorFormatValidationProgress],
                                   {
                                     taskId: task.taskId,
-                                    cloudProvider: task.payload.cloudProvider,
+                                    cloudProvider: 'gcp',
                                     clusterId: process.env.CTRL_PLANE_CLUSTER_ID,
                                     region: process.env.CTRL_PLANE_REGION,
                                     namespace: process.env.NAMESPACE,
@@ -407,7 +407,7 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
                                       ProcessorsSchemaMap[RdbImportTaskNames.RdbImportValidateRDBFormat],
                                       {
                                         taskId: task.taskId,
-                                        cloudProvider: task.payload.cloudProvider,
+                                        cloudProvider: 'gcp',
                                         clusterId: process.env.CTRL_PLANE_CLUSTER_ID,
                                         region: process.env.CTRL_PLANE_REGION,
                                         namespace: process.env.NAMESPACE,
@@ -427,7 +427,7 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
                                   ProcessorsSchemaMap[RdbImportTaskNames.RdbImportMonitorSizeValidationProgress],
                                   {
                                     taskId: task.taskId,
-                                    cloudProvider: task.payload.cloudProvider,
+                                    cloudProvider: 'gcp',
                                     clusterId: process.env.CTRL_PLANE_CLUSTER_ID,
                                     region: process.env.CTRL_PLANE_REGION,
                                     namespace: process.env.NAMESPACE,
@@ -445,7 +445,7 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
                                       ProcessorsSchemaMap[RdbImportTaskNames.RdbImportValidateRDBSize],
                                       {
                                         taskId: task.taskId,
-                                        cloudProvider: task.payload.cloudProvider,
+                                        cloudProvider: 'gcp',
                                         clusterId: process.env.CTRL_PLANE_CLUSTER_ID,
                                         region: process.env.CTRL_PLANE_REGION,
                                         namespace: process.env.NAMESPACE,
