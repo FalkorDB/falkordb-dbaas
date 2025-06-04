@@ -30,3 +30,6 @@ variable "velero_role_id" {
 variable "db_exporter_sa_email" {
   type = string
 }
+variable "metering_bucket_name" {
+  type = string
+}

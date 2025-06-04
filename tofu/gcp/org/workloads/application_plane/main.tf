@@ -75,3 +75,18 @@ resource "google_project_iam_member" "db_exporter_sa_k8s_admin" {
   role    = "roles/container.admin"
   member  = "serviceAccount:${var.db_exporter_sa_email}"
 }
+
+resource "google_storage_bucket" "omnistrate_metering_data" {
+  name     = var.metering_bucket_name
+  project  = module.project.project_id
+  location = "US"
+
+  uniform_bucket_level_access = true
+  force_destroy               = false
+}
+
+resource "google_storage_bucket_iam_member" "omnistrate_metering_data" {
+  bucket = google_storage_bucket.omnistrate_metering_data.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:omnistrate-billing@omnistrate-prod.iam.gserviceaccount.com"
+}
