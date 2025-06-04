@@ -30,7 +30,10 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     if (!task) {
       return null;
     }
-    return RDBTask.validateSync(task) as RDBTaskType;
+    return RDBTask.validateSync(task, {
+      stripUnknown: true, 
+      strict: false
+    }) as RDBTaskType;
   }
 
   async updateTask(task: RDBTaskType) {
