@@ -246,4 +246,52 @@ export class K8sRepository {
 
     return true;
   }
+
+  private async _getDeploymentPassword(kubeConfig: k8s.KubeConfig, instanceId: string, podId: string): Promise<string> {
+
+    const password = await this._executeCommand(kubeConfig, instanceId, podId, [
+      'cat',
+      '/run/secrets/adminpassword',
+    ]).catch((e) => {
+      this._options.logger.error(e, 'Error getting deployment password');
+      throw e;
+    });
+
+    if (!password) {
+      throw new Error('Could not get password');
+    }
+
+    return password.replace(/\n$/, '');
+  }
+
+  async getMaxMemory(
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    instanceId: string,
+    podId: string,
+    tls = false,
+  ): Promise<string> {
+    this._options.logger.info({ clusterId, region, instanceId, podId, }, 'Getting max memory');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
+
+    const password = await this._getDeploymentPassword(kubeConfig, instanceId, podId);
+
+    const response = await this._executeCommand(
+      kubeConfig,
+      instanceId,
+      podId,
+      ['redis-cli', tls ? '--tls' : '', '-a', password, '--no-auth-warning', 'config', 'get', 'maxmemory'].filter((c) => c),
+    ).catch((e) => {
+      this._options.logger.error(e, 'Error getting deployment mode');
+      throw e;
+    });
+
+    if (response.includes("NOAUTH")) {
+      throw new Error('Failed to authenticate to FalkorDB');
+    }
+
+    return response.split('\n')[1].trim();
+  }
 }

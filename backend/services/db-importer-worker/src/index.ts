@@ -1,7 +1,7 @@
 import { setupApp } from './app';
 import { setupContainer } from './container';
 import logger from './logger';
-import { setupWorkers } from './workers/workers';
+import { setupWorkers, shutdownWorkers } from './workers/workers';
 
 
 logger.info('Starting DB Importer Worker...');
@@ -15,4 +15,11 @@ export async function start() {
 start().catch((error) => {
   logger.error('Failed to start server', error);
   process.exit(1);
+});
+
+// process sigterm
+process.on('SIGTERM', async () => {
+  logger.info('Received SIGTERM, shutting down gracefully...');
+  await shutdownWorkers();
+  process.exit(0);
 });

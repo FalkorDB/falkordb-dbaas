@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { ListExportRDBTasksRequestQuerySchema, ListExportRDBTasksResponseSchema } from '@falkordb/schemas/services/import-export-rdb/v1';
+import { ListRDBTasksRequestQuerySchema, ListRDBTasksResponseSchema } from '@falkordb/schemas/services/import-export-rdb/v1';
 import { listTasksHandler } from './handlers/listTasksHandler';
 
 export default fp(
@@ -15,8 +15,8 @@ export default fp(
       {
         schema: {
           tags: ['tasks'],
-          querystring: ListExportRDBTasksRequestQuerySchema,
-          response: { 200: ListExportRDBTasksResponseSchema },
+          querystring: ListRDBTasksRequestQuerySchema,
+          response: { 200: ListRDBTasksResponseSchema },
           security: [
             {
               "bearerAuth": []

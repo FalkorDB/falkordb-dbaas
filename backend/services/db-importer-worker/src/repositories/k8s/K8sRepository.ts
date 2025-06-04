@@ -263,6 +263,35 @@ export class K8sRepository {
     }
   }
 
+  async sendRewriteAofCommand(
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    instanceId: string,
+    podId: string,
+    hasTLS = false,
+  ): Promise<void> {
+    this._options.logger.info({ clusterId, region, instanceId, podId, cloudProvider }, 'Sending rewrite aof command');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
+
+    const password = await this._getDeploymentPassword(kubeConfig, instanceId, podId);
+
+    const response = await this._executeCommand(
+      kubeConfig,
+      instanceId,
+      podId,
+      ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', 'bgrewriteaof'].filter((c) => c),
+    ).catch((e) => {
+      this._options.logger.error(e, 'Error sending bgrewriteaof command');
+      throw e;
+    });
+
+    if (response.includes("NOAUTH")) {
+      throw new Error('Failed to authenticate to FalkorDB');
+    }
+  }
+
   async isSaving(
     cloudProvider: 'gcp' | 'aws',
     clusterId: string,
@@ -292,6 +321,102 @@ export class K8sRepository {
     }
 
     return response.includes('rdb_bgsave_in_progress:1');
+  }
+
+  async isRewritingAof(
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    instanceId: string,
+    podId: string,
+    hasTLS = false,
+  ): Promise<boolean> {
+    this._options.logger.info({ clusterId, region, instanceId, podId }, 'Getting aof rewrite status');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
+
+    const password = await this._getDeploymentPassword(kubeConfig, instanceId, podId);
+
+    const response = await this._executeCommand(
+      kubeConfig,
+      instanceId,
+      podId,
+      ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', 'info', 'persistence'].filter((c) => c),
+    ).catch((e) => {
+      this._options.logger.error(e, 'Error getting save status');
+      throw e;
+    });
+
+    if (response.includes("NOAUTH")) {
+      throw new Error('Failed to authenticate to FalkorDB');
+    }
+
+    return response.includes('aof_rewrite_in_progress:1');
+  }
+
+  async getKeyCountFromAllPods(
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    instanceId: string,
+    podId: string,
+    hasTLS = false,
+    isCluster = false,
+  ): Promise<number> {
+    this._options.logger.info({ clusterId, region, instanceId, podId }, 'Getting key count');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
+
+    const password = await this._getDeploymentPassword(kubeConfig, instanceId, podId);
+
+    const shellCommand: string = isCluster ? `(
+            INITIAL_HOST="${podId}";
+            INITIAL_PORT="6379";
+            
+            # Get IP:Port of all master nodes, excluding the cluster bus port
+            MASTER_NODES=$(redis-cli ${hasTLS ? '--tls' : ''} -a ${password} --no-auth-warning -h "$INITIAL_HOST" -p "$INITIAL_PORT" CLUSTER NODES 2>/dev/null | \\
+                grep master | \\
+                awk '{print $2}' | \\
+                cut -d'@' -f1);
+
+            # Loop through each master node and run graph.list
+            for NODE in $MASTER_NODES; do
+                IP=$(echo "$NODE" | cut -d: -f1);
+                PORT=$(echo "$NODE" | cut -d: -f2);
+                # Use 2>/dev/null to suppress connection errors for unreachable nodes, if any
+                redis-cli  ${hasTLS ? '--tls' : ''} -a ${password} --no-auth-warning -h "$IP" -p "$PORT" graph.list 2>/dev/null;
+            done
+        ) | grep -v '^(empty array)' | grep -cve '^s*$'` :
+      `(
+          RESPONSE=$(redis-cli ${hasTLS ? '--tls' : ''} -a ${password} --no-auth-warning graph.list | grep -v '^(empty array)');
+          if [[ "$RESPONSE" == *"(empty array)"* ]] || [[ -z "$RESPONSE" ]]; then
+            echo "0";
+          else
+            echo "$RESPONSE" | wc -l;
+          fi
+        )`;
+
+    const response = await this._executeCommand(
+      kubeConfig,
+      instanceId,
+      podId,
+      [
+        'sh',
+        '-c',
+        shellCommand,
+      ],
+    ).catch((e) => {
+      this._options.logger.error(e, 'Error getting key count');
+      throw e;
+    });
+
+    const keyCount = parseInt(response, 10);
+    if (isNaN(keyCount) || keyCount < 0) {
+      this._options.logger.error({ response }, 'Invalid key count response');
+      throw new Error('Invalid key count response');
+    }
+
+    return keyCount;
   }
 
   async sendUploadCommand(
@@ -387,7 +512,241 @@ export class K8sRepository {
     await k8sApi.createNamespacedJob(namespace, jobManifest);
   }
 
+  async createImportRDBJob(
+    projectId: string,
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    namespace: string,
+    jobId: string,
+    podId: string,
+    hasTLS: boolean,
+    downloadUrl: string,
+  ): Promise<void> {
+    this._options.logger.info({
+      clusterId, region, namespace, jobId, podId, hasTLS, downloadUrl
+    }, 'Creating import RDB job');
 
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region, { projectId });
+
+    const k8sCoreApi = kubeConfig.makeApiClient(k8s.CoreV1Api);
+    const secrets = await k8sCoreApi.listNamespacedSecret(namespace).then((res) => res.body.items);
+
+    const shellCommand = `(
+      apk --update add curl redis;
+      curl -X GET -H "Accept: application/octet-stream" --output /data/dump.rdb "${downloadUrl}";
+      
+      info=$(redis-cli ${hasTLS ? '--tls' : ''} -h ${podId} -a $(echo $adminpassword) --no-auth-warning info);
+      
+      podId="${podId}";
+      if echo "$info" | grep -q "redis_mode:standalone"; then
+        if echo "$info" | grep -q "role:slave"; then
+          master=$(echo "$info" | grep "master_host" | cut -d':' -f2 | tr -d ' ' | tr -d '\r');
+          podId="$master";
+        fi
+      fi
+
+      url="${hasTLS ?
+        `rediss://:$(echo $adminpassword)@$podId:6379` :
+        `redis://:$(echo $adminpassword)@$podId:6379`}"
+
+      rmt -s /data/dump.rdb -m $url -r
+    )`;
+
+    const jobManifest: k8s.V1Job = {
+      apiVersion: 'batch/v1',
+      kind: 'Job',
+      metadata: {
+        name: jobId,
+        namespace,
+      },
+      spec: {
+        maxFailedIndexes: 1,
+        backoffLimitPerIndex: 0,
+        completionMode: 'Indexed',
+        template: {
+          spec: {
+            containers: [
+              {
+                name: 'import-rdb',
+                image: 'dudizimber/redis-rdb-cli:latest',
+                command: ['sh', '-c', shellCommand],
+                volumeMounts: [
+                  {
+                    name: 'emptydir',
+                    mountPath: '/data',
+                  },
+                ],
+                envFrom: secrets.filter((s) => s.metadata?.name.startsWith('file')).map((s) => ({
+                  secretRef: {
+                    name: s.metadata?.name,
+                  }
+                }))
+              },
+            ],
+            restartPolicy: 'Never',
+            volumes: [
+              {
+                name: 'emptydir',
+                emptyDir: {},
+              },
+            ]
+          },
+        },
+      },
+    };
+
+    const k8sApi = kubeConfig.makeApiClient(k8s.BatchV1Api);
+    await k8sApi.createNamespacedJob(namespace, jobManifest);
+
+  }
+
+  async createValidateRdbFormatJob(
+    projectId: string,
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    namespace: string,
+    jobId: string,
+    bucketName: string,
+    fileName: string,
+    outputFileName: string,
+  ): Promise<void> {
+    this._options.logger.info({ clusterId, region, namespace, bucketName, fileName, outputFileName }, 'Creating validate RDB format job');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region, { projectId });
+
+    const shellCommand: string = `(
+      rct -f count -t module -s /data/${fileName} -o count.csv && \
+      echo "$(cat count.csv | awk -F',' 'NR==2 {print $1}')" > /data/${outputFileName}
+    )`;
+
+    const jobManifest: k8s.V1Job = {
+      apiVersion: 'batch/v1',
+      kind: 'Job',
+      metadata: {
+        name: jobId,
+        namespace,
+      },
+      spec: {
+        maxFailedIndexes: 1,
+        backoffLimitPerIndex: 0,
+        completionMode: 'Indexed',
+        template: {
+          metadata: {
+            annotations: {
+              "gke-gcsfuse/volumes": "true",
+            }
+          },
+          spec: {
+            serviceAccountName: 'db-exporter-sa',
+            containers: [
+              {
+                name: 'redis-rdb-cli',
+                image: 'dudizimber/redis-rdb-cli:latest',
+                command: ['sh', '-c', shellCommand],
+                volumeMounts: [
+                  {
+                    name: 'gcsfuse',
+                    mountPath: '/data',
+                  }
+                ]
+              },
+            ],
+            restartPolicy: 'Never',
+            volumes: [
+              {
+                name: 'gcsfuse',
+                csi: {
+                  driver: 'gcsfuse.csi.storage.gke.io',
+                  volumeAttributes: {
+                    bucketName,
+                    mountOptions: 'implicit-dirs',
+                  },
+                }
+              }
+            ]
+          },
+        },
+      },
+    };
+
+    const k8sApi = kubeConfig.makeApiClient(k8s.BatchV1Api);
+    await k8sApi.createNamespacedJob(namespace, jobManifest);
+  }
+
+  async createValidateRdbSizeJob(
+    projectId: string,
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    namespace: string,
+    jobId: string,
+    bucketName: string,
+    fileName: string,
+    outputFileName: string,
+  ): Promise<void> {
+    this._options.logger.info({ clusterId, region, namespace, bucketName, fileName, outputFileName }, 'Creating validate RDB size job');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region, { projectId });
+
+    const shellCommand: string = `(
+      rdb-used-memory /data/${fileName} > /data/${outputFileName}
+    )`;
+
+    const jobManifest: k8s.V1Job = {
+      apiVersion: 'batch/v1',
+      kind: 'Job',
+      metadata: {
+        name: jobId,
+        namespace,
+      },
+      spec: {
+        maxFailedIndexes: 1,
+        backoffLimitPerIndex: 0,
+        completionMode: 'Indexed',
+        template: {
+          metadata: {
+            annotations: {
+              "gke-gcsfuse/volumes": "true",
+            }
+          },
+          spec: {
+            serviceAccountName: 'db-exporter-sa',
+            containers: [
+              {
+                name: 'rdb-used-memory',
+                image: 'falkordb/rdb-used-memory:v1.1.0',
+                command: ['sh', '-c', shellCommand],
+                volumeMounts: [
+                  {
+                    name: 'gcsfuse',
+                    mountPath: '/data',
+                  }
+                ]
+              },
+            ],
+            restartPolicy: 'Never',
+            volumes: [
+              {
+                name: 'gcsfuse',
+                csi: {
+                  driver: 'gcsfuse.csi.storage.gke.io',
+                  volumeAttributes: {
+                    bucketName,
+                    mountOptions: 'implicit-dirs',
+                  },
+                }
+              }
+            ]
+          },
+        },
+      },
+    };
+
+    const k8sApi = kubeConfig.makeApiClient(k8s.BatchV1Api);
+    await k8sApi.createNamespacedJob(namespace, jobManifest);
+  }
 
   async getJobStatus(
     projectId: string,
@@ -402,7 +761,7 @@ export class K8sRepository {
     const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region, { projectId });
 
     const k8sApi = kubeConfig.makeApiClient(k8s.BatchV1Api);
-    const { body } = await k8sApi.readNamespacedJob(`merge-rdbs-job-${jobId}`, namespace);
+    const { body } = await k8sApi.readNamespacedJob(`${jobId}`, namespace);
     const { status } = body;
 
     if (status?.failed > 0) {
@@ -416,4 +775,128 @@ export class K8sRepository {
     return 'pending';
   }
 
+  async makeLocalBackup(
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    namespace: string,
+    podId: string,
+    aofEnabled: boolean,
+    backupPath: string,
+  ): Promise<void> {
+    this._options.logger.info({ clusterId, region, namespace, podId, aofEnabled, backupPath }, 'Making local backup');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
+
+    await this._executeCommand(
+      kubeConfig,
+      namespace,
+      podId,
+      aofEnabled ?
+        ['cp', '-rf', '/data/appendonlydir', backupPath] :
+        ['cp', '/data/dump.rdb', backupPath],
+    ).catch((e) => {
+      this._options.logger.error(e, 'Error making local backup');
+      throw e;
+    });
+  }
+
+  async restoreLocalBackup(
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    namespace: string,
+    podIds: string[],
+    aofEnabled: boolean,
+    backupPath: string,
+  ): Promise<void> {
+    this._options.logger.info({ clusterId, region, namespace, podIds, aofEnabled, backupPath }, 'Copying local backup folder');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
+
+    for (const podId of podIds) {
+      try {
+        await this._executeCommand(
+          kubeConfig,
+          namespace,
+          podId,
+          aofEnabled ?
+            ['mv', '-f', backupPath, '/data/appendonlydir'] :
+            ['mv', backupPath, '/data/dump.rdb'],
+        );
+      } catch (e) {
+        this._options.logger.error(e, `Error copying local backup folder from pod ${podId}`);
+        throw e;
+      }
+    }
+  }
+
+  async deleteLocalBackup(
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    namespace: string,
+    podId: string,
+    backupPath: string,
+  ): Promise<void> {
+    this._options.logger.info({ clusterId, region, namespace, podId }, 'Deleting local backup');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
+
+    await this._executeCommand(
+      kubeConfig,
+      namespace,
+      podId,
+      ['rm', '-rf', backupPath],
+    )
+  }
+
+  async flushInstance(
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    namespace: string,
+    podId: string,
+    hasTLS = false,
+    isCluster: boolean = false,
+  ): Promise<void> {
+    this._options.logger.info({ clusterId, region, namespace, podId }, 'Flushing instance');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
+
+    const password = await this._getDeploymentPassword(kubeConfig, namespace, podId);
+
+    await this._executeCommand(
+      kubeConfig,
+      namespace,
+      podId,
+      ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', isCluster ? '--cluster call localhost:6379' : '', 'flushall'].filter((c) => c),
+    ).catch((e) => {
+      this._options.logger.error(e, 'Error flushing instance');
+      throw e;
+    });
+  }
+
+  async deletePods(
+    cloudProvider: 'gcp' | 'aws',
+    clusterId: string,
+    region: string,
+    namespace: string,
+    podIds: string[],
+  ): Promise<void> {
+    this._options.logger.info({ clusterId, region, namespace, podIds }, 'Deleting pods');
+
+    const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
+
+    const k8sApi = kubeConfig.makeApiClient(k8s.CoreV1Api);
+
+    for (const podId of podIds) {
+      try {
+        await k8sApi.deleteNamespacedPod(podId, namespace, undefined, undefined, 0);
+      } catch (e) {
+        this._options.logger.error(e, `Error deleting pod ${podId}`);
+        throw e;
+      }
+    }
+  }
 }

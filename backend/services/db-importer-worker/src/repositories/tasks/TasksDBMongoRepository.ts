@@ -1,8 +1,9 @@
-import { assert } from "console";
+import assert from "assert";
 import { ITasksDBRepository } from "./ITasksDBRepository";
 import { MongoClient } from 'mongodb';
-import { ExportRDBTask, ExportRDBTaskType } from "../../schemas/export-rdb-task";
+import { RDBTask, RDBTaskType } from "../../schemas/rdb-task";
 import { Logger } from "pino";
+import { flatten } from "../../utils/flatten";
 
 export class TasksDBMongoRepository implements ITasksDBRepository {
 
@@ -29,12 +30,13 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     if (!task) {
       return null;
     }
-    return ExportRDBTask.validateSync(task) as ExportRDBTaskType;
+    return RDBTask.validateSync(task) as RDBTaskType;
   }
 
-  async updateTask(task: ExportRDBTaskType) {
+  async updateTask(task: RDBTaskType) {
     const db = this._client.db(this._db);
-    await db.collection(this._collection).updateOne({ taskId: task.taskId }, { $set: { ...task, updatedAt: new Date().toISOString() } });
+    task.updatedAt = new Date().toISOString();
+    await db.collection(this._collection).updateOne({ taskId: task.taskId }, { $set: flatten(task) });
   }
 
 }
