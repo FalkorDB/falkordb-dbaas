@@ -20,7 +20,7 @@ const processor: Processor<RdbImportSendSaveCommandProcessorData> = async (job, 
   try {
     Value.Assert(RdbImportSendSaveCommandProcessorDataSchema, job.data);
 
-    if (job.data.aofEnabled) {
+    if (!job.data.aofEnabled) {
       for (const podId of job.data.podIds) {
         await k8sRepository.sendSaveCommand(
           job.data.cloudProvider,

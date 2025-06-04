@@ -113,7 +113,7 @@ export const RdbImportRequestRDBImportProcessorDataSchema = Type.Object({
   bucketName: Type.String(),
   fileName: Type.String(),
 });
-export type RdbImportRequestRDBImportProcessorData = Static<typeof RdbImportFlushInstanceProcessorDataSchema>;
+export type RdbImportRequestRDBImportProcessorData = Static<typeof RdbImportRequestRDBImportProcessorDataSchema>;
 
 export const RdbImportMonitorImportRDBProcessorDataSchema = Type.Object({
   taskId: Type.String(),
@@ -136,7 +136,6 @@ export const RdbImportValidateImportKeyNumberProcessorDataSchema = Type.Object({
   instanceId: Type.String(),
   podIds: Type.Array(Type.String()),
   hasTLS: Type.Boolean(),
-  expectedKeyCount: Type.Number(),
   backupPath: Type.String(),
   aofEnabled: Type.Boolean(),
   isCluster: Type.Boolean(),

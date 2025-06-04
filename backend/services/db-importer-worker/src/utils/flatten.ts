@@ -5,7 +5,6 @@
  *
  * @export
  * @param object the object to flatten
- * @param [number] how deep you want to flatten. 1 for flattening only the first nested prop, and keeping deeper objects as is.
  * @returns the flattened object
  */
 export function flatten(object: Record<string, any>): Record<string, any> {

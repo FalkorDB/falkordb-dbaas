@@ -72,13 +72,12 @@ export class OmnistrateRepository {
 
       return true;
     } catch (error) {
-      if (isAxiosError(error)) {
-        if (error.response?.status === 401) {
-          this._options.logger.error({ error }, 'Invalid token');
-          return false;
-        }
+      if (isAxiosError(error) && error.response?.status === 401) {
+        this._options.logger.error({ error }, 'Invalid token');
+      } else {
         this._options.logger.error({ error }, 'Error validating token');
       }
+      return false;
     }
   }
 
@@ -126,7 +125,7 @@ export class OmnistrateRepository {
       aofEnabled: instance?.['consumptionResourceInstanceResult']?.['result_params']?.['AOFPersistenceConfig'] !== 'no',
       podIds: Object.values(instance?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology']).find(
         ob => (ob as any).hasCompute && !(ob as any).resourceKey?.includes('rebalance') && !(ob as any).resourceKey?.includes('sentinel')
-      )['nodes']?.map((node: any) => node['id']) || [],
+      )['nodes']?.map((node: any) => node['id']) ?? [],
     } as OmnistrateInstanceSchemaType
 
   }

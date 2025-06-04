@@ -410,12 +410,13 @@ export class K8sRepository {
       throw e;
     });
 
-    if (parseInt(response, 10) < 0) {
+    const keyCount = parseInt(response, 10);
+    if (isNaN(keyCount) || keyCount < 0) {
       this._options.logger.error({ response }, 'Invalid key count response');
       throw new Error('Invalid key count response');
     }
 
-    return parseInt(response, 10);
+    return keyCount;
   }
 
   async sendUploadCommand(
@@ -820,7 +821,7 @@ export class K8sRepository {
           namespace,
           podId,
           aofEnabled ?
-            ['mv', '-rf', backupPath, '/data/appendonlydir'] :
+            ['mv', '-f', backupPath, '/data/appendonlydir'] :
             ['mv', backupPath, '/data/dump.rdb'],
         );
       } catch (e) {
@@ -869,7 +870,7 @@ export class K8sRepository {
       kubeConfig,
       namespace,
       podId,
-      ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', isCluster ? '-c call localhost:6379' : '', 'flushall'].filter((c) => c),
+      ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', isCluster ? '--cluster call localhost:6379' : '', 'flushall'].filter((c) => c),
     ).catch((e) => {
       this._options.logger.error(e, 'Error flushing instance');
       throw e;

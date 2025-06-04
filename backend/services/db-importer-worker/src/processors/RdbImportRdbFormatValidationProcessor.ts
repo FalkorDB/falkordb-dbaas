@@ -5,7 +5,6 @@ import { K8sRepository } from "../repositories/k8s/K8sRepository";
 import { Logger } from 'pino';
 import { RdbImportTaskNames, RdbImportValidateRDBFormatProcessorData, RdbImportValidateRDBFormatProcessorDataSchema } from "@falkordb/schemas/services/db-importer-worker/v1";
 import { Value } from "@sinclair/typebox/value";
-import { IBlobStorageRepository } from '../repositories/blob/IBlobStorageRepository';
 
 const processor: Processor<RdbImportValidateRDBFormatProcessorData> = async (job, token) => {
 

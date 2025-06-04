@@ -1,4 +1,4 @@
-import { assert } from "console";
+import assert from "assert";
 import { ITasksDBRepository } from "./ITasksDBRepository";
 import { MongoClient } from 'mongodb';
 import { TaskDocumentType, TaskDocumentSchema, RDBExportTaskPayloadType, TaskStatusType, TaskTypesType, RDBImportTaskPayloadType } from "@falkordb/schemas/global";

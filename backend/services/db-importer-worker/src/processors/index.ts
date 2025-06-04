@@ -10,7 +10,7 @@ import PlaceholderProcessor from './PlaceholderProcessor';
 import RdbImportDeleteLocalBackupProcessor from './RdbImportDeleteLocalBackupProcessor';
 import RdbImportFlushInstanceProcessor from './RdbImportFlushInstanceProcessor';
 import RdbImportMakeLocalBackupProcessor from './RdbImportMakeLocalBackupProcessor';
-import RdbImportMonitorFormatValidationProgress from './RdbImportMonitorFormatValidationProgress';
+import RdbImportMonitorFormatValidationProcessor from './RdbImportMonitorFormatValidationProcessor';
 import RdbImportMonitorImportRDBProcessor from './RdbImportMonitorImportRDBProcessor';
 import RdbImportMonitorSaveProgressProcessor from './RdbImportMonitorSaveProgressProcessor';
 import RdbImportMonitorSizeValidationProcessor from './RdbImportMonitorSizeValidationProcessor';
@@ -39,7 +39,7 @@ export default [
   RdbImportDeleteLocalBackupProcessor,
   RdbImportFlushInstanceProcessor,
   RdbImportMakeLocalBackupProcessor,
-  RdbImportMonitorFormatValidationProgress,
+  RdbImportMonitorFormatValidationProcessor,
   RdbImportMonitorImportRDBProcessor,
   RdbImportMonitorSaveProgressProcessor,
   RdbImportMonitorSizeValidationProcessor,
@@ -78,7 +78,7 @@ export {
   RdbImportDeleteLocalBackupProcessor,
   RdbImportFlushInstanceProcessor,
   RdbImportMakeLocalBackupProcessor,
-  RdbImportMonitorFormatValidationProgress,
+  RdbImportMonitorFormatValidationProcessor,
   RdbImportMonitorImportRDBProcessor,
   RdbImportMonitorSaveProgressProcessor,
   RdbImportMonitorSizeValidationProcessor,

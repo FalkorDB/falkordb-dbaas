@@ -18,8 +18,8 @@ start().catch((error) => {
 });
 
 // process sigterm
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   logger.info('Received SIGTERM, shutting down gracefully...');
-  shutdownWorkers();
+  await shutdownWorkers();
   process.exit(0);
 });

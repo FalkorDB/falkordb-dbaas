@@ -4,7 +4,7 @@ import { FlowChildJob, FlowJob, FlowProducer, JobsOptions } from 'bullmq';
 import { Static, TSchema } from "@sinclair/typebox";
 import { ProcessorsSchemaMap, RdbExportTaskNames, RdbImportTaskNames } from "@falkordb/schemas/services/db-importer-worker/v1";
 import { Value } from "@sinclair/typebox/value";
-import { assert } from "console";
+import assert from "assert";
 import { ITaskQueueRepository } from "./ITaskQueueRepository";
 
 export class TaskQueueBullMQRepository implements ITaskQueueRepository {
@@ -272,7 +272,6 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
         instanceId: task.payload.instanceId,
         podIds: task.payload.podIds,
         hasTLS: task.payload.hasTLS,
-        expectedKeyCount: 2,
         aofEnabled: task.payload.aofEnabled,
         backupPath: task.payload.backupPath,
         isCluster: task.payload.isCluster,
@@ -495,7 +494,7 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
     task: ImportRDBTaskType
   ): Promise<void> {
     assert(process.env.APPLICATION_PLANE_PROJECT_ID, 'APPLICATION_PLANE_PROJECT_ID is not set');
-    assert(process.env.CTRL_PLANE_CLUSTER_ID, 'CTRL_PLANE_CLUSTER_ID is not set');
+    assert(process.env.CTRL_PLANE_PROJECT_ID, 'CTRL_PLANE_PROJECT_ID is not set');
     assert(process.env.CTRL_PLANE_CLUSTER_ID, 'CTRL_PLANE_CLUSTER_ID is not set');
     assert(process.env.CTRL_PLANE_REGION, 'CTRL_PLANE_REGION is not set');
     assert(process.env.NAMESPACE, 'NAMESPACE is not set');

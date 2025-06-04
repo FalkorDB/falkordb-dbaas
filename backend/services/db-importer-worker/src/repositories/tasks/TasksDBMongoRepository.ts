@@ -1,4 +1,4 @@
-import { assert } from "console";
+import assert from "assert";
 import { ITasksDBRepository } from "./ITasksDBRepository";
 import { MongoClient } from 'mongodb';
 import { RDBTask, RDBTaskType } from "../../schemas/rdb-task";

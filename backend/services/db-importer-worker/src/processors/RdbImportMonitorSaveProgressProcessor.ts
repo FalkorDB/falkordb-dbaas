@@ -23,7 +23,7 @@ const processor: Processor<RdbImportMonitorSaveProgressProcessorData> = async (j
     let pending = true;
     if (job.data.aofEnabled) {
       pending = await Promise.all(
-        job.data.podIds.map(async (podId) => {
+        job.data.podIds.map((podId) =>
           k8sRepository.isRewritingAof(
             job.data.cloudProvider,
             job.data.clusterId,
@@ -32,10 +32,10 @@ const processor: Processor<RdbImportMonitorSaveProgressProcessorData> = async (j
             podId,
             job.data.hasTLS,
           )
-        })).then(results => results.some(result => result));
+        )).then(results => results.some(result => result));
     } else {
       pending = await Promise.all(
-        job.data.podIds.map(async (podId) => {
+        job.data.podIds.map((podId) =>
           k8sRepository.isSaving(
             job.data.cloudProvider,
             job.data.clusterId,
@@ -44,7 +44,7 @@ const processor: Processor<RdbImportMonitorSaveProgressProcessorData> = async (j
             podId,
             job.data.hasTLS,
           )
-        })).then(results => results.some(result => result));
+        )).then(results => results.some(result => result));
     }
 
     if (pending) {

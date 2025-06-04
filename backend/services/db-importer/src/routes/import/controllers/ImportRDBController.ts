@@ -1,14 +1,14 @@
 import { FastifyBaseLogger } from "fastify";
 import { K8sRepository } from "../../../repositories/k8s/K8sRepository";
 import { OmnistrateRepository } from "../../../repositories/omnistrate/OmnistrateRepository";
-import { assert } from "console";
+import assert from "assert";
 import { IBlobStorageRepository } from "../../../repositories/blob/IBlobStorageRepository";
 import { ITasksDBRepository } from "../../../repositories/tasks";
 import { ApiError } from "@falkordb/errors";
 import { OmnistrateInstanceSchemaType } from "../../../schemas/omnistrate-instance";
 import { ImportRDBTaskType, RDBImportTaskPayloadType, TaskDocumentType } from "@falkordb/schemas/global";
 import { ITaskQueueRepository } from "../../../repositories/tasksQueue/ITaskQueueRepository";
-
+import crypto from "crypto";
 
 export class ImportRDBController {
 
@@ -114,7 +114,6 @@ export class ImportRDBController {
     try {
       instance = await this.omnistrateRepository.getInstance(instanceId);
     } catch (error) {
-      console.error(error);
       this._opts.logger.error({ error }, 'Error getting instance');
       throw ApiError.internalServerError("Error getting instance", 'INSTANCE_ERROR');
     }
@@ -157,7 +156,6 @@ export class ImportRDBController {
       )
     } catch (error) {
       this._opts.logger.error({ error }, 'Error validating credentials');
-      console.error(error)
       throw ApiError.internalServerError("Error validating credentials", 'CREDENTIALS_ERROR');
     }
 
@@ -178,7 +176,6 @@ export class ImportRDBController {
       )
     } catch (error) {
       this._opts.logger.error({ error }, 'Error getting max memory');
-      console.error(error)
       throw ApiError.internalServerError("Error getting instance size", 'INSTANCE_SIZE_ERROR');
     }
 

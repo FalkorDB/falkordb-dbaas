@@ -1,4 +1,4 @@
-import { assert } from "console";
+import assert from "assert";
 import { IBlobStorageRepository } from "./IBlobStorageRepository";
 import { GetSignedUrlConfig, Storage } from '@google-cloud/storage'
 import { FastifyBaseLogger } from "fastify";

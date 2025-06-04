@@ -6,7 +6,7 @@ import {
   makeJobNode,
   RdbImportFlushInstanceProcessor,
   RdbImportMakeLocalBackupProcessor,
-  RdbImportMonitorFormatValidationProgress,
+  RdbImportMonitorFormatValidationProcessor,
   RdbImportMonitorImportRDBProcessor,
   RdbImportMonitorSaveProgressProcessor,
   RdbImportMonitorSizeValidationProcessor,
@@ -184,7 +184,7 @@ describe('import rdb test', () => {
                                 },
                                 [
                                   makeJobNode(
-                                    RdbImportMonitorFormatValidationProgress,
+                                    RdbImportMonitorFormatValidationProcessor,
                                     {
                                       taskId: task.taskId,
                                       cloudProvider: task.payload.cloudProvider,

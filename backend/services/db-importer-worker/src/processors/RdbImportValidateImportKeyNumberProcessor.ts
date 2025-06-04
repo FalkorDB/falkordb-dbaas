@@ -9,6 +9,7 @@ import { Queue } from 'bullmq';
 import RdbImportDeleteLocalBackupProcessor from './RdbImportDeleteLocalBackupProcessor'
 import RdbImportRecoverFailedImportProcessor from './RdbImportRecoverFailedImportProcessor'
 import { Static } from '@sinclair/typebox';
+import { RDBImportOutputType, RDBTaskType } from '../schemas/rdb-task';
 
 const processor: Processor<RdbImportValidateImportKeyNumberProcessorData> = async (job, token) => {
 
@@ -23,6 +24,8 @@ const processor: Processor<RdbImportValidateImportKeyNumberProcessorData> = asyn
   try {
     Value.Assert(RdbImportValidateImportKeyNumberProcessorDataSchema, job.data);
 
+    const task = await tasksRepository.getTaskById(job.data.taskId) as RDBTaskType;
+
     const keyCount = await k8sRepository.getKeyCountFromAllPods(
       job.data.cloudProvider,
       job.data.clusterId,
@@ -33,7 +36,7 @@ const processor: Processor<RdbImportValidateImportKeyNumberProcessorData> = asyn
       job.data.isCluster,
     );
 
-    if (keyCount !== job.data.expectedKeyCount) {
+    if (keyCount !== (task.output as RDBImportOutputType).numberOfKeys) {
       const queue = new Queue(RdbImportRecoverFailedImportProcessor.name, {
         connection: {
           url: process.env.REDIS_URL,

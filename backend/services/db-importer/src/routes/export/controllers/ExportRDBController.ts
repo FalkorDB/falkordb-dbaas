@@ -4,7 +4,7 @@ import { ITasksDBRepository } from "../../../repositories/tasks";
 import { K8sRepository } from "../../../repositories/k8s/K8sRepository";
 import { OmnistrateInstanceSchemaType } from "../../../schemas/omnistrate-instance";
 import { ExportRDBTaskType, MultiShardRDBExportPayloadType, RDBExportTaskPayloadType, SingleShardRDBExportPayloadType, TaskDocumentType, TaskTypesType } from "@falkordb/schemas/global";
-import { assert } from "console";
+import assert from "assert";
 import { ApiError } from "@falkordb/errors";
 import { ITaskQueueRepository } from "../../../repositories/tasksQueue/ITaskQueueRepository";
 
