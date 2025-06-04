@@ -18,7 +18,6 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     this._client = new MongoClient(process.env.MONGODB_URI);
 
     this._client.connect()
-      .then(() => this._options.logger.info('MongoDB connection established'))
       .then(() => this._client.db(this._db).createIndex(this._collection, 'taskId', { unique: true }))
 
   }
@@ -30,9 +29,8 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     if (!task) {
       return null;
     }
-    return RDBTask.validateSync(task, {
-      stripUnknown: true, 
-      strict: false
+    return RDBTask.cast(task, {
+      stripUnknown: true,
     }) as RDBTaskType;
   }
 

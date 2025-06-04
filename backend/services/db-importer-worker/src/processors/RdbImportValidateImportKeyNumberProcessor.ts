@@ -16,7 +16,7 @@ const processor: Processor<RdbImportValidateImportKeyNumberProcessorData> = asyn
   const container = setupContainer();
   const logger = container.resolve<Logger>('logger');
 
-  job.log(`Processing 'rdb-import-validate-import-key-number' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
+  logger.debug(`Processing 'rdb-import-validate-import-key-number' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
