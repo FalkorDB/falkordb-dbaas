@@ -29,7 +29,8 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     if (!task) {
       return null;
     }
-    return RDBTask.cast(task, {
+    delete task._id; // Remove MongoDB's default _id field
+    return RDBTask.validateSync(task, {
       stripUnknown: true,
     }) as RDBTaskType;
   }
