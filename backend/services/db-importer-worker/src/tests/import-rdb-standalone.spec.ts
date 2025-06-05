@@ -129,6 +129,7 @@ describe('import rdb test', () => {
                       podId: task.payload.podIds[0],
                       hasTLS: task.payload.hasTLS,
                       isCluster: task.payload.isCluster,
+                      aofEnabled: task.payload.aofEnabled,
                     },
                     {
                       failParentOnFailure: true,

@@ -28,6 +28,11 @@ const processor: Processor<RdbImportDeleteLocalBackupProcessorData> = async (job
       job.data.backupPath,
     );
 
+    await tasksRepository.updateTask({
+      taskId: job.data.taskId,
+      status: 'completed',
+    });
+
   } catch (error) {
     logger.error(error, `Error processing job ${job.id}: ${error}`);
     await tasksRepository.updateTask({

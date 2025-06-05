@@ -98,6 +98,7 @@ export const RdbImportFlushInstanceProcessorDataSchema = Type.Object({
   podId: Type.String(),
   hasTLS: Type.Boolean(),
   isCluster: Type.Boolean(),
+  aofEnabled: Type.Boolean(),
 });
 export type RdbImportFlushInstanceProcessorData = Static<typeof RdbImportFlushInstanceProcessorDataSchema>;
 

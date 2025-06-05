@@ -788,13 +788,16 @@ export class K8sRepository {
 
     const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
 
+    const shellCommand = aofEnabled ?
+      `mkdir -p /data/backup && cp -rf /data/appendonlydir ${backupPath}` :
+      `mkdir -p /data/backup && cp /data/dump.rdb ${backupPath}`;
+
+
     await this._executeCommand(
       kubeConfig,
       namespace,
       podId,
-      aofEnabled ?
-        ['cp', '-rf', '/data/appendonlydir', backupPath] :
-        ['cp', '/data/dump.rdb', backupPath],
+      ['sh', '-c', shellCommand]
     ).catch((e) => {
       this._options.logger.error(e, 'Error making local backup');
       throw e;
@@ -859,6 +862,7 @@ export class K8sRepository {
     podId: string,
     hasTLS = false,
     isCluster: boolean = false,
+    aofEnabled: boolean = false,
   ): Promise<void> {
     this._options.logger.info({ clusterId, region, namespace, podId }, 'Flushing instance');
 
@@ -871,10 +875,18 @@ export class K8sRepository {
       namespace,
       podId,
       ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', isCluster ? '--cluster call localhost:6379' : '', 'flushall'].filter((c) => c),
-    ).catch((e) => {
-      this._options.logger.error(e, 'Error flushing instance');
-      throw e;
-    });
+    )
+      .then(() => {
+        if (aofEnabled) {
+          return this.sendRewriteAofCommand(cloudProvider, clusterId, region, namespace, podId, hasTLS);
+        } else {
+          return this.sendSaveCommand(cloudProvider, clusterId, region, namespace, podId, hasTLS);
+        }
+      })
+      .catch((e) => {
+        this._options.logger.error(e, 'Error flushing instance');
+        throw e;
+      });
   }
 
   async deletePods(
