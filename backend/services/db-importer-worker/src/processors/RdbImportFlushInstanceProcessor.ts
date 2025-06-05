@@ -27,6 +27,7 @@ const processor: Processor<RdbImportFlushInstanceProcessorData> = async (job, to
       job.data.podId,
       job.data.hasTLS,
       job.data.isCluster,
+      job.data.aofEnabled,
     );
 
   } catch (error) {
