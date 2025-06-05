@@ -105,7 +105,7 @@ export const RDBTask: Yup.ObjectSchema<IExportRDBTask> = Yup.object({
       case TaskTypes.RDBImport:
         return RDBImportPayload;
       default:
-        return Yup.object().noUnknown();
+        return Yup.object();
     }
   }),
   output: Yup.lazy((_, opt) => {
@@ -115,7 +115,7 @@ export const RDBTask: Yup.ObjectSchema<IExportRDBTask> = Yup.object({
     if (opt.parent.type === TaskTypes.RDBImport) {
       return RDBImportOutput;
     }
-    return Yup.object().noUnknown().optional();
+    return Yup.object();
   })
 }).strict().noUnknown().required();
 
