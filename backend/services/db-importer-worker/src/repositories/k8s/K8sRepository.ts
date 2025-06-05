@@ -389,10 +389,12 @@ export class K8sRepository {
         ) | grep -v '^(empty array)' | grep -cve '^s*$'` :
       `(
           RESPONSE=$(redis-cli ${hasTLS ? '--tls' : ''} -a ${password} --no-auth-warning graph.list | grep -v '^(empty array)');
-          if [[ "$RESPONSE" == *"(empty array)"* ]] || [[ -z "$RESPONSE" ]]; then
+          if echo "$RESPONSE" | grep -q "(empty array)"; then
+            echo "0";
+          elif [ -z "$RESPONSE" ] || [ "$RESPONSE" = "" ] || [ "$RESPONSE" = $'\n' ]; then
             echo "0";
           else
-            echo "$RESPONSE" | wc -l;
+            echo "$RESPONSE" | grep -cve '^s*$';
           fi
         )`;
 
@@ -409,6 +411,7 @@ export class K8sRepository {
       this._options.logger.error(e, 'Error getting key count');
       throw e;
     });
+    this._options.logger.info({ response }, 'Key count response');
 
     const keyCount = parseInt(response, 10);
     if (isNaN(keyCount) || keyCount < 0) {
@@ -813,7 +816,7 @@ export class K8sRepository {
     aofEnabled: boolean,
     backupPath: string,
   ): Promise<void> {
-    this._options.logger.info({ clusterId, region, namespace, podIds, aofEnabled, backupPath }, 'Copying local backup folder');
+    this._options.logger.info({ clusterId, region, namespace, podIds, aofEnabled, backupPath }, 'Restoring local backup folder');
 
     const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region);
 
@@ -824,11 +827,18 @@ export class K8sRepository {
           namespace,
           podId,
           aofEnabled ?
-            ['mv', '-f', backupPath, '/data/appendonlydir'] :
+            ['mv', '-f', backupPath, '/data'] :
             ['mv', backupPath, '/data/dump.rdb'],
-        );
+        ).then(() => this.deleteLocalBackup(
+          cloudProvider,
+          clusterId,
+          region,
+          namespace,
+          podId,
+          backupPath,
+        ))
       } catch (e) {
-        this._options.logger.error(e, `Error copying local backup folder from pod ${podId}`);
+        this._options.logger.error(e, `Error restoring local backup folder from pod ${podId}`);
         throw e;
       }
     }
