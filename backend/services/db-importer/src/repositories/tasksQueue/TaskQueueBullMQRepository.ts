@@ -326,7 +326,7 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
                     clusterId: task.payload.clusterId,
                     region: task.payload.region,
                     instanceId: task.payload.instanceId,
-                    podId: task.payload.podIds[0],
+                    podIds: task.payload.podIds,
                     hasTLS: task.payload.hasTLS,
                     isCluster: task.payload.isCluster,
                     aofEnabled: task.payload.aofEnabled,
