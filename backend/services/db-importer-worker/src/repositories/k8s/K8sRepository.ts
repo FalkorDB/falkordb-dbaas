@@ -871,7 +871,6 @@ export class K8sRepository {
     namespace: string,
     podId: string,
     hasTLS = false,
-    isCluster: boolean = false,
     aofEnabled: boolean = false,
   ): Promise<void> {
     this._options.logger.info({ clusterId, region, namespace, podId }, 'Flushing instance');
@@ -884,7 +883,7 @@ export class K8sRepository {
       kubeConfig,
       namespace,
       podId,
-      ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', isCluster ? '--cluster call localhost:6379' : '', 'flushall'].filter((c) => c),
+      ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', 'flushall'].filter((c) => c),
     )
       .then(() => {
         if (aofEnabled) {

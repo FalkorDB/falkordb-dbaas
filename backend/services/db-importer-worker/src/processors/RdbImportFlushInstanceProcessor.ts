@@ -19,16 +19,17 @@ const processor: Processor<RdbImportFlushInstanceProcessorData> = async (job, to
   try {
     Value.Assert(RdbImportFlushInstanceProcessorDataSchema, job.data);
 
-    await k8sRepository.flushInstance(
-      job.data.cloudProvider,
-      job.data.clusterId,
-      job.data.region,
-      job.data.instanceId,
-      job.data.podId,
-      job.data.hasTLS,
-      job.data.isCluster,
-      job.data.aofEnabled,
-    );
+    for (const podId of job.data.podIds) {
+      await k8sRepository.flushInstance(
+        job.data.cloudProvider,
+        job.data.clusterId,
+        job.data.region,
+        job.data.instanceId,
+        podId,
+        job.data.hasTLS,
+        job.data.aofEnabled,
+      );
+    }
 
   } catch (error) {
     logger.error(error, `Error processing job ${job.id}: ${error}`);

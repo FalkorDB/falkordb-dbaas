@@ -95,7 +95,7 @@ export const RdbImportFlushInstanceProcessorDataSchema = Type.Object({
   clusterId: Type.String(),
   region: Type.String(),
   instanceId: Type.String(),
-  podId: Type.String(),
+  podIds: Type.Array(Type.String()),
   hasTLS: Type.Boolean(),
   isCluster: Type.Boolean(),
   aofEnabled: Type.Boolean(),
