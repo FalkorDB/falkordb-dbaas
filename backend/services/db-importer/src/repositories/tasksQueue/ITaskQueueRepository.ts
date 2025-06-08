@@ -1,7 +1,11 @@
-import { ExportRDBTaskType } from "@falkordb/schemas/global";
+import { ExportRDBTaskType, ImportRDBTaskType } from "@falkordb/schemas/global";
 
 export abstract class ITaskQueueRepository {
-  abstract submitTask(
+  abstract submitExportRDBTask(
     task: ExportRDBTaskType,
+  ): Promise<void>;
+
+  abstract submitImportRDBTask(
+    task: ImportRDBTaskType,
   ): Promise<void>;
 }

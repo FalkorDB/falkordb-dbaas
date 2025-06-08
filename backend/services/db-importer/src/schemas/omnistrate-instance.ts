@@ -27,6 +27,8 @@ export const OmnistrateInstanceSchema = Type.Object({
     Type.Literal('Cluster-Single-Zone'),
   ]),
   subscriptionId: Type.String(),
+  aofEnabled: Type.Boolean(),
+  podIds: Type.Array(Type.String()),
 });
 
 export type OmnistrateInstanceSchemaType = Static<typeof OmnistrateInstanceSchema>;

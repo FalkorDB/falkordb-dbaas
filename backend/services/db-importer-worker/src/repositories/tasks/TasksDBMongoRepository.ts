@@ -1,8 +1,9 @@
-import { assert } from "console";
+import assert from "assert";
 import { ITasksDBRepository } from "./ITasksDBRepository";
 import { MongoClient } from 'mongodb';
-import { ExportRDBTask, ExportRDBTaskType } from "../../schemas/export-rdb-task";
+import { RDBTask, RDBTaskType } from "../../schemas/rdb-task";
 import { Logger } from "pino";
+import { flatten } from "../../utils/flatten";
 
 export class TasksDBMongoRepository implements ITasksDBRepository {
 
@@ -17,7 +18,6 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     this._client = new MongoClient(process.env.MONGODB_URI);
 
     this._client.connect()
-      .then(() => this._options.logger.info('MongoDB connection established'))
       .then(() => this._client.db(this._db).createIndex(this._collection, 'taskId', { unique: true }))
 
   }
@@ -29,12 +29,16 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     if (!task) {
       return null;
     }
-    return ExportRDBTask.validateSync(task) as ExportRDBTaskType;
+    delete task._id; // Remove MongoDB's default _id field
+    return RDBTask.validateSync(task, {
+      stripUnknown: true,
+    }) as RDBTaskType;
   }
 
-  async updateTask(task: ExportRDBTaskType) {
+  async updateTask(task: RDBTaskType) {
     const db = this._client.db(this._db);
-    await db.collection(this._collection).updateOne({ taskId: task.taskId }, { $set: { ...task, updatedAt: new Date().toISOString() } });
+    task.updatedAt = new Date().toISOString();
+    await db.collection(this._collection).updateOne({ taskId: task.taskId }, { $set: flatten(task) });
   }
 
 }

@@ -50,6 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
     strategy:
+      fail-fast: false
       matrix:
         stack: ${{fromJson(needs.load-stack-matrix.outputs.matrix)}}
     steps:

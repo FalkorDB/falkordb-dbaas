@@ -10,7 +10,7 @@ import {
   RdbExportRequestRDBMergeProcessor,
   makeJobNode
 } from '../processors';
-import { ExportRDBTask, TaskTypes } from '../schemas/export-rdb-task';
+import { RDBTask, TaskTypes } from '../schemas/rdb-task';
 
 const taskId = Math.random().toString(36).substring(2, 15);
 const task = {
@@ -135,7 +135,7 @@ describe('export multi shard rdb test', () => {
 
   it('should start the rdb test', async () => {
 
-    ExportRDBTask.cast(task);
+    RDBTask.cast(task);
 
     const producer = new FlowProducer();
 

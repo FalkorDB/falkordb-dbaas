@@ -58,6 +58,19 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
     return NextResponse.json({}, { status: 500 });
   }
 
+  try {
+    await client.userSetUsingOrg({
+      org_id: existingOrgId,
+    })
+    console.log('set user using org', orgName, 'with id', existingOrgId);
+  } catch (error) {
+    console.error("failed to set user using org", (error as any)?.response ?? error);
+    return NextResponse.json(
+      { error: "Failed to set user using org" },
+      { status: 500 }
+    );
+  }
+
   let folderUid = null;
   try {
     const folders = await client.getFolders(null, null, {

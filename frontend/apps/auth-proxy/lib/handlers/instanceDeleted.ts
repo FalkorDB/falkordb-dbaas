@@ -53,6 +53,19 @@ export const instanceDeletedHandler = async (data: yup.InferType<typeof DeleteGr
     );
   }
 
+  try {
+    await client.userSetUsingOrg({
+      org_id: orgId,
+    })
+    console.log('set user using org', orgName, 'with id', orgId);
+  } catch (error) {
+    console.error("failed to set user using org", (error as any)?.response ?? error);
+    return NextResponse.json(
+      { error: "Failed to set user using org" },
+      { status: 500 }
+    );
+  }
+
   let folderUid = null;
   try {
     const folders = await client.getFolders(null, null, {
