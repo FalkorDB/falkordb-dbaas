@@ -164,6 +164,13 @@ resource "google_storage_bucket" "rdb_exports" {
 
   uniform_bucket_level_access = true
 
+  cors {
+    max_age_seconds = 3600
+    method          = ["PUT", "GET"]
+    origin          = ["https://app.falkordb.cloud"]
+    response_header = ["*"]
+  }
+
   depends_on = [module.project]
 }
 
