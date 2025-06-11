@@ -1,18 +1,23 @@
-// Run a e2e test to check the free tier functionality
 import { start } from '..';
 import axios, { AxiosError } from 'axios';
+import { FastifyInstance } from 'fastify';
 import { } from 'jest';
 
 const url = `http://localhost:${process.env.PORT ?? 3000}`;
 axios.defaults.baseURL = url;
-describe('e2e test free tier', () => {
+let server: FastifyInstance;
+describe('e2e test pro tier', () => {
 
   beforeAll(async () => {
-    start();
+    server = await start();
     while (await axios.get(`/health`).catch((err: AxiosError) => err.response?.status === 404) === false) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }, 60000);
+
+  afterAll(async () => {
+    await server.close();
+  });
 
   const random = Math.random().toString(36).substring(2, 15);
   const userEmail = `dudi+test-` + random + '@falkordb.com';
@@ -21,7 +26,6 @@ describe('e2e test free tier', () => {
 
   it('should create the service account', async () => {
 
-    // Mock the request to create a free tier instance
     const request = {
       message: {
         data: Buffer.from(JSON.stringify({

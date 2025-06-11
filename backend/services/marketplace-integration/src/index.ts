@@ -37,7 +37,7 @@ export async function start() {
   const port = fastify.config?.PORT || parseInt(process.env.PORT, 10) || 3000;
   const host = '0.0.0.0';
 
-  return await fastify.listen({
+  await fastify.listen({
     host,
     port,
   }).then(() => { 
@@ -47,6 +47,8 @@ export async function start() {
     fastify.log.error(`Error starting server: ${error}`);
     process.exit(1);
   })
+
+  return fastify;
 }
 
 if (process.env.NODE_ENV !== 'test') {

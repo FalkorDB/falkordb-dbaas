@@ -137,17 +137,16 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     if (this._opts?.dryRun) {
       return { subscriptionId: '123' };
     }
-    const data = {
+
+    const data: { productTierId: string; onBehalfOfCustomerUserId: string; serviceId: string; externalPayerId?: string; paymentChannelType?: string } = {
       productTierId,
       onBehalfOfCustomerUserId: userId,
-      externalPayerId: marketplaceEntitlementId,
-      paymentChannelType: "CUSTOM",
       serviceId: this._serviceId,
     };
 
-    if (!marketplaceEntitlementId) {
-      delete data.externalPayerId;
-      delete data.paymentChannelType;
+    if (marketplaceEntitlementId) {
+      data.externalPayerId = marketplaceEntitlementId;
+      data.paymentChannelType = 'CUSTOM';
     }
 
     try {
@@ -507,7 +506,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
 
     const user = await this._getUser(this._getSAEmail(params.marketplaceAccountId));
 
-    const subscriptionId = await this._createSubscription(
+    const { subscriptionId } = await this._createSubscription(
       params.productTierId,
       user.userId,
       params.entitlementId,
@@ -517,7 +516,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       throw new Error('Subscription not found');
     }
 
-    return { subscriptionId: subscriptionId.subscriptionId };
+    return { subscriptionId };
   }
 
   async inviteUserToSubscription(

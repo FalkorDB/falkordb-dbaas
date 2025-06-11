@@ -1,18 +1,24 @@
 // Run a e2e test to check the free tier functionality
 import { start } from '..';
 import axios, { AxiosError } from 'axios';
+import { FastifyInstance } from 'fastify';
 import { } from 'jest';
 
 const url = `http://localhost:${process.env.PORT ?? 3000}`;
 axios.defaults.baseURL = url;
+let server: FastifyInstance;
 describe('e2e test free tier', () => {
 
   beforeAll(async () => {
-    start();
+    server = await start();
     while (await axios.get(`/health`).catch((err: AxiosError) => err.response?.status === 404) === false) {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }, 60000);
+
+  afterAll(async () => {
+    await server.close();
+  });
 
   const userEmail = `dudi+test-` + Date.now() + '@falkordb.com';
   const marketplaceAccountId = 'test-account-id';
