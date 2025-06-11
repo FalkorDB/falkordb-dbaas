@@ -1,5 +1,5 @@
 // Run a e2e test to check the free tier functionality
-import { start } from '../src/index';
+import { start } from '..';
 import axios, { AxiosError } from 'axios';
 import { } from 'jest';
 
@@ -14,9 +14,10 @@ describe('e2e test free tier', () => {
     }
   }, 60000);
 
-  const userEmail = `dudi+test-` + Date.now() + '@falkordb.com';
-  const marketplaceAccountId = 'test-account-id';
-  const entitlementId = 'test-entitlement-id';
+  const random = Math.random().toString(36).substring(2, 15);
+  const userEmail = `dudi+test-` + random + '@falkordb.com';
+  const marketplaceAccountId = 'test-account-id-pro-' + random;
+  const entitlementId = 'test-entitlement-id-pro';
 
   it('should create the service account', async () => {
 
@@ -39,14 +40,14 @@ describe('e2e test free tier', () => {
   }, 60000);
 
 
-  it('should create the free tier entitlement', async () => {
+  it('should create the pro tier entitlement', async () => {
 
     const request = {
       message: {
         data: Buffer.from(JSON.stringify({
           marketplaceAccountId,
           entitlementId,
-          productTierId: 'free',
+          productTierId: 'pro',
           userEmail,
         })).toString('base64')
       }

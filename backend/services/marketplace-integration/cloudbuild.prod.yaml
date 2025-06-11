@@ -6,7 +6,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'us-central1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
       - '--build-arg'
       - 'PROJECT=${_SERVICE_NAME}'
       - '-f'
@@ -17,7 +17,7 @@ steps:
     name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'us-central1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
 
   - id: Deploy to Cloud Run
     name: 'gcr.io/cloud-builders/gcloud'
@@ -26,7 +26,7 @@ steps:
       - 'deploy'
       - '${_SERVICE_NAME}'
       - '--image'
-      - 'us-central1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
+      - 'europe-west1-docker.pkg.dev/${_PROJECT_ID}/${_REPOSITORY}/${_IMAGE_NAME}'
       - '--platform'
       - 'managed'
       - '--region'
