@@ -8,7 +8,7 @@
     "format": "eslint src/**/*.ts --fix",
     "start": "nodemon",
     "jest": "jest",
-    "test": "dotenv -e .env.test jest",
+    "test": "dotenv -e .env jest",
     "build": "tsc && copyfiles -u 1 src/assets/**/* dist/",
     "serve": "node ./dist/index.js",
     "deploy:prod": "gcloud builds submit --config cloudbuild.prod.yaml --async --project falkordb-public ../..",

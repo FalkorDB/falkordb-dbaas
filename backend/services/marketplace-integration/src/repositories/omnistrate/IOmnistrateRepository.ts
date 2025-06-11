@@ -10,9 +10,10 @@ export abstract class IOmnistrateRepository {
   abstract createSubscription(params: { productTierId: string, marketplaceAccountId: string; entitlementId?: string }): Promise<{ subscriptionId: string }>;
 
   abstract inviteUserToSubscription(params: {
+    marketplaceAccountId: string;
     subscriptionId: string;
     email: string;
-    role: 'reader' | 'writer'
+    role: 'reader' | 'editor'
   }): Promise<void>;
 
   abstract createFreeDeployment(params: { marketplaceAccountId: string; }): Promise<{

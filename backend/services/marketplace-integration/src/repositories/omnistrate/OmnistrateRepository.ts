@@ -1,5 +1,5 @@
 import { IOmnistrateRepository } from './IOmnistrateRepository';
-import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, isAxiosError } from 'axios';
 import { JwtPayload, decode } from 'jsonwebtoken';
 import assert = require('assert');
 import { randomBytes } from 'crypto';
@@ -142,6 +142,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       onBehalfOfCustomerUserId: userId,
       externalPayerId: marketplaceEntitlementId,
       paymentChannelType: "CUSTOM",
+      serviceId: this._serviceId,
     };
 
     if (!marketplaceEntitlementId) {
@@ -149,15 +150,28 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       delete data.paymentChannelType;
     }
 
-    const response = await OmnistrateRepository._client.post(`/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/subscription`, data);
+    try {
+
+      const response = await OmnistrateRepository._client.post(`/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/subscription`, data);
 
 
-    const subscription = response.data['subscription'];
-    if (!subscription) {
-      throw new Error('Subscription not found');
+      const subscriptionId = response.data['id'];
+      if (!subscriptionId) {
+        throw new Error('Subscription not found');
+      }
+
+      return { subscriptionId };
+    } catch (error) {
+      if (isAxiosError(error)) {
+        this._opts.logger.error(
+          { error, request: error.request, productTierId, marketplaceEntitlementId, userId },
+          'Failed to create subscription',
+        );
+        throw new Error(`Failed to create subscription: ${error.response?.data?.message || error.message}`);
+      } else {
+        throw error;
+      }
     }
-
-    return { subscriptionId: subscription['subscriptionId'] };
   }
 
   private async _getUser(email: string): Promise<{ userId: string; token?: string }> {
@@ -207,18 +221,27 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     });
   }
 
-  private async _inviteUser(subscriptionId: string, email: string, role: 'reader' | 'writer'): Promise<void> {
-    this._opts.logger.info({ subscriptionId, email, dryRun: this._opts.dryRun }, 'Inviting read-only user');
+  private async _inviteUser(marketplaceAccountId: string, subscriptionId: string, email: string, role: 'reader' | 'editor'): Promise<void> {
+    this._opts.logger.info({ subscriptionId, marketplaceAccountId, email, dryRun: this._opts.dryRun }, 'Inviting read-only user');
 
     if (this._opts?.dryRun) {
       return;
     }
 
-    await OmnistrateRepository._client.post(
+    const saEmail = this._getSAEmail(marketplaceAccountId);
+
+    const bearerToken = await OmnistrateRepository._getCustomerBearer(saEmail, this._serviceAccountSecret);
+
+    await axios.post(
       `${OmnistrateRepository._baseUrl}/2022-09-01-00/resource-instance/subscription/${subscriptionId}/invite-user`,
       {
         email,
         roleType: role,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+        },
       },
     );
   }
@@ -499,9 +522,10 @@ export class OmnistrateRepository implements IOmnistrateRepository {
 
   async inviteUserToSubscription(
     params: {
+      marketplaceAccountId: string;
       subscriptionId: string;
       email: string;
-      role: 'reader' | 'writer';
+      role: 'reader' | 'editor';
     },
   ): Promise<void> {
     this._opts.logger.info(
@@ -512,8 +536,23 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     if (this._opts?.dryRun) {
       return;
     }
+    try {
+      await this._inviteUser(params.marketplaceAccountId, params.subscriptionId, params.email, params.role)
+    } catch (error) {
+      if (isAxiosError(error)) {
+        this._opts.logger.error(
+          { error, subscriptionId: params.subscriptionId, email: params.email },
+          'Failed to invite user',
+        );
+        throw new Error(`Failed to invite user: ${error.response?.data?.message || error.message}`);
+      }
 
-    await this._inviteUser(params.subscriptionId, params.email, params.role)
+      this._opts.logger.error(
+        { error, subscriptionId: params.subscriptionId, email: params.email },
+        'Failed to invite user',
+      );
+      throw new Error('Failed to invite user');
+    }
   }
 
 }

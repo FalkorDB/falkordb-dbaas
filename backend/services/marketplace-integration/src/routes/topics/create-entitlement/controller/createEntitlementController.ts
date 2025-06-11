@@ -101,6 +101,7 @@ export class CreateEntitlementController {
 
     try {
       await this.omnistrateRepository.inviteUserToSubscription({
+        marketplaceAccountId,
         subscriptionId,
         email: userEmail,
         role: 'reader'
@@ -186,9 +187,10 @@ export class CreateEntitlementController {
 
     try {
       await this.omnistrateRepository.inviteUserToSubscription({
+        marketplaceAccountId,
         subscriptionId,
         email: userEmail,
-        role: 'writer'
+        role: 'editor'
       });
     } catch (error) {
       this._opts.logger.error({ error, entitlementId, marketplaceAccountId, userEmail }, `Failed to invite user: ${error.response?.data ?? error}`);
@@ -243,9 +245,10 @@ export class CreateEntitlementController {
 
     try {
       await this.omnistrateRepository.inviteUserToSubscription({
+        marketplaceAccountId,
         subscriptionId,
         email: userEmail,
-        role: 'writer'
+        role: 'editor'
       });
     } catch (error) {
       this._opts.logger.error({ error, entitlementId, marketplaceAccountId, userEmail }, `Failed to invite user: ${error.response?.data ?? error}`);
@@ -299,6 +302,7 @@ export class CreateEntitlementController {
 
     try {
       await this.omnistrateRepository.inviteUserToSubscription({
+        marketplaceAccountId,
         subscriptionId,
         email: userEmail,
         role: 'reader'
