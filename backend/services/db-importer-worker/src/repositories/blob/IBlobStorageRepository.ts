@@ -14,4 +14,9 @@ export abstract class IBlobStorageRepository {
     expiresIn?: number
   ): Promise<string>;
 
+  abstract readFileContent(
+    bucket: string,
+    file: string
+  ): Promise<string>;
+
 }

@@ -58,6 +58,19 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
     return NextResponse.json({}, { status: 500 });
   }
 
+  try {
+    await client.userSetUsingOrg({
+      org_id: existingOrgId,
+    })
+    console.log('set user using org', orgName, 'with id', existingOrgId);
+  } catch (error) {
+    console.error("failed to set user using org", (error as any)?.response ?? error);
+    return NextResponse.json(
+      { error: "Failed to set user using org" },
+      { status: 500 }
+    );
+  }
+
   let folderUid = null;
   try {
     const folders = await client.getFolders(null, null, {
@@ -92,12 +105,12 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
   }
 
   try {
-    await client.postDashboard(
+    await client.importDashboard(
       null,
       {
         folderUid,
-        overwrite: false,
-        message: "Initial dashboard",
+        overwrite: true,
+        inputs: [],
         dashboard: await getDashboard(folderName),
       },
       {
@@ -124,6 +137,7 @@ const getDashboard = async (uid: string) => {
     .then((res) => res.data);
   dashboard.uid = uid;
   dashboard.title = "FalkorDB dashboard for " + uid;
+  dashboard.id = null;
 
   const nsTemplatingIdx = dashboard.templating.list.findIndex(
     (v: { name: string }) => v.name === "namespace"

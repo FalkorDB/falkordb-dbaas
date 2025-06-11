@@ -3,7 +3,7 @@ import { setupContainer } from "../container";
 import { ITasksDBRepository } from "../repositories/tasks";
 import { K8sRepository } from "../repositories/k8s/K8sRepository";
 import { Logger } from 'pino';
-import { RdbExportMonitorSaveProgressProcessorDataSchema, RdbExportMonitorSaveProgressProcessorData, ExporterTaskNames } from "@falkordb/schemas/services/db-importer-worker/v1";
+import { RdbExportMonitorSaveProgressProcessorDataSchema, RdbExportMonitorSaveProgressProcessorData, RdbExportTaskNames } from "@falkordb/schemas/services/db-importer-worker/v1";
 import { Value } from "@sinclair/typebox/value";
 
 const processor: Processor<RdbExportMonitorSaveProgressProcessorData> = async (job, token) => {
@@ -11,7 +11,7 @@ const processor: Processor<RdbExportMonitorSaveProgressProcessorData> = async (j
   const container = setupContainer();
   const logger = container.resolve<Logger>('logger');
 
-  job.log(`Processing 'rdb-export-monitor-save-progress' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
+  logger.debug(`Processing 'rdb-export-monitor-save-progress' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
   
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
@@ -52,7 +52,7 @@ const processor: Processor<RdbExportMonitorSaveProgressProcessorData> = async (j
 }
 
 export default {
-  name: ExporterTaskNames.RdbExportMonitorSaveProgress,
+  name: RdbExportTaskNames.RdbExportMonitorSaveProgress,
   processor,
   concurrency: undefined,
   schema: RdbExportMonitorSaveProgressProcessorDataSchema,

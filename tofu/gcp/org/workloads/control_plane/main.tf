@@ -61,7 +61,7 @@ resource "google_secret_manager_secret" "mongodb_uri" {
 
   rotation {
     rotation_period    = "15552000s"
-    next_rotation_time = "2025-05-21T21:00:00Z"
+    next_rotation_time = "2025-11-17T21:00:00Z"
   }
 
   topics {
@@ -163,6 +163,13 @@ resource "google_storage_bucket" "rdb_exports" {
   }
 
   uniform_bucket_level_access = true
+
+  cors {
+    max_age_seconds = 3600
+    method          = ["PUT", "GET"]
+    origin          = ["https://app.falkordb.cloud"]
+    response_header = ["*"]
+  }
 
   depends_on = [module.project]
 }

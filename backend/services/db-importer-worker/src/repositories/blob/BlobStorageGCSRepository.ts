@@ -1,4 +1,4 @@
-import { assert } from "console";
+import assert from "assert";
 import { IBlobStorageRepository } from "./IBlobStorageRepository";
 import { GetSignedUrlConfig, Storage } from '@google-cloud/storage'
 import { Logger } from "pino";
@@ -49,6 +49,15 @@ export class BlobStorageGCSRepository implements IBlobStorageRepository {
       .file(file)
       .getSignedUrl(options);
     return signedUrls[0];
+  }
+
+  async readFileContent(
+    bucket: string,
+    file: string
+  ): Promise<string> {
+    const fileHandle = this._client.bucket(bucket).file(file);
+    const [content] = await fileHandle.download();
+    return content.toString('utf-8');
   }
 
 }

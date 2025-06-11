@@ -3,7 +3,7 @@ import { setupContainer } from "../container";
 import { ITasksDBRepository } from "../repositories/tasks";
 import { K8sRepository } from "../repositories/k8s/K8sRepository";
 import { Logger } from 'pino';
-import { RdbExportMonitorRDBMergeProcessorDataSchema, RdbExportMonitorRDBMergeProcessorData, ExporterTaskNames } from '@falkordb/schemas/services/db-importer-worker/v1'
+import { RdbExportMonitorRDBMergeProcessorDataSchema, RdbExportMonitorRDBMergeProcessorData, RdbExportTaskNames } from '@falkordb/schemas/services/db-importer-worker/v1'
 import { Value } from '@sinclair/typebox/value'
 
 const processor: Processor<RdbExportMonitorRDBMergeProcessorData> = async (job, token) => {
@@ -11,12 +11,12 @@ const processor: Processor<RdbExportMonitorRDBMergeProcessorData> = async (job, 
   const container = setupContainer();
   const logger = container.resolve<Logger>('logger');
 
-  job.log(`Processing 'rdb-export-monitor-rdb-merge' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
+  logger.debug(`Processing 'rdb-export-monitor-rdb-merge' job ${job.id} with data: ${JSON.stringify(job.data, null, 2)}`);
 
-  
+
   const tasksRepository = container.resolve<ITasksDBRepository>(ITasksDBRepository.name);
   const k8sRepository = container.resolve<K8sRepository>(K8sRepository.name);
-  
+
   try {
     Value.Assert(RdbExportMonitorRDBMergeProcessorDataSchema, job.data);
 
@@ -26,7 +26,7 @@ const processor: Processor<RdbExportMonitorRDBMergeProcessorData> = async (job, 
       job.data.clusterId,
       job.data.region,
       job.data.namespace,
-      job.data.taskId
+      `merge-rdbs-job-${job.data.taskId}`
     )
 
     if (jobStatus === 'failed') {
@@ -56,7 +56,7 @@ const processor: Processor<RdbExportMonitorRDBMergeProcessorData> = async (job, 
 }
 
 export default {
-  name: ExporterTaskNames.RdbExportMonitorRDBMerge,
+  name: RdbExportTaskNames.RdbExportMonitorRDBMerge,
   processor,
   concurrency: undefined,
   schema: RdbExportMonitorRDBMergeProcessorDataSchema,

@@ -1,7 +1,7 @@
 import { Queue, QueueEvents } from 'bullmq';
 import { FlowProducer } from 'bullmq';
 import { TasksDBMongoRepository } from '../repositories/tasks';
-import { ExportRDBTask, ExportRDBTaskType, TaskTypes } from '../schemas/export-rdb-task';
+import { RDBTask, RDBTaskType, TaskTypes } from '../schemas/rdb-task';
 import { MongoClient } from 'mongodb';
 import {
   makeJobNode,
@@ -56,7 +56,7 @@ describe('export single shard rdb test', () => {
 
   it('should start the rdb test', async () => {
 
-    ExportRDBTask.cast(task);
+    RDBTask.cast(task);
 
     const producer = new FlowProducer();
 

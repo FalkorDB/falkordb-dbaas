@@ -1,8 +1,8 @@
-import { ExportRDBTaskType, RDBExportTaskPayloadType, TaskStatusType, TaskTypesType } from "@falkordb/schemas/global";
+import { ExportRDBTaskType, RDBExportTaskPayloadType, RDBImportTaskPayloadType, TaskDocumentType, TaskStatusType, TaskTypesType } from "@falkordb/schemas/global";
 
 export abstract class ITasksDBRepository {
 
-  abstract createTask(type: TaskTypesType, payload: RDBExportTaskPayloadType): Promise<ExportRDBTaskType>;
+  abstract createTask(type: TaskTypesType, payload: RDBExportTaskPayloadType | RDBImportTaskPayloadType): Promise<TaskDocumentType>;
 
   abstract listTasks(
     instanceId: string,
@@ -10,17 +10,20 @@ export abstract class ITasksDBRepository {
       page?: number,
       pageSize?: number,
       status?: TaskStatusType[],
+      types?: TaskTypesType[],
     }
   ): Promise<{
-    data: ExportRDBTaskType[];
+    data: TaskDocumentType[];
     page: number;
     pageSize: number;
     total: number;
   }>;
 
   abstract updateTask(
-    task: Partial<ExportRDBTaskType> & {
+    task: Partial<TaskDocumentType> & {
       taskId: string;
     }
-  ): Promise<ExportRDBTaskType>;
+  ): Promise<TaskDocumentType>;
+
+  abstract getTaskById(taskId: string): Promise<TaskDocumentType | null>;
 }
