@@ -1,7 +1,6 @@
 import { RouteHandlerMethod } from 'fastify';
 import { IOmnistrateRepository } from '../../../../repositories/omnistrate/IOmnistrateRepository';
 import { ICommitRepository } from '../../../../repositories/commit/ICommitRepository';
-import { ApiError } from '@falkordb/errors';
 import { DeleteEntitlementMessageSchema, DeleteEntitlementMessageType } from '../../../../schemas/delete-entitlement';
 
 export const deleteEntitlementHandler: RouteHandlerMethod<undefined, undefined, undefined, { Body: unknown }> = async (
@@ -15,16 +14,15 @@ export const deleteEntitlementHandler: RouteHandlerMethod<undefined, undefined, 
   const { entitlementId, marketplaceAccountId } = request.body as DeleteEntitlementMessageType;
 
   try {
-    await omnistrateRepository.deleteDeployment({
+    await omnistrateRepository.deleteDeployments({
       marketplaceAccountId,
-      entitlementId,
     });
   } catch (error) {
     // Check if instance was not found
     if (error instanceof Error && error.message.includes('not found')) {
       throw error;
     }
-    request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to delete deployment: ${error}`);
+    request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to delete deployments: ${error}`);
     return;
   }
 

@@ -1,5 +1,5 @@
 import { IOmnistrateRepository } from './IOmnistrateRepository';
-import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, isAxiosError } from 'axios';
 import { JwtPayload, decode } from 'jsonwebtoken';
 import assert = require('assert');
 import { randomBytes } from 'crypto';
@@ -83,8 +83,8 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     return response.data.jwtToken;
   }
 
-  private async _createServiceAccount(id: string): Promise<{ email: string; password: string }> {
-    this._opts.logger.info({ id, dryRun: this._opts.dryRun }, 'Creating service account');
+  private async _createServiceAccount(id: string, companyName: string): Promise<{ email: string; password: string }> {
+    this._opts.logger.info({ id, companyName, dryRun: this._opts.dryRun }, 'Creating service account');
 
     if (this._opts?.dryRun) {
       return { email: this._getSAEmail(id), password: this._serviceAccountSecret };
@@ -93,11 +93,84 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     const email = this._getSAEmail(id);
     await OmnistrateRepository._client.post(`/2022-09-01-00/customer-user-signup`, {
       email,
-      legalCompanyName: 'FalkorDB SA',
+      legalCompanyName: `FalkorDB SA ${companyName}`,
       name: `FalkorDB Service Account ${id.replace(/-/g, '')}`,
       password: this._serviceAccountSecret,
     });
     return { email, password: this._serviceAccountSecret };
+  }
+
+  private async _createAccount(
+    email: string,
+    password: string,
+    name: string,
+    companyName: string,
+  ): Promise<{ userId: string; }> {
+    this._opts.logger.info({ email, name, companyName, dryRun: this._opts.dryRun }, 'Creating account');
+    if (this._opts?.dryRun) {
+      return { userId: '123' };
+    }
+    return await OmnistrateRepository._client.post(`/2022-09-01-00/customer-user-signup`, {
+      email,
+      legalCompanyName: companyName,
+      name,
+      password,
+    }).then((response) => {
+      const user = response.data['user'];
+      if (!user) {
+        throw new Error('User not found');
+      }
+      return { userId: user['userId'] };
+    })
+  }
+
+  private async _createSubscription(
+    productTierId: string,
+    userId: string,
+    marketplaceEntitlementId?: string,
+  ): Promise<{ subscriptionId: string }> {
+    this._opts.logger.info(
+      { productTierId, marketplaceEntitlementId, dryRun: this._opts.dryRun },
+      'Creating subscription',
+    );
+
+    if (this._opts?.dryRun) {
+      return { subscriptionId: '123' };
+    }
+
+    const data: { productTierId: string; onBehalfOfCustomerUserId: string; serviceId: string; externalPayerId?: string; paymentChannelType?: string } = {
+      productTierId,
+      onBehalfOfCustomerUserId: userId,
+      serviceId: this._serviceId,
+    };
+
+    if (marketplaceEntitlementId) {
+      data.externalPayerId = marketplaceEntitlementId;
+      data.paymentChannelType = 'CUSTOM';
+    }
+
+    try {
+
+      const response = await OmnistrateRepository._client.post(`/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/subscription`, data);
+
+
+      const subscriptionId = response.data['id'];
+      if (!subscriptionId) {
+        throw new Error('Subscription not found');
+      }
+
+      return { subscriptionId };
+    } catch (error) {
+      if (isAxiosError(error)) {
+        this._opts.logger.error(
+          { error, request: error.request, productTierId, marketplaceEntitlementId, userId },
+          'Failed to create subscription',
+        );
+        throw new Error(`Failed to create subscription: ${error.response?.data?.message || error.message}`);
+      } else {
+        throw error;
+      }
+    }
   }
 
   private async _getUser(email: string): Promise<{ userId: string; token?: string }> {
@@ -115,6 +188,25 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     return { userId: user['userId'], token: user['token'] };
   }
 
+  private async _getUserSubscriptions(userId: string): Promise<{ subscriptionId: string, productTierId: string }[]> {
+    this._opts.logger.info({ userId, dryRun: this._opts.dryRun }, 'Getting user subscriptions');
+
+    if (this._opts?.dryRun) {
+      return Promise.resolve([{ subscriptionId: '123', productTierId: '123' }]);
+    }
+
+    return await OmnistrateRepository._client.get(`/2022-09-01-00/fleet/user/${userId}`).then((response) => {
+      const subscriptions = response.data['subscriptions'];
+      if (!subscriptions) {
+        throw new Error('Subscriptions not found');
+      }
+      return subscriptions.map((s: unknown) => ({
+        subscriptionId: s['subscriptionId'],
+        productTierId: s['productTierId'],
+      }));
+    });
+  }
+
   private async _verifyServiceAccount(email: string, token: string): Promise<void> {
     this._opts.logger.info({ email, dryRun: this._opts.dryRun }, 'Verifying service account');
 
@@ -128,39 +220,22 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     });
   }
 
-  private async _createReadOnlySubscription(
-    bearerToken: string,
-    serviceId: string,
-    productTierId: string,
-  ): Promise<string> {
-    return await axios
-      .post(
-        `${OmnistrateRepository._baseUrl}/2022-09-01-00/subscription`,
-        {
-          serviceId,
-          productTierId,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${bearerToken}`,
-          },
-        },
-      )
-      .then((response) => response.data);
-  }
-
-  private async _inviteReadOnlyUser(bearerToken: string, subscriptionId: string, email: string): Promise<void> {
-    this._opts.logger.info({ subscriptionId, email, dryRun: this._opts.dryRun }, 'Inviting read-only user');
+  private async _inviteUser(marketplaceAccountId: string, subscriptionId: string, email: string, role: 'reader' | 'editor'): Promise<void> {
+    this._opts.logger.info({ subscriptionId, marketplaceAccountId, email, dryRun: this._opts.dryRun }, 'Inviting read-only user');
 
     if (this._opts?.dryRun) {
       return;
     }
 
+    const saEmail = this._getSAEmail(marketplaceAccountId);
+
+    const bearerToken = await OmnistrateRepository._getCustomerBearer(saEmail, this._serviceAccountSecret);
+
     await axios.post(
       `${OmnistrateRepository._baseUrl}/2022-09-01-00/resource-instance/subscription/${subscriptionId}/invite-user`,
       {
         email,
-        roleType: 'reader',
+        roleType: role,
       },
       {
         headers: {
@@ -190,7 +265,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
         `/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/instances`,
       )
     ).data;
-    
+
     this._opts.logger.info({ name, response }, 'Getting instance with name');
 
     const instance = response['resourceInstances']?.find(
@@ -270,44 +345,28 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     );
   }
 
-  async createReadOnlySubscription(params: { marketplaceAccountId: string; userEmail: string }): Promise<void> {
-    this._opts.logger.info(
-      { marketplaceAccountId: params.marketplaceAccountId, userEmail: params.userEmail, dryRun: this._opts.dryRun },
-      'Creating read-only subscription',
-    );
+  private async _listInstancesInSubscription(
+    productTierId: string,
+    subscriptionId: string,
+  ): Promise<{ instanceId: string }[]> {
+    this._opts.logger.info({ productTierId, subscriptionId }, 'Listing instances');
 
-    if (this._opts?.dryRun) {
-      return;
+    const response = (
+      await OmnistrateRepository._client.get(
+        `/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/instances?SubscriptionId=${subscriptionId}&ProductTierId=${productTierId}`,
+      )
+    ).data;
+
+
+    const instances = response['resourceInstances'];
+
+    if (!instances) {
+      throw new Error('Instances not found');
     }
 
-    if (await this._getUser(this._getSAEmail(params.marketplaceAccountId)).catch(() => false)) {
-      throw new Error('Service account already exists');
-    }
-
-    // Create service account
-    const { email, password } = await this._createServiceAccount(params.marketplaceAccountId);
-
-    const { token } = await this._getUser(email);
-
-    if (!token) {
-      throw new Error('User token not found');
-    }
-
-    // Verify service account
-    await this._verifyServiceAccount(email, token);
-
-    // Get SA bearer token
-    const bearerToken = await OmnistrateRepository._getCustomerBearer(email, password);
-
-    // Register for free tier
-    const subscriptionId = await this._createReadOnlySubscription(
-      bearerToken,
-      this._serviceId,
-      this._freeProductTierId,
-    );
-
-    // Invite user as reader for free tier
-    await this._inviteReadOnlyUser(bearerToken, subscriptionId, params.userEmail);
+    return instances.map((i: unknown) => ({
+      instanceId: i['consumptionResourceInstanceResult']['id'],
+    }));
   }
 
   async createFreeDeployment(params: { marketplaceAccountId: string; entitlementId: string }): Promise<{
@@ -337,7 +396,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     const { instanceId, username, password } = await this._createFreeInstance(
       bearerToken,
       subscriptionId,
-      params.entitlementId,
+      'FalkorDB Free'
     );
 
     return {
@@ -347,18 +406,152 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     };
   }
 
-  async deleteDeployment(params: { marketplaceAccountId: string; entitlementId: string }): Promise<void> {
+  async deleteDeployments(params: { marketplaceAccountId: string, productTierId: string }): Promise<void> {
     this._opts.logger.info(
-      { marketplaceAccountId: params.marketplaceAccountId, entitlementId: params.entitlementId, dryRun: this._opts.dryRun },
-      'Deleting deployment',
+      'Deleting deployments',
+      { marketplaceAccountId: params.marketplaceAccountId, productTierId: params.productTierId, dryRun: this._opts.dryRun },
     );
 
     if (this._opts?.dryRun) {
       return;
     }
 
-    const { instanceId } = await this._getInstanceWithName(params.entitlementId);
+    const user = await this._getUser(this._getSAEmail(params.marketplaceAccountId));
 
-    await this._deleteInstance(instanceId);
+    const subscriptions = await this._getUserSubscriptions(user.userId);
+    const subscription = subscriptions.find((s) => s.productTierId === params.productTierId);
+
+    if (!subscription) {
+      this._opts.logger.info(
+        { marketplaceAccountId: params.marketplaceAccountId, productTierId: params.productTierId },
+        'No subscription found',
+      );
+      return;
+    }
+
+    const instances = await this._listInstancesInSubscription(
+      params.productTierId,
+      subscription.subscriptionId,
+    );
+    if (!instances || instances.length === 0) {
+      this._opts.logger.info(
+        { marketplaceAccountId: params.marketplaceAccountId, productTierId: params.productTierId },
+        'No instances found',
+      );
+      return;
+    }
+
+    await Promise.all(
+      instances.map((i) => this._deleteInstance(i.instanceId)),
+    );
   }
+
+  async createServiceAccount(params: {
+    marketplaceAccountId: string;
+    companyName: string;
+  }): Promise<void> {
+    this._opts.logger.info(
+      {
+        marketplaceAccountId: params.marketplaceAccountId,
+        companyName: params.companyName,
+        dryRun: this._opts.dryRun,
+      },
+      'Creating service account',
+    );
+
+    if (this._opts?.dryRun) {
+      return;
+    }
+
+    try {
+      await this._createServiceAccount(
+        params.marketplaceAccountId,
+        params.companyName,
+      )
+    } catch (error) {
+      this._opts.logger.error({ error, marketplaceAccountId: params.marketplaceAccountId, companyName: params.companyName }, `Failed to create account: ${error}`);
+      throw new Error('Failed to create account');
+    }
+
+    const sa = await this._getUser(this._getSAEmail(params.marketplaceAccountId));
+
+    try {
+      await this._verifyServiceAccount(
+        this._getSAEmail(params.marketplaceAccountId),
+        sa.token,
+      );
+    } catch (error) {
+      this._opts.logger.error({ error, marketplaceAccountId: params.marketplaceAccountId }, `Failed to verify account: ${error}`);
+      throw new Error('Failed to verify account');
+    }
+  }
+
+  async createSubscription(params: {
+    productTierId: string,
+    marketplaceAccountId: string
+    entitlementId?: string
+  }): Promise<{ subscriptionId: string }> {
+    this._opts.logger.info(
+      {
+        productTierId: params.productTierId,
+        marketplaceAccountId: params.marketplaceAccountId,
+        entitlementId: params.entitlementId,
+        dryRun: this._opts.dryRun,
+      },
+      'Creating subscription',
+    );
+    if (this._opts?.dryRun) {
+      return { subscriptionId: '123' };
+    }
+
+    const user = await this._getUser(this._getSAEmail(params.marketplaceAccountId));
+
+    const { subscriptionId } = await this._createSubscription(
+      params.productTierId,
+      user.userId,
+      params.entitlementId,
+    )
+
+    if (!subscriptionId) {
+      throw new Error('Subscription not found');
+    }
+
+    return { subscriptionId };
+  }
+
+  async inviteUserToSubscription(
+    params: {
+      marketplaceAccountId: string;
+      subscriptionId: string;
+      email: string;
+      role: 'reader' | 'editor';
+    },
+  ): Promise<void> {
+    this._opts.logger.info(
+      { subscriptionId: params.subscriptionId, email: params.email, dryRun: this._opts.dryRun },
+      'Inviting user to subscription',
+    );
+
+    if (this._opts?.dryRun) {
+      return;
+    }
+    try {
+      await this._inviteUser(params.marketplaceAccountId, params.subscriptionId, params.email, params.role)
+    } catch (error) {
+      if (isAxiosError(error)) {
+        this._opts.logger.error(
+          { error, subscriptionId: params.subscriptionId, email: params.email },
+          'Failed to invite user',
+        );
+        throw new Error(`Failed to invite user: ${error.response?.data?.message || error.message}`);
+      }
+
+      this._opts.logger.error(
+        { error, subscriptionId: params.subscriptionId, email: params.email },
+        'Failed to invite user',
+      );
+      throw new Error('Failed to invite user');
+    }
+  }
+
 }
