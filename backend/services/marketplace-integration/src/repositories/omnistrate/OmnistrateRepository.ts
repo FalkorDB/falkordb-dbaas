@@ -138,7 +138,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       return { subscriptionId: '123' };
     }
 
-    const data: { productTierId: string; onBehalfOfCustomerUserId: string; serviceId: string; externalPayerId?: string; paymentChannelType?: string } = {
+    const data: { productTierId: string; onBehalfOfCustomerUserId: string; serviceId: string; externalPayerId?: string; billingProvider?: string } = {
       productTierId,
       onBehalfOfCustomerUserId: userId,
       serviceId: this._serviceId,
@@ -146,7 +146,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
 
     if (marketplaceEntitlementId) {
       data.externalPayerId = marketplaceEntitlementId;
-      data.paymentChannelType = 'CUSTOM';
+      data.billingProvider = "BRING_YOUR_OWN"
     }
 
     try {
