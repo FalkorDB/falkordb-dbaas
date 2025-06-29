@@ -239,6 +239,48 @@ spec:
                     job_name = "falkordb-pods"
                   }
 
+                  discovery.relabel "falkordb_pods_9122" {
+                  targets = discovery.kubernetes.falkordb_pods.targets
+
+                  rule {
+                    source_labels = ["__meta_kubernetes_pod_ip"]
+                    regex         = "(.+)"
+                    replacement   = "$1:9122"
+                    target_label  = "__address__"
+                  }
+
+                  rule {
+                    source_labels     = ["__meta_kubernetes_pod_container_name"]
+                    action            = "keep"
+                    regex             = "service"
+                  }
+
+                  rule {
+                    action = "replace"
+                    target_label = "namespace"
+                    source_labels = ["__meta_kubernetes_namespace"]
+                  }
+
+                  rule {
+                    action = "labeldrop"
+                    regex = "^instance$"
+                  }
+
+                  rule {
+                    source_labels = ["__meta_kubernetes_pod_name"]
+                    regex         = "(.+)"
+                    target_label  = "pod"
+                  }
+                  }
+
+                  prometheus.scrape "falkordb_pods_9122" {
+                    targets           = discovery.relabel.falkordb_pods_9122.output
+                    scrape_interval   = "60s"
+                    forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
+
+                    job_name = "falkordb-pods-9122"
+                  }
+
                   prometheus.scrape "alloy" {
                     scheme = "https"
 
