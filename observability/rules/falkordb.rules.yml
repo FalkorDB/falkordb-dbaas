@@ -15,6 +15,16 @@ spec:
         annotations:
           summary: FalkorDB down (instance {{ $labels.namespace }})
           description: "FalkorDB instance is down\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      
+      - alert: FalkorDBSentinelMasterDisagreement
+        expr: count(count_values by(master_address) ("count", redis_sentinel_master_status{namespace="{{ $labels.namespace }}" })) > 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Sentinels disagree on the Redis master"
+          description: "Multiple master_address values have been reported by Sentinels for at least 5 minutes."
+
 
       - alert: FalkorDBMissingMaster
         expr: absent(redis_instance_info) == 0 and count(redis_instance_info{role="master"}) by (namespace) < 1
