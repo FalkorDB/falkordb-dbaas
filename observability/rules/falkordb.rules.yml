@@ -17,9 +17,7 @@ spec:
           description: "FalkorDB instance is down\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
       
       - alert: FalkorDBSentinelMasterDisagreement
-        expr: count by (namespace) (
-                count by (namespace, master_address) (redis_sentinel_master_status)
-              ) > 1
+        expr: count(count_values by(master_address, namespace, cluster) ("count", redis_sentinel_master_status)) > 1
         for: 5m
         labels:
           severity: critical
