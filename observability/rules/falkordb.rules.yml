@@ -79,7 +79,7 @@ spec:
           summary: FalkorDB rejected connections (instance {{ $labels.namespace }})
           description: "Some connections to FalkorDB has been rejected\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
-      - alert: FalkorDBAOFFileSizeExceeded
+      - alert: FalkorDBAOFFileSizeExceededWarning
         expr: redis_aof_file_size_bytes > 64 * 1024 * 1024
         for: 5m
         labels:
@@ -87,6 +87,15 @@ spec:
         annotations:
           summary: "FalkorDB AOF file size exceeded threshold in namespace {{ $labels.namespace }}"
           description: "The AOF file size for FalkorDB in namespace {{ $labels.namespace }} has exceeded 64MB. Current size: {{ $value | humanize1024 }}."
+
+      - alert: FalkorDBAOFFileSizeExceededCritical
+        expr: redis_aof_file_size_bytes >= 512 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "FalkorDB AOF file size exceeded the 512MB threshold in namespace {{ $labels.namespace }}"
+          description: "The AOF file size for FalkorDB in namespace {{ $labels.namespace }} has exceeded 512MB. Current size: {{ $value | humanize1024 }}."
 
   - name: falkordb.rules.standalone
     rules: []
