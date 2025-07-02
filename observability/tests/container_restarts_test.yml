@@ -1,0 +1,60 @@
+rule_files:
+  - "../rules/containerrestarts.rules.yml"
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      # Default namespace pod restarts
+      - series: 'kube_pod_container_status_restarts_total{namespace="default", pod="app-1"}'
+        values: '0 1 2 3 4 6 8 10 12 15 18 20 23 26 30 35 40 45 50 55 60 65'
+
+      # Instance-* namespace pod restarts (triggers both PodRestartInstanceWarning & PodRestartCritical)
+      - series: 'kube_pod_container_status_restarts_total{namespace="instance-123", pod="app-2"}'
+        values: '0 0 1 1 2 3 4 5 6 7 8 9 10'  # Frequent restarts in an `instance-*` namespace.
+
+    alert_rule_test:
+      # Validate `PodRestartCritical` (fix: expect two alerts)
+      - eval_time: 15m
+        alertname: PodRestartCritical
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              namespace: "default"
+              pod: "app-1"
+            exp_annotations:
+              summary: "Pod Restart Critical"
+              description: "Pod app-1 in namespace default restarted 5 or more times in the last 10 minutes. Possible crash-loop detected."
+
+          - exp_labels:
+              severity: critical
+              namespace: "instance-123"
+              pod: "app-2"
+            exp_annotations:
+              summary: "Pod Restart Critical"
+              description: "Pod app-2 in namespace instance-123 restarted 5 or more times in the last 10 minutes. Possible crash-loop detected."
+
+      # Validate `PodRestartInfo`
+      - eval_time: 65m
+        alertname: PodRestartInfo
+        exp_alerts:
+          - exp_labels:
+              severity: info
+              namespace: "default"
+              pod: "app-1"
+            exp_annotations:
+              summary: "Pod Restart Info"
+              description: "Pod app-1 in namespace default restarted 10 or more times in the last hour. Investigate potential instability."
+
+      # Validate `PodRestartInstanceWarning`
+      - eval_time: 10m
+        alertname: PodRestartInstanceWarning
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              namespace: "instance-123"
+              pod: "app-2"
+            exp_annotations:
+              summary: "Instance Namespace Pod Restart"
+              description: "Pod app-2 in namespace instance-123 restarted 2 or more times in 5 minutes."
