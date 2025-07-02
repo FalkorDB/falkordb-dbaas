@@ -8,7 +8,7 @@ spec:
   - name: falkordb.rules.general
     rules:
       - alert: FalkorDBDown
-        expr: redis_up == 0
+        expr: redis_up == 0 or absent(redis_up)
         for: 1m
         labels:
           severity: critical
