@@ -115,11 +115,11 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
             exit 1
         fi
 
-        if ! az aks nodepool list --cluster-name "$CLUSTER" --resource-group "$RESOURCE_GROUP" | jq -r '.[].name' | grep -q "^observblty$"; then
+        if ! az aks nodepool list --cluster-name "$CLUSTER" --resource-group "$RESOURCE_GROUP" | jq -r '.[].name' | grep -q "^observe$"; then
             az aks nodepool add \
                 --cluster-name "$CLUSTER" \
                 --resource-group "$RESOURCE_GROUP" \
-                --name observblty \
+                --name observe \
                 --node-count 1 \
                 --min-count 1 \
                 --max-count 10 \
