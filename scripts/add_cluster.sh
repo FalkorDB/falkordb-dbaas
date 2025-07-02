@@ -20,6 +20,10 @@
 #    aws_profile: x
 #    region: x
 #    network_id: x
+#  - platform: azure
+#    context: x
+#    cluster_name: x
+#    resource_group: x
 
 # Require yq
 if ! command -v yq &>/dev/null; then
@@ -48,8 +52,8 @@ export CTRL_PLANE_CTX=$(yq e '.control_plane_context' $CONFIG_FILE)
 
 # Extract cluster details and process them sequentially
 yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cluster_json; do
-    PLATFORM=$(echo "$cluster_json" | jq -r '.platform')
-    REGION=$(echo "$cluster_json" | jq -r '.region')
+    PLATFORM=$(echo "$cluster_json" | jq -r '.platform')    
+    REGION=$(echo "$cluster_json" | jq -r '.region // empty')
     CLUSTER=$(echo "$cluster_json" | jq -r '.cluster_name')
     APP_PLANE_CTX=$(echo "$cluster_json" | jq -r '.context')
 
@@ -70,7 +74,8 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
                 --node-labels=node_pool=observability
         fi
         gcloud container clusters get-credentials $CLUSTER --region=$REGION --project=$PROJECT
-    else
+
+    elif [ "$PLATFORM" == "aws" ]; then
         export AWS_PAGER=""
         AWS_PROFILE=$(echo "$cluster_json" | jq -r '.aws_profile')
         NETWORK_ID=$(echo "$cluster_json" | jq -r '.network_id')
@@ -99,6 +104,35 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
             eval $command
         fi
         aws eks update-kubeconfig --name $CLUSTER --region=$REGION --profile $AWS_PROFILE
+
+        aws eks update-cluster-config --name $CLUSTER --logging '{"clusterLogging":[{"types":["api","audit","authenticator","controllerManager","scheduler"], "enabled": true}]}' --region $REGION --profile $AWS_PROFILE
+
+    elif [ "$PLATFORM" == "azure" ]; then
+        RESOURCE_GROUP=$(echo "$cluster_json" | jq -r '.resource_group')
+
+        if ! az aks show --name "$CLUSTER" --resource-group "$RESOURCE_GROUP" &>/dev/null; then
+            echo "AKS Cluster $CLUSTER not found in resource group $RESOURCE_GROUP."
+            exit 1
+        fi
+
+        if ! az aks nodepool list --cluster-name "$CLUSTER" --resource-group "$RESOURCE_GROUP" | jq -r '.[].name' | grep -q "^observblty$"; then
+            az aks nodepool add \
+                --cluster-name "$CLUSTER" \
+                --resource-group "$RESOURCE_GROUP" \
+                --name observblty \
+                --node-count 1 \
+                --min-count 1 \
+                --max-count 10 \
+                --enable-cluster-autoscaler \
+                --node-vm-size Standard_B2ms \
+                --labels node_pool=observability
+        fi
+
+        az aks get-credentials --name "$CLUSTER" --resource-group "$RESOURCE_GROUP" --overwrite-existing
+
+    else
+        echo "Unsupported platform: $PLATFORM"
+        exit 1
     fi
 
     # Login to ArgoCD
@@ -116,7 +150,7 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
             --namespace=observability
     fi
 
-    # Add cluster credentials
+    # Add cluster credentials to ArgoCD
     if ! argocd cluster list | grep -q "$APP_PLANE_CTX"; then
         argocd cluster add $APP_PLANE_CTX --upsert -y --server $ARGOCD_SERVER --label role=app-plane --label cloud_provider=$(echo $PLATFORM | tr '[:upper:]' '[:lower:]')
     fi
@@ -129,7 +163,7 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
     done
     echo "vmuser secret created."
 
-    # Create vmuser secret
+    # Create vmuser secret in app cluster
     if ! kubectl get secret vmuser --namespace=observability &>/dev/null; then
         kubectl create secret generic vmuser \
             --from-literal=password=$(kubectl get secret $CLUSTER-vmuser -n observability -o jsonpath="{.data.password}" --context $CTRL_PLANE_CTX | base64 --decode) \

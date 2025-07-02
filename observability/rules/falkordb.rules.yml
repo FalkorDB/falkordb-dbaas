@@ -100,6 +100,27 @@ spec:
           summary: "FalkorDB AOF file size exceeded threshold in namespace {{ $labels.namespace }}"
           description: "The AOF file size for FalkorDB in namespace {{ $labels.namespace }} has exceeded 64MB. Current size: {{ $value | humanize1024 }}."
 
+      - alert: FalkorDBAOFPendingRewriteWarning
+        expr: |
+          avg_over_time(redis_aof_pending_rewrite[10m]) == 1
+          unless
+          avg_over_time(redis_aof_pending_rewrite[20m]) == 1
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AOF pending rewrite is taking too long (namespace {{ $labels.namespace }})"
+          description: "AOF pending rewrite has been pending for more than 10 minutes on namespace {{ $labels.namespace }}. This might indicate an issue with AOF persistence."
+
+      - alert: FalkorDBAOFPendingRewriteCritical
+        expr: avg_over_time(redis_aof_pending_rewrite[20m]) == 1
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AOF pending rewrite is critically delayed (namespace {{ $labels.namespace }})"
+          description: "AOF pending rewrite has been pending for more than 20 minutes on namespace {{ $labels.namespace }}. This is a critical issue that could impact data durability."
+
   - name: falkordb.rules.standalone
     rules: []
 
