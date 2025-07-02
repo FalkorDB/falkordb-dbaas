@@ -4,17 +4,26 @@ metadata:
   namespace: observability
   name: falkordb.rules
 spec:
-  groups:
-    - name: falkordb.rules.general
-      rules:
-        - alert: FalkorDBDown
-          expr: redis_up == 0 or absent(redis_up)
-          for: 1m
-          labels:
-            severity: critical
-          annotations:
-            summary: FalkorDB down (instance {{ $labels.namespace }})
-            description: "FalkorDB instance is down\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+ groups:
+  - name: falkordb.rules.general
+    rules:
+      - alert: FalkorDBDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: FalkorDB down (instance {{ $labels.namespace }})
+          description: "FalkorDB instance is down\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+      
+      - alert: FalkorDBSentinelMasterDisagreement
+        expr: count(count_values("master_address", redis_sentinel_master_status[1m]) by (namespace)) by (namespace) > 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Sentinel master disagreement in {{ $labels.namespace }}"
+          description: "Sentinels in '{{ $labels.namespace }}' report multiple master_address values — they do not agree on the master.\n VALUE = {{ $value }}\n LABELS = {{ $labels }}"
 
         - alert: FalkorDBSentinelMasterDisagreement
           expr: count(count_values by(master_address, namespace, cluster) ("count", redis_sentinel_master_status)) > 1
