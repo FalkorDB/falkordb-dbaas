@@ -57,6 +57,35 @@ dex:
         defaultMode: 420
         secretName: argocd-google-groups
 
+applicationSet:
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "500m"
+    limits: 
+      memory: "4Gi"
+      cpu: "2"
+
+controller:
+  replicas: 2
+  metrics:
+    enabled: true
+  template:
+    spec: 
+      containers:
+        - name: argocd-application-controller
+          env:
+            - name: ARGOCD_CONTROLLER_REPLICAS
+              value: "2"
+
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1"
+    limits: 
+      memory: "6Gi"
+      cpu: "2"
+
 extraObjects:
   - apiVersion: argoproj.io/v1alpha1
     kind: Application

@@ -99,8 +99,9 @@ module "gke" {
   enable_private_endpoint              = false
   enable_private_nodes                 = true
   http_load_balancing                  = true
+  gcs_fuse_csi_driver                  = true
 
-  default_max_pods_per_node = 110
+  default_max_pods_per_node = var.default_max_pods_per_node
 
   monitoring_enabled_components = ["SYSTEM_COMPONENTS"]
 
@@ -116,6 +117,7 @@ module "gke" {
       max_count          = 100
       image_type         = "COS_CONTAINERD"
       initial_node_count = 0
+      max_pods_per_node  = 25
     },
     {
       name               = "observability-resources"
@@ -125,9 +127,30 @@ module "gke" {
       max_count          = 20
       image_type         = "COS_CONTAINERD"
       initial_node_count = 0
-
+      max_pods_per_node  = 25
+    },
+    {
+      name               = "backend"
+      machine_type       = "e2-standard-2"
+      disk_size_gb       = 30
+      min_count          = 0
+      max_count          = 20
+      image_type         = "COS_CONTAINERD"
+      initial_node_count = 0
+      max_pods_per_node  = 25
     },
   ]
+  node_pools_resource_labels = {
+    "default-pool" = {
+      "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
+    "observability-resources" = {
+      "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
+    "backend" = {
+      "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
+  }
 }
 
 # Public node pool
@@ -146,6 +169,9 @@ resource "google_container_node_pool" "public" {
     labels = {
       "node_pool" = "public-pool"
     }
+    resource_labels = {
+      "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
   }
 
   autoscaling {
@@ -158,45 +184,6 @@ resource "google_container_node_pool" "public" {
   }
 
 }
-
-# Storage bucket for metrics
-resource "google_storage_bucket" "metrics_bucket" {
-  name                     = "falkordb-observability-metrics"
-  location                 = var.region
-  project                  = var.project_id
-  force_destroy            = true
-  public_access_prevention = "enforced"
-
-  lifecycle_rule {
-    action {
-      type          = "SetStorageClass"
-      storage_class = "NEARLINE"
-    }
-    condition {
-      age = 30
-    }
-  }
-
-  lifecycle_rule {
-    action {
-      type          = "SetStorageClass"
-      storage_class = "COLDLINE"
-    }
-    condition {
-      age = 90
-    }
-  }
-
-  lifecycle_rule {
-    action {
-      type = "Delete"
-    }
-    condition {
-      age = 365
-    }
-  }
-}
-
 
 # ArgoCD IP Address
 module "argocd_ip" {
@@ -253,4 +240,59 @@ resource "google_service_account" "argocd_dwd" {
 # SA Json Key
 resource "google_service_account_key" "argocd_dwd_key" {
   service_account_id = google_service_account.argocd_dwd.name
+}
+
+# Create frontend artifact registry
+resource "google_artifact_registry_repository" "frontend" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "frontend"
+  format        = "DOCKER"
+}
+
+# Create backend artifact registry
+resource "google_artifact_registry_repository" "backend" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "backend"
+  format        = "DOCKER"
+}
+
+# Create jobs artifact registry
+resource "google_artifact_registry_repository" "jobs" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "jobs"
+  format        = "DOCKER"
+}
+
+# add permission to pull images from artifact registry
+resource "google_project_iam_member" "frontend" {
+  project = var.project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${module.gke.service_account}"
+}
+
+data "google_service_account" "db_exporter_sa" {
+  account_id = var.db_exporter_sa_id
+}
+
+resource "google_artifact_registry_repository_iam_member" "db_exporter_sa" {
+  repository = google_artifact_registry_repository.backend.id
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${data.google_service_account.db_exporter_sa.email}"
+}
+
+module "customer_observability_ip" {
+  source  = "terraform-google-modules/address/google"
+  version = "~> 3.2"
+
+  project_id = var.project_id
+  region     = var.region
+
+  global       = false
+  address_type = "EXTERNAL"
+  network_tier = "PREMIUM"
+
+  names = ["customer-observability-ip"]
 }

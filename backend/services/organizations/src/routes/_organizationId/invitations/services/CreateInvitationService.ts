@@ -3,7 +3,7 @@ import { IInvitationsRepository } from '../../../../repositories/invitations/IIn
 import { ApiError } from '@falkordb/errors';
 import { IMessagingRepository } from '../../../../repositories/messaging/IMessagingRepository';
 import { IOrganizationsRepository } from '../../../../repositories/organizations/IOrganizationsRepository';
-import { CreateInvitationType, InvitationType, RoleType } from '@falkordb/schemas/dist/global';
+import { CreateInvitationType, InvitationType, RoleType } from '@falkordb/schemas/global';
 
 export class CreateInvitationService {
   constructor(

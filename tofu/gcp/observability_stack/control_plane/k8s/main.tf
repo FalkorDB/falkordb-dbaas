@@ -46,29 +46,6 @@ provider "helm" {
   }
 }
 
-provider "github" {
-  owner = var.github_organization
-}
-
-resource "github_repository" "this" {
-  name                 = var.github_repository
-  visibility           = "public"
-  auto_init            = true
-  vulnerability_alerts = true
-}
-
-resource "tls_private_key" "flux" {
-  algorithm   = "ECDSA"
-  ecdsa_curve = "P256"
-}
-
-resource "github_repository_deploy_key" "this" {
-  title      = "Flux"
-  repository = github_repository.this.name
-  key        = tls_private_key.flux.public_key_openssh
-  read_only  = "false"
-}
-
 resource "kubernetes_namespace" "argocd" {
   metadata {
     name = "argocd"
@@ -89,7 +66,7 @@ resource "kubernetes_secret" "argocd-secret" {
   }
 
   data = {
-    "admin.password"          = var.argocd_admin_password
+    "admin.password"          = bcrypt(var.argocd_admin_password)
     "admin.passwordMtime"     = timestamp()
     "server.secretkey"        = random_id.argocd.hex
     "dex.google.clientId"     = var.dex_google_client_id
@@ -111,7 +88,7 @@ resource "kubernetes_secret" "argocd-google-groups" {
   }
 
   data = {
-    "googleAuth.json" = var.argocd_groups_sa_json
+    "googleAuth.json" = base64decode(var.argocd_groups_sa_json)
   }
 
   depends_on = [kubernetes_namespace.argocd]
@@ -125,6 +102,8 @@ resource "helm_release" "argocd" {
   namespace  = "argocd"
   version    = "7.7.15"
 
+  skip_crds = false
+
   values = var.environment == "development" ? [file("./values/dev/argocd.yaml")] : [file("./values/prod/argocd.yaml")]
 
   depends_on = [kubernetes_secret.argocd-secret]
@@ -135,3 +114,56 @@ resource "kubernetes_namespace" "observability" {
     name = "observability"
   }
 }
+
+resource "kubernetes_secret" "grafana-google-credentials" {
+  metadata {
+    name      = "grafana-google-credentials"
+    namespace = kubernetes_namespace.observability.metadata.0.name
+  }
+
+  data = {
+    "client-id"     = var.grafana_google_client_id
+    "client-secret" = var.grafana_google_client_secret
+  }
+}
+
+data "google_service_account" "db_exporter_sa" {
+  account_id = var.db_exporter_sa_id
+}
+
+resource "kubernetes_namespace" "api" {
+  metadata {
+    name = "api"
+  }
+}
+
+resource "kubernetes_service_account" "db-exporter-sa" {
+  metadata {
+    name      = "db-exporter-sa"
+    namespace = kubernetes_namespace.api.id
+
+    annotations = {
+      "iam.gke.io/gcp-service-account" = data.google_service_account.db_exporter_sa.email
+    }
+  }
+
+}
+
+// attach db exporter sa to workload identity federation
+resource "google_service_account_iam_binding" "db-exporter-sa-iam" {
+  service_account_id = var.db_exporter_sa_id
+  role               = "roles/iam.workloadIdentityUser"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.api.metadata.0.name}/${kubernetes_service_account.db-exporter-sa.metadata.0.name}]",
+  ]
+}
+
+resource "google_service_account_iam_binding" "db-exporter-sa-token-creator" {
+  service_account_id = var.db_exporter_sa_id
+  role               = "roles/iam.serviceAccountTokenCreator"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.api.metadata.0.name}/${kubernetes_service_account.db-exporter-sa.metadata.0.name}]",
+    "serviceAccount:${data.google_service_account.db_exporter_sa.email}",
+  ]
+}
+

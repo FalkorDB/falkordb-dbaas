@@ -1,7 +1,7 @@
 import { RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import { IMembershipsRepository } from '../../../../../repositories/membership/IMembershipsRepository';
-import { DeleteUserMembershipRequestParamsSchemaType } from '@falkordb/schemas/dist/services/users/v1';
+import { DeleteUserMembershipRequestParamsSchemaType } from '@falkordb/schemas/services/users/v1';
 
 export const deleteMembershipHandler: RouteHandlerMethod<
   undefined,

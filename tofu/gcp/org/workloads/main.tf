@@ -19,6 +19,7 @@ module "control_plane" {
   project_name       = var.control_plane_project_name
   project_parent_id  = google_folder.root_folder.id
   billing_account_id = var.billing_account_id
+  repo_name          = var.pipelines_development_repo_name
 
   state_bucket_name = var.state_bucket_name
 
@@ -26,6 +27,9 @@ module "control_plane" {
   public_network_subnets = var.control_plane_public_network_subnets
 
   cloud_build_push_endpoint = var.control_plane_cloud_build_push_endpoint
+
+  rdb_exports_bucket_name   = var.control_plane_rdb_exports_bucket_name
+  rdb_exports_bucket_region = var.control_plane_rdb_exports_bucket_region
 }
 
 
@@ -42,6 +46,9 @@ module "application_plane" {
 
   velero_role_id = local.velero_role_id
 
+  db_exporter_sa_email = module.control_plane.db_exporter_sa_email
+
+  metering_bucket_name = var.application_plane_metering_bucket_name
 }
 
 module "pipelines_development" {

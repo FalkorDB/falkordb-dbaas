@@ -2,6 +2,7 @@
 local
 __pycache__
 .venv
+.vscode
 
 *.tfstate
 *.tfstate.backup
@@ -17,3 +18,7 @@ backend.conf
 
 node_modules
 dist
+clusters.yml
+.DS_Store
+**/.DS_Store
+certs

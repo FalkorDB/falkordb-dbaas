@@ -168,6 +168,25 @@ spec:
                       target_label = "__address__"
                     }
 
+                    rule {
+                      source_labels = ["__meta_kubernetes_node_label_topology_kubernetes_io_region"]
+                      target_label = "region"
+                    }
+
+                    rule {
+                      source_labels = ["__meta_kubernetes_node_annotation_node_gke_io_last_applied_node_labels"]
+                      target_label = "platform"
+                      regex = "(.+)"
+                      replacement = "gke"
+                    }
+
+                    rule {
+                      source_labels = ["__meta_kubernetes_node_label_k8s_io_cloud_provider_aws"]
+                      target_label = "platform"
+                      regex = "(.+)"
+                      replacement = "eks"
+                    }
+
                   }
 
                   prometheus.scrape "node_exporter" {
@@ -218,6 +237,48 @@ spec:
                     forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
                     job_name = "falkordb-pods"
+                  }
+
+                  discovery.relabel "falkordb_pods_9122" {
+                  targets = discovery.kubernetes.falkordb_pods.targets
+
+                  rule {
+                    source_labels = ["__meta_kubernetes_pod_ip"]
+                    regex         = "(.+)"
+                    replacement   = "$1:9122"
+                    target_label  = "__address__"
+                  }
+
+                  rule {
+                    source_labels     = ["__meta_kubernetes_pod_container_name"]
+                    action            = "keep"
+                    regex             = "service"
+                  }
+
+                  rule {
+                    action = "replace"
+                    target_label = "namespace"
+                    source_labels = ["__meta_kubernetes_namespace"]
+                  }
+
+                  rule {
+                    action = "labeldrop"
+                    regex = "^instance$"
+                  }
+
+                  rule {
+                    source_labels = ["__meta_kubernetes_pod_name"]
+                    regex         = "(.+)"
+                    target_label  = "pod"
+                  }
+                  }
+
+                  prometheus.scrape "falkordb_pods_9122" {
+                    targets           = discovery.relabel.falkordb_pods_9122.output
+                    scrape_interval   = "60s"
+                    forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
+
+                    job_name = "falkordb-pods-9122"
                   }
 
                   prometheus.scrape "alloy" {

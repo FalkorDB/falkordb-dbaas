@@ -4,7 +4,7 @@ import { Value } from '@sinclair/typebox/value';
 import {
   CloudProvisionConfigCreateBodySchemaType,
   CloudProvisionConfigCreateResponseSuccessSchema,
-} from '@falkordb/schemas/dist/services/provisioner/v1';
+} from '@falkordb/schemas/services/provisioner/v1';
 
 let fastify: FastifyInstance;
 beforeAll(async () => {

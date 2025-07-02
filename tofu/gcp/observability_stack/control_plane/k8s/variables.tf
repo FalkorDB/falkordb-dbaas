@@ -56,3 +56,13 @@ variable "dex_google_admin_email" {
 variable "argocd_groups_sa_json" {
   type = string
 }
+
+variable "grafana_google_client_id" {
+  type = string
+}
+variable "grafana_google_client_secret" {
+  type = string
+}
+variable "db_exporter_sa_id" {
+  type = string
+}

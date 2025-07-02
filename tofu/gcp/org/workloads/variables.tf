@@ -25,6 +25,9 @@ variable "application_plane_project_id" {
 variable "application_plane_project_name" {
   type = string
 }
+variable "application_plane_metering_bucket_name" {
+  type = string
+}
 
 
 ###### CONTROL PLANE ######
@@ -57,6 +60,14 @@ variable "control_plane_public_network_subnets" {
 variable "control_plane_cloud_build_push_endpoint" {
   type     = string
   nullable = true
+}
+
+variable "control_plane_rdb_exports_bucket_name" {
+  type = string
+}
+
+variable "control_plane_rdb_exports_bucket_region" {
+  type = string
 }
 
 ###### PIPELINES DEVELOPMENT ######

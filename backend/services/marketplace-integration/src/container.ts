@@ -28,6 +28,9 @@ export const setupGlobalContainer = (fastify: FastifyInstance) => {
     }),
 
     [ICommitRepository.repositoryName]: asFunction(() => {
+      if (process.env.NODE_ENV === 'test') {
+        return new CommitRepositoryMock();
+      }
       return new CommitRepository(fastify.config.COMMIT_BACKEND_BASE_URL, {
         dryRun: fastify.config.DRY_RUN,
         logger: fastify.log,

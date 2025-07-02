@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nginx-ingress-controller
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes.github.io/ingress-nginx
+    targetRevision: 4.12.1
+    chart: ingress-nginx
+    helm:
+      values: |
+        controller:
+          replicaCount: 1
+          allowSnippetAnnotations: true
+          config:
+            annotations-risk-level: Critical
+          service:
+            annotations:
+              cloud.google.com/load-balancer-type: "External"
+            type: LoadBalancer
+            loadBalancerIP: 34.45.219.11
+          admissionWebhooks:
+            enabled: true
+            annotations:
+              argocd.argoproj.io/hook: PostSync
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nginx
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

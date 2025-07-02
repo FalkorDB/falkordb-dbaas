@@ -24,9 +24,9 @@ export async function start() {
 
   await fastify.register(App);
 
-  const IS_GOOGLE_CLOUD_RUN = process.env.K_SERVICE !== undefined;
+  
   const port = fastify.config?.PORT || parseInt(process.env.PORT, 10) || 3000;
-  const host = IS_GOOGLE_CLOUD_RUN ? '0.0.0.0' : '127.0.0.1';
+  const host = '0.0.0.0';
 
   await fastify.listen({
     host,

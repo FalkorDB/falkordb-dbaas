@@ -1,0 +1,31 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mongodb
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: mongodb
+    repoURL: registry-1.docker.io/bitnamicharts
+    targetRevision: 16.5.2
+    helm:
+      releaseName: mongodb
+      valuesObject:
+        fullnameOverride: "mongodb"
+        architecture: standalone
+        nodeSelector:
+          node_pool: backend
+        persistence:
+          enabled: true
+          storageClass: "standard-rwo"
+          size: 50Gi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: api
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
+    "lint": {
+      "dependsOn": ["^lint"]
+    },
+    "check-types": {
+      "dependsOn": ["^check-types"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "env": [
+        "NEXTAUTH_URL",
+        "NEXT_PUBLIC_GRAFANA_URL",
+        "NEXTAUTH_JWT_SECRET",
+        "OMNISTRATE_USER",
+        "OMNISTRATE_PASSWORD",
+        "GRAFANA_WEBHOOK_API_TOKEN",
+        "GRAFANA_SA_USERNAME",
+        "GRAFANA_SA_PASSWORD",
+        "INTERNAL_GRAFANA_URL"
+      ]
+    }
+  }
+}

@@ -1,4 +1,4 @@
-import { DeleteUserRequestParamsSchema } from '@falkordb/schemas/dist/services/auth/v1';
+import { DeleteUserRequestParamsSchema } from '@falkordb/schemas/services/auth/v1';
 import fp from 'fastify-plugin';
 import { deleteUserHandler } from './handlers/delete';
 

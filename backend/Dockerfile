@@ -40,7 +40,6 @@ RUN turbo run --filter=$PROJECT build
 RUN --mount=type=cache,id=pnpm,target=~/.pnpm-store pnpm prune --prod --no-optional
 RUN rm -rf ./services/*/src
 RUN rm -rf ./jobs/*/src
-RUN rm -rf ./libs/*/src
 
 # Final image
 FROM alpine AS runner
