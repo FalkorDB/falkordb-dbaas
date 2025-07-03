@@ -86,6 +86,14 @@ spec:
                         alertname: InfoInhibitor
                       receiver: "blackhole"
                     - receiver: "pagerduty"
+                    - receiver: 'robusta'
+                      group_by: [ '...' ]
+                      group_wait: 1s
+                      group_interval: 1s
+                      matchers:
+                      - severity =~ ".*"
+                      repeat_interval: 4h
+                      continue: true
                 receivers:
                   - name: blackhole
                   - name: "pagerduty"
@@ -93,6 +101,11 @@ spec:
                       - service_key_file: "/etc/vm/secrets/pagerduty-service-key/api-key"
                         url: https://events.pagerduty.com/generic/2010-04-15/create_event.json
                         send_resolved: true
+                  - name: 'robusta'
+                    webhook_configs:
+                        - url: 'http://robusta-runner.default.svc.cluster.local/api/alerts'
+                    send_resolved: true
+
             vmalert:
               spec:
                 nodeSelector:
