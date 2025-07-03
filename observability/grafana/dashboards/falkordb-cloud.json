@@ -10,7 +10,7 @@
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
+        "name": "Annotations \u0026 Alerts",
         "type": "dashboard"
       }
     ]
@@ -887,10 +887,12 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "expr": "sum(rate(redis_net_input_bytes_total{pod=~\"$pod\", namespace=~\"$namespace\"}[5m]))",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "{{ input }}",
+          "legendFormat": "In",
+          "range": true,
           "refId": "A",
           "step": 240
         },
@@ -899,11 +901,13 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
+          "editorMode": "code",
           "expr": "sum(rate(redis_net_output_bytes_total{pod=~\"$pod\", namespace=~\"$namespace\"}[5m]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{ output }}",
+          "legendFormat": "Out",
+          "range": true,
           "refId": "B",
           "step": 240
         }
@@ -1382,8 +1386,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
