@@ -85,7 +85,6 @@ spec:
                     - match:
                         alertname: InfoInhibitor
                       receiver: "blackhole"
-                    - receiver: "pagerduty"
                     - receiver: 'robusta'
                       group_by: [ '...' ]
                       group_wait: 1s
@@ -94,6 +93,7 @@ spec:
                       - severity =~ ".*"
                       repeat_interval: 4h
                       continue: true
+                    - receiver: "pagerduty"
                 receivers:
                   - name: blackhole
                   - name: "pagerduty"
@@ -104,7 +104,7 @@ spec:
                   - name: 'robusta'
                     webhook_configs:
                         - url: 'http://robusta-runner.default.svc.cluster.local/api/alerts'
-                    send_resolved: true
+                          send_resolved: true
 
             vmalert:
               spec:
