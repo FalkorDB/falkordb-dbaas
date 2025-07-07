@@ -23,7 +23,7 @@ spec:
         helm:
           releaseName: robusta
           valuesObject:
-            clusterName: {{ .name }}
+            clusterName: "{{ .name }}"
             globalConfig:
               signing_key: {{ "'{{ env.signing_key }}'" }}
               account_id: {{ "'{{ env.account_id }}'" }}
