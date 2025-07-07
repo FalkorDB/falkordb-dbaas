@@ -25,18 +25,18 @@ spec:
           valuesObject:
             clusterName: {{ .name }}
             globalConfig:
-              signing_key: "{{ env.signing_key }}"
-              account_id: "{{ env.account_id }}"
+              signing_key: {{ "'{{ env.signing_key }}'" }}
+              account_id: {{ "'{{ env.account_id }}'" }}
               prometheus_url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429
               alertmanager_url: http://vmalertmanager-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:9093
               grafana_url: http://grafana-services.observability.svc.cluster.local:3000
             sinksConfig:
               - robusta_sink:
                   name: robusta_ui_sink
-                  token: {{ env.robusta_ui_token }}
+                  token: {{ "'{{ env.robusta_ui_token }}'" }}
               - pagerduty_sink:
                   name: main_pagerduty_sink
-                  api_key: {{ env.pagerduty }}
+                  api_key: {{ "'{{ env.pagerduty }}'" }}
             enablePrometheusStack: false
             enablePlatformPlaybooks: true
             runner:
