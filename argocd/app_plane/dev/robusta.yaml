@@ -43,7 +43,7 @@ spec:
               nodeSelector:
                 node_pool: observability
               sendAdditionalTelemetry: true
-              additionalEnvVars:
+              additional_env_vars:
                 - name: signing_key
                   valueFrom:
                     secretKeyRef:
@@ -90,6 +90,11 @@ spec:
                     secretKeyRef:
                       name: robusta-secrets
                       key: account_id
+                - name: robusta_ui_token
+                  valueFrom:
+                    secretKeyRef:
+                      name: robusta-secrets
+                      key: robusta_ui_token
       destination:
         server: "{{.server}}"
         namespace: observability
