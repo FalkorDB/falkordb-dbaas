@@ -103,7 +103,7 @@ spec:
                         send_resolved: true
                   - name: 'robusta'
                     webhook_configs:
-                        - url: 'http://robusta-runner.default.svc.cluster.local/api/alerts'
+                        - url: 'http://robusta-runner.observability.svc.cluster.local/api/alerts'
                           send_resolved: true
 
             vmalert:
