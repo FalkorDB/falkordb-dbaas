@@ -31,6 +31,7 @@ spec:
           annotations:
             summary: "Container memory RSS usage is high (warning)"
             description: "Container {{ $labels.container }} in pod {{ $labels.pod }} (namespace {{ $labels.namespace }}) is using {{ humanizePercentage $value }} of its memory limit (RSS)."
+            runbook_url: "https://github.com/falkordb/runbooks/blob/main/alerts/ContainerMemoryHighRSSWarning.md"
 
         - alert: ContainerMemoryHighRSSCritical
           expr: |
@@ -45,3 +46,4 @@ spec:
           annotations:
             summary: "Container memory RSS usage is critical"
             description: "Container {{ $labels.container }} in pod {{ $labels.pod }} (namespace {{ $labels.namespace }}) is using {{ humanizePercentage $value }} of its memory limit (RSS)."
+            runbook_url: "https://github.com/falkordb/runbooks/blob/main/alerts/ContainerMemoryHighRSSCritical.md"
