@@ -17,4 +17,5 @@ spec:
             severity: critical
           annotations:
             summary: "Container OOMKilled"
-            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} was terminated due to OOMKilled.\nRunbook link: https://github.com/FalkorDB/runbooks/blob/main/alerts/ContainerOOMKilledRunbook.md"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} was terminated due to OOMKilled."
+            runbook_url: "https://github.com/FalkorDB/runbooks/blob/main/alerts/ContainerOOMKilledRunbook.md"
