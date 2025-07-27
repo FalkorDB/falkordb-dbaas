@@ -72,7 +72,7 @@ spec:
               group_wait: 30s
               group_interval: 5m
               repeat_interval: 12h
-              receiver: "pagerduty"
+              receiver: "blackhole"
               routes:
                 - match:
                     alertname: Watchdog
@@ -80,14 +80,14 @@ spec:
                 # route infoinhibitor to blackhole
                 - match:
                     alertname: InfoInhibitor
-                - receiver: "pagerduty"
+                # - receiver: "pagerduty"
             receivers:
               - name: blackhole
-              - name: "pagerduty"
-                pagerduty_configs:
-                  - service_key_file: "/etc/vm/secrets/pagerduty-service-key/api-key"
-                    url: https://events.pagerduty.com/generic/2010-04-15/create_event.json
-                    send_resolved: true
+              # - name: "pagerduty"
+              #   pagerduty_configs:
+              #     - service_key_file: "/etc/vm/secrets/pagerduty-service-key/api-key"
+              #       url: https://events.pagerduty.com/generic/2010-04-15/create_event.json
+              #       send_resolved: true
         vmalert:
           spec:
             nodeSelector:
