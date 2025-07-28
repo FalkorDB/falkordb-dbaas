@@ -58,7 +58,7 @@ data:
       # Filter pods with TLS=true and exclude sentinel pods
       TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
         ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0) and
-        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0) and
+        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0)
       ) | .metadata.name' | sort | uniq)
       
       if [ -z "$TLS_ENABLED_PODS" ]; then
@@ -136,7 +136,7 @@ data:
     # Filter pods with TLS=true and exclude sentinel pods
       TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
         ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0) and
-        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0) and
+        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0)
       ) | .metadata.name' | sort | uniq)
     
     if [ -z "$TLS_ENABLED_PODS" ]; then
