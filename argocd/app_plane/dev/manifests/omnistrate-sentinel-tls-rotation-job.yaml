@@ -36,7 +36,7 @@ data:
     echo "Found namespaces: $INSTANCE_NAMESPACES"
 
     # Count current running jobs to avoid overwhelming the cluster
-    CURRENT_JOBS=$(kubectl get jobs -l app=sentinel-tls-rotation-job --field-selector status.successful!=1,status.failed!=1 -o name | wc -l)
+    CURRENT_JOBS=$(kubectl get jobs -l app=sentinel-tls-rotation-job --field-selector status.successful!=1 -o name | wc -l)
 
     if [ "$CURRENT_JOBS" -ge "$MAX_CONCURRENT_JOBS" ]; then
       echo "Maximum concurrent jobs ($MAX_CONCURRENT_JOBS) reached. Skipping this run."
@@ -45,6 +45,27 @@ data:
 
     # For each instance namespace, create a job
     for namespace in $INSTANCE_NAMESPACES; do
+
+      # Get all pods in the namespace
+      PODS=$(kubectl get pods -n $namespace -o json 2>/dev/null || echo '{"items":[]}')
+
+      if [ "$PODS" = '{"items":[]}' ]; then
+        echo "No pods found in namespace $namespace"
+        exit 0
+      fi
+
+      # Filter pods with TLS=true and exclude cluster pods
+      TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
+        (.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")) and
+        (.spec.containers[]?.env[]? | select(.name == "RUN_SENTINEL" and .value == 1)) and
+        (.spec.containers[]?.env[]? | select(.name == "NODE_INDEX" and .value <= 1))
+      ) | .metadata.name' | sort | uniq)
+
+      if [ -z "$TLS_ENABLED_PODS" ]; then
+        echo "No TLS-enabled FalkorDB pods found in namespace $namespace"
+        exit 0
+      fi
+
       echo "Creating TLS rotation job for namespace: $namespace"
       
       # Generate unique job name
@@ -56,7 +77,7 @@ data:
     kind: Job
     metadata:
       name: $JOB_NAME
-      namespace: tls-rotation-job
+      namespace: sentinel-tls-rotation-job
       labels:
         app: sentinel-tls-rotation-job
         target-namespace: $namespace
@@ -112,16 +133,15 @@ data:
       exit 0
     fi
 
-    # Filter pods with TLS=true and exclude sentinel pods
+    # Filter pods with TLS=true and exclude cluster pods
     TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
       (.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")) and
-      (.metadata.name | contains("cluster") | not) and
-      # index is <= 1
+      (.spec.containers[]?.env[]? | select(.name == "RUN_SENTINEL" and .value == 1)) and
       (.spec.containers[]?.env[]? | select(.name == "NODE_INDEX" and .value <= 1))
-    ) | .metadata.name')
+    ) | .metadata.name' | sort | uniq)
 
     if [ -z "$TLS_ENABLED_PODS" ]; then
-      echo "No TLS-enabled FalkorDB pods found in namespace $TARGET_NAMESPACE (excluding sentinel pods)"
+      echo "No TLS-enabled FalkorDB pods found in namespace $TARGET_NAMESPACE (excluding cluster pods)"
       exit 0
     fi
 

@@ -37,7 +37,7 @@ data:
     echo "Found namespaces: $INSTANCE_NAMESPACES"
     
     # Count current running jobs to avoid overwhelming the cluster
-    CURRENT_JOBS=$(kubectl get jobs -l app=node-tls-rotation-job --field-selector status.successful!=1,status.failed!=1 -o name | wc -l)
+    CURRENT_JOBS=$(kubectl get jobs -l app=node-tls-rotation-job --field-selector status.successful!=1 -o name | wc -l)
     
     if [ "$CURRENT_JOBS" -ge "$MAX_CONCURRENT_JOBS" ]; then
       echo "Maximum concurrent jobs ($MAX_CONCURRENT_JOBS) reached. Skipping this run."
@@ -46,6 +46,27 @@ data:
     
     # For each instance namespace, create a job
     for namespace in $INSTANCE_NAMESPACES; do
+
+      # Get all pods in the namespace
+      PODS=$(kubectl get pods -n $namespace -o json 2>/dev/null || echo '{"items":[]}')
+      
+      if [ "$PODS" = '{"items":[]}' ]; then
+        echo "No pods found in namespace $namespace"
+        exit 0
+      fi
+      
+      # Filter pods with TLS=true and exclude sentinel pods
+      TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
+        (.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == 1)) and
+        (.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")) and
+        (.metadata.name | contains("sentinel") | not)
+      ) | .metadata.name' | sort | uniq)
+      
+      if [ -z "$TLS_ENABLED_PODS" ]; then
+        echo "No TLS-enabled FalkorDB pods found in namespace $namespace"
+        continue
+      fi
+
       echo "Creating TLS rotation job for namespace: $namespace"
       
       # Generate unique job name
@@ -115,9 +136,10 @@ data:
     
     # Filter pods with TLS=true and exclude sentinel pods
     TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
+      (.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == 1)) and
       (.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")) and
       (.metadata.name | contains("sentinel") | not)
-    ) | .metadata.name')
+    ) | .metadata.name' | sort | uniq)
     
     if [ -z "$TLS_ENABLED_PODS" ]; then
       echo "No TLS-enabled FalkorDB pods found in namespace $TARGET_NAMESPACE (excluding sentinel pods)"
