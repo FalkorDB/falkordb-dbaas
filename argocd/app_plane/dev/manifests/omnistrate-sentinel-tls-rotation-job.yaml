@@ -167,7 +167,7 @@ data:
       echo "Checking if cert_rotate_sentinel.sh exists in /data directory of pod $POD_NAME"
       if kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- test -f /data/cert_rotate_sentinel.sh; then
         echo "Executing TLS certificate rotation on pod: $POD_NAME"
-        kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- sh -c "cd /data && ./cert_rotate_sentinel.sh" || echo "TLS rotation failed in $POD_NAME"
+        kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- sh -c "cd /data && ./cert_rotate_sentinel.sh" || { echo "TLS rotation failed in $POD_NAME" ; exit 1; }
         echo "TLS rotation completed for pod: $POD_NAME"
       else
         echo "Warning: cert_rotate_sentinel.sh not found in /data directory of pod $POD_NAME, skipping..."
