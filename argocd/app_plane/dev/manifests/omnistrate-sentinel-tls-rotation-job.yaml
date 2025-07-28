@@ -77,7 +77,7 @@ data:
     kind: Job
     metadata:
       name: $JOB_NAME
-      namespace: sentinel-tls-rotation-job
+      namespace: tls-rotation-job
       labels:
         app: sentinel-tls-rotation-job
         target-namespace: $namespace
