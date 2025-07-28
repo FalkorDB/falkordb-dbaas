@@ -69,7 +69,7 @@ data:
       echo "Creating TLS rotation job for namespace: $namespace"
       
       # Generate unique job name
-      JOB_NAME="tls-rotation-$namespace-$(date +%s)"
+      JOB_NAME="sentinel-tls-rotation-$namespace-$(date +%s)"
       
       # Create the job manifest
       cat <<EOF | kubectl apply -f -
