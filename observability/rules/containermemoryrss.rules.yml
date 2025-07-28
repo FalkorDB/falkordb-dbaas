@@ -45,5 +45,5 @@ spec:
             severity: critical
           annotations:
             summary: "Container memory RSS usage is critical"
-            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} (namespace {{ $labels.namespace }}) is using {{ humanizePercentage $value }} of its memory limit (RSS)."
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} (namespace {{ $labels.namespace }}) is using {{ humanizePercentage ($value / 100) }} of its memory limit (RSS)."
             runbook_url: "https://github.com/falkordb/runbooks/blob/main/alerts/ContainerMemoryHighRSSCritical.md"
