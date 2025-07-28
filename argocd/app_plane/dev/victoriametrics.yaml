@@ -76,36 +76,22 @@ spec:
                   group_wait: 30s
                   group_interval: 5m
                   repeat_interval: 12h
-                  receiver: "blackhole"
+                  receiver: "pagerduty"
                   routes:
                     - match:
                         alertname: Watchdog
                       receiver: "blackhole"
-                    # route infoinhibitor to blackhole
                     - match:
                         alertname: InfoInhibitor
                       receiver: "blackhole"
-                    - receiver: 'robusta'
-                      group_by: [ '...' ]
-                      group_wait: 1s
-                      group_interval: 1s
-                      matchers:
-                      - severity =~ ".*"
-                      repeat_interval: 4h
-                      continue: true
-                    # - receiver: "pagerduty"
+                    - receiver: "pagerduty"
                 receivers:
                   - name: blackhole
-                  # - name: "pagerduty"
-                  #   pagerduty_configs:
-                  #     - service_key_file: "/etc/vm/secrets/pagerduty-service-key/api-key"
-                  #       url: https://events.pagerduty.com/generic/2010-04-15/create_event.json
-                  #       send_resolved: true
-                  - name: 'robusta'
-                    webhook_configs:
-                        - url: 'http://robusta-runner.observability.svc.cluster.local/api/alerts'
-                          send_resolved: true
-
+                  - name: "pagerduty"
+                    pagerduty_configs:
+                      - service_key_file: "/etc/vm/secrets/pagerduty-service-key/api-key"
+                        url: https://events.pagerduty.com/generic/2010-04-15/create_event.json
+                        send_resolved: true
             vmalert:
               spec:
                 nodeSelector:
