@@ -63,7 +63,7 @@ data:
 
       if [ -z "$TLS_ENABLED_PODS" ]; then
         echo "No TLS-enabled FalkorDB pods found in namespace $namespace"
-        exit 0
+        continue
       fi
 
       echo "Creating TLS rotation job for namespace: $namespace"
