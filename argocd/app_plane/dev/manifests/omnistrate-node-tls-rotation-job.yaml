@@ -57,9 +57,8 @@ data:
       
       # Filter pods with TLS=true and exclude sentinel pods
       TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
-        (.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == 1)) and
-        (.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")) and
-        (.metadata.name | contains("sentinel") | not)
+        ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0) and
+        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0) and
       ) | .metadata.name' | sort | uniq)
       
       if [ -z "$TLS_ENABLED_PODS" ]; then
@@ -135,11 +134,10 @@ data:
     fi
     
     # Filter pods with TLS=true and exclude sentinel pods
-    TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
-      (.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == 1)) and
-      (.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")) and
-      (.metadata.name | contains("sentinel") | not)
-    ) | .metadata.name' | sort | uniq)
+      TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
+        ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0) and
+        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0) and
+      ) | .metadata.name' | sort | uniq)
     
     if [ -z "$TLS_ENABLED_PODS" ]; then
       echo "No TLS-enabled FalkorDB pods found in namespace $TARGET_NAMESPACE (excluding sentinel pods)"
