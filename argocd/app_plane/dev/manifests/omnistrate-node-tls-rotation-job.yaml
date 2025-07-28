@@ -231,7 +231,7 @@ metadata:
     app: tls-rotation
 spec:
   # Run every 12 hours for TLS rotation
-  schedule: "* * * * *"
+  schedule: "* */12 * * *"
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
   successfulJobsHistoryLimit: 3
