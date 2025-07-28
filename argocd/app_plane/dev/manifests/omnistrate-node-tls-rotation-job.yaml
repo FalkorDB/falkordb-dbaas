@@ -13,7 +13,7 @@ metadata:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: tls-rotation-scanner-script
+  name: node-tls-rotation-scanner-script
   namespace: tls-rotation-job
 data:
   namespace-scanner.sh: |
@@ -37,7 +37,7 @@ data:
     echo "Found namespaces: $INSTANCE_NAMESPACES"
     
     # Count current running jobs to avoid overwhelming the cluster
-    CURRENT_JOBS=$(kubectl get jobs -l app=tls-rotation-job --field-selector status.successful!=1,status.failed!=1 -o name | wc -l)
+    CURRENT_JOBS=$(kubectl get jobs -l app=node-tls-rotation-job --field-selector status.successful!=1,status.failed!=1 -o name | wc -l)
     
     if [ "$CURRENT_JOBS" -ge "$MAX_CONCURRENT_JOBS" ]; then
       echo "Maximum concurrent jobs ($MAX_CONCURRENT_JOBS) reached. Skipping this run."
@@ -49,7 +49,7 @@ data:
       echo "Creating TLS rotation job for namespace: $namespace"
       
       # Generate unique job name
-      JOB_NAME="tls-rotation-$namespace-$(date +%s)"
+      JOB_NAME="node-tls-rotation-$namespace-$(date +%s)"
       
       # Create the job manifest
       cat <<EOF | kubectl apply -f -
@@ -59,9 +59,9 @@ data:
       name: $JOB_NAME
       namespace: tls-rotation-job
       labels:
-        app: tls-rotation-job
+        app: node-tls-rotation-job
         target-namespace: $namespace
-        created-by: tls-rotation-cronjob
+        created-by: node-tls-rotation-cronjob
     spec:
       ttlSecondsAfterFinished: 300
       template:
@@ -83,7 +83,7 @@ data:
           volumes:
           - name: tls-rotation-script
             configMap:
-              name: tls-rotation-execution-script
+              name: node-tls-rotation-execution-script
               defaultMode: 0755
     EOF
       
@@ -96,7 +96,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: tls-rotation-execution-script
+  name: node-tls-rotation-execution-script
   namespace: tls-rotation-job
 data:
   tls-rotation.sh: |
@@ -203,13 +203,13 @@ subjects:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: tls-rotation-cronjob
+  name: node-tls-rotation-cronjob
   namespace: tls-rotation-job
   labels:
     app: tls-rotation
 spec:
   # Run every 12 hours for TLS rotation
-  schedule: "*/5 * * * *"
+  schedule: "* * * * *"
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
   successfulJobsHistoryLimit: 3
@@ -218,7 +218,7 @@ spec:
       template:
         metadata:
           labels:
-            app: tls-rotation-scanner
+            app: node-tls-rotation-scanner
         spec:
           serviceAccountName: instance-kubectl-exec-sa
           restartPolicy: OnFailure
@@ -246,5 +246,5 @@ spec:
           volumes:
           - name: scanner-script
             configMap:
-              name: tls-rotation-scanner-script
+              name: node-tls-rotation-scanner-script
               defaultMode: 0755
