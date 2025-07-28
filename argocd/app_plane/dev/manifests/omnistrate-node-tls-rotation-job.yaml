@@ -1,0 +1,250 @@
+---
+# Kubernetes CronJob for executing TLS rotation on FalkorDB instance-* namespaces
+# This CronJob scans for namespaces matching the pattern "instance-*" and creates
+# individual Jobs to perform TLS certificate rotation on FalkorDB pods.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tls-rotation-job
+  labels:
+    app: tls-rotation-job
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tls-rotation-scanner-script
+  namespace: tls-rotation-job
+data:
+  namespace-scanner.sh: |
+    #!/bin/bash
+    set -e
+    
+    # Configuration
+    NAMESPACE_PATTERN="${NAMESPACE_PATTERN:-instance-}"
+    MAX_CONCURRENT_JOBS="${MAX_CONCURRENT_JOBS:-5}"
+    
+    echo "Starting namespace scan for ${NAMESPACE_PATTERN}* pattern..."
+    
+    # Get all namespaces matching the pattern
+    INSTANCE_NAMESPACES=$(kubectl get namespaces -o name | grep "namespace/${NAMESPACE_PATTERN}" | sed 's/namespace\///')
+    
+    if [ -z "$INSTANCE_NAMESPACES" ]; then
+      echo "No namespaces found matching '${NAMESPACE_PATTERN}*' pattern"
+      exit 0
+    fi
+    
+    echo "Found namespaces: $INSTANCE_NAMESPACES"
+    
+    # Count current running jobs to avoid overwhelming the cluster
+    CURRENT_JOBS=$(kubectl get jobs -l app=tls-rotation-job --field-selector status.successful!=1,status.failed!=1 -o name | wc -l)
+    
+    if [ "$CURRENT_JOBS" -ge "$MAX_CONCURRENT_JOBS" ]; then
+      echo "Maximum concurrent jobs ($MAX_CONCURRENT_JOBS) reached. Skipping this run."
+      exit 0
+    fi
+    
+    # For each instance namespace, create a job
+    for namespace in $INSTANCE_NAMESPACES; do
+      echo "Creating TLS rotation job for namespace: $namespace"
+      
+      # Generate unique job name
+      JOB_NAME="tls-rotation-$namespace-$(date +%s)"
+      
+      # Create the job manifest
+      cat <<EOF | kubectl apply -f -
+    apiVersion: batch/v1
+    kind: Job
+    metadata:
+      name: $JOB_NAME
+      namespace: tls-rotation-job
+      labels:
+        app: tls-rotation-job
+        target-namespace: $namespace
+        created-by: tls-rotation-cronjob
+    spec:
+      ttlSecondsAfterFinished: 300
+      template:
+        spec:
+          serviceAccountName: instance-kubectl-exec-sa
+          restartPolicy: Never
+          containers:
+          - name: tls-rotator
+            image: bitnami/kubectl:latest
+            env:
+            - name: TARGET_NAMESPACE
+              value: "$namespace"
+            volumeMounts:
+            - name: tls-rotation-script
+              mountPath: /scripts
+            command:
+            - /bin/bash
+            - /scripts/tls-rotation.sh
+          volumes:
+          - name: tls-rotation-script
+            configMap:
+              name: tls-rotation-execution-script
+              defaultMode: 0755
+    EOF
+      
+      echo "Job $JOB_NAME created successfully"
+    done
+    
+    echo "All TLS rotation jobs created successfully"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tls-rotation-execution-script
+  namespace: tls-rotation-job
+data:
+  tls-rotation.sh: |
+    #!/bin/bash
+    set -e
+    
+    echo "Starting TLS rotation for namespace: $TARGET_NAMESPACE"
+    
+    # Get all pods in the namespace
+    PODS=$(kubectl get pods -n $TARGET_NAMESPACE -o json 2>/dev/null || echo '{"items":[]}')
+    
+    if [ "$PODS" = '{"items":[]}' ]; then
+      echo "No pods found in namespace $TARGET_NAMESPACE"
+      exit 0
+    fi
+    
+    # Filter pods with TLS=true and exclude sentinel pods
+    TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
+      (.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")) and
+      (.metadata.name | contains("sentinel") | not)
+    ) | .metadata.name')
+    
+    if [ -z "$TLS_ENABLED_PODS" ]; then
+      echo "No TLS-enabled FalkorDB pods found in namespace $TARGET_NAMESPACE (excluding sentinel pods)"
+      exit 0
+    fi
+    
+    echo "Found TLS-enabled FalkorDB pods in $TARGET_NAMESPACE: $TLS_ENABLED_PODS"
+    
+    # Execute cert rotation on each qualifying pod
+    for POD_NAME in $TLS_ENABLED_PODS; do
+      echo "Processing TLS rotation for pod: $POD_NAME"
+      
+      # Check if pod is ready
+      POD_STATUS=$(kubectl get pod -n $TARGET_NAMESPACE $POD_NAME -o jsonpath='{.status.phase}')
+      if [ "$POD_STATUS" != "Running" ]; then
+        echo "Pod $POD_NAME is not running (status: $POD_STATUS), skipping..."
+        continue
+      fi
+      
+      # Check if the cert_rotate_node.sh script exists
+      echo "Checking if cert_rotate_node.sh exists in /data directory of pod $POD_NAME"
+      if kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- test -f /data/cert_rotate_node.sh; then
+        echo "Executing TLS certificate rotation on pod: $POD_NAME"
+        kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- sh -c "cd /data && ./cert_rotate_node.sh" || echo "TLS rotation failed in $POD_NAME"
+        echo "TLS rotation completed for pod: $POD_NAME"
+      else
+        echo "Warning: cert_rotate_node.sh not found in /data directory of pod $POD_NAME, skipping..."
+      fi
+    done
+    
+    echo "TLS rotation process completed for namespace $TARGET_NAMESPACE"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: instance-kubectl-exec-sa
+  namespace: tls-rotation-job
+  labels:
+    app: instance-kubectl-exec
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: instance-kubectl-exec-role
+  labels:
+    app: instance-kubectl-exec
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["list", "get"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list", "get"]
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "get", "list", "delete"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: instance-kubectl-exec-binding
+  labels:
+    app: instance-kubectl-exec
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: instance-kubectl-exec-role
+subjects:
+- kind: ServiceAccount
+  name: instance-kubectl-exec-sa
+  namespace: tls-rotation-job
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: tls-rotation-cronjob
+  namespace: tls-rotation-job
+  labels:
+    app: tls-rotation
+spec:
+  # Run every 12 hours for TLS rotation
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: tls-rotation-scanner
+        spec:
+          serviceAccountName: instance-kubectl-exec-sa
+          restartPolicy: OnFailure
+          containers:
+          - name: namespace-scanner
+            image: bitnami/kubectl:latest
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "50m"
+              limits:
+                memory: "128Mi"
+                cpu: "100m"
+            env:
+            - name: NAMESPACE_PATTERN
+              value: "instance-"
+            - name: MAX_CONCURRENT_JOBS
+              value: "5"
+            volumeMounts:
+            - name: scanner-script
+              mountPath: /scripts
+            command:
+            - /bin/bash
+            - /scripts/namespace-scanner.sh
+          volumes:
+          - name: scanner-script
+            configMap:
+              name: tls-rotation-scanner-script
+              defaultMode: 0755
