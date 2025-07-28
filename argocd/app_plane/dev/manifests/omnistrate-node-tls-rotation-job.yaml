@@ -19,31 +19,31 @@ data:
   namespace-scanner.sh: |
     #!/bin/bash
     set -e
-    
+
     # Configuration
     NAMESPACE_PATTERN="${NAMESPACE_PATTERN:-instance-}"
     MAX_CONCURRENT_JOBS="${MAX_CONCURRENT_JOBS:-5}"
-    
+
     echo "Starting namespace scan for ${NAMESPACE_PATTERN}* pattern..."
-    
+
     # Get all namespaces matching the pattern
     INSTANCE_NAMESPACES=$(kubectl get namespaces -o name | grep "namespace/${NAMESPACE_PATTERN}" | sed 's/namespace\///')
-    
+
     if [ -z "$INSTANCE_NAMESPACES" ]; then
       echo "No namespaces found matching '${NAMESPACE_PATTERN}*' pattern"
       exit 0
     fi
-    
+
     echo "Found namespaces: $INSTANCE_NAMESPACES"
-    
+
     # Count current running jobs to avoid overwhelming the cluster
     CURRENT_JOBS=$(kubectl get jobs -l app=node-tls-rotation-job --field-selector status.successful!=1 -o name | wc -l)
-    
+
     if [ "$CURRENT_JOBS" -ge "$MAX_CONCURRENT_JOBS" ]; then
       echo "Maximum concurrent jobs ($MAX_CONCURRENT_JOBS) reached. Skipping this run."
       exit 0
     fi
-    
+
     # For each instance namespace, create a job
     for namespace in $INSTANCE_NAMESPACES; do
 
@@ -91,6 +91,10 @@ data:
           containers:
           - name: tls-rotator
             image: bitnami/kubectl:latest
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 1000
+              allowPrivilegeEscalation: false
             env:
             - name: TARGET_NAMESPACE
               value: "$namespace"
@@ -109,7 +113,7 @@ data:
       
       echo "Job $JOB_NAME created successfully"
     done
-    
+
     echo "All TLS rotation jobs created successfully"
 
 ---
@@ -122,30 +126,30 @@ data:
   tls-rotation.sh: |
     #!/bin/bash
     set -e
-    
+
     echo "Starting TLS rotation for namespace: $TARGET_NAMESPACE"
-    
+
     # Get all pods in the namespace
     PODS=$(kubectl get pods -n $TARGET_NAMESPACE -o json 2>/dev/null || echo '{"items":[]}')
-    
+
     if [ "$PODS" = '{"items":[]}' ]; then
       echo "No pods found in namespace $TARGET_NAMESPACE"
       exit 0
     fi
-    
+
     # Filter pods with TLS=true and exclude sentinel pods
       TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
         ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0) and
         ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0)
       ) | .metadata.name' | sort | uniq)
-    
+
     if [ -z "$TLS_ENABLED_PODS" ]; then
       echo "No TLS-enabled FalkorDB pods found in namespace $TARGET_NAMESPACE (excluding sentinel pods)"
       exit 0
     fi
-    
+
     echo "Found TLS-enabled FalkorDB pods in $TARGET_NAMESPACE: $TLS_ENABLED_PODS"
-    
+
     # Execute cert rotation on each qualifying pod
     for POD_NAME in $TLS_ENABLED_PODS; do
       echo "Processing TLS rotation for pod: $POD_NAME"
@@ -167,7 +171,7 @@ data:
         echo "Warning: cert_rotate_node.sh not found in /data directory of pod $POD_NAME, skipping..."
       fi
     done
-    
+
     echo "TLS rotation process completed for namespace $TARGET_NAMESPACE"
 
 ---
@@ -187,21 +191,21 @@ metadata:
   labels:
     app: instance-kubectl-exec
 rules:
-- apiGroups: [""]
-  resources: ["namespaces"]
-  verbs: ["list", "get"]
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["list", "get"]
-- apiGroups: [""]
-  resources: ["pods/exec"]
-  verbs: ["create"]
-- apiGroups: ["batch"]
-  resources: ["jobs"]
-  verbs: ["create", "get", "list", "delete"]
-- apiGroups: [""]
-  resources: ["events"]
-  verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["list", "get"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list", "get"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -215,9 +219,9 @@ roleRef:
   kind: ClusterRole
   name: instance-kubectl-exec-role
 subjects:
-- kind: ServiceAccount
-  name: instance-kubectl-exec-sa
-  namespace: tls-rotation-job
+  - kind: ServiceAccount
+    name: instance-kubectl-exec-sa
+    namespace: tls-rotation-job
 
 ---
 apiVersion: batch/v1
@@ -243,28 +247,32 @@ spec:
           serviceAccountName: instance-kubectl-exec-sa
           restartPolicy: OnFailure
           containers:
-          - name: namespace-scanner
-            image: bitnami/kubectl:latest
-            resources:
-              requests:
-                memory: "64Mi"
-                cpu: "50m"
-              limits:
-                memory: "128Mi"
-                cpu: "100m"
-            env:
-            - name: NAMESPACE_PATTERN
-              value: "instance-"
-            - name: MAX_CONCURRENT_JOBS
-              value: "5"
-            volumeMounts:
-            - name: scanner-script
-              mountPath: /scripts
-            command:
-            - /bin/bash
-            - /scripts/namespace-scanner.sh
+            - name: namespace-scanner
+              image: bitnami/kubectl:latest
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "100m"
+              env:
+                - name: NAMESPACE_PATTERN
+                  value: "instance-"
+                - name: MAX_CONCURRENT_JOBS
+                  value: "5"
+              volumeMounts:
+                - name: scanner-script
+                  mountPath: /scripts
+              command:
+                - /bin/bash
+                - /scripts/namespace-scanner.sh
           volumes:
-          - name: scanner-script
-            configMap:
-              name: node-tls-rotation-scanner-script
-              defaultMode: 0755
+            - name: scanner-script
+              configMap:
+                name: node-tls-rotation-scanner-script
+                defaultMode: 0755
