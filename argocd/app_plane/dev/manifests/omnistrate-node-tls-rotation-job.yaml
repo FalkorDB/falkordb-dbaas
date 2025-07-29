@@ -52,7 +52,7 @@ data:
       
       if [ "$PODS" = '{"items":[]}' ]; then
         echo "No pods found in namespace $namespace"
-        exit 0
+        continue
       fi
       
       # Filter pods with TLS=true and exclude sentinel pods
