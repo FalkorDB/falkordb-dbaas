@@ -165,7 +165,7 @@ data:
 
       # Check if there's a container called "*sentinel*" in the pod. If so, execute the cert rotation script there
       CONTAINER_NAME=service
-      if $PODS | jq -e ".items[] | select(.metadata.name == \"$POD_NAME\") | .spec.containers[] | select(.name | contains(\"sentinel\"))" > /dev/null; then
+      if echo "$PODS" | jq -e ".items[] | select(.metadata.name == \"$POD_NAME\") | .spec.containers[] | select(.name | contains(\"sentinel\"))" > /dev/null; then
         CONTAINER_NAME=$(kubectl get pod -n $TARGET_NAMESPACE $POD_NAME -o jsonpath='{.spec.containers[?(@.name == "service")].name}')
       fi
       
