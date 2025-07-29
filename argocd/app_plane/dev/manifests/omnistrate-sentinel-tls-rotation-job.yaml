@@ -3,13 +3,6 @@
 # This CronJob scans for namespaces matching the pattern "instance-*" and creates
 # individual Jobs to perform TLS certificate rotation on FalkorDB sentinel pods.
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: tls-rotation-job
-  labels:
-    app: tls-rotation-job
----
-apiVersion: v1
 kind: ConfigMap
 metadata:
   name: sentinel-tls-rotation-scanner-script
@@ -21,7 +14,7 @@ data:
 
     # Configuration
     NAMESPACE_PATTERN="${NAMESPACE_PATTERN:-instance-}"
-    MAX_CONCURRENT_JOBS="${MAX_CONCURRENT_JOBS:-5}"
+    MAX_CONCURRENT_JOBS="${MAX_CONCURRENT_JOBS:-1}"
 
     echo "Starting namespace scan for ${NAMESPACE_PATTERN}* pattern..."
 
@@ -166,7 +159,7 @@ data:
       # Check if there's a container called "*sentinel*" in the pod. If so, execute the cert rotation script there
       CONTAINER_NAME=service
       if echo "$PODS" | jq -e ".items[] | select(.metadata.name == \"$POD_NAME\") | .spec.containers[] | select(.name | contains(\"sentinel\"))" > /dev/null; then
-        CONTAINER_NAME=$(kubectl get pod -n $TARGET_NAMESPACE $POD_NAME -o jsonpath='{.spec.containers[?(@.name == "service")].name}')
+        CONTAINER_NAME=$(kubectl get pod -n $TARGET_NAMESPACE $POD_NAME -o jsonpath='{.spec.containers[?(@.name | contains("sentinel"))].name}' | awk '{print $1}')
       fi
       
       # Check if the cert_rotate_sentinel.sh script exists
@@ -272,7 +265,7 @@ spec:
                 - name: NAMESPACE_PATTERN
                   value: "instance-"
                 - name: MAX_CONCURRENT_JOBS
-                  value: "5"
+                  value: "1"
               volumeMounts:
                 - name: scanner-script
                   mountPath: /scripts

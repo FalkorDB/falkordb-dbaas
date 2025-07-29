@@ -1,21 +1,12 @@
 ---
-# Kubernetes CronJob for executing bgrewriteaof on FalkorDB instance-* namespaces
+# Kubernetes CronJob for executing TLS rotation on FalkorDB instance-* namespaces
 # This CronJob scans for namespaces matching the pattern "instance-*" and creates
-# individual Jobs to perform background AOF rewriting on FalkorDB node pods.
-
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: bgrewriteaof-job
-  labels:
-    app: bgrewriteaof-job
-
----
+# individual Jobs to perform TLS certificate rotation on FalkorDB sentinel pods.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: bgrewriteaof-scanner-script
-  namespace: bgrewriteaof-job
+  name: sentinel-tls-rotation-scanner-script
+  namespace: tls-rotation-job
 data:
   namespace-scanner.sh: |
     #!/bin/bash
@@ -38,7 +29,7 @@ data:
     echo "Found namespaces: $INSTANCE_NAMESPACES"
 
     # Count current running jobs to avoid overwhelming the cluster
-    CURRENT_JOBS=$(kubectl get jobs -l app=bgrewriteaof-job --field-selector status.successful!=1 -o name | wc -l)
+    CURRENT_JOBS=$(kubectl get jobs -l app=sentinel-tls-rotation-job --field-selector status.successful!=1 -o name | wc -l)
 
     if [ "$CURRENT_JOBS" -ge "$MAX_CONCURRENT_JOBS" ]; then
       echo "Maximum concurrent jobs ($MAX_CONCURRENT_JOBS) reached. Skipping this run."
@@ -50,26 +41,28 @@ data:
 
       # Get all pods in the namespace
       PODS=$(kubectl get pods -n $namespace -o json 2>/dev/null || echo '{"items":[]}')
-      
+
       if [ "$PODS" = '{"items":[]}' ]; then
         echo "No pods found in namespace $namespace"
         continue
       fi
-      
-      # Filter pods with RUN_NODE=1
-      NODE_PODS=$(echo "$PODS" | jq -r '.items[] | select(
-        ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0)
+
+      # Filter pods with TLS=true and exclude cluster pods
+      TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
+        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0) and
+        ([.spec.containers[]?.env[]? | select(.name == "RUN_SENTINEL" and .value == "1")] | length > 0) and
+        ([.spec.containers[]?.env[]? | select(.name == "NODE_INDEX" and (.value == "0" or .value == "1"))] | length > 0)
       ) | .metadata.name' | sort | uniq)
-      
-      if [ -z "$NODE_PODS" ]; then
-        echo "No FalkorDB node pods found in namespace $namespace"
+
+      if [ -z "$TLS_ENABLED_PODS" ]; then
+        echo "No TLS-enabled FalkorDB pods found in namespace $namespace"
         continue
       fi
 
-      echo "Creating bgrewriteaof job for namespace: $namespace"
+      echo "Creating TLS rotation job for namespace: $namespace"
       
       # Generate unique job name
-      JOB_NAME="bgrewriteaof-$namespace-$(date +%s)"
+      JOB_NAME="sentinel-tls-rotation-$namespace-$(date +%s)"
       
       # Create the job manifest
       cat <<EOF | kubectl apply -f -
@@ -77,11 +70,11 @@ data:
     kind: Job
     metadata:
       name: $JOB_NAME
-      namespace: bgrewriteaof-job
+      namespace: tls-rotation-job
       labels:
-        app: bgrewriteaof-job
+        app: sentinel-tls-rotation-job
         target-namespace: $namespace
-        created-by: bgrewriteaof-cronjob
+        created-by: sentinel-tls-rotation-cronjob
     spec:
       ttlSecondsAfterFinished: 300
       template:
@@ -89,7 +82,7 @@ data:
           serviceAccountName: instance-kubectl-exec-sa
           restartPolicy: Never
           containers:
-          - name: bgrewriteaof-executor
+          - name: tls-rotator
             image: bitnami/kubectl:latest
             securityContext:
               runAsNonRoot: true
@@ -99,35 +92,35 @@ data:
             - name: TARGET_NAMESPACE
               value: "$namespace"
             volumeMounts:
-            - name: bgrewriteaof-script
+            - name: tls-rotation-script
               mountPath: /scripts
             command:
             - /bin/bash
-            - /scripts/bgrewriteaof.sh
+            - /scripts/tls-rotation.sh
           volumes:
-          - name: bgrewriteaof-script
+          - name: tls-rotation-script
             configMap:
-              name: bgrewriteaof-execution-script
+              name: sentinel-tls-rotation-execution-script
               defaultMode: 0755
     EOF
       
       echo "Job $JOB_NAME created successfully"
     done
 
-    echo "All bgrewriteaof jobs created successfully"
+    echo "All TLS rotation jobs created successfully"
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: bgrewriteaof-execution-script
-  namespace: bgrewriteaof-job
+  name: sentinel-tls-rotation-execution-script
+  namespace: tls-rotation-job
 data:
-  bgrewriteaof.sh: |
+  tls-rotation.sh: |
     #!/bin/bash
     set -e
 
-    echo "Starting bgrewriteaof execution for namespace: $TARGET_NAMESPACE"
+    echo "Starting TLS rotation for namespace: $TARGET_NAMESPACE"
 
     # Get all pods in the namespace
     PODS=$(kubectl get pods -n $TARGET_NAMESPACE -o json 2>/dev/null || echo '{"items":[]}')
@@ -137,21 +130,24 @@ data:
       exit 0
     fi
 
-    # Filter pods with RUN_NODE=1
-    NODE_PODS=$(echo "$PODS" | jq -r '.items[] | select(
-      ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0)
-    ) | .metadata.name' | sort | uniq)
+    # Filter pods with TLS=true and exclude cluster pods
+      TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
+        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0) and
+        ([.spec.containers[]?.env[]? | select(.name == "RUN_SENTINEL" and .value == "1")] | length > 0) and
+        ([.spec.containers[]?.env[]? | select(.name == "NODE_INDEX" and (.value == "0" or .value == "1"))] | length > 0)
+      ) | .metadata.name' | sort | uniq)
 
-    if [ -z "$NODE_PODS" ]; then
-      echo "No FalkorDB node pods found in namespace $TARGET_NAMESPACE"
+
+    if [ -z "$TLS_ENABLED_PODS" ]; then
+      echo "No TLS-enabled FalkorDB pods found in namespace $TARGET_NAMESPACE (excluding cluster pods)"
       exit 0
     fi
 
-    echo "Found FalkorDB node pods in $TARGET_NAMESPACE: $NODE_PODS"
+    echo "Found TLS-enabled FalkorDB pods in $TARGET_NAMESPACE: $TLS_ENABLED_PODS"
 
-    # Execute bgrewriteaof on each qualifying pod
-    for POD_NAME in $NODE_PODS; do
-      echo "Processing bgrewriteaof for pod: $POD_NAME"
+    # Execute cert rotation on each qualifying pod
+    for POD_NAME in $TLS_ENABLED_PODS; do
+      echo "Processing TLS rotation for pod: $POD_NAME"
       
       # Check if pod is ready
       POD_STATUS=$(kubectl get pod -n $TARGET_NAMESPACE $POD_NAME -o jsonpath='{.status.phase}')
@@ -159,27 +155,33 @@ data:
         echo "Pod $POD_NAME is not running (status: $POD_STATUS), skipping..."
         continue
       fi
+
+      # Check if there's a container called "*sentinel*" in the pod. If so, execute the cert rotation script there
+      CONTAINER_NAME=service
+      if echo "$PODS" | jq -e ".items[] | select(.metadata.name == \"$POD_NAME\") | .spec.containers[] | select(.name | contains(\"sentinel\"))" > /dev/null; then
+        # Get the first container name that matches "sentinel"
+        CONTAINER_NAME=$(kubectl get pod -n $TARGET_NAMESPACE $POD_NAME -o jsonpath='{.spec.containers[?(@.name | contains("sentinel"))].name}' | awk '{print $1}')
+      fi
       
-      # Check if the run_bgrewriteaof script exists
-      echo "Checking if run_bgrewriteaof exists in /var/lib/falkordb directory of pod $POD_NAME"
-      if kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- test -f /var/lib/falkordb/run_bgrewriteaof; then
-        echo "Executing bgrewriteaof script on pod: $POD_NAME"
-        kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- sh -c "/var/lib/falkordb/run_bgrewriteaof" || { echo "Bgrewriteaof execution failed in $POD_NAME"; exit 1; }
-        echo "Bgrewriteaof execution completed for pod: $POD_NAME"
+      # Check if the cert_rotate_sentinel.sh script exists
+      echo "Checking if cert_rotate_sentinel.sh exists in /data directory of pod $POD_NAME"
+      if kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c $CONTAINER_NAME -- test -f /data/cert_rotate_sentinel.sh; then
+        echo "Executing TLS certificate rotation on pod: $POD_NAME"
+        kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c $CONTAINER_NAME -- sh -c "cd /data && ./cert_rotate_sentinel.sh" || { echo "TLS rotation failed in $POD_NAME" ; exit 1; }
+        echo "TLS rotation completed for pod: $POD_NAME"
       else
-        echo "Warning: run_bgrewriteaof not found in /var/lib/falkordb directory of pod $POD_NAME, skipping..."
-        exit 1
+        echo "Warning: cert_rotate_sentinel.sh not found in /data directory of pod $POD_NAME, skipping..."
       fi
     done
 
-    echo "Bgrewriteaof execution process completed for namespace $TARGET_NAMESPACE"
+    echo "TLS rotation process completed for namespace $TARGET_NAMESPACE"
 
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: instance-kubectl-exec-sa
-  namespace: bgrewriteaof-job
+  namespace: tls-rotation-job
   labels:
     app: instance-kubectl-exec
 
@@ -187,9 +189,9 @@ metadata:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: bgrewriteaof-kubectl-exec-role
+  name: instance-kubectl-exec-role
   labels:
-    app: bgrewriteaof-kubectl-exec
+    app: instance-kubectl-exec
 rules:
   - apiGroups: [""]
     resources: ["namespaces"]
@@ -211,29 +213,29 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: bgrewriteaof-kubectl-exec-binding
+  name: instance-kubectl-exec-binding
   labels:
-    app: bgrewriteaof-kubectl-exec
+    app: instance-kubectl-exec
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: bgrewriteaof-kubectl-exec-role
+  name: instance-kubectl-exec-role
 subjects:
   - kind: ServiceAccount
     name: instance-kubectl-exec-sa
-    namespace: bgrewriteaof-job
+    namespace: tls-rotation-job
 
 ---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: bgrewriteaof-cronjob
-  namespace: bgrewriteaof-job
+  name: sentinel-tls-rotation-cronjob
+  namespace: tls-rotation-job
   labels:
-    app: bgrewriteaof
+    app: tls-rotation
 spec:
-  # Run every 15 minutes
-  schedule: "*/15 * * * *"
+  # Run every 12 hours for TLS rotation
+  schedule: "0 */12 * * *"
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
   successfulJobsHistoryLimit: 3
@@ -242,7 +244,7 @@ spec:
       template:
         metadata:
           labels:
-            app: bgrewriteaof-scanner
+            app: sentinel-tls-rotation-scanner
         spec:
           serviceAccountName: instance-kubectl-exec-sa
           restartPolicy: OnFailure
@@ -274,5 +276,5 @@ spec:
           volumes:
             - name: scanner-script
               configMap:
-                name: bgrewriteaof-scanner-script
+                name: sentinel-tls-rotation-scanner-script
                 defaultMode: 0755
