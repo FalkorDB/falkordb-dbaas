@@ -18,3 +18,32 @@ spec:
             )
           labels: {}
           record: node_namespace_pod_container:container_memory_rss
+        - alert: ContainerMemoryHighRSSWarning
+          expr: |
+            (
+              sum by (namespace, pod, container) (container_memory_rss{container!=""})
+              /
+              sum by (namespace, pod, container) (kube_pod_container_resource_limits{resource="memory"})
+            ) * 100 > 75
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Container memory RSS usage is high (warning)"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} (namespace {{ $labels.namespace }}) is using {{ humanizePercentage ($value / 100) }} of its memory limit (RSS)."
+            runbook_url: "https://github.com/falkordb/runbooks/blob/main/alerts/ContainerMemoryHighRSSWarning.md"
+
+        - alert: ContainerMemoryHighRSSCritical
+          expr: |
+            (
+              sum by (namespace, pod, container) (container_memory_rss{container!=""})
+              /
+              sum by (namespace, pod, container) (kube_pod_container_resource_limits{resource="memory"})
+            ) * 100 > 90
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Container memory RSS usage is critical"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} (namespace {{ $labels.namespace }}) is using {{ humanizePercentage ($value / 100) }} of its memory limit (RSS)."
+            runbook_url: "https://github.com/falkordb/runbooks/blob/main/alerts/ContainerMemoryHighRSSCritical.md"
