@@ -265,7 +265,7 @@ spec:
                 - name: NAMESPACE_PATTERN
                   value: "instance-"
                 - name: MAX_CONCURRENT_JOBS
-                  value: "5"
+                  value: "1"
               volumeMounts:
                 - name: scanner-script
                   mountPath: /scripts
