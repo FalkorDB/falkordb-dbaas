@@ -1,11 +1,19 @@
 ---
 # Kubernetes CronJob for executing TLS rotation on FalkorDB instance-* namespaces
 # This CronJob scans for namespaces matching the pattern "instance-*" and creates
-# individual Jobs to perform TLS certificate rotation on FalkorDB sentinel pods.
+# individual Jobs to perform TLS certificate rotation on FalkorDB pods.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tls-rotation-job
+  labels:
+    app: tls-rotation-job
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: sentinel-tls-rotation-scanner-script
+  name: node-tls-rotation-scanner-script
   namespace: tls-rotation-job
 data:
   namespace-scanner.sh: |
@@ -29,7 +37,7 @@ data:
     echo "Found namespaces: $INSTANCE_NAMESPACES"
 
     # Count current running jobs to avoid overwhelming the cluster
-    CURRENT_JOBS=$(kubectl get jobs -l app=sentinel-tls-rotation-job --field-selector status.successful!=1 -o name | wc -l)
+    CURRENT_JOBS=$(kubectl get jobs -l app=node-tls-rotation-job --field-selector status.successful!=1 -o name | wc -l)
 
     if [ "$CURRENT_JOBS" -ge "$MAX_CONCURRENT_JOBS" ]; then
       echo "Maximum concurrent jobs ($MAX_CONCURRENT_JOBS) reached. Skipping this run."
@@ -41,19 +49,18 @@ data:
 
       # Get all pods in the namespace
       PODS=$(kubectl get pods -n $namespace -o json 2>/dev/null || echo '{"items":[]}')
-
+      
       if [ "$PODS" = '{"items":[]}' ]; then
         echo "No pods found in namespace $namespace"
         continue
       fi
-
-      # Filter pods with TLS=true and exclude cluster pods
+      
+      # Filter pods with TLS=true and exclude sentinel pods
       TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
-        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0) and
-        ([.spec.containers[]?.env[]? | select(.name == "RUN_SENTINEL" and .value == "1")] | length > 0) and
-        ([.spec.containers[]?.env[]? | select(.name == "NODE_INDEX" and (.value == "0" or .value == "1"))] | length > 0)
+        ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0) and
+        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0)
       ) | .metadata.name' | sort | uniq)
-
+      
       if [ -z "$TLS_ENABLED_PODS" ]; then
         echo "No TLS-enabled FalkorDB pods found in namespace $namespace"
         continue
@@ -62,7 +69,7 @@ data:
       echo "Creating TLS rotation job for namespace: $namespace"
       
       # Generate unique job name
-      JOB_NAME="sentinel-tls-rotation-$namespace-$(date +%s)"
+      JOB_NAME="node-tls-rotation-$namespace-$(date +%s)"
       
       # Create the job manifest
       cat <<EOF | kubectl apply -f -
@@ -72,9 +79,9 @@ data:
       name: $JOB_NAME
       namespace: tls-rotation-job
       labels:
-        app: sentinel-tls-rotation-job
+        app: node-tls-rotation-job
         target-namespace: $namespace
-        created-by: sentinel-tls-rotation-cronjob
+        created-by: node-tls-rotation-cronjob
     spec:
       ttlSecondsAfterFinished: 300
       template:
@@ -100,7 +107,7 @@ data:
           volumes:
           - name: tls-rotation-script
             configMap:
-              name: sentinel-tls-rotation-execution-script
+              name: node-tls-rotation-execution-script
               defaultMode: 0755
     EOF
       
@@ -113,7 +120,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: sentinel-tls-rotation-execution-script
+  name: node-tls-rotation-execution-script
   namespace: tls-rotation-job
 data:
   tls-rotation.sh: |
@@ -130,16 +137,14 @@ data:
       exit 0
     fi
 
-    # Filter pods with TLS=true and exclude cluster pods
+    # Filter pods with TLS=true and exclude sentinel pods
       TLS_ENABLED_PODS=$(echo "$PODS" | jq -r '.items[] | select(
-        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0) and
-        ([.spec.containers[]?.env[]? | select(.name == "RUN_SENTINEL" and .value == "1")] | length > 0) and
-        ([.spec.containers[]?.env[]? | select(.name == "NODE_INDEX" and (.value == "0" or .value == "1"))] | length > 0)
+        ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0) and
+        ([.spec.containers[]?.env[]? | select(.name == "TLS" and .value == "true")] | length > 0)
       ) | .metadata.name' | sort | uniq)
 
-
     if [ -z "$TLS_ENABLED_PODS" ]; then
-      echo "No TLS-enabled FalkorDB pods found in namespace $TARGET_NAMESPACE (excluding cluster pods)"
+      echo "No TLS-enabled FalkorDB pods found in namespace $TARGET_NAMESPACE (excluding sentinel pods)"
       exit 0
     fi
 
@@ -155,21 +160,15 @@ data:
         echo "Pod $POD_NAME is not running (status: $POD_STATUS), skipping..."
         continue
       fi
-
-      # Check if there's a container called "*sentinel*" in the pod. If so, execute the cert rotation script there
-      CONTAINER_NAME=service
-      if echo "$PODS" | jq -e ".items[] | select(.metadata.name == \"$POD_NAME\") | .spec.containers[] | select(.name | contains(\"sentinel\"))" > /dev/null; then
-        CONTAINER_NAME=$(kubectl get pod -n $TARGET_NAMESPACE $POD_NAME -o jsonpath='{.spec.containers[?(@.name == "service")].name}')
-      fi
       
-      # Check if the cert_rotate_sentinel.sh script exists
-      echo "Checking if cert_rotate_sentinel.sh exists in /data directory of pod $POD_NAME"
-      if kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c $CONTAINER_NAME -- test -f /data/cert_rotate_sentinel.sh; then
+      # Check if the cert_rotate_node.sh script exists
+      echo "Checking if cert_rotate_node.sh exists in /data directory of pod $POD_NAME"
+      if kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- test -f /data/cert_rotate_node.sh; then
         echo "Executing TLS certificate rotation on pod: $POD_NAME"
-        kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c $CONTAINER_NAME -- sh -c "cd /data && ./cert_rotate_sentinel.sh" || { echo "TLS rotation failed in $POD_NAME" ; exit 1; }
+        kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- sh -c "cd /data && ./cert_rotate_node.sh" || { echo "TLS rotation failed in $POD_NAME"; exit 1; }
         echo "TLS rotation completed for pod: $POD_NAME"
       else
-        echo "Warning: cert_rotate_sentinel.sh not found in /data directory of pod $POD_NAME, skipping..."
+        echo "Warning: cert_rotate_node.sh not found in /data directory of pod $POD_NAME, skipping..."
       fi
     done
 
@@ -228,7 +227,7 @@ subjects:
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: sentinel-tls-rotation-cronjob
+  name: node-tls-rotation-cronjob
   namespace: tls-rotation-job
   labels:
     app: tls-rotation
@@ -243,7 +242,7 @@ spec:
       template:
         metadata:
           labels:
-            app: sentinel-tls-rotation-scanner
+            app: node-tls-rotation-scanner
         spec:
           serviceAccountName: instance-kubectl-exec-sa
           restartPolicy: OnFailure
@@ -275,5 +274,5 @@ spec:
           volumes:
             - name: scanner-script
               configMap:
-                name: sentinel-tls-rotation-scanner-script
+                name: node-tls-rotation-scanner-script
                 defaultMode: 0755
