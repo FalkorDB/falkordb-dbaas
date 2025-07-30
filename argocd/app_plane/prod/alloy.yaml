@@ -351,6 +351,12 @@ spec:
                       action        = "keep"
                     }
 
+                    rule {
+                      source_labels = ["pod"]
+                      regex         = "^(bgrewriteaof-instance.*)"
+                      action        = "drop"
+                    }
+
                   }
 
                   prometheus.relabel "add_cluster_label" {
