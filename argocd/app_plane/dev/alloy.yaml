@@ -352,8 +352,8 @@ spec:
                     }
 
                     rule {
-                      source_labels = ["app"]
-                      regex         = "^(bgrewriteaof-job)"
+                      source_labels = ["pod"]
+                      regex         = "^(bgrewriteaof-instance.*)"
                       action        = "drop"
                     }
 
