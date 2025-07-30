@@ -351,6 +351,12 @@ spec:
                       action        = "keep"
                     }
 
+                    rule {
+                      source_labels = ["app"]
+                      regex         = "^(bgrewriteaof-job)"
+                      action        = "drop"
+                    }
+
                   }
 
                   prometheus.relabel "add_cluster_label" {
