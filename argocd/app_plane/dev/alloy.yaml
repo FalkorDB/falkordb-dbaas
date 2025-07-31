@@ -395,7 +395,7 @@ spec:
                   loki.process "pod_logs" {
                     stage.static_labels {
                       values = {
-                        cluster = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}"
+                        cluster = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}",
                       }
                     }
                     
