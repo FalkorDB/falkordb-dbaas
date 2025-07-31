@@ -47,6 +47,12 @@ spec:
                     }
                   }
 
+                  loki.write "in_cluster" {
+                    endpoint {
+                      url = "http://victorialogs.observability.svc.cluster.local:9428/insert/loki/api/v1/push"
+                    }
+                  }
+
                   logging {
                     level  = "info"
                     format = "logfmt"
@@ -65,6 +71,10 @@ spec:
 
                   discovery.kubernetes "nodes" {
                     role = "node"
+                  }
+
+                  discovery.kubernetes "pods" {
+                    role = "pod"
                   }
 
                   discovery.kubernetes "falkordb_pods" {
@@ -374,6 +384,39 @@ spec:
                     rule {
                       action = "labeldrop"
                       regex  = "^(cloud_google_com|omnistrate_com).*"
+                    }
+                  }
+
+                  loki.source.kubernetes "pod_logs" {
+                    targets    = discovery.kubernetes.pods.targets
+                    forward_to = [loki.process.pod_logs.receiver]
+                  }
+
+                  loki.process "pod_logs" {
+                    stage.static_labels {
+                      values = {
+                        cluster = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}"
+                      }
+                    }
+                    
+                    forward_to = [loki.write.in_cluster.receiver]
+                  }
+
+                  loki.source.kubernetes_events "cluster_events" {
+                    job_name   = "integrations/kubernetes/eventhandler"
+                    log_format = "logfmt"
+                    forward_to = [
+                      loki.process.cluster_events.receiver,
+                    ]
+                  }
+
+                  loki.process "cluster_events" {
+                    forward_to = [loki.write.in_cluster.receiver]
+
+                    stage.static_labels {
+                      values = {
+                        cluster = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}"
+                      }
                     }
                   }
               clustering:
