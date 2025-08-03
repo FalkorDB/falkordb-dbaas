@@ -402,6 +402,14 @@ spec:
                   }
 
                   loki.process "pod_logs" {
+                    stage.label_keep {
+                      values = [
+                        "__meta_kubernetes_namespace",
+                        "__meta_kubernetes_pod_name",
+                        "__meta_kubernetes_pod_container_name",
+                      ]
+                    }
+
                     stage.static_labels {
                       values = {
                         cluster = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}",
