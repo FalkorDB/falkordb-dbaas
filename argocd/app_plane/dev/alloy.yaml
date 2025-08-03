@@ -404,9 +404,14 @@ spec:
                   loki.process "pod_logs" {
                     stage.label_keep {
                       values = [
-                        "__meta_kubernetes_namespace",
-                        "__meta_kubernetes_pod_name",
-                        "__meta_kubernetes_pod_container_name",
+                        "kubernetes_namespace",
+                        "kubernetes_pod_name",
+                        "kubernetes_pod_container_name",
+                        "namespace",
+                        "pod",
+                        "container",
+                        "cluster",
+                        "job",
                       ]
                     }
 
@@ -418,9 +423,9 @@ spec:
 
                     stage.labels {
                       values = {
-                        namespace = "__meta_kubernetes_namespace",
-                        pod = "__meta_kubernetes_pod_name",
-                        container = "__meta_kubernetes_pod_container_name",
+                        namespace = "kubernetes_namespace",
+                        pod = "kubernetes_pod_name",
+                        container = "kubernetes_pod_container_name",
                       }
                     }
                     
