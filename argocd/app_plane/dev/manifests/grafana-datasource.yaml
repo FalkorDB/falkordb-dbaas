@@ -29,13 +29,12 @@ spec:
     matchLabels:
       dashboards: grafana
   allowCrossNamespaceImport: false
+  plugins:
+    - name: victoriametrics-logs-datasource
+      version: 0.19.2
   datasource:
-    isDefault: true
+    isDefault: false
     access: proxy
-    database: prometheus
-    jsonData:
-      timeInterval: 5s
-      tlsSkipVerify: true
     name: VictoriaLogs
-    type: prometheus
+    type: victoriametrics-logs-datasource
     url: http://victorialogs-server.observability.svc.cluster.local:9428
