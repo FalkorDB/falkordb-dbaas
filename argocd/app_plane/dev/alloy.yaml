@@ -403,27 +403,30 @@ spec:
 
                   loki.relabel "add_labels" {
                     forward_to = [loki.process.pod_logs.receiver]
-                    
+
                     rule {
                       action = "replace"
-                      source_labels     = ["instance"]
-                      target_label      = "namespace"
-                      regex             = "(^[^/]+)"
+                      source_labels = ["instance"]
+                      target_label  = "namespace"
+                      regex         = "([^/]+)/.*"
+                      replacement   = "$1"
                     }
 
                     rule {
                       action = "replace"
                       source_labels = ["instance"]
-                      target_label = "pod"
-                      regex = "^[^/]+/([^:]+)"
+                      target_label  = "pod"
+                      regex         = "[^/]+/([^:]+):.*"
+                      replacement   = "$1"
                     }
 
                     rule {
                       action = "replace"
                       source_labels = ["instance"]
                       target_label  = "container"
-                      regex = "^[^/]+/[^:]+:(.+)"
-                    }
+                      regex         = "[^/]+/[^:]+:(.+)"
+                      replacement   = "$1"
+                    }            
                   }
 
                   loki.process "pod_logs" {
