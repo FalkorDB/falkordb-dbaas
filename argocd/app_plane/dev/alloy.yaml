@@ -250,37 +250,37 @@ spec:
                   }
 
                   discovery.relabel "falkordb_pods_9122" {
-                  targets = discovery.kubernetes.falkordb_pods.targets
+                    targets = discovery.kubernetes.falkordb_pods.targets
 
-                  rule {
-                    source_labels = ["__meta_kubernetes_pod_ip"]
-                    regex         = "(.+)"
-                    replacement   = "$1:9122"
-                    target_label  = "__address__"
-                  }
+                    rule {
+                      source_labels = ["__meta_kubernetes_pod_ip"]
+                      regex         = "(.+)"
+                      replacement   = "$1:9122"
+                      target_label  = "__address__"
+                    }
 
-                  rule {
-                    source_labels     = ["__meta_kubernetes_pod_container_name"]
-                    action            = "keep"
-                    regex             = "service"
-                  }
+                    rule {
+                      source_labels     = ["__meta_kubernetes_pod_container_name"]
+                      action            = "keep"
+                      regex             = "service"
+                    }
 
-                  rule {
-                    action = "replace"
-                    target_label = "namespace"
-                    source_labels = ["__meta_kubernetes_namespace"]
-                  }
+                    rule {
+                      action = "replace"
+                      target_label = "namespace"
+                      source_labels = ["__meta_kubernetes_namespace"]
+                    }
 
-                  rule {
-                    action = "labeldrop"
-                    regex = "^instance$"
-                  }
+                    rule {
+                      action = "labeldrop"
+                      regex = "^instance$"
+                    }
 
-                  rule {
-                    source_labels = ["__meta_kubernetes_pod_name"]
-                    regex         = "(.+)"
-                    target_label  = "pod"
-                  }
+                    rule {
+                      source_labels = ["__meta_kubernetes_pod_name"]
+                      regex         = "(.+)"
+                      target_label  = "pod"
+                    }
                   }
 
                   prometheus.scrape "falkordb_pods_9122" {
@@ -405,6 +405,14 @@ spec:
                     stage.static_labels {
                       values = {
                         cluster = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}",
+                      }
+                    }
+
+                    stage.labels {
+                      values = {
+                        namespace = "__meta_kubernetes_namespace",
+                        pod = "__meta_kubernetes_pod_name",
+                        container = "__meta_kubernetes_pod_container_name",
                       }
                     }
                     
