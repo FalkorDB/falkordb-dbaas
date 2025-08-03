@@ -415,14 +415,14 @@ spec:
                       action = "replace"
                       source_labels = ["instance"]
                       target_label = "pod"
-                      regex = "^[^/]+\/([^:]+)"
+                      regex = "^[^/]+/([^:]+)"
                     }
 
                     rule {
                       action = "replace"
                       source_labels = ["instance"]
                       target_label  = "container"
-                      regex = "^[^/]+\/[^:]+:(.+)"
+                      regex = "^[^/]+/[^:]+:(.+)"
                     }
                   }
 
