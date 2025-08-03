@@ -424,33 +424,12 @@ spec:
                   }
 
                   loki.process "pod_logs" {
-                    stage.label_keep {
-                      values = [
-                        "kubernetes_namespace",
-                        "kubernetes_pod_name",
-                        "kubernetes_pod_container_name",
-                        "namespace",
-                        "pod",
-                        "container",
-                        "cluster",
-                        "job",
-                      ]
-                    }
-
                     stage.static_labels {
                       values = {
                         cluster = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}",
                       }
                     }
 
-                    stage.labels {
-                      values = {
-                        namespace = "kubernetes_namespace",
-                        pod = "kubernetes_pod_name",
-                        container = "kubernetes_pod_container_name",
-                      }
-                    }
-                    
                     forward_to = [loki.write.in_cluster.receiver]
                   }
 
