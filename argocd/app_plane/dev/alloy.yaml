@@ -406,20 +406,23 @@ spec:
                     
                     rule {
                       action = "replace"
-                      source_labels     = ["__meta_kubernetes_pod_container_name"]
-                      target_label      = "container"
+                      source_labels     = ["instance"]
+                      target_label      = "namespace"
+                      regex             = "(^[^/]+)"
                     }
 
                     rule {
                       action = "replace"
-                      source_labels = ["__meta_kubernetes_namespace"]
-                      target_label = "namespace"
+                      source_labels = ["instance"]
+                      target_label = "pod"
+                      regex = "^[^/]+\/([^:]+)"
                     }
 
                     rule {
                       action = "replace"
-                      source_labels = ["__meta_kubernetes_pod_name"]
-                      target_label  = "pod"
+                      source_labels = ["instance"]
+                      target_label  = "container"
+                      regex = "^[^/]+\/[^:]+:(.+)"
                     }
                   }
 
