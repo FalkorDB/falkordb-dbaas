@@ -20,6 +20,15 @@ spec:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: dev
         path: argocd/kustomize/fluentbit
+        kustomize:
+          patches:
+            - target: 
+                kind: DaemonSet
+                name: fluent-bit
+              patch: |-
+                - op: replace
+                  path: /spec/template/spec/containers/0/env/1/value
+                  value: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}'
       destination:
         server: "{{.server}}"
         namespace: fluent-bit
