@@ -53,7 +53,7 @@ data:
     [OUTPUT]
         Name          loki
         Match         kube.*
-        Host          alloy-0.observability.svc.cluster.local
+        Host          alloy-0.observability.pod.cluster.local
         Port          3100
         URI           /insert/loki/api/v1/push
         # These labels are defined to match the user's request.
@@ -65,7 +65,7 @@ data:
     [OUTPUT]
         Name          loki
         Match         node_syslog
-        Host          alloy-0.observability.svc.cluster.local
+        Host          alloy-0.observability.pod.cluster.local
         Port          3100
         URI           /insert/loki/api/v1/push
         # Use a Cluster Name from an environment variable for easier management
