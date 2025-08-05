@@ -1,6 +1,21 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: fluent-bit-lua-scripts
+  namespace: fluent-bit
+data:
+  victoria-logs-filter.lua: |
+    function map_log_to_msg(tag, timestamp, record)
+        if record["log"] then
+            record["_msg"] = record["log"]
+            record["log"] = nil
+        end
+        return 1, timestamp, record
+    end
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: fluent-bit-config
   namespace: fluent-bit
 data:
@@ -49,6 +64,12 @@ data:
         Labels              On
         Annotations         On
 
+    [FILTER]
+        Name                lua
+        Match               *
+        script              /fluent-bit/config/victoria-logs-filter.lua
+        call                map_log_to_msg
+        
     # Sends Kubernetes container logs to VictoriaLogs with the specified labels
     [OUTPUT]
         Name          loki

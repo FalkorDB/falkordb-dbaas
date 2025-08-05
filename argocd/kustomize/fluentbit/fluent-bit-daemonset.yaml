@@ -41,6 +41,9 @@ spec:
               readOnly: true
             - name: fluent-bit-config
               mountPath: /fluent-bit/etc/
+            - name: fluent-bit-lua-scripts
+              mountPath: /fluent-bit/config/victoria-logs-filter.lua
+              subPath: victoria-logs-filter.lua
       # Mount the ConfigMap with the Fluent Bit configuration.
       volumes:
         - name: varlog
@@ -52,6 +55,9 @@ spec:
         - name: fluent-bit-config
           configMap:
             name: fluent-bit-config
+        - name: fluent-bit-lua-scripts
+          configMap:
+            name: fluent-bit-lua-scripts
       # Tolerations are important for the DaemonSet to run on all nodes,
       # including control plane nodes.
       tolerations:
