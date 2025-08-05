@@ -1525,7 +1525,7 @@
     {
       "datasource": {
         "type": "victoriametrics-logs-datasource",
-        "uid": "8edd3f3c-dea3-466d-9fdb-72abfb644bf2"
+        "uid": "${vl_datasource}"
       },
       "fieldConfig": {
         "defaults": {},
@@ -1553,7 +1553,7 @@
         {
           "datasource": {
             "type": "victoriametrics-logs-datasource",
-            "uid": "8edd3f3c-dea3-466d-9fdb-72abfb644bf2"
+            "uid": "${vl_datasource}"
           },
           "editorMode": "code",
           "expr": "namespace: \"$namespace\" AND pod: \"$pod\" AND container: \"service\"",
@@ -1582,6 +1582,15 @@
         "name": "datasource",
         "options": [],
         "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "includeAll": false,
+        "name": "vl_datasource",
+        "options": [],
+        "query": "victoriametrics-logs-datasource",
         "refresh": 1,
         "regex": "",
         "type": "datasource"
