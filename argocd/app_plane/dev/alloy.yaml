@@ -53,6 +53,21 @@ spec:
                     }
                   }
 
+                  loki.write "ctrl_plane" {
+                    endpoint {
+                      url = "https://vmauth.observability.dev.internal.falkordb.cloud/insert/loki/api/v1/push"
+
+                      basic_auth {
+                        username = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-user"
+                        password_file = "/var/run/secrets/victoriametrics/vmuser/password"
+                      }
+                      
+                      tls_config {
+                        insecure_skip_verify = true
+                      }
+                    }
+                  }
+
                   logging {
                     level  = "info"
                     format = "logfmt"
@@ -436,7 +451,7 @@ spec:
                       }
                     }
 
-                    forward_to = [loki.write.in_cluster.receiver]
+                    forward_to = [loki.write.in_cluster.receiver, loki.write.ctrl_plane.receiver]
                   }
 
                   loki.source.kubernetes_events "cluster_events" {
@@ -448,7 +463,7 @@ spec:
                   }
 
                   loki.process "cluster_events" {
-                    forward_to = [loki.write.in_cluster.receiver]
+                    forward_to = [loki.write.in_cluster.receiver, loki.write.ctrl_plane.receiver]
 
                     stage.static_labels {
                       values = {

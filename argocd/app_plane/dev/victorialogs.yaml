@@ -24,6 +24,7 @@ spec:
           valuesObject:
             fullnameOverride: "victorialogs"
             server:
+              retentionPeriod: 30d
               nodeSelector:
                 node_pool: observability
               persistentVolume:
@@ -49,4 +50,3 @@ spec:
         automated:
           prune: true
           selfHeal: true
-      ignoreDifferences:
