@@ -6,3 +6,4 @@ namespace: fluent-bit
 resources:
   - fluent-bit-daemonset.yaml
   - fluent-bit-config.yaml
+  - fluent-bit-sa.yaml
