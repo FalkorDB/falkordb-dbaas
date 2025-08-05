@@ -20,7 +20,7 @@ spec:
           image: fluent/fluent-bit:2.2.2 # Use a specific version for stability
           imagePullPolicy: IfNotPresent
           env:
-            - name: FLUENT_BIT_NAME
+            - name: HOST_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName

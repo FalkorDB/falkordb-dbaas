@@ -69,7 +69,7 @@ data:
         Port          9428
         URI           /insert/loki/api/v1/push
         # Use a Cluster Name from an environment variable for easier management
-        Labels        job=node/syslog,cluster=${CLUSTER_NAME},node_name=${FLUENT_BIT_HOST_NAME}
+        Labels        job=node/syslog,cluster=${CLUSTER_NAME},node_name=${HOST_NAME}
         Retry_Limit   3
 
   parsers.conf: |
