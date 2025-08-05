@@ -4,6 +4,5 @@ metadata:
   name: fluentbit-kustomization
 namespace: fluent-bit
 resources:
-  - namespace.yaml
   - fluent-bit-daemonset.yaml
   - fluent-bit-config.yaml
