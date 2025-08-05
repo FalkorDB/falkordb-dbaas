@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: fluent-bit
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush         1
+        Daemon        Off
+        Log_Level     info
+        Parsers_File  parsers.conf
+        HTTP_Server   On
+        HTTP_Listen   0.0.0.0
+        HTTP_Port     2020
+
+    # Collects logs from Kubernetes containers
+    [INPUT]
+        Name              tail
+        Tag               kube.*
+        Path              /var/log/containers/*.log
+        Parser            docker
+        Mem_Buf_Limit     5MB
+        DB                /var/log/flb_kube.db
+        Skip_Long_Lines   On
+        # The 'Path_Key' is important for the 'kubernetes' filter to
+        # correctly identify the log source.
+        Path_Key          log_file
+
+    # Collects logs from the node's syslog
+    [INPUT]
+        Name              tail
+        Tag               node_syslog
+        Path              /var/log/syslog
+        Parser            syslog
+        Mem_Buf_Limit     5MB
+        DB                /var/log/flb_syslog.db
+        Skip_Long_Lines   On
+
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Kube_URL            https://kubernetes.default.svc:443
+        Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+        Kube_Tag_Prefix     kube.var.log.containers.
+        Merge_Log           On
+        Merge_Log_Key       log
+        Labels              On
+        Annotations         On
+
+    # Sends Kubernetes container logs to VictoriaLogs with the specified labels
+    [OUTPUT]
+        Name          loki
+        Match         kube.*
+        Host          victorialogs-server.observability.svc.cluster.local
+        Port          9428
+        URI           /insert/loki/api/v1/push
+        # These labels are defined to match the user's request.
+        # The 'cluster' label is a placeholder for Kustomize to replace.
+        Labels        cluster=${CLUSTER_NAME},namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name']
+        Retry_Limit   3
+
+    # Sends node system logs to VictoriaLogs with specified labels
+    [OUTPUT]
+        Name          loki
+        Match         node_syslog
+        Host          victorialogs-server.observability.svc.cluster.local
+        Port          9428
+        URI           /insert/loki/api/v1/push
+        # Use a Cluster Name from an environment variable for easier management
+        Labels        job=node/syslog,cluster=${CLUSTER_NAME},node_name=${FLUENT_BIT_HOST_NAME}
+        Retry_Limit   3
+
+  parsers.conf: |
+    [PARSER]
+        Name         docker
+        Format       json
+        Time_Key     time
+        Time_Format  %Y-%m-%dT%H:%M:%S.%L%z
+        Time_Keep    On
+
+    [PARSER]
+        Name         syslog
+        Format       regex
+        Regex        ^(?<time>[^ ]* +[^ ]* +[^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:<(?<priority>[0-9]+)>)?(?:\[[^\]]+\])?(?<message>.*)$
+        Time_Key     time
+        Time_Format  %b %d %H:%M:%S
+        Time_Keep    On

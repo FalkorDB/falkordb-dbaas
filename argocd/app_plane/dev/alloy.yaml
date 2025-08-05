@@ -411,48 +411,48 @@ spec:
                     }
                   }
 
-                  loki.source.kubernetes "pod_logs" {
-                    targets    = discovery.kubernetes.pods.targets
-                    forward_to = [loki.relabel.add_labels.receiver]
-                  }
+                  # loki.source.kubernetes "pod_logs" {
+                  #   targets    = discovery.kubernetes.pods.targets
+                  #   forward_to = [loki.relabel.add_labels.receiver]
+                  # }
 
-                  loki.relabel "add_labels" {
-                    forward_to = [loki.process.pod_logs.receiver]
+                  # loki.relabel "add_labels" {
+                  #   forward_to = [loki.process.pod_logs.receiver]
 
-                    rule {
-                      action = "replace"
-                      source_labels = ["instance"]
-                      target_label  = "namespace"
-                      regex         = "([^/]+)/.*"
-                      replacement   = "$1"
-                    }
+                  #   rule {
+                  #     action = "replace"
+                  #     source_labels = ["instance"]
+                  #     target_label  = "namespace"
+                  #     regex         = "([^/]+)/.*"
+                  #     replacement   = "$1"
+                  #   }
 
-                    rule {
-                      action = "replace"
-                      source_labels = ["instance"]
-                      target_label  = "pod"
-                      regex         = "[^/]+/([^:]+):.*"
-                      replacement   = "$1"
-                    }
+                  #   rule {
+                  #     action = "replace"
+                  #     source_labels = ["instance"]
+                  #     target_label  = "pod"
+                  #     regex         = "[^/]+/([^:]+):.*"
+                  #     replacement   = "$1"
+                  #   }
 
-                    rule {
-                      action = "replace"
-                      source_labels = ["instance"]
-                      target_label  = "container"
-                      regex         = "[^/]+/[^:]+:(.+)"
-                      replacement   = "$1"
-                    }            
-                  }
+                  #   rule {
+                  #     action = "replace"
+                  #     source_labels = ["instance"]
+                  #     target_label  = "container"
+                  #     regex         = "[^/]+/[^:]+:(.+)"
+                  #     replacement   = "$1"
+                  #   }            
+                  # }
 
-                  loki.process "pod_logs" {
-                    stage.static_labels {
-                      values = {
-                        cluster = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}",
-                      }
-                    }
+                  # loki.process "pod_logs" {
+                  #   stage.static_labels {
+                  #     values = {
+                  #       cluster = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}",
+                  #     }
+                  #   }
 
-                    forward_to = [loki.write.in_cluster.receiver, loki.write.ctrl_plane.receiver]
-                  }
+                  #   forward_to = [loki.write.in_cluster.receiver, loki.write.ctrl_plane.receiver]
+                  # }
 
                   loki.source.kubernetes_events "cluster_events" {
                     job_name   = "integrations/kubernetes/eventhandler"
