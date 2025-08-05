@@ -53,8 +53,8 @@ data:
     [OUTPUT]
         Name          loki
         Match         kube.*
-        Host          victorialogs-server.observability.svc.cluster.local
-        Port          9428
+        Host          alloy-0.observability.svc.cluster.local
+        Port          3100
         URI           /insert/loki/api/v1/push
         # These labels are defined to match the user's request.
         # The 'cluster' label is a placeholder for Kustomize to replace.
@@ -65,8 +65,8 @@ data:
     [OUTPUT]
         Name          loki
         Match         node_syslog
-        Host          victorialogs-server.observability.svc.cluster.local
-        Port          9428
+        Host          alloy-0.observability.svc.cluster.local
+        Port          3100
         URI           /insert/loki/api/v1/push
         # Use a Cluster Name from an environment variable for easier management
         Labels        job=node/syslog,cluster=${CLUSTER_NAME},node_name=${HOST_NAME}
