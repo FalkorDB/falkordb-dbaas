@@ -414,7 +414,7 @@ spec:
                   loki.source.api "pod_logs" {
                     http {
                       listen_address = "0.0.0.0"
-                      port = 3100
+                      listen_port = 3100
                     }
 
                     forward_to = [
