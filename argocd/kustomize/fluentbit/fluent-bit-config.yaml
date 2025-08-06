@@ -63,6 +63,7 @@ data:
         Merge_Log_Key       log
         Labels              On
         Annotations         On
+        Buffer_Size         1MB
 
     [FILTER]
         Name                lua
