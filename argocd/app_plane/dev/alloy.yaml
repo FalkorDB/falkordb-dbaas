@@ -24,6 +24,10 @@ spec:
           valuesObject:
             fullnameOverride: alloy
             alloy:
+              extraPorts:
+                - name: pod-logs
+                  port: 3100
+                  targetPort: 3100
               configMap:
                 content: |-
                   prometheus.remote_write "in_cluster" {
