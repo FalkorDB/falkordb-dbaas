@@ -15,14 +15,14 @@ spec:
             description: |
               Job {{ $labels.job }} (instance {{ $labels.instance }}) has restarted more than twice in the last 15 minutes. It might be crashlooping.
             summary: '{{ $labels.job }} too many restarts (instance {{ $labels.instance }})'
-          expr: changes(process_start_time_seconds{job=~".*(victoriametrics|vmselect|vminsert|vmstorage|vmagent|vmalert|vmsingle|vmalertmanager|vmauth).*"}[15m]) > 2
+          expr: changes(process_start_time_seconds{job=~".*(victoriametrics|vmselect|vminsert|vmstorage|vmagent|vmalert|vmsingle|vmalertmanager|vmauth|victorialogs).*"}[15m]) > 2
           labels:
             severity: critical
         - alert: ServiceDown
           annotations:
             description: '{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 2 minutes.'
             summary: Service {{ $labels.job }} is down on {{ $labels.instance }}
-          expr: up{job=~".*(victoriametrics|vmselect|vminsert|vmstorage|vmagent|vmalert|vmsingle|vmalertmanager|vmauth).*"} == 0
+          expr: up{job=~".*(victoriametrics|vmselect|vminsert|vmstorage|vmagent|vmalert|vmsingle|vmalertmanager|vmauth|victorialogs).*"} == 0
           for: 2m
           labels:
             severity: critical
