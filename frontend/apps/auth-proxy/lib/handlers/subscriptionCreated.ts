@@ -31,7 +31,7 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
       },
     });
     client = await api.init<Client>();
-        curlirize(client)
+    curlirize(client)
   } catch (error) {
     console.error("failed to initialize client", error);
     return NextResponse.json(
@@ -84,6 +84,25 @@ export const subscriptionCreatedHandler = async (data: yup.InferType<typeof Crea
         "isDefault": true,
         "name": "VictoriaMetrics",
         "url": "http://vmsingle-vm.observability.svc.cluster.local:8429"
+      },
+    )
+    console.log('created datasource for org', orgName, 'with id', existingOrgId, response.data);
+  } catch (error) {
+    console.error("failed to create datasource", (error as any)?.response ?? error);
+    return NextResponse.json(
+      { error: "Failed to create datasource" },
+      { status: 200 }
+    );
+  }
+  
+  try {
+    const response = await client.addDataSource(null,
+      {
+        "type": "victoriametrics-logs-datasource",
+        "access": "proxy",
+        "isDefault": false,
+        "name": "VictoriaLogs",
+        "url": "http://victorialogs-server.observability.svc.cluster.local:9428",
       },
     )
     console.log('created datasource for org', orgName, 'with id', existingOrgId, response.data);
