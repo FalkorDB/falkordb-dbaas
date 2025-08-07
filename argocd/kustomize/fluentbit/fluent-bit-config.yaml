@@ -80,7 +80,7 @@ data:
         URI           /loki/api/v1/push
         # These labels are defined to match the user's request.
         # The 'cluster' label is a placeholder for Kustomize to replace.
-        Labels        cluster=${CLUSTER_NAME},namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name']
+        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name']
         Retry_Limit   3
 
     # Sends node system logs to VictoriaLogs with specified labels
@@ -91,7 +91,7 @@ data:
         Port          3100
         URI           /loki/api/v1/push
         # Use a Cluster Name from an environment variable for easier management
-        Labels        job=node/syslog,cluster=${CLUSTER_NAME},node_name=${HOST_NAME}
+        Labels        job=node/syslog,node_name=${HOST_NAME}
         Retry_Limit   3
 
   parsers.conf: |

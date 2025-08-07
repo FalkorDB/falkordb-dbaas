@@ -9,15 +9,7 @@ spec:
     repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
     targetRevision: dev
     path: argocd/kustomize/fluentbit
-    kustomize:
-      patches:
-        - target:
-            kind: DaemonSet
-            name: fluent-bit
-          patch: |-
-            - op: replace
-              path: /spec/template/spec/containers/0/env/1/value
-              value: "{{ .name }}"
+    kustomize: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: fluent-bit
