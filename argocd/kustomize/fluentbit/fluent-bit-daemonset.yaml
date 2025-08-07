@@ -19,11 +19,6 @@ spec:
         - name: fluent-bit
           image: fluent/fluent-bit:4.0.6
           imagePullPolicy: IfNotPresent
-          securityContext:
-            runAsNonRoot: true
-            runAsUser: 1000
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
           env:
             - name: HOST_NAME
               valueFrom:
