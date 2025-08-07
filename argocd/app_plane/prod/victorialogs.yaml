@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: victorialogs
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: app-plane
+  template:
+    metadata:
+      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-victorialogs'
+    spec:
+      project: default
+      source:
+        chart: victoria-logs-single 
+        repoURL: https://victoriametrics.github.io/helm-charts
+        targetRevision: 0.11.5
+        helm:
+          valuesObject:
+            fullnameOverride: "victorialogs"
+            server:
+              retentionPeriod: 30d
+              nodeSelector:
+                node_pool: observability
+              persistentVolume:
+                enabled: true
+                size: 50Gi
+            dashboards:
+              enabled: true
+              annotations:
+                argocd.argoproj.io/sync-options: ServerSideApply=true
+              grafanaOperator:
+                enabled: true
+                spec:
+                  instanceSelector:
+                    matchLabels:
+                      dashboards: "grafana"
+      destination:
+        server: "{{.server}}"
+        namespace: observability
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - RespectIgnoreDifferences=true
+        automated:
+          prune: true
+          selfHeal: true
