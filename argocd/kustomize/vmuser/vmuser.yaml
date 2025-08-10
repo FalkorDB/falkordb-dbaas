@@ -20,3 +20,7 @@ spec:
         - "/api/v1/query"
         - "/api/v1/query_range"
         - "/vmui.*"
+    - static:
+        url: http://victorialogs-server.observability.svc.cluster.local:9428
+      paths:
+        - "/insert/loki/api/v1/push"

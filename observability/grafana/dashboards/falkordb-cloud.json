@@ -1521,6 +1521,48 @@
         }
       ],
       "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "victoriametrics-logs-datasource",
+        "uid": "${vl_datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "id": 25,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": false,
+        "sortOrder": "Ascending",
+        "wrapLogMessage": false
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "victoriametrics-logs-datasource",
+            "uid": "${vl_datasource}"
+          },
+          "editorMode": "code",
+          "expr": "namespace: \"$namespace\" AND pod: \"$pod\" AND container: \"service\"",
+          "queryType": "instant",
+          "refId": "A"
+        }
+      ],
+      "title": "Logs",
+      "type": "logs"
     }
   ],
   "preload": false,
@@ -1540,6 +1582,15 @@
         "name": "datasource",
         "options": [],
         "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
+        "includeAll": false,
+        "name": "vl_datasource",
+        "options": [],
+        "query": "victoriametrics-logs-datasource",
         "refresh": 1,
         "regex": "",
         "type": "datasource"

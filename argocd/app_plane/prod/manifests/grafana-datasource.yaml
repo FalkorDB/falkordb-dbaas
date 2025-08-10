@@ -18,3 +18,23 @@ spec:
     name: VictoriaMetrics
     type: prometheus
     url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: victorialogs
+  namespace: observability
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  allowCrossNamespaceImport: false
+  plugins:
+    - name: victoriametrics-logs-datasource
+      version: 0.19.2
+  datasource:
+    isDefault: false
+    access: proxy
+    name: VictoriaLogs
+    type: victoriametrics-logs-datasource
+    url: http://victorialogs-server.observability.svc.cluster.local:9428
