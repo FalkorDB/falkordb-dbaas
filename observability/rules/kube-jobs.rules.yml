@@ -1,0 +1,47 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  namespace: observability
+  name: kube-jobs
+spec:
+  groups:
+  - name: job_alerts
+    rules:
+      # This alert fires when a Kubernetes job is in a failed state.
+      # It uses the `kube_job_status_failed` metric, which is a gauge set to 1 for failed jobs.
+      - alert: KubeJobFailed
+        expr: |
+          kube_job_status_failed > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kubernetes job '{{ $labels.job_name }}' in namespace '{{ $labels.namespace }}' failed"
+          description: "The job '{{ $labels.job_name }}' has been in a failed state for more than 5 minutes. This requires immediate attention."
+
+      # This is an alternative approach that alerts on a high rate of job failures
+      # over the last 15 minutes. This is useful for jobs that run frequently.
+      # The `kube_job_status_failed` metric acts as a counter for new failures.
+      - alert: HighJobFailureRate
+        expr: |
+          sum by (job_name, namespace) (rate(kube_job_status_failed[15m])) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High failure rate for job '{{ $labels.job_name }}'"
+          description: "The job '{{ $labels.job_name }}' is experiencing a high rate of failures. The average rate over the last 15 minutes is {{ $value }} failures per second."
+
+      # This rule checks if a specific cronjob has not been scheduled successfully
+      # within its expected schedule for over 24 hours.
+      # It uses the `kube_cronjob_status_last_schedule_time` metric.
+      - alert: CronJobStalled
+        expr: |
+          time() - kube_cronjob_status_last_schedule_time > 24*60*60
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Cronjob '{{ $labels.cronjob }}' is stalled"
+          description: "The cronjob '{{ $labels.cronjob }}' has not been scheduled successfully for over 24 hours. Last successful schedule was at {{ $value | humanizeTimestamp }}."
