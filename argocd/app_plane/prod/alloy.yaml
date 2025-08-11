@@ -59,7 +59,7 @@ spec:
 
                   loki.write "ctrl_plane" {
                     endpoint {
-                      url = "https://vmauth.observability.dev.internal.falkordb.cloud/insert/loki/api/v1/push"
+                      url = "https://vmauth.observability.internal.falkordb.cloud/insert/loki/api/v1/push"
 
                       basic_auth {
                         username = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-user"
