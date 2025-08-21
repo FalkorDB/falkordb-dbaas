@@ -22,7 +22,7 @@ export async function discoverGCPClusters(): Promise<Cluster[]> {
       logger.debug({ cluster }, `Discovered GCP cluster: ${cluster.name}`);
       return {
         name: cluster.name,
-        endpoint: cluster.endpoint,
+        endpoint: `https://${cluster.endpoint}`,
         labels: cluster.resourceLabels,
         cloud: 'gcp',
         region: cluster.location,
