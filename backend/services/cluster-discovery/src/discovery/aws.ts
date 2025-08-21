@@ -69,14 +69,17 @@ async function getAWSCredentials(): Promise<AWSCredentials> {
 async function getAWSRegions(credentials: AWSCredentials) {
   const client = new AccountClient({
     credentials,
-    region: 'us-west-2'
+    region: 'us-west-2',
   });
 
   try {
-    const command = new ListRegionsCommand({});
+    const command = new ListRegionsCommand({
+      RegionOptStatusContains: ['ENABLED', 'ENABLED_BY_DEFAULT'],
+      MaxResults: 100,
+    });
     const response = await client.send(command);
 
-    return response.Regions.filter(r => ["ENABLED", "ENABLED_BY_DEFAULT"].includes(r.RegionOptStatus)).map(r => r.RegionName)
+    return response.Regions.map(r => r.RegionName)
   } catch (error) {
     logger.error(error, 'Failed to get AWS regions')
     return [];
@@ -91,7 +94,7 @@ async function getRegionClusters(credentials: AWSCredentials, region: string): P
 
   try {
     const { clusters: clusterNames } = await client.send(new ListClustersCommand());
-    
+
     logger.info(`Found ${clusterNames.length} clusters in aws region ${region}`)
 
     const clusters: Cluster[] = [];
