@@ -188,6 +188,9 @@ importers:
       '@opentelemetry/tracing':
         specifier: ^0.24.0
         version: 0.24.0(@opentelemetry/api@1.9.0)
+      tsup:
+        specifier: ^8.0.2
+        version: 8.0.2
     devDependencies:
       '@types/jest':
         specifier: ^29.5.12
@@ -210,7 +213,7 @@ importers:
     devDependencies:
       tsup:
         specifier: ^8.0.2
-        version: 8.0.2(ts-node@10.9.2)(typescript@5.3.3)
+        version: 8.0.2
 
   libs/plugins:
     dependencies:
@@ -1358,8 +1361,8 @@ packages:
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
     dependencies:
-      '@jridgewell/gen-mapping': 0.3.8
-      '@jridgewell/trace-mapping': 0.3.25
+      '@jridgewell/gen-mapping': 0.3.13
+      '@jridgewell/trace-mapping': 0.3.30
     dev: true
 
   /@autotelic/fastify-opentelemetry@0.20.0(@opentelemetry/api@1.8.0):
@@ -2096,8 +2099,8 @@ packages:
     dependencies:
       '@babel/parser': 7.27.0
       '@babel/types': 7.27.0
-      '@jridgewell/gen-mapping': 0.3.8
-      '@jridgewell/trace-mapping': 0.3.25
+      '@jridgewell/gen-mapping': 0.3.13
+      '@jridgewell/trace-mapping': 0.3.30
       jsesc: 3.1.0
     dev: true
 
@@ -3973,7 +3976,7 @@ packages:
       '@jest/test-result': 29.7.0
       '@jest/transform': 29.7.0
       '@jest/types': 29.6.3
-      '@jridgewell/trace-mapping': 0.3.25
+      '@jridgewell/trace-mapping': 0.3.30
       '@types/node': 20.11.25
       chalk: 4.1.2
       collect-v8-coverage: 1.0.2
@@ -4010,7 +4013,7 @@ packages:
       '@jest/test-result': 30.0.5
       '@jest/transform': 30.0.5
       '@jest/types': 30.0.5
-      '@jridgewell/trace-mapping': 0.3.25
+      '@jridgewell/trace-mapping': 0.3.30
       '@types/node': 20.11.25
       chalk: 4.1.2
       collect-v8-coverage: 1.0.2
@@ -4060,7 +4063,7 @@ packages:
     resolution: {integrity: sha512-MHjT95QuipcPrpLM+8JMSzFx6eHp5Bm+4XeFDJlwsvVBjmKNiIAvasGK2fxz2WbGRlnvqehFbh07MMa7n3YJnw==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     dependencies:
-      '@jridgewell/trace-mapping': 0.3.25
+      '@jridgewell/trace-mapping': 0.3.30
       callsites: 3.1.0
       graceful-fs: 4.2.11
     dev: true
@@ -4069,7 +4072,7 @@ packages:
     resolution: {integrity: sha512-MIRWMUUR3sdbP36oyNyhbThLHyJ2eEDClPCiHVbrYAe5g3CHRArIVpBw7cdSB5fr+ofSfIb2Tnsw8iEHL0PYQg==}
     engines: {node: ^18.14.0 || ^20.0.0 || ^22.0.0 || >=24.0.0}
     dependencies:
-      '@jridgewell/trace-mapping': 0.3.25
+      '@jridgewell/trace-mapping': 0.3.30
       callsites: 3.1.0
       graceful-fs: 4.2.11
     dev: true
@@ -4120,7 +4123,7 @@ packages:
     dependencies:
       '@babel/core': 7.26.10
       '@jest/types': 29.6.3
-      '@jridgewell/trace-mapping': 0.3.25
+      '@jridgewell/trace-mapping': 0.3.30
       babel-plugin-istanbul: 6.1.1
       chalk: 4.1.2
       convert-source-map: 2.0.0
@@ -4129,8 +4132,8 @@ packages:
       jest-haste-map: 29.7.0
       jest-regex-util: 29.6.3
       jest-util: 29.7.0
-      micromatch: 4.0.5
-      pirates: 4.0.6
+      micromatch: 4.0.8
+      pirates: 4.0.7
       slash: 3.0.0
       write-file-atomic: 4.0.2
     transitivePeerDependencies:
@@ -4143,7 +4146,7 @@ packages:
     dependencies:
       '@babel/core': 7.28.3
       '@jest/types': 30.0.5
-      '@jridgewell/trace-mapping': 0.3.25
+      '@jridgewell/trace-mapping': 0.3.30
       babel-plugin-istanbul: 7.0.0
       chalk: 4.1.2
       convert-source-map: 2.0.0
@@ -4190,48 +4193,19 @@ packages:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.0
       '@jridgewell/trace-mapping': 0.3.30
-    dev: true
-
-  /@jridgewell/gen-mapping@0.3.5:
-    resolution: {integrity: sha512-IzL8ZoEDIBRWEzlCcRhOaCupYyN5gdIK+Q6fbFdPDg6HqX6jpkItn7DFIpW9LQzXG6Df9sA7+OKnq0qlz/GaQg==}
-    engines: {node: '>=6.0.0'}
-    dependencies:
-      '@jridgewell/set-array': 1.2.1
-      '@jridgewell/sourcemap-codec': 1.5.0
-      '@jridgewell/trace-mapping': 0.3.25
-
-  /@jridgewell/gen-mapping@0.3.8:
-    resolution: {integrity: sha512-imAbBGkb+ebQyxKgzv5Hu2nmROxoDOXHh80evxdoXNOrvAnVx7zimzc1Oo5h9RlfV4vPXaE2iM5pOFbvOCClWA==}
-    engines: {node: '>=6.0.0'}
-    dependencies:
-      '@jridgewell/set-array': 1.2.1
-      '@jridgewell/sourcemap-codec': 1.5.0
-      '@jridgewell/trace-mapping': 0.3.25
-    dev: true
 
   /@jridgewell/resolve-uri@3.1.2:
     resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
     engines: {node: '>=6.0.0'}
 
-  /@jridgewell/set-array@1.2.1:
-    resolution: {integrity: sha512-R8gLRTZeyp03ymzP/6Lil/28tGeGEzhx1q2k703KGWRAI1VdvPIXdG70VJc2pAMw3NA6JKL5hhFu1sJX0Mnn/A==}
-    engines: {node: '>=6.0.0'}
-
   /@jridgewell/sourcemap-codec@1.5.0:
     resolution: {integrity: sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ==}
-
-  /@jridgewell/trace-mapping@0.3.25:
-    resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
-    dependencies:
-      '@jridgewell/resolve-uri': 3.1.2
-      '@jridgewell/sourcemap-codec': 1.5.0
 
   /@jridgewell/trace-mapping@0.3.30:
     resolution: {integrity: sha512-GQ7Nw5G2lTu/BtHTKfXhKHok2WGetd4XYcVKGx00SjAk8GMwgJM3zr6zORiPGuOE+/vkc90KtTosSSvaCjKb2Q==}
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
-    dev: true
 
   /@jridgewell/trace-mapping@0.3.9:
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
@@ -6592,7 +6566,7 @@ packages:
     resolution: {integrity: sha512-ktDsaf79wJsLaoG1Pp+stHSRf6a1k/JydoRAaYVG5iJnd3DooL6yewZsciUi2yiN/WQc5tAXCIFTXL4uXGB8LA==}
     engines: {node: '>=16.17'}
     dependencies:
-      pirates: 4.0.6
+      pirates: 4.0.7
       process-on-spawn: 1.0.0
       signal-exit: 4.1.0
       uuid: 8.3.2
@@ -6963,7 +6937,7 @@ packages:
     engines: {node: ^16.14.0 || >=18.0.0}
     dependencies:
       '@tufjs/canonical-json': 2.0.0
-      minimatch: 9.0.3
+      minimatch: 9.0.5
     dev: false
 
   /@tybys/wasm-util@0.10.0:
@@ -8362,18 +8336,11 @@ packages:
     dependencies:
       balanced-match: 1.0.2
 
-  /braces@3.0.2:
-    resolution: {integrity: sha512-b8um+L1RzM3WDSzvhm6gIz1yfTbBt6YTlcEKAvsmqCZZFw46z626lVj9j1yEPW33H5H+lBQpZMP1k8l+78Ha0A==}
-    engines: {node: '>=8'}
-    dependencies:
-      fill-range: 7.0.1
-
   /braces@3.0.3:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
     engines: {node: '>=8'}
     dependencies:
       fill-range: 7.1.1
-    dev: true
 
   /brorand@1.1.0:
     resolution: {integrity: sha512-cKV8tMCEpQs4hK/ik71d6LrPOnpkpGBR0wzxqr68g2m/LB2GxVYQroAjMJZRVM1Y4BCjCKc3vAamxSzOY2RP+w==}
@@ -8640,7 +8607,7 @@ packages:
     engines: {node: '>= 8.10.0'}
     dependencies:
       anymatch: 3.1.3
-      braces: 3.0.2
+      braces: 3.0.3
       glob-parent: 5.1.2
       is-binary-path: 2.1.0
       is-glob: 4.0.3
@@ -8923,7 +8890,6 @@ packages:
       path-key: 3.1.1
       shebang-command: 2.0.0
       which: 2.0.2
-    dev: true
 
   /crypto-js@4.2.0:
     resolution: {integrity: sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==}
@@ -9600,7 +9566,7 @@ packages:
     resolution: {integrity: sha512-8uSpZZocAZRBAPIEINJj3Lo9HyGitllczc27Eh5YYojjMFMn8yHMDMaUHE2Jqfq05D/wucwI4JGURyXt1vchyg==}
     engines: {node: '>=10'}
     dependencies:
-      cross-spawn: 7.0.3
+      cross-spawn: 7.0.6
       get-stream: 6.0.1
       human-signals: 2.1.0
       is-stream: 2.0.1
@@ -9728,7 +9694,7 @@ packages:
       '@nodelib/fs.walk': 1.2.8
       glob-parent: 5.1.2
       merge2: 1.4.1
-      micromatch: 4.0.5
+      micromatch: 4.0.8
 
   /fast-json-stable-stringify@2.1.0:
     resolution: {integrity: sha512-lhd/wF+Lk98HZoTCtlVraHtfh5XYijIjalXck7saUtuanSDyLMxnHhSXEDJqHxD7msR8D0uCmqlkwjCV8xvwHw==}
@@ -9929,18 +9895,11 @@ packages:
       flat-cache: 4.0.1
     dev: true
 
-  /fill-range@7.0.1:
-    resolution: {integrity: sha512-qOo9F+dMUmC2Lcb4BbVvnKJxTPjCm+RRpe4gDuGrzkL7mEVl/djYSu2OdQ2Pa302N4oqkSg9ir6jaLWJ2USVpQ==}
-    engines: {node: '>=8'}
-    dependencies:
-      to-regex-range: 5.0.1
-
   /fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
     engines: {node: '>=8'}
     dependencies:
       to-regex-range: 5.0.1
-    dev: true
 
   /finalhandler@2.1.0:
     resolution: {integrity: sha512-/t88Ty3d5JWQbWYgaOGCCYfXRwV1+be02WqYYlL6h0lEiUAMPM8o8qKGO01YIkOHzka2up08wvgYD0mDiI+q3Q==}
@@ -10048,7 +10007,7 @@ packages:
     resolution: {integrity: sha512-dCIq9FpEcyQyXKCkyzmlPTFNgrCzPudOe+mhvJU5zAtlBnGVy2yKxtfsxK2tQBThwq225jcvBjpw1Gr40uzZCA==}
     engines: {node: '>=8.0.0'}
     dependencies:
-      cross-spawn: 7.0.3
+      cross-spawn: 7.0.6
       signal-exit: 3.0.7
     dev: false
 
@@ -10056,7 +10015,7 @@ packages:
     resolution: {integrity: sha512-TMKDUnIte6bfb5nWv7V/caI169OHgvwjb7V4WkeUvbQQdjr5rWKqHFiKWb/fcOwB+CzBT+qbWjvj+DVwRskpIg==}
     engines: {node: '>=14'}
     dependencies:
-      cross-spawn: 7.0.3
+      cross-spawn: 7.0.6
       signal-exit: 4.1.0
 
   /forever-agent@0.6.1:
@@ -10307,7 +10266,7 @@ packages:
     dependencies:
       foreground-child: 3.1.1
       jackspeak: 2.3.6
-      minimatch: 9.0.3
+      minimatch: 9.0.5
       minipass: 7.1.2
       path-scurry: 1.10.1
 
@@ -10781,7 +10740,7 @@ packages:
     resolution: {integrity: sha512-t7sv42WkwFkyKbivUCglsQW5YWMskWtbEf4MNKX5u/CCWHKSPzN4FtBQGsQZgCLbxOzpVlcbWVK5KB3auIOjSw==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
     dependencies:
-      minimatch: 9.0.3
+      minimatch: 9.0.5
     dev: false
 
   /ignore@5.3.1:
@@ -11180,7 +11139,7 @@ packages:
     resolution: {integrity: sha512-yg2d+Em4KizZC5niWhQaIomgf5WlL4vOOjZ5xGCmF8SnPE/mDWWXgvRExdcpCgh9lLRRa1/fSYp2ymmbJ1pI+A==}
     engines: {node: '>=10'}
     dependencies:
-      '@jridgewell/trace-mapping': 0.3.25
+      '@jridgewell/trace-mapping': 0.3.30
       debug: 4.4.0
       istanbul-lib-coverage: 3.2.2
     transitivePeerDependencies:
@@ -11403,7 +11362,7 @@ packages:
       jest-runner: 29.7.0
       jest-util: 29.7.0
       jest-validate: 29.7.0
-      micromatch: 4.0.5
+      micromatch: 4.0.8
       parse-json: 5.2.0
       pretty-format: 29.7.0
       slash: 3.0.0
@@ -11444,7 +11403,7 @@ packages:
       jest-runner: 29.7.0
       jest-util: 29.7.0
       jest-validate: 29.7.0
-      micromatch: 4.0.5
+      micromatch: 4.0.8
       parse-json: 5.2.0
       pretty-format: 29.7.0
       slash: 3.0.0
@@ -11644,7 +11603,7 @@ packages:
       jest-regex-util: 29.6.3
       jest-util: 29.7.0
       jest-worker: 29.7.0
-      micromatch: 4.0.5
+      micromatch: 4.0.8
       walker: 1.0.8
     optionalDependencies:
       fsevents: 2.3.3
@@ -11713,7 +11672,7 @@ packages:
       '@types/stack-utils': 2.0.3
       chalk: 4.1.2
       graceful-fs: 4.2.11
-      micromatch: 4.0.5
+      micromatch: 4.0.8
       pretty-format: 29.7.0
       slash: 3.0.0
       stack-utils: 2.0.6
@@ -12684,8 +12643,9 @@ packages:
     resolution: {integrity: sha512-DMy+ERcEW2q8Z2Po+WNXuw3c5YaUSFjAO5GsJqfEl7UjvtIuFKO6ZrKvcItdy98dwFI2N1tg3zNIdKaQT+aNdA==}
     engines: {node: '>=8.6'}
     dependencies:
-      braces: 3.0.2
+      braces: 3.0.3
       picomatch: 2.3.1
+    dev: true
 
   /micromatch@4.0.8:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
@@ -12693,7 +12653,6 @@ packages:
     dependencies:
       braces: 3.0.3
       picomatch: 2.3.1
-    dev: true
 
   /mime-db@1.52.0:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
@@ -12766,7 +12725,6 @@ packages:
     engines: {node: '>=16 || 14 >=14.17'}
     dependencies:
       brace-expansion: 2.0.1
-    dev: true
 
   /minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
@@ -13964,14 +13922,9 @@ packages:
       thread-stream: 3.1.0
     dev: false
 
-  /pirates@4.0.6:
-    resolution: {integrity: sha512-saLsH7WeYYPiD25LDuLRRY/i+6HaPYr6G1OUlN39otzkSTxKnubR9RTxS3/Kk50s1g2JTgFwWQDQyplC5/SHZg==}
-    engines: {node: '>= 6'}
-
   /pirates@4.0.7:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
     engines: {node: '>= 6'}
-    dev: true
 
   /pkg-dir@4.2.0:
     resolution: {integrity: sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==}
@@ -15009,6 +14962,7 @@ packages:
   /source-map@0.8.0-beta.0:
     resolution: {integrity: sha512-2ymg6oRBpebeZi9UUNsgQ89bhx01TcTkmNTGnNO88imTmbSgy4nfujrgVEFKWpMTEGA11EDkTt7mqObTPdigIA==}
     engines: {node: '>= 8'}
+    deprecated: The work that was done in this beta branch won't be included in future versions
     dependencies:
       whatwg-url: 7.1.0
 
@@ -15210,12 +15164,12 @@ packages:
     engines: {node: '>=16 || 14 >=14.17'}
     hasBin: true
     dependencies:
-      '@jridgewell/gen-mapping': 0.3.5
+      '@jridgewell/gen-mapping': 0.3.13
       commander: 4.1.1
       glob: 10.3.10
       lines-and-columns: 1.2.4
       mz: 2.7.0
-      pirates: 4.0.6
+      pirates: 4.0.7
       ts-interface-checker: 0.1.13
 
   /supports-color@5.5.0:
@@ -15774,6 +15728,43 @@ packages:
   /tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
+  /tsup@8.0.2:
+    resolution: {integrity: sha512-NY8xtQXdH7hDUAZwcQdY/Vzlw9johQsaqf7iwZ6g1DOUlFYQ5/AtVAjTvihhEyeRlGo4dLRVHtrRaL35M1daqQ==}
+    engines: {node: '>=18'}
+    hasBin: true
+    peerDependencies:
+      '@microsoft/api-extractor': ^7.36.0
+      '@swc/core': ^1
+      postcss: ^8.4.12
+      typescript: '>=4.5.0'
+    peerDependenciesMeta:
+      '@microsoft/api-extractor':
+        optional: true
+      '@swc/core':
+        optional: true
+      postcss:
+        optional: true
+      typescript:
+        optional: true
+    dependencies:
+      bundle-require: 4.0.2(esbuild@0.19.12)
+      cac: 6.7.14
+      chokidar: 3.6.0
+      debug: 4.4.0
+      esbuild: 0.19.12
+      execa: 5.1.1
+      globby: 11.1.0
+      joycon: 3.1.1
+      postcss-load-config: 4.0.2(ts-node@10.9.2)
+      resolve-from: 5.0.0
+      rollup: 4.12.1
+      source-map: 0.8.0-beta.0
+      sucrase: 3.35.0
+      tree-kill: 1.2.2
+    transitivePeerDependencies:
+      - supports-color
+      - ts-node
+
   /tsup@8.0.2(ts-node@10.9.2)(typescript@5.3.3):
     resolution: {integrity: sha512-NY8xtQXdH7hDUAZwcQdY/Vzlw9johQsaqf7iwZ6g1DOUlFYQ5/AtVAjTvihhEyeRlGo4dLRVHtrRaL35M1daqQ==}
     engines: {node: '>=18'}
@@ -15811,6 +15802,7 @@ packages:
     transitivePeerDependencies:
       - supports-color
       - ts-node
+    dev: false
 
   /tuf-js@2.2.0:
     resolution: {integrity: sha512-ZSDngmP1z6zw+FIkIBjvOp/II/mIub/O7Pp12j1WNsiCpg5R5wAc//i555bBQsE44O94btLt0xM/Zr2LQjwdCg==}
@@ -16044,7 +16036,7 @@ packages:
     resolution: {integrity: sha512-/EH/sDgxU2eGxajKdwLCDmQ4FWq+kpi3uCmBGpw1xJtnAxEjlD8j8PEiGWpCIMIs3ciNAgH0d3TTJiUkYzyZjA==}
     engines: {node: '>=10.12.0'}
     dependencies:
-      '@jridgewell/trace-mapping': 0.3.25
+      '@jridgewell/trace-mapping': 0.3.30
       '@types/istanbul-lib-coverage': 2.0.6
       convert-source-map: 2.0.0
 
