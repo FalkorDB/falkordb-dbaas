@@ -83,10 +83,30 @@ resource "google_storage_bucket" "omnistrate_metering_data" {
 
   uniform_bucket_level_access = true
   force_destroy               = false
+
+  cors {
+    max_age_seconds = 3600
+    method = [
+      "PUT",
+    ]
+    origin = [
+      "http://localhost:3000",
+      "https://app.falkordb.cloud",
+    ]
+    response_header = [
+      "Content-Type",
+    ]
+  }
 }
 
 resource "google_storage_bucket_iam_member" "omnistrate_metering_data" {
   bucket = google_storage_bucket.omnistrate_metering_data.name
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:omnistrate-billing@omnistrate-prod.iam.gserviceaccount.com"
+}
+
+resource "google_project_iam_member" "argocd_sa_k8s_dev" {
+  project = module.project.project_id
+  role    = "roles/container.developer"
+  member  = "serviceAccount:${var.argocd_sa_email}"
 }
