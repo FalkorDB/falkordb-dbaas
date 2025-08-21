@@ -28,7 +28,11 @@ export async function updateClusterSecret(secretName: string, cluster: Cluster):
   const k8sApi = kubeconfig.makeApiClient(k8s.CoreV1Api);
 
   try {
-    await k8sApi.patchNamespacedSecret(secretName, ARGOCD_NAMESPACE, makeSecret(cluster));
+    await k8sApi.patchNamespacedSecret(secretName, ARGOCD_NAMESPACE, makeSecret(cluster), undefined, undefined, undefined, undefined, undefined, {
+      headers: {
+        'Content-Type': 'application/apply-patch+yaml'
+      }
+    });
     logger.info({ clusterName: cluster.name }, 'Successfully updated ArgoCD secret for cluster');
   } catch (error) {
     logger.error({ clusterName: cluster.name, error }, 'Failed to update ArgoCD secret for cluster');
