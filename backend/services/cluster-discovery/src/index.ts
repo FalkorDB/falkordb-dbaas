@@ -1,5 +1,4 @@
 import { discoverGCPClusters } from './discovery/gcp';
-import { CLUSTER_SECRET_NAME_PREFIX } from './constants';
 import logger from './logger';
 import { createClusterSecret, deleteClusterSecret, listClusterSecrets, makeClusterLabels, updateClusterSecret } from './registration/argocd';
 import { isEqual } from 'lodash'
@@ -52,10 +51,10 @@ async function main() {
 
   // Add or update secrets for discovered clusters
   for (const cluster of discoveredClusters) {
-    const existingSecret = existingSecrets.find((secret) => secret.name === `${CLUSTER_SECRET_NAME_PREFIX}${cluster.name}`);
+    const existingSecret = existingSecrets.find((secret) => secret.labels.cluster === `${cluster.name}`);
     if (existingSecret) {
       if (!isEqual(makeClusterLabels(cluster), existingSecret.labels)) {
-        await updateClusterSecret(cluster);
+        await updateClusterSecret(existingSecret.name, cluster);
       }
     } else {
       await createClusterSecret(cluster);
@@ -63,10 +62,13 @@ async function main() {
   }
 
   // Remove secrets for clusters that are no longer discovered
-  for (const secretName of existingSecrets) {
-    const clusterName = secretName.name.replace(CLUSTER_SECRET_NAME_PREFIX, '');
-    if (!discoveredClusters.some((cluster) => cluster.name === clusterName)) {
-      await deleteClusterSecret(clusterName);
+  for (const secret of existingSecrets) {
+    if (!discoveredClusters.some((cluster) => cluster.name === secret.labels.cluster)) {
+      if (process.env.DELETE_UNKNOWN_SECRETS === "true") {
+        await deleteClusterSecret(secret.name);
+      } else {
+        logger.info(`Skipping deletion of secret ${secret.name}. Env variable DELETE_UNKNOWN_SECRETS is not set to "true".`);
+      }
     }
   }
 
