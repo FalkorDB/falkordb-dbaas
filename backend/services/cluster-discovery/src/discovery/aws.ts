@@ -69,6 +69,7 @@ async function getAWSCredentials(): Promise<AWSCredentials> {
 async function getAWSRegions(credentials: AWSCredentials) {
   const client = new AccountClient({
     credentials,
+    region: 'us-west-2'
   });
 
   try {
