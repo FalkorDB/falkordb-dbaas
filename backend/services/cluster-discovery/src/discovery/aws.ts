@@ -91,6 +91,8 @@ async function getRegionClusters(credentials: AWSCredentials, region: string): P
 
   try {
     const { clusters: clusterNames } = await client.send(new ListClustersCommand());
+    
+    logger.info(`Found ${clusterNames.length} clusters in aws region ${region}`)
 
     const clusters: Cluster[] = [];
     for await (const clusterName of clusterNames) {
