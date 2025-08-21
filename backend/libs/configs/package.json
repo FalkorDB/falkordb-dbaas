@@ -7,6 +7,12 @@
   "scripts": {
     "build": "tsc --noEmit && tsup"
   },
+  "tsup": {
+    "format": "cjs",
+    "entryPoints": [
+      "src/index.ts"
+    ]
+  },
   "keywords": [],
   "author": "",
   "license": "SSPL",
@@ -27,6 +33,7 @@
     "@opentelemetry/sdk-node": "^0.53.0",
     "@opentelemetry/sdk-trace-base": "^1.26.0",
     "@opentelemetry/sdk-trace-node": "^1.26.0",
-    "@opentelemetry/tracing": "^0.24.0"
+    "@opentelemetry/tracing": "^0.24.0",
+    "tsup": "^8.0.2"
   }
 }
