@@ -19,16 +19,16 @@ server:
   serviceAccount:
     annotations:
       iam.gke.io/gcp-service-account: "argocd-sa@ctrl-plane-prod-b1b92df2.iam.gserviceaccount.com"
-  extraVolumes:
+  volumes:
     - name: aws-profile
       secret:
         secretName: aws-profile
         items:
           - key: profile
             path: profile
-  extraVolumeMounts:
+  volumeMounts:
     - name: aws-profile
-      mountPath: /mount/aws/profile
+      mountPath: /mount/aws
       readOnly: true
 
 cmp:
@@ -101,16 +101,16 @@ controller:
     limits:
       memory: "6Gi"
       cpu: "2"
-  extraVolumes:
+  volumes:
     - name: aws-profile
       secret:
         secretName: aws-profile
         items:
           - key: profile
             path: profile
-  extraVolumeMounts:
+  volumeMounts:
     - name: aws-profile
-      mountPath: /mount/aws/profile
+      mountPath: /mount/aws
       readOnly: true
 
 extraObjects:

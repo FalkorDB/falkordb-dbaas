@@ -124,7 +124,7 @@ function makeSecretData(cluster: Cluster): { [key: string]: string; } {
           awsAuthConfig: {
             clusterName: cluster.name,
             roleARN: process.env.AWS_ROLE_ARN,
-            profile: '/mount/aws/profile'
+            profile: 'default'
           },
           tlsClientConfig: {
             insecure: false,
