@@ -75,7 +75,7 @@ async function getAWSRegions(credentials: AWSCredentials) {
   try {
     const command = new ListRegionsCommand({
       RegionOptStatusContains: ['ENABLED', 'ENABLED_BY_DEFAULT'],
-      MaxResults: 100,
+      MaxResults: 50,
     });
     const response = await client.send(command);
 
