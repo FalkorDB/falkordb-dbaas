@@ -171,12 +171,12 @@ resource "google_service_account_iam_binding" "db-exporter-sa-token-creator" {
   ]
 }
 
-// attach argocd-sa to argocd-server and argocd-application-controller
+// attach argocd-server to argocd-server and argocd-application-controller
 resource "google_service_account_iam_binding" "argocd_sa" {
   service_account_id = var.argocd_sa_id
   role               = "roles/iam.serviceAccountUser"
   members = [
-    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata.0.name}/argocd-sa]",
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata.0.name}/argocd-server]",
     "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata.0.name}/argocd-application-controller]",
   ]
 }
@@ -185,7 +185,7 @@ resource "google_service_account_iam_binding" "argocd_sa_token_creator" {
   service_account_id = var.argocd_sa_id
   role               = "roles/iam.serviceAccountTokenCreator"
   members = [
-    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata.0.name}/argocd-sa]",
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata.0.name}/argocd-server]",
     "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata.0.name}/argocd-application-controller]",
   ]
 }

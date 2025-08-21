@@ -206,4 +206,3 @@ resource "google_service_account" "argocd_sa" {
   account_id   = "argocd-sa"
   display_name = "ArgoCD SA"
 }
-
