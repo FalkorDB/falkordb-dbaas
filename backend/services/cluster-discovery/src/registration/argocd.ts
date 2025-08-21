@@ -30,7 +30,7 @@ export async function updateClusterSecret(secretName: string, cluster: Cluster):
   try {
     await k8sApi.patchNamespacedSecret(secretName, ARGOCD_NAMESPACE, makeSecret(cluster), undefined, undefined, undefined, undefined, undefined, {
       headers: {
-        'Content-Type': 'application/apply-patch+yaml'
+        'Content-Type': 'application/json-patch+json'
       }
     });
     logger.info({ clusterName: cluster.name }, 'Successfully updated ArgoCD secret for cluster');
