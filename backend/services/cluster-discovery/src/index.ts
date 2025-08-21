@@ -1,6 +1,7 @@
 import { discoverGCPClusters } from './discovery/gcp';
+import { discoverAWSClusters } from './discovery/aws';
 import logger from './logger';
-import { createClusterSecret, deleteClusterSecret, listClusterSecrets, makeClusterLabels, updateClusterSecret } from './registration/argocd';
+import { createClusterSecret, deleteClusterSecret, listClusterSecrets, makeClusterLabels, updateClusterSecret, rotateAWSSecret } from './registration/argocd';
 import { isEqual } from 'lodash'
 
 // Parse environment variables as comma-separated lists
@@ -12,21 +13,21 @@ async function main() {
   logger.info('Starting cluster discovery...');
 
   // Discover clusters
-  const gcpClusters = await discoverGCPClusters().catch((err) => {
+  const { clusters: gcpClusters } = await discoverGCPClusters().catch((err) => {
     logger.error(err, 'Error discovering GCP clusters:');
-    return [];
+    return { clusters: [] };
   });
-  // const awsClusters = await discoverAWSClusters().catch((err) => {
-  //   logger.error(err, 'Error discovering AWS clusters:');
-  //   return [];
-  // });
+  const { clusters: awsClusters, credentials: awsCredentials } = await discoverAWSClusters().catch((err) => {
+    logger.error(err, 'Error discovering AWS clusters:');
+    return { clusters: [], credentials: undefined, };
+  });
   // const azureClusters = await discoverAzureClusters().catch((err) => {
   //   logger.error(err, 'Error discovering Azure clusters:');
   //   return [];
   // });
 
   // Combine all discovered clusters
-  let discoveredClusters = [...gcpClusters,] //...awsClusters, ...azureClusters];
+  let discoveredClusters = [...gcpClusters, ...awsClusters,] // ...azureClusters];
 
   // Apply whitelist and blacklist filters
   if (WHITELIST_CLUSTERS.length > 0) {
@@ -45,6 +46,8 @@ async function main() {
       }
     );
   }
+
+  await rotateAWSSecret(awsCredentials);
 
   // Get existing secrets in the Kubernetes cluster
   const existingSecrets = await listClusterSecrets();

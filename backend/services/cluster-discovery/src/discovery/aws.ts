@@ -1,212 +1,116 @@
-// import { EKSClient, ListClustersCommand, DescribeClusterCommand } from '@aws-sdk/client-eks';
-// import { EC2Client, DescribeRegionsCommand } from '@aws-sdk/client-ec2';
-// import { STSClient, AssumeRoleWithWebIdentityCommand } from '@aws-sdk/client-sts';
-// import { ClusterSchema, Cluster } from '../types';
-// import logger from '../logger';
-// import { exec } from 'child_process';
-// import { promisify } from 'util';
-// import axios from 'axios';
+import { ClusterSchema, Cluster } from '../types';
+import logger from '../logger';
+import { AccountClient, ListRegionsCommand } from "@aws-sdk/client-account";
+import { STSClient, AssumeRoleWithWebIdentityCommand } from '@aws-sdk/client-sts';
+import { EKSClient, DescribeClusterCommand, ListClustersCommand } from '@aws-sdk/client-eks';
+import axios from 'axios';
 
-// const execAsync = promisify(exec);
+type AWSCredentials = {
+  accessKeyId: string;
+  secretAccessKey: string;
+  sessionToken: string;
+}
 
-// export async function discoverAWSClusters(): Promise<Cluster[]> {
-//   logger.info('Discovering AWS clusters from all regions...');
+export async function discoverAWSClusters(): Promise<{ clusters: Cluster[], credentials: AWSCredentials }> {
+  logger.info('Discovering AWS clusters...');
 
-//   // Get all AWS regions
-//   const regions = await getAllAWSRegions();
-//   logger.info({ regionCount: regions.length }, `Checking ${regions.length} AWS regions for clusters`);
+  const credentials = await getAWSCredentials();
 
-//   const allClusters: Cluster[] = [];
+  const regions = await getAWSRegions(credentials);
 
-//   // Discover clusters in each region
-//   for (const region of regions) {
-//     try {
-//       logger.debug({ region }, `Discovering clusters in region: ${region}`);
-//       const regionClusters = await discoverClustersInRegion(region);
-//       allClusters.push(...regionClusters);
-//     } catch (error) {
-//       logger.error({ error, region }, `Failed to discover clusters in region: ${region}`);
-//     }
-//   }
+  const clusters: Cluster[] = [];
 
-//   logger.info({ clusterCount: allClusters.length }, `Found ${allClusters.length} total AWS clusters across all regions`);
+  for await (const region of regions) {
+    clusters.push(
+      ...(await getRegionClusters(credentials, region))
+    )
+  }
 
-//   return allClusters;
-// }
+  const validClusters = clusters.filter((c): c is Cluster => c !== null);
 
-// async function getAllAWSRegions(): Promise<string[]> {
-//   try {
-//     // Use credentials to get regions - we'll use us-east-1 as default for this call
-//     const credentials = await getEKSCredentials('temp', 'us-east-1');
-//     const ec2Client = new EC2Client({
-//       credentials: {
-//         accessKeyId: credentials.accessKeyId,
-//         secretAccessKey: credentials.secretAccessKey,
-//         sessionToken: credentials.sessionToken,
-//       },
-//       region: 'us-east-1',
-//     });
+  logger.info({ clusterCount: validClusters.length }, `Found ${validClusters.length} AWS clusters.`);
 
-//     const { Regions } = await ec2Client.send(new DescribeRegionsCommand({}));
-//     return Regions?.map(region => region.RegionName).filter(Boolean) || [];
-//   } catch (error) {
-//     logger.error({ error }, 'Failed to get AWS regions, using default regions');
-//     // Fallback to common regions if API call fails
-//     return [
-//       'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
-//       'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-central-1',
-//       'ap-northeast-1', 'ap-northeast-2', 'ap-southeast-1', 'ap-southeast-2',
-//       'ap-south-1', 'ca-central-1', 'sa-east-1'
-//     ];
-//   }
-// }
+  // Validate clusters
+  return { clusters: validClusters.map((cluster) => ClusterSchema.validateSync(cluster)), credentials }
+}
 
-// async function discoverClustersInRegion(region: string): Promise<Cluster[]> {
-//   try {
-//     const credentials = await getEKSCredentials('temp', region);
-//     const eksClient = new EKSClient({
-//       credentials: {
-//         accessKeyId: credentials.accessKeyId,
-//         secretAccessKey: credentials.secretAccessKey,
-//         sessionToken: credentials.sessionToken,
-//       },
-//       region,
-//     });
+async function getAWSCredentials(): Promise<AWSCredentials> {
+  const targetAudience = process.env.AWS_TARGET_AUDIENCE;
 
-//     const clusters = await eksClient.send(new ListClustersCommand({}));
+  const res = await axios.get(
+    'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=' +
+    targetAudience,
+    {
+      headers: {
+        'Metadata-Flavor': 'Google',
+      },
+    },
+  );
 
-//     if (!clusters.clusters || clusters.clusters.length === 0) {
-//       return [];
-//     }
+  const idToken = res.data;
 
-//     const clusterDetails = await Promise.all(
-//       clusters.clusters.map(async (name) => {
-//         try {
-//           const clusterInfo = await eksClient.send(new DescribeClusterCommand({ name }));
+  const sts = new STSClient({});
 
-//           if (!clusterInfo.cluster) {
-//             return null;
-//           }
+  const { Credentials } = await sts.send(
+    new AssumeRoleWithWebIdentityCommand({
+      RoleArn: process.env.AWS_ROLE_ARN,
+      RoleSessionName: process.env.SERVICE_NAME || 'cluster-discovery',
+      WebIdentityToken: idToken,
+    }),
+  );
 
-//           const cluster = {
-//             name: clusterInfo.cluster.name,
-//             endpoint: clusterInfo.cluster.endpoint,
-//             labels: clusterInfo.cluster.tags,
-//             cloud: 'aws',
-//             region: region,
-//           } as Cluster;
+  return {
+    accessKeyId: Credentials.AccessKeyId,
+    secretAccessKey: Credentials.SecretAccessKey,
+    sessionToken: Credentials.SessionToken,
+  };
+}
 
-//           await addClusterToKubectlContext(cluster);
+async function getAWSRegions(credentials: AWSCredentials) {
+  const client = new AccountClient({
+    credentials,
+  });
 
-//           return cluster;
-//         } catch (error) {
-//           logger.error({ error, clusterName: name, region }, 'Failed to get cluster details');
-//           return null;
-//         }
-//       })
-//     );
+  try {
+    const command = new ListRegionsCommand({});
+    const response = await client.send(command);
 
-//     const validClusters = clusterDetails.filter((c): c is Cluster => c !== null);
+    return response.Regions.filter(r => ["ENABLED", "ENABLED_BY_DEFAULT"].includes(r.RegionOptStatus)).map(r => r.RegionName)
+  } catch (error) {
+    logger.error(error, 'Failed to get AWS regions')
+    return [];
+  }
+}
 
-//     if (validClusters.length > 0) {
-//       logger.info({ region, clusterCount: validClusters.length }, `Found ${validClusters.length} clusters in region ${region}`);
-//     }
+async function getRegionClusters(credentials: AWSCredentials, region: string): Promise<Cluster[]> {
+  const client = new EKSClient({
+    credentials,
+    region,
+  })
 
-//     // Validate clusters
-//     return validClusters.map((cluster) => ClusterSchema.validateSync(cluster));
-//   } catch (error) {
-//     logger.error({ error, region }, `Failed to discover clusters in region: ${region}`);
-//     return [];
-//   }
-// }
+  try {
+    const { clusters: clusterNames } = await client.send(new ListClustersCommand());
 
-// async function getEKSCredentials(clusterId: string, region: string) {
-//   // get ID token from default GCP SA
-//   const targetAudience = process.env.AWS_TARGET_AUDIENCE;
+    const clusters: Cluster[] = [];
+    for await (const clusterName of clusterNames) {
 
-//   const res = await axios.get(
-//     'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=' +
-//     targetAudience,
-//     {
-//       headers: {
-//         'Metadata-Flavor': 'Google',
-//       },
-//     },
-//   );
+      const { cluster } = await client.send(new DescribeClusterCommand({
+        name: clusterName,
+      }))
 
-//   const idToken = res.data;
+      clusters.push({
+        name: clusterName,
+        region,
+        cloud: 'aws',
+        endpoint: cluster.endpoint,
+        labels: cluster.tags,
+        caData: cluster.certificateAuthority.data,
+      })
+    }
 
-//   const sts = new STSClient({ region });
-
-//   const { Credentials } = await sts.send(
-//     new AssumeRoleWithWebIdentityCommand({
-//       RoleArn: process.env.AWS_ROLE_ARN,
-//       RoleSessionName: 'cluster-discovery-service',
-//       WebIdentityToken: idToken,
-//     }),
-//   );
-
-//   if (!Credentials?.AccessKeyId || !Credentials?.SecretAccessKey) {
-//     throw new Error('Failed to get valid AWS credentials from STS');
-//   }
-
-//   // For cluster-specific operations, get EKS token
-//   if (clusterId !== 'temp') {
-//     const eks = new EKSClient({
-//       credentials: {
-//         accessKeyId: Credentials.AccessKeyId,
-//         secretAccessKey: Credentials.SecretAccessKey,
-//         sessionToken: Credentials.SessionToken,
-//       },
-//       region,
-//     });
-
-//     const { cluster } = await eks.send(new DescribeClusterCommand({ name: clusterId }));
-
-//     // eslint-disable-next-line @typescript-eslint/no-var-requires
-//     const EKSToken = require('aws-eks-token');
-//     EKSToken.config = {
-//       accessKeyId: Credentials.AccessKeyId,
-//       secretAccessKey: Credentials.SecretAccessKey,
-//       sessionToken: Credentials.SessionToken,
-//       region,
-//     };
-
-//     const token = await EKSToken.renew(clusterId);
-
-//     return {
-//       accessKeyId: Credentials.AccessKeyId,
-//       secretAccessKey: Credentials.SecretAccessKey,
-//       sessionToken: Credentials.SessionToken,
-//       endpoint: cluster?.endpoint,
-//       certificateAuthority: cluster?.certificateAuthority?.data,
-//       accessToken: token,
-//     };
-//   }
-
-//   // For non-cluster specific operations (like listing regions)
-//   return {
-//     accessKeyId: Credentials.AccessKeyId,
-//     secretAccessKey: Credentials.SecretAccessKey,
-//     sessionToken: Credentials.SessionToken,
-//   };
-// }
-
-// async function addClusterToKubectlContext(cluster: Cluster): Promise<void> {
-//   if (!cluster.name || !cluster.region) {
-//     throw new Error('Cluster name and region are required');
-//   }
-
-//   const command = `aws eks update-kubeconfig --region ${cluster.region} --name ${cluster.name}`;
-
-//   try {
-//     const { stdout, stderr } = await execAsync(command);
-//     if (stderr) {
-//       logger.warn({ stderr, clusterName: cluster.name }, 'Warning during kubectl context update');
-//     }
-//     logger.debug({ stdout, clusterName: cluster.name }, 'kubectl context update output');
-//   } catch (error) {
-//     logger.error({ error, clusterName: cluster.name, region: cluster.region }, 'Failed to execute aws eks update-kubeconfig');
-//     throw error;
-//   }
-// }
+    return clusters;
+  } catch (error) {
+    logger.error(error, 'Failed to get clusters from region ' + region)
+    return [];
+  }
+}
