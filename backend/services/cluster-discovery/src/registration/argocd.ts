@@ -74,6 +74,7 @@ export async function deleteClusterSecret(secretName: string): Promise<void> {
 export function makeClusterLabels(cluster: Cluster): { [key: string]: string } {
   return {
     ...cluster.labels,
+    cluster: cluster.name,
     'argocd.argoproj.io/secret-type': 'cluster',
     'cloud_provider': cluster.cloud,
     'region': cluster.region,
