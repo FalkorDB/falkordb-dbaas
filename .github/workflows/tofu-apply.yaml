@@ -67,6 +67,7 @@ jobs:
           TF_GRAFANA_GOOGLE_CLIENT_ID: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_ID }}
           TF_GRAFANA_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_SECRET }}
           TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+          TF_ARGOCD_SA_ID: ${{ secrets.TF_ARGOCD_SA_ID }}
         run: |
           json=$(echo '${{ toJson(matrix) }}' | envsubst)
           # set the matrix values as environment variables
