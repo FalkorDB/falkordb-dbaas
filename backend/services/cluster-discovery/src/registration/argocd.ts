@@ -96,17 +96,17 @@ function makeSecretData(cluster: Cluster): { [key: string]: string; } {
   switch (cluster.cloud) {
     case 'gcp':
       return {
-        name: cluster.name,
-        server: cluster.endpoint,
+        name: Buffer.from(cluster.name).toString('base64'),
+        server: Buffer.from(cluster.endpoint).toString('base64'),
         config: Buffer.from(JSON.stringify({
-          "execProviderConfig": {
-            "command": "argocd-k8s-auth",
-            "args": ["gcp"],
-            "apiVersion": "client.authentication.k8s.io/v1beta1"
+          execProviderConfig: {
+            command: 'argocd-k8s-auth',
+            args: ['gcp'],
+            apiVersion: 'client.authentication.k8s.io/v1beta1'
           },
-          "tlsClientConfig": {
-            "insecure": false,
-            "caData": cluster.caData,
+          tlsClientConfig: {
+            insecure: false,
+            caData: cluster.caData,
           }
         })).toString('base64')
       };
