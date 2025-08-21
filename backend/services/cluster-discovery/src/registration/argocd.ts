@@ -42,7 +42,7 @@ export async function listClusterSecrets(): Promise<{ name: string, labels: { [k
   const k8sApi = kubeconfig.makeApiClient(k8s.CoreV1Api);
 
   try {
-    const secrets = await k8sApi.listNamespacedSecret(ARGOCD_NAMESPACE);
+    const secrets = await k8sApi.listNamespacedSecret(ARGOCD_NAMESPACE, undefined, undefined, undefined, undefined, "argocd.argoproj.io/secret-type=cluster");
     return secrets.body.items.map(s => ({
       name: s.metadata.name,
       labels: s.metadata.labels || {},
