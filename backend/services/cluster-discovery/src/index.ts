@@ -47,7 +47,8 @@ async function main() {
     );
   }
 
-  await rotateAWSSecret(awsCredentials);
+  if (awsCredentials)
+    await rotateAWSSecret(awsCredentials);
 
   // Get existing secrets in the Kubernetes cluster
   const existingSecrets = await listClusterSecrets();
