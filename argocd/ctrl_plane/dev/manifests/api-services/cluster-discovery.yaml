@@ -16,7 +16,7 @@ spec:
         spec:
           containers:
             - name: cluster-discovery
-              image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery:1.0.0
+              image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery:edge
               imagePullPolicy: Always
               envFrom:
                 - secretRef:
