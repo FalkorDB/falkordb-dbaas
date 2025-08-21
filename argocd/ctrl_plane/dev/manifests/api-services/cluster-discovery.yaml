@@ -23,5 +23,5 @@ spec:
                     name: cluster-discovery-env
           restartPolicy: Never
           serviceAccountName: argocd-server
-      nodeSelector:
-        node_pool: observability-resources
+          nodeSelector:
+            node_pool: observability-resources
