@@ -26,9 +26,10 @@ export async function updateClusterSecret(secretName: string, cluster: Cluster):
   kubeconfig.loadFromDefault();
 
   const k8sApi = kubeconfig.makeApiClient(k8s.CoreV1Api);
-
+  const body = makeSecret(cluster)
+  body.metadata.name = secretName;
   try {
-    await k8sApi.patchNamespacedSecret(secretName, ARGOCD_NAMESPACE, makeSecret(cluster), undefined, undefined, undefined, undefined, undefined, {
+    await k8sApi.patchNamespacedSecret(secretName, ARGOCD_NAMESPACE, body, undefined, undefined, undefined, undefined, undefined, {
       headers: {
         'Content-Type': 'application/merge-patch+json'
       }
