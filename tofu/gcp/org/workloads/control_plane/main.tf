@@ -167,7 +167,7 @@ resource "google_storage_bucket" "rdb_exports" {
   cors {
     max_age_seconds = 3600
     method          = ["PUT", "GET"]
-    origin          = ["https://app.falkordb.cloud"]
+    origin          = ["https://app.falkordb.cloud", "http://localhost:3000"]
     response_header = ["*"]
   }
 
@@ -200,3 +200,10 @@ resource "google_project_iam_member" "db_exporter_sa" {
   role    = "roles/container.developer"
   member  = "serviceAccount:${google_service_account.db_exporter_sa.email}"
 }
+
+resource "google_service_account" "argocd_sa" {
+  project      = var.project_id
+  account_id   = "argocd-sa"
+  display_name = "ArgoCD SA"
+}
+

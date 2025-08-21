@@ -19,6 +19,7 @@ jobs:
         service:
           - name: db-importer-worker
           - name: db-importer
+          - name: cluster-discovery
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4

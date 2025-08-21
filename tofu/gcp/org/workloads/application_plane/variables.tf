@@ -33,3 +33,6 @@ variable "db_exporter_sa_email" {
 variable "metering_bucket_name" {
   type = string
 }
+variable "argocd_sa_email" {
+  type = string
+}
