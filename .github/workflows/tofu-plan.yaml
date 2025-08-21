@@ -105,7 +105,7 @@ jobs:
       - name: Setup Tofu workspace
         run: |
           cd ${{ matrix.stack.path }}
-          tofu init ${{ env.init_param }}
+          tofu init --upgrade ${{ env.init_param }}
 
       - name: Plan Tofu
         id: plan-run
