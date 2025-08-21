@@ -19,6 +19,17 @@ server:
   serviceAccount:
     annotations:
       iam.gke.io/gcp-service-account: "argocd-sa@ctrl-plane-prod-b1b92df2.iam.gserviceaccount.com"
+  extraVolumes:
+    - name: aws-profile
+      secret:
+        secretName: aws-profile
+        items:
+          - key: profile
+            path: profile
+  extraVolumeMounts:
+    - name: aws-profile
+      mountPath: /mount/aws/profile
+      readOnly: true
 
 cmp:
   repositories:
@@ -90,6 +101,17 @@ controller:
     limits:
       memory: "6Gi"
       cpu: "2"
+  extraVolumes:
+    - name: aws-profile
+      secret:
+        secretName: aws-profile
+        items:
+          - key: profile
+            path: profile
+  extraVolumeMounts:
+    - name: aws-profile
+      mountPath: /mount/aws/profile
+      readOnly: true
 
 extraObjects:
   - apiVersion: argoproj.io/v1alpha1

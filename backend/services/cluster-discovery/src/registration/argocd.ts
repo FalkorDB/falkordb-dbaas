@@ -1,7 +1,7 @@
 import { Cluster } from '../types';
 import logger from '../logger';
 import * as k8s from '@kubernetes/client-node'
-import { ARGOCD_NAMESPACE } from '../constants';
+import { ARGOCD_NAMESPACE, AWS_CREDENTIALS_SECRET_NAME } from '../constants';
 
 export async function createClusterSecret(cluster: Cluster): Promise<void> {
   logger.info({ clusterName: cluster.name }, 'Creating ArgoCD secret for cluster');
@@ -94,7 +94,7 @@ function makeSecret(cluster: Cluster): k8s.V1Secret {
         ...makeClusterLabels(cluster),
       }
     },
-    data: makeSecretData(cluster),
+    stringData: makeSecretData(cluster),
   };
 }
 
@@ -102,9 +102,9 @@ function makeSecretData(cluster: Cluster): { [key: string]: string; } {
   switch (cluster.cloud) {
     case 'gcp':
       return {
-        name: Buffer.from(cluster.name).toString('base64'),
-        server: Buffer.from(cluster.endpoint).toString('base64'),
-        config: Buffer.from(JSON.stringify({
+        name: cluster.name,
+        server: cluster.endpoint,
+        config: JSON.stringify({
           execProviderConfig: {
             command: 'argocd-k8s-auth',
             args: ['gcp'],
@@ -114,9 +114,74 @@ function makeSecretData(cluster: Cluster): { [key: string]: string; } {
             insecure: false,
             caData: cluster.caData,
           }
-        })).toString('base64')
+        })
+      };
+    case 'aws':
+      return {
+        name: cluster.name,
+        server: cluster.endpoint,
+        config: JSON.stringify({
+          awsAuthConfig: {
+            clusterName: cluster.name,
+            roleARN: process.env.AWS_ROLE_ARN,
+            profile: '/mount/aws/profile'
+          },
+          tlsClientConfig: {
+            insecure: false,
+            caData: cluster.caData,
+          }
+        })
       };
     default:
       throw new Error(`Unsupported cloud provider: ${cluster.cloud}`);
   }
+}
+
+export async function rotateAWSSecret(credentials: {
+  accessKeyId: string;
+  secretAccessKey: string;
+  sessionToken: string;
+}): Promise<void> {
+  const kubeconfig = new k8s.KubeConfig();
+  kubeconfig.loadFromDefault();
+
+  const k8sApi = kubeconfig.makeApiClient(k8s.CoreV1Api);
+
+  function makeSecretBody() {
+    return {
+      metadata: {
+        name: AWS_CREDENTIALS_SECRET_NAME,
+      },
+      stringData: {
+        profile: `
+        [default]
+        region = us-west-2
+        aws_access_key_id = ${credentials.accessKeyId}
+        aws_secret_access_key = ${credentials.secretAccessKey}
+        aws_session_token = ${credentials.sessionToken}
+        `
+      }
+    };
+  }
+
+  if (!await k8sApi.readNamespacedSecret(AWS_CREDENTIALS_SECRET_NAME, ARGOCD_NAMESPACE).catch((e) => undefined)) {
+    try {
+      await k8sApi.createNamespacedSecret(ARGOCD_NAMESPACE, makeSecretBody())
+      logger.info('Created aws secret successfully')
+    } catch (error) {
+      logger.error(error, 'Failed to create aws secret')
+    }
+  } else {
+    try {
+      await k8sApi.patchNamespacedSecret(AWS_CREDENTIALS_SECRET_NAME, ARGOCD_NAMESPACE, makeSecretBody(), undefined, undefined, undefined, undefined, undefined, {
+        headers: {
+          'Content-Type': 'application/merge-patch+json'
+        }
+      });
+      logger.info('Rotated aws secret successfully')
+    } catch (error) {
+      logger.error(error, 'Failed to rotate aws secret')
+    }
+  }
+
 }

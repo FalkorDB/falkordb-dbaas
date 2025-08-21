@@ -4,7 +4,7 @@ import logger from '../logger';
 
 const client = new ClusterManagerClient();
 
-export async function discoverGCPClusters(): Promise<Cluster[]> {
+export async function discoverGCPClusters(): Promise<{ clusters: Cluster[] }> {
   logger.info('Discovering GCP clusters...');
 
   const [response] = await client.listClusters({
@@ -36,5 +36,5 @@ export async function discoverGCPClusters(): Promise<Cluster[]> {
   logger.info({ clusterCount: validClusters.length }, `Found ${validClusters.length} GCP clusters.`);
 
   // Validate clusters
-  return validClusters.map((cluster) => ClusterSchema.validateSync(cluster));
+  return { clusters: validClusters.map((cluster) => ClusterSchema.validateSync(cluster)) }
 }
