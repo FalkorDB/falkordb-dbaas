@@ -1,7 +1,7 @@
 import { Cluster } from '../types';
 import logger from '../logger';
 import * as k8s from '@kubernetes/client-node'
-import { ARGOCD_NAMESPACE, CLUSTER_SECRET_NAME_PREFIX } from '../constants';
+import { ARGOCD_NAMESPACE } from '../constants';
 
 export async function createClusterSecret(cluster: Cluster): Promise<void> {
   logger.info({ clusterName: cluster.name }, 'Creating ArgoCD secret for cluster');
@@ -19,7 +19,7 @@ export async function createClusterSecret(cluster: Cluster): Promise<void> {
   }
 }
 
-export async function updateClusterSecret(cluster: Cluster): Promise<void> {
+export async function updateClusterSecret(secretName: string, cluster: Cluster): Promise<void> {
   logger.info({ clusterName: cluster.name }, 'Updating ArgoCD secret for cluster');
 
   const kubeconfig = new k8s.KubeConfig();
@@ -28,7 +28,7 @@ export async function updateClusterSecret(cluster: Cluster): Promise<void> {
   const k8sApi = kubeconfig.makeApiClient(k8s.CoreV1Api);
 
   try {
-    await k8sApi.patchNamespacedSecret(`${CLUSTER_SECRET_NAME_PREFIX}${cluster.name}`, ARGOCD_NAMESPACE, makeSecret(cluster));
+    await k8sApi.patchNamespacedSecret(secretName, ARGOCD_NAMESPACE, makeSecret(cluster));
     logger.info({ clusterName: cluster.name }, 'Successfully updated ArgoCD secret for cluster');
   } catch (error) {
     logger.error({ clusterName: cluster.name, error }, 'Failed to update ArgoCD secret for cluster');
@@ -53,17 +53,17 @@ export async function listClusterSecrets(): Promise<{ name: string, labels: { [k
   }
 }
 
-export async function deleteClusterSecret(clusterName: string): Promise<void> {
+export async function deleteClusterSecret(secretName: string): Promise<void> {
   const kubeconfig = new k8s.KubeConfig();
   kubeconfig.loadFromDefault();
 
   const k8sApi = kubeconfig.makeApiClient(k8s.CoreV1Api);
 
   try {
-    await k8sApi.deleteNamespacedSecret(`${CLUSTER_SECRET_NAME_PREFIX}${clusterName}`, ARGOCD_NAMESPACE);
-    logger.info({ clusterName }, 'Successfully deleted ArgoCD secret for cluster');
+    await k8sApi.deleteNamespacedSecret(`${secretName}`, ARGOCD_NAMESPACE);
+    logger.info({ secretName }, 'Successfully deleted ArgoCD secret for cluster');
   } catch (error) {
-    logger.error({ clusterName, error }, 'Failed to delete ArgoCD secret for cluster');
+    logger.error({ secretName, error }, 'Failed to delete ArgoCD secret for cluster');
   }
 }
 
@@ -82,7 +82,7 @@ function makeSecret(cluster: Cluster): k8s.V1Secret {
     apiVersion: 'v1',
     kind: 'Secret',
     metadata: {
-      name: `${CLUSTER_SECRET_NAME_PREFIX}${cluster.name}`,
+      name: `${cluster.name}`,
       namespace: ARGOCD_NAMESPACE,
       labels: {
         ...makeClusterLabels(cluster),
