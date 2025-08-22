@@ -175,7 +175,7 @@ export async function rotateAWSSecret(credentials: {
     try {
       await k8sApi.patchNamespacedSecret(AWS_CREDENTIALS_SECRET_NAME, ARGOCD_NAMESPACE, makeSecretBody(), undefined, undefined, undefined, undefined, undefined, {
         headers: {
-          'Content-Type': 'application/merge-patch+json'
+          'Content-Type': 'application/strategic-merge-patch+json'
         }
       });
       logger.info('Rotated aws secret successfully')
