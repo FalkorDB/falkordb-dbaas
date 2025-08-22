@@ -3,10 +3,11 @@ import { discoverAWSClusters } from './discovery/aws';
 import logger from './logger';
 import { createClusterSecret, deleteClusterSecret, listClusterSecrets, makeClusterLabels, updateClusterSecret, rotateAWSSecret } from './registration/argocd';
 import { isEqual } from 'lodash'
+import { Cluster } from './types'
 
 // Parse environment variables as comma-separated lists
-const WHITELIST_CLUSTERS = process.env.WHITELIST_CLUSTERS?.split(',').map((name) => name.trim()) || [];
-const BLACKLIST_CLUSTERS = process.env.BLACKLIST_CLUSTERS?.split(',').map((name) => name.trim()) || [];
+const WHITELIST_CLUSTERS = process.env.WHITELIST_CLUSTERS?.split(',').map((name) => name.trim().toLowerCase()) || [];
+const BLACKLIST_CLUSTERS = process.env.BLACKLIST_CLUSTERS?.split(',').map((name) => name.trim().toLowerCase()) || [];
 
 // Main function to discover, register, and deregister clusters
 async function main() {
@@ -27,18 +28,18 @@ async function main() {
   // });
 
   // Combine all discovered clusters
-  let discoveredClusters = [...gcpClusters, ...awsClusters,] // ...azureClusters];
+  let discoveredClusters: Cluster[] = [...gcpClusters, ...awsClusters,] // ...azureClusters];
 
   // Apply whitelist and blacklist filters
   if (WHITELIST_CLUSTERS.length > 0) {
     discoveredClusters = discoveredClusters.filter((cluster) =>
-      WHITELIST_CLUSTERS.includes(cluster.name)
+      WHITELIST_CLUSTERS.includes(cluster.name.trim().toLowerCase())
     );
   }
   if (BLACKLIST_CLUSTERS.length > 0) {
     discoveredClusters = discoveredClusters.filter(
       (cluster) => {
-        if (BLACKLIST_CLUSTERS.includes(cluster.name)) {
+        if (BLACKLIST_CLUSTERS.includes(cluster.name.trim().toLowerCase())) {
           logger.info(`Cluster ${cluster.name} is blacklisted.`);
           return false;
         }
@@ -54,6 +55,7 @@ async function main() {
   const existingSecrets = await listClusterSecrets();
 
   // Add or update secrets for discovered clusters
+  logger.info({ clusters: discoveredClusters.map(e => e.name) }, 'Adding clusters')
   for (const cluster of discoveredClusters) {
     const existingSecret = existingSecrets.find((secret) => secret.labels.cluster === cluster.name || secret.name === cluster.name);
     if (existingSecret) {
