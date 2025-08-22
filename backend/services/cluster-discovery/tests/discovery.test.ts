@@ -3,8 +3,9 @@ import { discoverGCPClusters } from '../src/discovery/gcp';
 describe('Cluster Discovery', () => {
     describe('GCP Cluster Discovery', () => {
         it('should return an array of valid clusters', async () => {
-            const clusters = await discoverGCPClusters();
+            const { clusters } = await discoverGCPClusters();
             expect(clusters).toBeInstanceOf(Array);
+            console.log(clusters)
             clusters.forEach(cluster => {
                 expect(cluster).toHaveProperty('endpoint');
                 expect(cluster).toHaveProperty('caData');
@@ -16,7 +17,7 @@ describe('Cluster Discovery', () => {
 
     describe('AWS Cluster Discovery', () => {
         it('should return an array of valid clusters', async () => {
-            const clusters = await discoverAWSClusters();
+            const { clusters } = await discoverAWSClusters();
             expect(clusters).toBeInstanceOf(Array);
             clusters.forEach(cluster => {
                 expect(cluster).toHaveProperty('endpoint');
