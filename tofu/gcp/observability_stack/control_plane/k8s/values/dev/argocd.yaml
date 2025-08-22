@@ -23,12 +23,9 @@ server:
     - name: aws-profile
       secret:
         secretName: aws-profile
-        items:
-          - key: profile
-            path: profile
   volumeMounts:
     - name: aws-profile
-      mountPath: /mount/aws
+      mountPath: /home/argocd/.aws
       readOnly: true
 
 cmp:
@@ -81,12 +78,9 @@ controller:
     - name: aws-profile
       secret:
         secretName: aws-profile
-        items:
-          - key: profile
-            path: profile
   volumeMounts:
     - name: aws-profile
-      mountPath: /mount/aws
+      mountPath: /home/argocd/.aws
       readOnly: true
 
 extraObjects:

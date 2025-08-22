@@ -153,12 +153,12 @@ export async function rotateAWSSecret(credentials: {
         name: AWS_CREDENTIALS_SECRET_NAME,
       },
       stringData: {
-        profile: `
-        [default]
-        region = us-west-2
-        aws_access_key_id = ${credentials.accessKeyId}
-        aws_secret_access_key = ${credentials.secretAccessKey}
-        aws_session_token = ${credentials.sessionToken}
+        credentials: `
+      [default]
+      region = us-west-2
+      aws_access_key_id = ${credentials.accessKeyId}
+      aws_secret_access_key = ${credentials.secretAccessKey}
+      aws_session_token = ${credentials.sessionToken}
         `
       }
     };
