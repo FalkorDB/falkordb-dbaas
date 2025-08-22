@@ -32,9 +32,12 @@ async function main() {
 
   // Apply whitelist and blacklist filters
   if (WHITELIST_CLUSTERS.length > 0) {
-    discoveredClusters = discoveredClusters.filter((cluster) =>
-      WHITELIST_CLUSTERS.includes(cluster.name.trim().toLowerCase())
-    );
+    discoveredClusters = discoveredClusters.filter((cluster) => {
+      const includes = WHITELIST_CLUSTERS.includes(cluster.name.trim().toLowerCase())
+      if (includes) return true;
+      logger.info(`Cluster ${cluster.name} is not whitelisted`)
+      return false;
+    });
   }
   if (BLACKLIST_CLUSTERS.length > 0) {
     discoveredClusters = discoveredClusters.filter(
