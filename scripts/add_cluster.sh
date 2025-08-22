@@ -105,8 +105,6 @@ yq e '.app_plane_clusters[]' $CONFIG_FILE -o=json | jq -c '.' | while read -r cl
         fi
         aws eks update-kubeconfig --name $CLUSTER --region=$REGION --profile $AWS_PROFILE
 
-        aws eks update-cluster-config --name $CLUSTER --logging '{"clusterLogging":[{"types":["api","audit","authenticator","controllerManager","scheduler"], "enabled": true}]}' --region $REGION --profile $AWS_PROFILE
-
     elif [ "$PLATFORM" == "azure" ]; then
         RESOURCE_GROUP=$(echo "$cluster_json" | jq -r '.resource_group')
 
