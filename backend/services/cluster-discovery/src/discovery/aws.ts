@@ -2,7 +2,7 @@ import { ClusterSchema, Cluster } from '../types';
 import logger from '../logger';
 import { AccountClient, ListRegionsCommand } from "@aws-sdk/client-account";
 import { STSClient, AssumeRoleWithWebIdentityCommand } from '@aws-sdk/client-sts';
-import { EKSClient, DescribeClusterCommand, ListClustersCommand } from '@aws-sdk/client-eks';
+import { EKSClient, DescribeClusterCommand, ListClustersCommand, ListAccessEntriesCommand, CreateAccessEntryCommand, AssociateAccessPolicyCommand, AccessScopeType, CreateAccessEntryCommandOutput } from '@aws-sdk/client-eks';
 import axios from 'axios';
 
 type AWSCredentials = {
@@ -112,11 +112,54 @@ async function getRegionClusters(credentials: AWSCredentials, region: string): P
         labels: cluster.tags,
         caData: cluster.certificateAuthority.data,
       })
+
+      await resolveClusterAccessEntry(client, cluster);
     }
 
     return clusters;
   } catch (error) {
     logger.error(error, 'Failed to get clusters from region ' + region)
     return [];
+  }
+}
+
+async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): Promise<void> {
+
+  let hasAccessEntries = false;
+  try {
+    const accessEntries = await client.send(new ListAccessEntriesCommand({
+      clusterName: cluster.name,
+      associatedPolicyArn: process.env.AWS_ROLE_ARN
+    }))
+    hasAccessEntries = accessEntries.accessEntries.length > 0;
+  } catch (error) {
+    logger.error(error, "Failed to get access entries for cluster " + cluster.name)
+    return;
+  }
+
+  if (!hasAccessEntries) {
+    let accessEntry: CreateAccessEntryCommandOutput;
+    try {
+      accessEntry = await client.send(new CreateAccessEntryCommand({
+        clusterName: cluster.name,
+        principalArn: process.env.AWS_ROLE_ARN,
+        type: 'STANDARD',
+      }))
+    } catch (error) {
+      logger.error(error, "Failed to create access entries for cluster " + cluster.name)
+      return;
+    }
+
+    try {
+      await client.send(new AssociateAccessPolicyCommand({
+        clusterName: cluster.name,
+        accessScope: { type: AccessScopeType.cluster, },
+        policyArn: 'arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy',
+        principalArn: accessEntry.accessEntry.principalArn,
+      }))
+    } catch (error) {
+      logger.error(error, "Failed to create access policy for cluster " + cluster.name)
+      return;
+    }
   }
 }
