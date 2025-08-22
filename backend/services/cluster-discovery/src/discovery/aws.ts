@@ -2,7 +2,7 @@ import { ClusterSchema, Cluster } from '../types';
 import logger from '../logger';
 import { AccountClient, ListRegionsCommand } from "@aws-sdk/client-account";
 import { STSClient, AssumeRoleWithWebIdentityCommand } from '@aws-sdk/client-sts';
-import { EKSClient, DescribeClusterCommand, ListClustersCommand, ListAccessEntriesCommand, CreateAccessEntryCommand, AssociateAccessPolicyCommand, AccessScopeType, CreateAccessEntryCommandOutput } from '@aws-sdk/client-eks';
+import { EKSClient, DescribeClusterCommand, ListClustersCommand, ListAccessEntriesCommand, CreateAccessEntryCommand, AssociateAccessPolicyCommand, AccessScopeType, CreateAccessEntryCommandOutput, DescribeAccessEntryCommand } from '@aws-sdk/client-eks';
 import axios from 'axios';
 
 type AWSCredentials = {
@@ -129,9 +129,18 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
   try {
     const accessEntries = await client.send(new ListAccessEntriesCommand({
       clusterName: cluster.name,
-      associatedPolicyArn: process.env.AWS_ROLE_ARN
+      associatedPolicyArn: 'arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy',
     }))
-    hasAccessEntries = accessEntries.accessEntries.length > 0;
+    hasAccessEntries = accessEntries.accessEntries.length > 0 && (
+      await Promise.all(
+        accessEntries.accessEntries.map(a =>
+          client.send(new DescribeAccessEntryCommand({
+            clusterName: cluster.name,
+            principalArn: a,
+          })).then(e => e.accessEntry.principalArn === process.env.AWS_ROLE_ARN)
+        )
+      )
+    ).some(a => !!a)
   } catch (error) {
     logger.error(error, "Failed to get access entries for cluster " + cluster.name)
     return;
