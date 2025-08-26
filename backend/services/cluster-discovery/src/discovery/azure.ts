@@ -13,7 +13,7 @@ export async function discoverAzureClusters(): Promise<{ clusters: Cluster[] }> 
     return { clusters: [] };
   }
 
-  const credential = new ClientSecretCredential(process.env.AZURE_TENANT_ID, process.env.AZURE_AAD_SERVICE_PRINCIPAL_CLIENT_ID, process.env.AZURE_AAD_SERVICE_PRINCIPAL_CLIENT_SECRET);
+  const credential = new ClientSecretCredential(process.env.AZURE_TENANT_ID, process.env.AZURE_CLIENT_ID, process.env.AZURE_CLIENT_SECRET);
   const client = new ContainerServiceClient(credential, subscriptionId);
 
   const clusters: Cluster[] = [];
