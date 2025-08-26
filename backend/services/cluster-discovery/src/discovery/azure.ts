@@ -1,69 +1,102 @@
-// import { ContainerServiceClient } from '@azure/arm-containerservice';
-// import { ResourceManagementClient } from '@azure/arm-resources';
-// import { DefaultAzureCredential } from '@azure/identity';
-// import { ClusterSchema, Cluster } from '../types';
-// import logger from '../logger';
-// import { exec } from 'child_process';
-// import { promisify } from 'util';
+import { ClusterSchema, Cluster } from '../types';
+import logger from '../logger';
+import { ClientSecretCredential } from '@azure/identity';
+import { ContainerServiceClient, ManagedCluster } from '@azure/arm-containerservice';
+import { load } from 'js-yaml';
 
-// const execAsync = promisify(exec);
+export async function discoverAzureClusters(): Promise<{ clusters: Cluster[] }> {
+  logger.info('Discovering Azure AKS clusters...');
 
-// const credential = new DefaultAzureCredential();
-// const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID || 'YOUR_SUBSCRIPTION_ID';
+  const subscriptionId = process.env.AZURE_SUBSCRIPTION_ID;
+  if (!subscriptionId) {
+    logger.error('AZURE_SUBSCRIPTION_ID environment variable is not set.');
+    return { clusters: [] };
+  }
 
-// const resourceGroupsClient = new ResourceManagementClient(credential, subscriptionId);
-// const clustersClient = new ContainerServiceClient(credential, subscriptionId);
+  const credential = new ClientSecretCredential(process.env.AZURE_TENANT_ID, process.env.AZURE_AAD_SERVICE_PRINCIPAL_CLIENT_ID, process.env.AZURE_AAD_SERVICE_PRINCIPAL_CLIENT_SECRET);
+  const client = new ContainerServiceClient(credential, subscriptionId);
 
-// export async function discoverAzureClusters(): Promise<Cluster[]> {
-//   logger.info('Discovering Azure clusters...');
+  const clusters: Cluster[] = [];
 
-//   const resourceGroups = resourceGroupsClient.resourceGroups.list();
-//   const allClusters: Cluster[] = [];
+  for await (const cluster of client.managedClusters.list()) {
+    logger.debug(`Discovered Azure Azure cluster: ${cluster.name}`);
 
-//   for await (const rg of resourceGroups) {
-//     logger.info(`Discovering clusters in resource group: ${rg.name}`);
-//     const clustersInRg = await discoverClustersForResourceGroup(rg.name);
-//     allClusters.push(...clustersInRg);
-//   }
+    // Check if critical properties exist before proceeding
+    if (!cluster.name || !cluster.fqdn || !cluster.kubernetesVersion || !cluster.location || !cluster.agentPoolProfiles) {
+      logger.warn(`Skipping cluster due to missing properties: ${cluster.name || 'Unknown'}`);
+      continue;
+    }
 
-//   logger.info(`Found ${allClusters.length} total Azure clusters.`);
-//   return allClusters;
-// }
+    const resourceGroup = cluster.id.split('/')[4];
 
-// async function discoverClustersForResourceGroup(resourceGroupName: string): Promise<Cluster[]> {
-//   const clusters: Cluster[] = [];
+    await verifyOIDCEnabled(client, cluster, resourceGroup);
 
-//   // Use listByResourceGroup to get clusters for a specific resource group
-//   for await (const cluster of clustersClient.managedClusters.listByResourceGroup(resourceGroupName)) {
-//     // Retrieve credentials for each cluster to get the CA data
-//     clusters.push({
-//       name: cluster.name,
-//       endpoint: cluster.fqdn,
-//       labels: cluster.tags,
-//       cloud: 'azure',
-//       region: cluster.location,
-//       resourceGroup: resourceGroupName,
-//     });
+    // Extract CA from kubeconfig value
+    const kubeconfigValue = (
+      (
+        await client.managedClusters.listClusterAdminCredentials(resourceGroup, cluster.name)
+      )?.kubeconfigs?.[0]?.value
+    );
+    let caData = '';
+    try {
+      const kubeconfig: any = load(Buffer.from(kubeconfigValue).toString('utf-8'));
+      caData = kubeconfig?.clusters?.[0]?.cluster?.['certificate-authority-data'] ?? '';
+    } catch (err) {
+      logger.error(err, `Failed to extract CA data from kubeconfig for cluster ${cluster.name}`);
+    }
 
-//     await addClusterToKubectlContext(cluster, resourceGroupName);
-//   }
+    clusters.push({
+      name: cluster.name,
+      endpoint: `https://${cluster.fqdn}`,
+      labels: cluster.tags,
+      cloud: 'azure',
+      region: cluster.location,
+      secretConfig: {
+        execProviderConfig: {
+          command: "argocd-k8s-auth",
+          env: {
+            AAD_ENVIRONMENT_NAME: "AzurePublicCloud",
+            AZURE_TENANT_ID: process.env.AZURE_TENANT_ID,
+            AAD_SERVICE_PRINCIPAL_CLIENT_ID: process.env.AZURE_AAD_SERVICE_PRINCIPAL_CLIENT_ID,
+            AAD_SERVICE_PRINCIPAL_CLIENT_SECRET: process.env.AZURE_AAD_SERVICE_PRINCIPAL_CLIENT_SECRET,
+            AAD_LOGIN_METHOD: "spn"
+          },
+          args: ["azure"],
+          apiVersion: "client.authentication.k8s.io/v1beta1"
+        },
+        tlsClientConfig: {
+          insecure: false,
+          caData
+        }
+      }
+    });
+  }
 
+  const validClusters = clusters.filter((c): c is Cluster => c !== null);
 
-//   // Validate and return the clusters
-//   return clusters.map((c) => ClusterSchema.validateSync(c));
-// }
+  logger.info({ clusterCount: validClusters.length }, `Found ${validClusters.length} Azure AKS clusters.`);
 
-// async function addClusterToKubectlContext(cluster: Cluster, resourceGroupName: string): Promise<void> {
-//   const command = `az aks get-credentials --resource-group ${resourceGroupName} --name ${cluster.name}`;
+  // Validate clusters
+  return { clusters: validClusters.map((cluster) => ClusterSchema.validateSync(cluster)) };
+}
 
-//   try {
-//     const { stdout, stderr } = await execAsync(command);
-//     if (stderr) {
-//       logger.warn({ stderr, clusterName: cluster.name }, 'Warning during kubectl context update');
-//     }
-//     logger.debug({ stdout, clusterName: cluster.name }, 'kubectl context update output');
-//   } catch (error) {
-//     logger.error({ error, clusterName: cluster.name, resourceGroupName }, 'Failed to execute az aks get-credentials');
-//     throw error;
-//   }
-// }
+async function verifyOIDCEnabled(client: ContainerServiceClient, cluster: ManagedCluster, resourceGroup: string) {
+  // Checks if OIDC issuer profile is enabled for the AKS cluster
+  if (!cluster.oidcIssuerProfile || !cluster.oidcIssuerProfile.enabled) {
+    logger.info(`Enabling OIDC issuer for cluster: ${cluster.name}`);
+    try {
+      await client.managedClusters.beginCreateOrUpdateAndWait(resourceGroup, cluster.name!, {
+        location: cluster.location,
+        oidcIssuerProfile: {
+          enabled: true,
+        }
+      });
+      logger.info(`OIDC issuer enabled for cluster: ${cluster.name}`)
+    } catch (error) {
+      logger.error(error, `Failed to enable OIDC issuer for cluster ${cluster.name}`)
+    }
+  } else {
+    logger.debug(`OIDC issuer profile is enabled for cluster: ${cluster.name}`);
+  }
+
+}

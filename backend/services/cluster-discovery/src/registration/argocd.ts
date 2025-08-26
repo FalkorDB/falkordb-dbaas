@@ -94,47 +94,12 @@ function makeSecret(cluster: Cluster): k8s.V1Secret {
         ...makeClusterLabels(cluster),
       }
     },
-    stringData: makeSecretData(cluster),
+    stringData: {
+      name: cluster.name,
+      server: cluster.endpoint,
+      config: JSON.stringify(cluster.secretConfig)
+    },
   };
-}
-
-function makeSecretData(cluster: Cluster): { [key: string]: string; } {
-  switch (cluster.cloud) {
-    case 'gcp':
-      return {
-        name: cluster.name,
-        server: cluster.endpoint,
-        config: JSON.stringify({
-          execProviderConfig: {
-            command: 'argocd-k8s-auth',
-            args: ['gcp'],
-            apiVersion: 'client.authentication.k8s.io/v1beta1'
-          },
-          tlsClientConfig: {
-            insecure: false,
-            caData: cluster.caData,
-          }
-        })
-      };
-    case 'aws':
-      return {
-        name: cluster.name,
-        server: cluster.endpoint,
-        config: JSON.stringify({
-          awsAuthConfig: {
-            clusterName: cluster.name,
-            roleARN: process.env.AWS_ROLE_ARN,
-            profile: 'default'
-          },
-          tlsClientConfig: {
-            insecure: false,
-            caData: cluster.caData,
-          }
-        })
-      };
-    default:
-      throw new Error(`Unsupported cloud provider: ${cluster.cloud}`);
-  }
 }
 
 export async function rotateAWSSecret(credentials: {

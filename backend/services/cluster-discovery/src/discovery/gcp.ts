@@ -19,14 +19,24 @@ export async function discoverGCPClusters(): Promise<{ clusters: Cluster[] }> {
         return null; // Return null for invalid clusters
       }
 
-      logger.debug({ cluster }, `Discovered GCP cluster: ${cluster.name}`);
+      logger.debug(`Discovered GCP cluster: ${cluster.name}`);
       return {
         name: cluster.name,
         endpoint: `https://${cluster.endpoint}`,
         labels: cluster.resourceLabels,
         cloud: 'gcp',
         region: cluster.location,
-        caData: cluster.masterAuth?.clusterCaCertificate,
+        secretConfig: {
+          execProviderConfig: {
+            command: 'argocd-k8s-auth',
+            args: ['gcp'],
+            apiVersion: 'client.authentication.k8s.io/v1beta1'
+          },
+          tlsClientConfig: {
+            insecure: false,
+            caData: cluster.masterAuth?.clusterCaCertificate,
+          }
+        }
       } as Cluster;
     }) || []
   );
