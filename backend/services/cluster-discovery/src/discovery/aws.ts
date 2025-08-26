@@ -156,6 +156,12 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
       await addApiAuthMode(client, cluster);
       return resolveClusterAccessEntry(client, cluster);
     }
+    if (error instanceof InvalidRequestException && error.message.includes(`Cannot AccessConfigUpdate because cluster ${cluster.name} currently has update`)) {
+      await (new Promise((res) => {
+        setTimeout(res, 3000)
+      }))
+      return resolveClusterAccessEntry(client, cluster);
+    }
     logger.error(error, "Failed to get access entries for cluster " + cluster.name)
     return;
   }
