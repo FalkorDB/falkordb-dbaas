@@ -57,9 +57,11 @@ export async function discoverAzureClusters(): Promise<{ clusters: Cluster[] }> 
           env: {
             AAD_LOGIN_METHOD: "spn",
             AZURE_TENANT_ID: process.env.AZURE_TENANT_ID,
+            AAD_SERVER_APPLICATION_ID: process.env.AAD_SERVER_APPLICATION_ID,
             AZURE_CLIENT_ID: process.env.AZURE_CLIENT_ID,
             AZURE_CLIENT_SECRET: process.env.AZURE_CLIENT_SECRET,
-            AAD_SERVER_APPLICATION_ID: process.env.AAD_SERVER_APPLICATION_ID
+            AAD_SERVICE_PRINCIPAL_CLIENT_ID: process.env.AZURE_CLIENT_ID,
+            AAD_SERVICE_PRINCIPAL_CLIENT_SECRET: process.env.AZURE_CLIENT_SECRET,
           },
           args: ["azure"],
           apiVersion: "client.authentication.k8s.io/v1beta1"
