@@ -55,14 +55,11 @@ export async function discoverAzureClusters(): Promise<{ clusters: Cluster[] }> 
         execProviderConfig: {
           command: "argocd-k8s-auth",
           env: {
-            AAD_ENVIRONMENT_NAME: "AzurePublicCloud",
-            AZURE_CLIENT_ID: process.env.AZURE_CLIENT_ID,
+            AAD_LOGIN_METHOD: "spn",
             AZURE_TENANT_ID: process.env.AZURE_TENANT_ID,
-            AZURE_FEDERATED_TOKEN_FILE: process.env.AZURE_FEDERATED_TOKEN_FILE,
-            AZURE_AUTHORITY_HOST: process.env.AZURE_AUTHORITY_HOST,
-            // AAD_SERVICE_PRINCIPAL_CLIENT_ID: process.env.AZURE_AAD_SERVICE_PRINCIPAL_CLIENT_ID,
-            // AAD_SERVICE_PRINCIPAL_CLIENT_SECRET: process.env.AZURE_AAD_SERVICE_PRINCIPAL_CLIENT_SECRET,
-            AAD_LOGIN_METHOD: "workloadidentity"
+            AZURE_CLIENT_ID: process.env.AZURE_CLIENT_ID,
+            AZURE_CLIENT_SECRET: process.env.AZURE_CLIENT_SECRET,
+            AAD_SERVER_APPLICATION_ID: process.env.AAD_SERVER_APPLICATION_ID
           },
           args: ["azure"],
           apiVersion: "client.authentication.k8s.io/v1beta1"
