@@ -2,7 +2,7 @@ import { ClusterSchema, Cluster } from '../types';
 import logger from '../logger';
 import { AccountClient, ListRegionsCommand } from "@aws-sdk/client-account";
 import { STSClient, AssumeRoleWithWebIdentityCommand } from '@aws-sdk/client-sts';
-import { EKSClient, DescribeClusterCommand, ListClustersCommand, ListAccessEntriesCommand, CreateAccessEntryCommand, AssociateAccessPolicyCommand, AccessScopeType, CreateAccessEntryCommandOutput, DescribeAccessEntryCommand } from '@aws-sdk/client-eks';
+import { EKSClient, DescribeClusterCommand, ListClustersCommand, ListAccessEntriesCommand, CreateAccessEntryCommand, AssociateAccessPolicyCommand, AccessScopeType, CreateAccessEntryCommandOutput, DescribeAccessEntryCommand, InvalidRequestException, UpdateClusterConfigCommand } from '@aws-sdk/client-eks';
 import axios from 'axios';
 
 type AWSCredentials = {
@@ -152,6 +152,10 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
       )
     ).some(a => !!a)
   } catch (error) {
+    if (error instanceof InvalidRequestException && error.message === "The cluster's authentication mode must be set to one of [API, API_AND_CONFIG_MAP] to perform this operation.") {
+      await addApiAuthMode(client, cluster);
+      return resolveClusterAccessEntry(client, cluster);
+    }
     logger.error(error, "Failed to get access entries for cluster " + cluster.name)
     return;
   }
@@ -180,5 +184,19 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
       logger.error(error, "Failed to create access policy for cluster " + cluster.name)
       return;
     }
+  }
+}
+
+async function addApiAuthMode(client: EKSClient, cluster: Cluster): Promise<void> {
+  try {
+    logger.info(`Requesting API authentication mode for cluster ${cluster.name}`);
+    await client.send(new UpdateClusterConfigCommand({
+      name: cluster.name,
+      accessConfig: {
+        authenticationMode: "API_AND_CONFIG_MAP",
+      }
+    }));
+  } catch (error) {
+    logger.error(error, `Failed to set API authentication mode for cluster ${cluster.name}`);
   }
 }
