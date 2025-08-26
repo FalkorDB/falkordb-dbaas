@@ -1,5 +1,6 @@
 import { discoverGCPClusters } from './discovery/gcp';
 import { discoverAWSClusters } from './discovery/aws';
+import { discoverAzureClusters } from './discovery/azure';
 import logger from './logger';
 import { createClusterSecret, deleteClusterSecret, listClusterSecrets, makeClusterLabels, updateClusterSecret, rotateAWSSecret } from './registration/argocd';
 import { isEqual } from 'lodash'
@@ -22,13 +23,13 @@ async function main() {
     logger.error(err, 'Error discovering AWS clusters:');
     return { clusters: [], credentials: undefined, };
   });
-  // const azureClusters = await discoverAzureClusters().catch((err) => {
-  //   logger.error(err, 'Error discovering Azure clusters:');
-  //   return [];
-  // });
+  const { clusters: azureClusters } = await discoverAzureClusters().catch((err) => {
+    logger.error(err, 'Error discovering Azure clusters:');
+    return { clusters: [] };
+  });
 
   // Combine all discovered clusters
-  let discoveredClusters: Cluster[] = [...gcpClusters, ...awsClusters,] // ...azureClusters];
+  let discoveredClusters: Cluster[] = [...gcpClusters, ...awsClusters, ...azureClusters] // ...azureClusters];
 
   // Apply whitelist and blacklist filters
   if (WHITELIST_CLUSTERS.length > 0) {
