@@ -110,7 +110,17 @@ async function getRegionClusters(credentials: AWSCredentials, region: string): P
         cloud: 'aws',
         endpoint: cluster.endpoint,
         labels: cluster.tags,
-        caData: cluster.certificateAuthority.data,
+        secretConfig: {
+          awsAuthConfig: {
+            clusterName: cluster.name,
+            roleARN: process.env.AWS_ROLE_ARN,
+            profile: 'default'
+          },
+          tlsClientConfig: {
+            insecure: false,
+            caData: cluster.certificateAuthority.data,
+          }
+        }
       })
 
       await resolveClusterAccessEntry(client, cluster);

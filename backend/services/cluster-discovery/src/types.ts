@@ -7,11 +7,7 @@ export const ClusterSchema = yup.object({
   labels: yup.object().shape({}).default({}),
   cloud: yup.string().oneOf(['gcp', 'aws', 'azure']).required(),
   region: yup.string().required(),
-  caData: yup.string().required(),
-  extraSecrets: yup.array(yup.object().shape({
-    name: yup.string().required(),
-    data: yup.mixed().required(),
-  })).optional()
+  secretConfig: yup.object().optional(),
 });
 
 // TypeScript type inferred from the schema
