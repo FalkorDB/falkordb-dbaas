@@ -23,10 +23,10 @@ async function main() {
     logger.error(err, 'Error discovering AWS clusters:');
     return { clusters: [], credentials: undefined, };
   });
-  const { clusters: azureClusters } = await discoverAzureClusters().catch((err) => {
-    logger.error(err, 'Error discovering Azure clusters:');
-    return { clusters: [] };
-  });
+  // const { clusters: azureClusters } = await discoverAzureClusters().catch((err) => {
+  //   logger.error(err, 'Error discovering Azure clusters:');
+  //   return { clusters: [] };
+  // });
 
   // Combine all discovered clusters
   let discoveredClusters: Cluster[] = [...gcpClusters, ...awsClusters, ...azureClusters] // ...azureClusters];
