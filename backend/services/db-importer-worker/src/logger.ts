@@ -15,5 +15,5 @@ export default pino({
       }  
     : undefined,  
 }).child({  
-  service: process.env.SERVICE_NAME || 'cluster-discovery',  
+  service: process.env.SERVICE_NAME || 'db-importer-worker',  
 });  
