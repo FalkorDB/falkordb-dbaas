@@ -167,7 +167,7 @@ resource "google_storage_bucket" "rdb_exports" {
   cors {
     max_age_seconds = 3600
     method          = ["PUT", "GET"]
-    origin          = ["https://app.falkordb.cloud", "http://localhost:3000"]
+    origin          = ["https://app.falkordb.cloud"]
     response_header = ["*"]
   }
 

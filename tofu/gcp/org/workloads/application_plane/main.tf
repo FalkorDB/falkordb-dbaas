@@ -90,7 +90,6 @@ resource "google_storage_bucket" "omnistrate_metering_data" {
       "PUT",
     ]
     origin = [
-      "http://localhost:3000",
       "https://app.falkordb.cloud",
     ]
     response_header = [
