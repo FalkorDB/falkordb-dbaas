@@ -49,7 +49,7 @@ async function getAWSCredentials(): Promise<AWSCredentials> {
 
   const idToken = res.data;
 
-  const sts = new STSClient({});
+  const sts = new STSClient({ region: 'us-west-2' });
 
   const { Credentials } = await sts.send(
     new AssumeRoleWithWebIdentityCommand({

@@ -29,7 +29,7 @@ async function main() {
   // });
 
   // Combine all discovered clusters
-  let discoveredClusters: Cluster[] = [...gcpClusters, ...awsClusters, ...azureClusters] // ...azureClusters];
+  let discoveredClusters: Cluster[] = [...gcpClusters, ...awsClusters] // ...azureClusters];
 
   // Apply whitelist and blacklist filters
   if (WHITELIST_CLUSTERS.length > 0) {
@@ -52,7 +52,8 @@ async function main() {
     );
   }
 
-  await rotateAWSSecret(awsCredentials);
+  if (awsCredentials)
+    await rotateAWSSecret(awsCredentials);
 
   // Get existing secrets in the Kubernetes cluster
   const existingSecrets = await listClusterSecrets();

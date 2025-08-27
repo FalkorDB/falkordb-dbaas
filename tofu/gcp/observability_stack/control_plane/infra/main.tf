@@ -103,9 +103,11 @@ module "gke" {
   monitoring_service                   = null
   logging_service                      = null
 
-  default_max_pods_per_node = var.default_max_pods_per_node
+  maintenance_start_time = "1970-01-01T22:00:00Z"
+  maintenance_end_time   = "1970-01-02T02:00:00Z"
+  maintenance_recurrence = "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA,SU"
 
-  monitoring_enabled_components = ["SYSTEM_COMPONENTS"]
+  default_max_pods_per_node = var.default_max_pods_per_node
 
   security_posture_mode               = "BASIC"
   security_posture_vulnerability_mode = "VULNERABILITY_BASIC"
