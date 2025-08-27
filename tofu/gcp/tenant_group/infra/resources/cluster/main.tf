@@ -34,10 +34,6 @@ module "gke" {
   disable_legacy_metadata_endpoints    = false
   deletion_protection                  = var.cluster_deletion_protection
 
-  maintenance_start_time = "1970-01-01T22:00:00Z"
-  maintenance_end_time   = "1970-01-02T02:00:00Z"
-  maintenance_recurrence = "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR,SA,SU"
-
   default_max_pods_per_node = var.default_max_pods_per_node
 
   enable_private_endpoint = false
@@ -47,6 +43,15 @@ module "gke" {
 
   monitoring_enabled_components = [
     "SYSTEM_COMPONENTS",
+    "APISERVER",
+    "SCHEDULER",
+    "CONTROLLER_MANAGER",
+    "STORAGE",
+    "HPA",
+    "POD",
+    "DAEMONSET",
+    "DEPLOYMENT",
+    "STATEFULSET"
   ]
 
   security_posture_mode               = "BASIC"
