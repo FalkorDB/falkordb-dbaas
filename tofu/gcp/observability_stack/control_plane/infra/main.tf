@@ -100,6 +100,8 @@ module "gke" {
   enable_private_nodes                 = true
   http_load_balancing                  = true
   gcs_fuse_csi_driver                  = true
+  monitoring_service                   = null
+  logging_service                      = null
 
   default_max_pods_per_node = var.default_max_pods_per_node
 
