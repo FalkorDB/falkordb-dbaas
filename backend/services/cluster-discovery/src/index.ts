@@ -5,6 +5,7 @@ import logger from './logger';
 import { createClusterSecret, deleteClusterSecret, listClusterSecrets, makeClusterLabels, updateClusterSecret, rotateAWSSecret } from './registration/argocd';
 import { isEqual } from 'lodash'
 import { Cluster } from './types'
+import { createObservabilityNodePool } from './nodepool';
 
 // Parse environment variables as comma-separated lists
 const WHITELIST_CLUSTERS = process.env.WHITELIST_CLUSTERS?.split(',').map((name) => name.trim().toLowerCase()) || [];
@@ -67,6 +68,7 @@ async function main() {
         await updateClusterSecret(existingSecret.name, cluster);
       }
     } else {
+      await createObservabilityNodePool(cluster).catch((e) => { });
       await createClusterSecret(cluster);
     }
   }
