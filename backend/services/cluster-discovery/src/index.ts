@@ -62,7 +62,7 @@ async function main() {
   // Add or update secrets for discovered clusters
   logger.info({ clusters: discoveredClusters.map(e => e.name) }, 'Adding clusters')
   for (const cluster of discoveredClusters) {
-    const existingSecret = existingSecrets.find((secret) => secret.labels.cluster === cluster.name || secret.name === cluster.name);
+    const existingSecret = existingSecrets.find((secret) => (secret.labels.cluster === cluster.name || secret.name === cluster.name));
     if (existingSecret) {
       if (!isEqual(makeClusterLabels(cluster), existingSecret.labels)) {
         await updateClusterSecret(existingSecret.name, cluster);
