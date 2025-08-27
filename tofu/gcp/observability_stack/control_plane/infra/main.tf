@@ -100,6 +100,8 @@ module "gke" {
   enable_private_nodes                 = true
   http_load_balancing                  = true
   gcs_fuse_csi_driver                  = true
+  monitoring_service                   = null
+  logging_service                      = null
 
   maintenance_start_time = "1970-01-01T22:00:00Z"
   maintenance_end_time   = "1970-01-02T02:00:00Z"
