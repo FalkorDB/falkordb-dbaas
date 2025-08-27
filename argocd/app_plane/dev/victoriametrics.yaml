@@ -50,19 +50,19 @@ spec:
                 logFormat: json
                 nodeSelector:
                   node_pool: observability
-                resources:
-                  requests:
-                    memory: "1Gi"
-                    cpu: "1"
-                  limits:
-                    memory: "4Gi"
-                    cpu: "2"
                 storage:
                   resources:
                     requests:
                       storage: 50Gi
             alertmanager:
               spec:
+                resources:
+                  requests:
+                    memory: "56Mi"
+                    cpu: "20m"
+                  limits:
+                    memory: "256Mi"
+                    cpu: "100m"
                 nodeSelector:
                   node_pool: observability
                 secrets:

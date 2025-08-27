@@ -16,6 +16,17 @@ server:
         create: true
     annotations:
       kubernetes.io/ingress.global-static-ip-name: "argocd-ip"
+  serviceAccount:
+    annotations:
+      iam.gke.io/gcp-service-account: "argocd-sa@ctrl-plane-dev-f7a2434f.iam.gserviceaccount.com"
+  volumes:
+    - name: aws-profile
+      secret:
+        secretName: aws-profile
+  volumeMounts:
+    - name: aws-profile
+      mountPath: /home/argocd/.aws
+      readOnly: true
 
 cmp:
   repositories:
@@ -60,6 +71,17 @@ dex:
 controller:
   metrics:
     enabled: true
+  serviceAccount:
+    annotations:
+      iam.gke.io/gcp-service-account: "argocd-sa@ctrl-plane-dev-f7a2434f.iam.gserviceaccount.com"
+  volumes:
+    - name: aws-profile
+      secret:
+        secretName: aws-profile
+  volumeMounts:
+    - name: aws-profile
+      mountPath: /home/argocd/.aws
+      readOnly: true
 
 extraObjects:
   - apiVersion: argoproj.io/v1alpha1

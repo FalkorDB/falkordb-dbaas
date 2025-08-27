@@ -16,6 +16,17 @@ server:
         create: true
     annotations:
       kubernetes.io/ingress.global-static-ip-name: "argocd-ip"
+  serviceAccount:
+    annotations:
+      iam.gke.io/gcp-service-account: "argocd-sa@ctrl-plane-prod-b1b92df2.iam.gserviceaccount.com"
+  volumes:
+    - name: aws-profile
+      secret:
+        secretName: aws-profile
+  volumeMounts:
+    - name: aws-profile
+      mountPath: /home/argocd/.aws
+      readOnly: true
 
 cmp:
   repositories:
@@ -62,7 +73,7 @@ applicationSet:
     requests:
       memory: "2Gi"
       cpu: "500m"
-    limits: 
+    limits:
       memory: "4Gi"
       cpu: "2"
 
@@ -71,20 +82,30 @@ controller:
   metrics:
     enabled: true
   template:
-    spec: 
+    spec:
       containers:
         - name: argocd-application-controller
           env:
             - name: ARGOCD_CONTROLLER_REPLICAS
               value: "2"
-
+  serviceAccount:
+    annotations:
+      iam.gke.io/gcp-service-account: "argocd-sa@ctrl-plane-prod-b1b92df2.iam.gserviceaccount.com"
   resources:
     requests:
       memory: "2Gi"
       cpu: "1"
-    limits: 
+    limits:
       memory: "6Gi"
       cpu: "2"
+  volumes:
+    - name: aws-profile
+      secret:
+        secretName: aws-profile
+  volumeMounts:
+    - name: aws-profile
+      mountPath: /home/argocd/.aws
+      readOnly: true
 
 extraObjects:
   - apiVersion: argoproj.io/v1alpha1

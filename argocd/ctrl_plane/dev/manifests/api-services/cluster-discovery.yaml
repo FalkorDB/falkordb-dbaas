@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cluster-discovery
+  namespace: argocd
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: "Forbid"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 300
+      template:
+        spec:
+          containers:
+            - name: cluster-discovery
+              image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery:latest
+              imagePullPolicy: Always
+              envFrom:
+                - secretRef:
+                    name: cluster-discovery-env
+          restartPolicy: Never
+          serviceAccountName: argocd-server
+          nodeSelector:
+            node_pool: observability-resources

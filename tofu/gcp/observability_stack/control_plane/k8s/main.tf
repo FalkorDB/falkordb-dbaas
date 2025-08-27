@@ -25,11 +25,11 @@ provider "kubernetes" {
 }
 
 provider "helm" {
-  kubernetes {
+  kubernetes = {
     host                   = "https://${var.cluster_endpoint}"
     token                  = data.google_client_config.default.access_token
     cluster_ca_certificate = base64decode(var.cluster_ca_certificate)
-    exec {
+    exec = {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "gcloud"
       args = [
@@ -74,9 +74,9 @@ resource "kubernetes_secret" "argocd-secret" {
     "dex.google.adminEmail"   = var.dex_google_admin_email
   }
 
-  lifecycle {
-    ignore_changes = [data]
-  }
+  # lifecycle {
+  #   ignore_changes = [data]
+  # }
 
   depends_on = [kubernetes_namespace.argocd]
 }
@@ -100,7 +100,7 @@ resource "helm_release" "argocd" {
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"
   namespace  = "argocd"
-  version    = "7.7.15"
+  version    = "8.3.0"
 
   skip_crds = false
 
@@ -134,6 +134,9 @@ data "google_service_account" "db_exporter_sa" {
 resource "kubernetes_namespace" "api" {
   metadata {
     name = "api"
+    labels = {
+      "argocd.argoproj.io/instance" = "observability-stack"
+    }
   }
 }
 
@@ -164,6 +167,25 @@ resource "google_service_account_iam_binding" "db-exporter-sa-token-creator" {
   members = [
     "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.api.metadata.0.name}/${kubernetes_service_account.db-exporter-sa.metadata.0.name}]",
     "serviceAccount:${data.google_service_account.db_exporter_sa.email}",
+    "serviceAccount:falkordb-provisioning-sa@${var.project_id}.iam.gserviceaccount.com"
   ]
 }
 
+// attach argocd-server to argocd-server and argocd-application-controller
+resource "google_service_account_iam_binding" "argocd_sa" {
+  service_account_id = var.argocd_sa_id
+  role               = "roles/iam.serviceAccountUser"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata.0.name}/argocd-server]",
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata.0.name}/argocd-application-controller]",
+  ]
+}
+
+resource "google_service_account_iam_binding" "argocd_sa_token_creator" {
+  service_account_id = var.argocd_sa_id
+  role               = "roles/iam.serviceAccountTokenCreator"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata.0.name}/argocd-server]",
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata.0.name}/argocd-application-controller]",
+  ]
+}

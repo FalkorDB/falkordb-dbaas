@@ -200,3 +200,9 @@ resource "google_project_iam_member" "db_exporter_sa" {
   role    = "roles/container.developer"
   member  = "serviceAccount:${google_service_account.db_exporter_sa.email}"
 }
+
+resource "google_service_account" "argocd_sa" {
+  project      = var.project_id
+  account_id   = "argocd-sa"
+  display_name = "ArgoCD SA"
+}
