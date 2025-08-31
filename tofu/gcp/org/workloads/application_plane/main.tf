@@ -106,6 +106,6 @@ resource "google_storage_bucket_iam_member" "omnistrate_metering_data" {
 
 resource "google_project_iam_member" "argocd_sa_k8s_dev" {
   project = module.project.project_id
-  role    = "roles/container.developer"
+  role    = "roles/container.clusterAdmin"
   member  = "serviceAccount:${var.argocd_sa_email}"
 }
