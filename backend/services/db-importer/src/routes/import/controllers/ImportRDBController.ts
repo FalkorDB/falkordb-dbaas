@@ -195,12 +195,22 @@ export class ImportRDBController {
       throw ApiError.internalServerError("Error creating task", 'TASK_CREATION_ERROR');
     }
 
-    const uploadUrl = await this.storageRepository.getWriteUrl(
-      this._importBucketName,
-      payload.fileName,
-      'application/octet-stream',
-      60 * 60, // 1 hour
-    );
+    let uploadUrl = '';
+    try {
+      uploadUrl = await this.storageRepository.getWriteUrl(
+        this._importBucketName,
+        payload.fileName,
+        'application/octet-stream',
+        60 * 60, // 1 hour
+      );
+    } catch (error) {
+      await this.tasksRepository.updateTask({
+        taskId: task.taskId,
+        status: 'failed',
+        error: 'Internal error'
+      })
+      throw error;
+    }
 
     await this.tasksRepository.updateTask({
       taskId: task.taskId,
