@@ -92,6 +92,9 @@ function makeSecret(cluster: Cluster): k8s.V1Secret {
       namespace: ARGOCD_NAMESPACE,
       labels: {
         ...makeClusterLabels(cluster),
+      },
+      annotations: {
+        "argocd.argoproj.io/secret-type": "cluster"
       }
     },
     stringData: {
