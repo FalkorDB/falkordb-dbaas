@@ -1,0 +1,32 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  namespace: observability
+  name: alloy-health
+spec:
+  groups:
+    - name: alloy-health
+      params: {}
+      rules:
+        - alert: AlloyNoDataDeliveryToControlPlane
+          annotations:
+            description: |
+              Grafana Alloy on app plane clusters is not delivering metrics or logs to the control plane.
+              This indicates a failure in the data delivery pipeline from app plane clusters.
+              Either Prometheus remote storage samples or VictoriaLogs rows have been absent for 10 minutes.
+            summary: 'Alloy data delivery failure from app plane clusters to control plane'
+          expr: |
+            (
+              (
+                absent_over_time(prometheus_remote_storage_samples_total{cluster!="in-cluster"}[10m]) == 1
+              )
+            ) or
+            (
+              (
+                absent_over_time(vl_rows_ingested_total{cluster!="in-cluster"}[10m]) == 1
+              )
+            )
+          for: 0m
+          labels:
+            severity: warning
