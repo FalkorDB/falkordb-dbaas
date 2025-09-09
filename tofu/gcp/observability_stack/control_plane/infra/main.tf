@@ -134,6 +134,16 @@ module "gke" {
       max_pods_per_node  = 25
     },
     {
+      name               = "observability-resources-large"
+      machine_type       = "e2-standard-4"
+      disk_size_gb       = 30
+      min_count          = 0
+      max_count          = 20
+      image_type         = "COS_CONTAINERD"
+      initial_node_count = 0
+      max_pods_per_node  = 25
+    },
+    {
       name               = "backend"
       machine_type       = "e2-standard-2"
       disk_size_gb       = 30
@@ -149,6 +159,9 @@ module "gke" {
       "goog-gke-node-pool-provisioning-model" = "on-demand"
     }
     "observability-resources" = {
+      "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
+    "observability-resources-large" = {
       "goog-gke-node-pool-provisioning-model" = "on-demand"
     }
     "backend" = {
