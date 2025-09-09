@@ -15,10 +15,14 @@ spec:
         server:
           retentionPeriod: 1y
           nodeSelector:
-            node_pool: observability-resources
+            node_pool: observability-resources-large
           persistentVolume:
             enabled: true
             size: 500Gi
+          resources:
+            requests:
+              memory: "6Gi"
+              cpu: "1500m"
         dashboards:
           enabled: true
           annotations:

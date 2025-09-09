@@ -39,12 +39,9 @@ spec:
             retentionPeriod: 365d
             logFormat: json
             nodeSelector:
-              node_pool: observability-resources
+              node_pool: observability-resources-large
             resources:
               requests:
-                memory: "4Gi"
-                cpu: "1"
-              limits:
                 memory: "6Gi"
                 cpu: "1500m"
             storage:
