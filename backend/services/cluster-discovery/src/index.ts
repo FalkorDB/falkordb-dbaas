@@ -75,6 +75,7 @@ async function main() {
 
   // Remove secrets for clusters that are no longer discovered
   for (const secret of existingSecrets) {
+    if (secret.name.startsWith("cluster-kubernetes.default.svc") || secret.labels["role"] === "ctrl-plane") continue; // Skip control plane secrets
     if (!discoveredClusters.some((cluster) => cluster.name === secret.labels.cluster)) {
       if (process.env.DELETE_UNKNOWN_SECRETS === "true") {
         await deleteClusterSecret(secret.name);
