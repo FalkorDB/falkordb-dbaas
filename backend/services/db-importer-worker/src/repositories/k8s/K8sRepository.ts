@@ -719,7 +719,7 @@ export class K8sRepository {
             containers: [
               {
                 name: 'rdb-used-memory',
-                image: 'falkordb/rdb-used-memory:v1.1.0',
+                image: 'falkordb/rdb-used-memory:v1.2.0',
                 command: ['sh', '-c', shellCommand],
                 volumeMounts: [
                   {
