@@ -42,10 +42,8 @@ spec:
               node_pool: observability-resources-large
             resources:
               requests:
-                memory: "8Gi"
-                cpu: "2"
-              limits:
-                memory: "14Gi"
+                memory: "6Gi"
+                cpu: "1500m"
             storage:
               resources:
                 requests:

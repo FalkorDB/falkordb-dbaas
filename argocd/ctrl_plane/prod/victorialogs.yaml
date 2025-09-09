@@ -19,6 +19,10 @@ spec:
           persistentVolume:
             enabled: true
             size: 500Gi
+          resources:
+            requests:
+              memory: "6Gi"
+              cpu: "1500m"
         dashboards:
           enabled: true
           annotations:
