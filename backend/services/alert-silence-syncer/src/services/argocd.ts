@@ -1,6 +1,6 @@
 import { ARGO_SILENCE_REPO_PATH, ARGO_SILENCE_REPO_TARGET_REVISION, ARGO_SILENCE_REPO_URL, ARGOCD_NAMESPACE, SILENCE_APP_NAME, SILENCE_ID_LABEL, SILENCE_MANAGED_BY_LABEL, SILENCE_NAMESPACE } from "../constants";
 import { Silence, Cluster } from "../types";
-import logger from '../logger'
+import logger from '../logger';
 
 export function generateArgoCDAppManifest(
   silence: Silence, cluster: Cluster

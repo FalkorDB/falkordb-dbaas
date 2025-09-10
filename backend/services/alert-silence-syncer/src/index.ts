@@ -66,7 +66,7 @@ async function main() {
     }
 
   } catch (error) {
-    console.error(error, 'An error occurred during ArgoCD synchronization:');
+    logger.error(error, 'An error occurred during ArgoCD synchronization:');
   }
 }
 
