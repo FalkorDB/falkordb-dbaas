@@ -46,14 +46,21 @@ spec:
                 node_pool: observability
             vmsingle:
               spec:
+                resources:
+                  requests:
+                    memory: "1000Mi"
+                    cpu: "1500m"
+                  limits:
+                    memory: "2000Mi"
+                    cpu: "2"
                 retentionPeriod: 3d
                 logFormat: json
                 nodeSelector:
                   node_pool: observability
-            storage:
-              resources:
-                requests:
-                  storage: 50Gi
+                storage:
+                  resources:
+                    requests:
+                      storage: 50Gi
             alertmanager:
               spec:
                 resources:
