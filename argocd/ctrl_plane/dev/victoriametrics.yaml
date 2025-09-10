@@ -87,6 +87,7 @@ spec:
                   - service_key_file: "/etc/vm/secrets/pagerduty-service-key/api-key"
                     url: https://events.pagerduty.com/generic/2010-04-15/create_event.json
                     send_resolved: true
+                    client_url: https://grafana.observability.dev.internal.falkordb.cloud/alerting/groups
         vmalert:
           spec:
             nodeSelector:
