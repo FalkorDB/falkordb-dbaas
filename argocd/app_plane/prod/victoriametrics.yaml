@@ -49,7 +49,7 @@ spec:
                 resources:
                   requests:
                     memory: "1000Mi"
-                    cpu: "1500m"
+                    cpu: "1"
                 retentionPeriod: 3d
                 logFormat: json
                 nodeSelector:
