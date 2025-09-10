@@ -1,5 +1,5 @@
 import * as k8s from '@kubernetes/client-node';
-import { ARGOCD_NAMESPACE, SILENCE_ID_FROM_APP_NAME, SILENCE_MANAGED_BY_LABEL } from '../constants';
+import { ARGOCD_NAMESPACE, SILENCE_ID_LABEL, SILENCE_MANAGED_BY_LABEL } from '../constants';
 import logger from '../logger';
 import { Silence } from '../types';
 import { generateArgoCDAppManifest } from './argocd';
@@ -19,11 +19,15 @@ export async function fetchSilenceApplications(): Promise<Silence[]> {
     const existingSilenceApps = existingArgoApps.body.items;
 
     const silences: Silence[] = existingSilenceApps.map((app: any) => {
-      const silenceId = SILENCE_ID_FROM_APP_NAME(app.metadata.name);
+      const silenceId = app.labels?.[SILENCE_ID_LABEL];
+      if (!silenceId) {
+        logger.warn({ app }, 'Found ArgoCD Application without silence ID label. Skipping.');
+        return null;
+      }
       return {
         id: silenceId,
-      };
-    });
+      } as Silence;
+    }).filter((s): s is Silence => s !== null);
 
     return silences;
   } catch (error) {

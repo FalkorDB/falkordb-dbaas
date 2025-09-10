@@ -1,4 +1,4 @@
-import { ARGO_SILENCE_REPO_PATH, ARGO_SILENCE_REPO_URL, ARGOCD_NAMESPACE, SILENCE_APP_NAME, SILENCE_MANAGED_BY_LABEL, SILENCE_NAMESPACE } from "../constants";
+import { ARGO_SILENCE_REPO_PATH, ARGO_SILENCE_REPO_URL, ARGOCD_NAMESPACE, SILENCE_APP_NAME, SILENCE_ID_LABEL, SILENCE_MANAGED_BY_LABEL, SILENCE_NAMESPACE } from "../constants";
 import { Silence, Cluster } from "../types";
 import logger from '../logger'
 
@@ -38,6 +38,7 @@ export function generateArgoCDAppManifest(
       namespace: ARGOCD_NAMESPACE,
       labels: {
         [SILENCE_MANAGED_BY_LABEL.split('=')[0]]: SILENCE_MANAGED_BY_LABEL.split('=')[1],
+        [SILENCE_ID_LABEL]: silence.id,
         'app.kubernetes.io/part-of': 'alerting',
       },
       annotations: {

@@ -10,4 +10,4 @@ export const SILENCE_MANAGED_BY_LABEL = 'app.kubernetes.io/managed-by=silence-sy
 export const ALERTMANAGER_URL = process.env.ALERTMANAGER_URL || 'http://vmalertmanager-vm.observability.svc.cluster.local:9093';
 
 export const SILENCE_APP_NAME = (silenceId: string) => `am-silence-${silenceId.substring(0, 10).toLowerCase()}`;
-export const SILENCE_ID_FROM_APP_NAME = (appName: string) => appName.replace(/^am-silence-/, '');
+export const SILENCE_ID_LABEL = 'silence-syncer/alertmanager-silence-id';
