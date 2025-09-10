@@ -23,6 +23,7 @@ spec:
         helm:
           valuesObject:
             fullnameOverride: silence-operator
+            alertmanagerAddress: "http://vmalertmanager-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:9093"
             nodeSelector:
               node_pool: observability
       destination:
