@@ -50,9 +50,6 @@ spec:
                   requests:
                     memory: "1000Mi"
                     cpu: "1500m"
-                  limits:
-                    memory: "2000Mi"
-                    cpu: "2"
                 retentionPeriod: 3d
                 logFormat: json
                 nodeSelector:
@@ -96,6 +93,7 @@ spec:
                       - service_key_file: "/etc/vm/secrets/pagerduty-service-key/api-key"
                         url: https://events.pagerduty.com/generic/2010-04-15/create_event.json
                         send_resolved: true
+                        client_url: https://grafana.observability.internal.falkordb.cloud/alerting/groups
             vmalert:
               spec:
                 nodeSelector:

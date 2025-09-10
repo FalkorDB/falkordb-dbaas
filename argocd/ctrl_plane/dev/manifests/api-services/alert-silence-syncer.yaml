@@ -1,0 +1,70 @@
+---
+# Service account with access to cluster secrets
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alert-silence-syncer-sa
+  namespace: observability
+  labels:
+    app.kubernetes.io/managed-by: alert-silence-syncer
+---
+# Role with permissions to read cluster secrets and manage Silence applications
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: alert-silence-syncer-role
+  namespace: argocd
+  labels:
+    app.kubernetes.io/managed-by: alert-silence-syncer
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["get", "list", "create", "update", "delete"]
+---
+# RoleBinding to bind the Role to the ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: alert-silence-syncer-rolebinding
+  namespace: argocd
+  labels:
+    app.kubernetes.io/managed-by: alert-silence-syncer
+subjects:
+  - kind: ServiceAccount
+    name: alert-silence-syncer-sa
+    namespace: observability
+roleRef:
+  kind: Role
+  name: alert-silence-syncer-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: alert-silence-syncer
+  namespace: observability
+spec:
+  schedule: "* * * * *"
+  concurrencyPolicy: "Forbid"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 300
+      template:
+        spec:
+          containers:
+            - name: alert-silence-syncer
+              image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/alert-silence-syncer:latest
+              imagePullPolicy: Always
+              envFrom:
+                - secretRef:
+                    name: alert-silence-syncer-env
+          restartPolicy: Never
+          serviceAccountName: alert-silence-syncer-sa
+          nodeSelector:
+            node_pool: observability-resources

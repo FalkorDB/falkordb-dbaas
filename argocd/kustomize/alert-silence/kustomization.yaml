@@ -1,0 +1,7 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: alert-silence-kustomization
+namespace: observability
+resources:
+  - v1alpha2_silence.yaml
