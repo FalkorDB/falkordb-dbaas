@@ -20,6 +20,7 @@ jobs:
           - name: db-importer-worker
           - name: db-importer
           - name: cluster-discovery
+          - name: alert-silence-syncer
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
