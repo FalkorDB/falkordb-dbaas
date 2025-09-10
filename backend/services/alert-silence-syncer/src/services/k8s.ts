@@ -19,7 +19,7 @@ export async function fetchSilenceApplications(): Promise<Silence[]> {
     const existingSilenceApps = existingArgoApps.body.items;
 
     const silences: Silence[] = existingSilenceApps.map((app: any) => {
-      const silenceId = app.labels?.[SILENCE_ID_LABEL];
+      const silenceId = app.metadata.labels?.[SILENCE_ID_LABEL];
       if (!silenceId) {
         logger.warn({ app }, 'Found ArgoCD Application without silence ID label. Skipping.');
         return null;

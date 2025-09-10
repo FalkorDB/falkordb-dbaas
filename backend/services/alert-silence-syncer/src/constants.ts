@@ -3,6 +3,7 @@ export const ARGOCD_NAMESPACE = 'argocd';
 
 export const ARGO_SILENCE_REPO_URL = process.env.ARGO_SILENCE_REPO_URL || "https://github.com/FalkorDB/falkordb-dbaas.git";
 export const ARGO_SILENCE_REPO_PATH = process.env.ARGO_SILENCE_REPO_PATH || "argocd/kustomize/alert-silence";
+export const ARGO_SILENCE_REPO_TARGET_REVISION = process.env.ARGO_SILENCE_REPO_TARGET_REVISION || "HEAD";
 
 export const SILENCE_NAMESPACE = 'observability';
 export const SILENCE_MANAGED_BY_LABEL = 'app.kubernetes.io/managed-by=silence-syncer';
