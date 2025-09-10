@@ -45,6 +45,7 @@ export function generateArgoCDAppManifest(
         // Pass the ArgoCD sync policy directly
         'argocd.argoproj.io/sync-wave': '1',
       },
+      finalizers: ['resources-finalizer.argocd.argoproj.io'],
     },
     spec: {
       project: 'default',
