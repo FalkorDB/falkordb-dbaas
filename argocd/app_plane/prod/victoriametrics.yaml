@@ -57,10 +57,10 @@ spec:
                 logFormat: json
                 nodeSelector:
                   node_pool: observability
-            storage:
-              resources:
-                requests:
-                  storage: 50Gi
+                storage:
+                  resources:
+                    requests:
+                      storage: 50Gi
             alertmanager:
               spec:
                 resources:
