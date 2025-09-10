@@ -14,7 +14,7 @@ export async function fetchSilenceApplications(): Promise<Silence[]> {
 
   try {
     const existingArgoApps = await k8sApi.listNamespacedCustomObject(
-      'argoproj.io', 'v1alpha1', ARGOCD_NAMESPACE, 'applications', undefined, undefined, undefined, SILENCE_MANAGED_BY_LABEL,
+      'argoproj.io', 'v1alpha1', ARGOCD_NAMESPACE, 'applications', undefined, undefined, undefined, undefined, SILENCE_MANAGED_BY_LABEL,
     ) as { body: any };
     const existingSilenceApps = existingArgoApps.body.items;
 
