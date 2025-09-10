@@ -5,7 +5,7 @@ import { AlertmanagerSilence } from "../types";
 export async function fetchActiveSilences(): Promise<AlertmanagerSilence[]> {
   try {
     console.log(`[${new Date().toISOString()}] Fetching active silences from Alertmanager...`);
-    const response = await fetch(`${ALERTMANAGER_URL}/api/v2/silences?filter=status=active`);
+    const response = await fetch(`${ALERTMANAGER_URL}/api/v2/silences`);
     if (!response.ok) {
       console.error(`Error fetching silences: ${response.statusText}`);
       return [];

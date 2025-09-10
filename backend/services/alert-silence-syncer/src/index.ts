@@ -26,6 +26,10 @@ async function main() {
 
     // Get the list of existing ArgoCD Application resources managed by this service
     const existingArgoApps = await fetchSilenceApplications();
+    if (!activeSilences.length) {
+      logger.info('No active silences found in Alertmanager.');
+    }
+
 
     // Create or update ArgoCD Applications for new/active silences
     for (const silence of activeSilences) {
@@ -50,6 +54,9 @@ async function main() {
       await createApplicationIfNotExists(appManifest);
     }
 
+    if (!existingArgoApps.length) {
+      logger.info('No existing silence applications found in ArgoCD.');
+    }
     // Delete ArgoCD Applications for expired silences
     for (const app of existingArgoApps) {
       const silenceId = app.id;
