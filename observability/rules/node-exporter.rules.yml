@@ -15,16 +15,12 @@ spec:
             count without (cpu, mode) (
               node_cpu_seconds_total{job="node-exporter",mode="idle"}
             )
-          labels:
-            cluster: '{{ $labels.cluster }}'
           record: instance:node_num_cpu:sum
         - annotations: {}
           expr: |-
             1 - avg without (cpu) (
               sum without (mode) (rate(node_cpu_seconds_total{job="node-exporter", mode=~"idle|iowait|steal"}[5m]))
             )
-          labels:
-            cluster: '{{ $labels.cluster }}'
           record: instance:node_cpu_utilisation:rate5m
         - annotations: {}
           expr: |-
@@ -33,8 +29,6 @@ spec:
             /
               instance:node_num_cpu:sum{job="node-exporter"}
             )
-          labels:
-            cluster: '{{ $labels.cluster }}'
           record: instance:node_load1_per_cpu:ratio
         - annotations: {}
           expr: |-
@@ -55,55 +49,39 @@ spec:
             /
               node_memory_MemTotal_bytes{job="node-exporter"}
             )
-          labels:
-            cluster: '{{ $labels.cluster }}'
           record: instance:node_memory_utilisation:ratio
         - annotations: {}
           expr: rate(node_vmstat_pgmajfault{job="node-exporter"}[5m])
-          labels:
-            cluster: '{{ $labels.cluster }}'
           record: instance:node_vmstat_pgmajfault:rate5m
         - annotations: {}
           expr: rate(node_disk_io_time_seconds_total{job="node-exporter", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)"}[5m])
-          labels:
-            cluster: '{{ $labels.cluster }}'
           record: instance_device:node_disk_io_time_seconds:rate5m
         - annotations: {}
           expr: rate(node_disk_io_time_weighted_seconds_total{job="node-exporter", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)"}[5m])
-          labels:
-            cluster: '{{ $labels.cluster }}'
           record: instance_device:node_disk_io_time_weighted_seconds:rate5m
         - annotations: {}
           expr: |-
             sum without (device) (
               rate(node_network_receive_bytes_total{job="node-exporter", device!="lo"}[5m])
             )
-          labels:
-            cluster: '{{ $labels.cluster }}'
           record: instance:node_network_receive_bytes_excluding_lo:rate5m
         - annotations: {}
           expr: |-
             sum without (device) (
               rate(node_network_transmit_bytes_total{job="node-exporter", device!="lo"}[5m])
             )
-          labels:
-            cluster: '{{ $labels.cluster }}'
           record: instance:node_network_transmit_bytes_excluding_lo:rate5m
         - annotations: {}
           expr: |-
             sum without (device) (
               rate(node_network_receive_drop_total{job="node-exporter", device!="lo"}[5m])
             )
-          labels:
-            cluster: '{{ $labels.cluster }}'
           record: instance:node_network_receive_drop_excluding_lo:rate5m
         - annotations: {}
           expr: |-
             sum without (device) (
               rate(node_network_transmit_drop_total{job="node-exporter", device!="lo"}[5m])
             )
-          labels:
-            cluster: '{{ $labels.cluster }}'
           record: instance:node_network_transmit_drop_excluding_lo:rate5m
     - name: node-exporter
       params: {}

@@ -27,7 +27,6 @@ spec:
             )
           labels:
             workload_type: deployment
-            cluster: '{{ $labels.cluster }}'
           record: namespace_workload_pod:kube_pod_owner:relabel
         - annotations: {}
           expr: |-
@@ -39,7 +38,6 @@ spec:
             )
           labels:
             workload_type: daemonset
-            cluster: '{{ $labels.cluster }}'
           record: namespace_workload_pod:kube_pod_owner:relabel
         - annotations: {}
           expr: |-
@@ -51,7 +49,6 @@ spec:
             )
           labels:
             workload_type: statefulset
-            cluster: '{{ $labels.cluster }}'
           record: namespace_workload_pod:kube_pod_owner:relabel
         - annotations: {}
           expr: |-
@@ -63,5 +60,4 @@ spec:
             )
           labels:
             workload_type: job
-            cluster: '{{ $labels.cluster }}'
           record: namespace_workload_pod:kube_pod_owner:relabel
