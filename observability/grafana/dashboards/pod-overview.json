@@ -37,22 +37,22 @@
       },
       "targets": [
         {
-          "expr": "namespace_pod:container_restarts_total >= 2",
+          "expr": "namespace_pod:container_restarts_total{cluster=\"$cluster\", namespace=\"$namespace\", pod=\"$pod\"} >= 2",
           "legendFormat": "Pod Restart Warning",
           "refId": "A"
         },
         {
-          "expr": "namespace_pod:container_restarts_10m >= 5",
+          "expr": "namespace_pod:container_restarts_10m{cluster=\"$cluster\", namespace=\"$namespace\", pod=\"$pod\"} >= 5",
           "legendFormat": "Pod Restart Critical",
           "refId": "B"
         },
         {
-          "expr": "namespace_pod:container_restarts_1h >= 10",
+          "expr": "namespace_pod:container_restarts_1h{cluster=\"$cluster\", namespace=\"$namespace\", pod=\"$pod\"} >= 10",
           "legendFormat": "Pod Restart Info",
           "refId": "C"
         },
         {
-          "expr": "namespace_pod:container_restarts_instance_5m >= 2",
+          "expr": "namespace_pod:container_restarts_instance_5m{cluster=\"$cluster\", namespace=\"$namespace\", pod=\"$pod\"} >= 2",
           "legendFormat": "Pod Restart Instance",
           "refId": "D"
         }
