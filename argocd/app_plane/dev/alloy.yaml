@@ -153,20 +153,6 @@ spec:
                   ksm.scrape "metrics" {
                     targets    = ksm.kubernetes.targets.output
                     forward_to = [prometheus.relabel.kube_state_metrics.receiver]
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^container$"
-                      }
-                    }
                   }
 
                   prometheus.scrape "cadvisor" {
@@ -180,23 +166,9 @@ spec:
                     bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
                     targets           = discovery.relabel.metrics_cadvisor.output
                     scrape_interval   = "30s"
-                    forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
+                    forward_to        = [prometheus.relabel.drop_pod_and_container_label.receiver]
 
                     job_name = "cadvisor"
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
-                    
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^container$"
-                      }
-                    }
                   }
 
                   prometheus.scrape "kubelet" {
@@ -210,23 +182,10 @@ spec:
                     bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
                     targets           = discovery.relabel.metrics_kubelet.output
                     scrape_interval   = "60s"
-                    forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
+                    forward_to        = [prometheus.relabel.drop_pod_and_container_label.receiver]
 
                     job_name = "kubernetes-kubelet"
 
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
-                    
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^container$"
-                      }
-                    }
                   }
 
                   discovery.relabel "node_exporter" {
@@ -263,23 +222,9 @@ spec:
                   prometheus.scrape "node_exporter" {
                     targets           = discovery.relabel.node_exporter.output
                     scrape_interval   = "60s"
-                    forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
+                    forward_to        = [prometheus.relabel.drop_pod_and_container_label.receiver]
 
                     job_name = "node-exporter"
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
-                    
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^container$"
-                      }
-                    }
                   }
 
                   discovery.relabel "falkordb_pods" {
@@ -317,13 +262,6 @@ spec:
                     forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
                     job_name = "falkordb-pods"
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
                   }
 
                   discovery.relabel "falkordb_pods_9122" {
@@ -361,13 +299,6 @@ spec:
                     forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
                     job_name = "falkordb-pods-9122"
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
                   }
 
                   prometheus.scrape "alloy" {
@@ -381,146 +312,76 @@ spec:
                     bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
                     targets           = prometheus.exporter.self.alloy.targets
                     scrape_interval   = "60s"
-                    forward_to        = [prometheus.relabel.drop_unwanted_metrics.receiver]
+                    forward_to        = [prometheus.relabel.drop_pod_and_container_label.receiver]
 
                     job_name = "alloy"
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
-                    
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^container$"
-                      }
-                    }
                   }
 
                   prometheus.scrape "vm_operator" {
                     targets = [
                       {__address__ = "vm-victoria-metrics-operator.observability.svc.cluster.local:8080"},
                     ]
-                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+                    forward_to = [prometheus.relabel.drop_pod_and_container_label.receiver]
 
                     job_name = "vm-operator"
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
-                    
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^container$"
-                      }
-                    }
                   }
 
                   prometheus.scrape "vm_single" {
                     targets = [
                       {__address__ = "vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429"},
                     ]
-                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+                    forward_to = [prometheus.relabel.drop_pod_and_container_label.receiver]
 
                     job_name = "vm-single"
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
-                    
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^container$"
-                      }
-                    }
                   }
 
                   prometheus.scrape "vm_alertmanager" {
                     targets = [
                       {__address__ = "vmalertmanager-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:9093"},
                     ]
-                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+                    forward_to = [prometheus.relabel.drop_pod_and_container_label.receiver]
 
                     job_name = "vm-alertmanager"
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
-                    
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^container$"
-                      }
-                    }
                   }
 
                   prometheus.scrape "vm_alert" {
                     targets = [
                       {__address__ = "vmalert-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8080"},
                     ]
-                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+                    forward_to = [prometheus.relabel.drop_pod_and_container_label.receiver]
 
                     job_name = "vm-alert"
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
-                    
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^container$"
-                      }
-                    }
                   }
 
                   prometheus.scrape "victorialogs" {
                     targets = [
                       {__address__ = "victorialogs-server.observability.svc.cluster.local:9428"},
                     ]
-                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+                    forward_to = [prometheus.relabel.drop_pod_and_container_label.receiver]
 
                     job_name = "victorialogs"
-
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^instance$"
-                      }
-                    }
-                    
-                    relabel_configs {
-                      rule {
-                        action = "labeldrop"
-                        regex  = "^container$"
-                      }
-                    }
                   }
 
                   prometheus.relabel "kube_state_metrics" {
-                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+                    forward_to = [prometheus.relabel.drop_pod_and_container_label.receiver]
 
                     rule {
                       replacement  = "kube-state-metrics"
                       target_label = "job"
+                    }
+                  }
+
+                  prometheus.relabel "drop_pod_and_container_label" {
+                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+
+                    rule {
+                      action = "labeldrop"
+                      regex  = "^pod$"
+                    }
+
+                    rule {
+                      action = "labeldrop"
+                      regex  = "^container$"
                     }
                   }
 
