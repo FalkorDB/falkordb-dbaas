@@ -166,7 +166,7 @@ spec:
                     bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
                     targets           = discovery.relabel.metrics_cadvisor.output
                     scrape_interval   = "30s"
-                    forward_to        = [prometheus.relabel.drop_container_label.receiver]
+                    forward_to        = [prometheus.relabel.drop_unused_labels.receiver]
 
                     job_name = "cadvisor"
                   }
@@ -182,7 +182,7 @@ spec:
                     bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
                     targets           = discovery.relabel.metrics_kubelet.output
                     scrape_interval   = "60s"
-                    forward_to        = [prometheus.relabel.drop_container_label.receiver]
+                    forward_to        = [prometheus.relabel.drop_unused_labels.receiver]
 
                     job_name = "kubernetes-kubelet"
 
@@ -222,7 +222,7 @@ spec:
                   prometheus.scrape "node_exporter" {
                     targets           = discovery.relabel.node_exporter.output
                     scrape_interval   = "60s"
-                    forward_to        = [prometheus.relabel.drop_container_label.receiver]
+                    forward_to        = [prometheus.relabel.drop_unused_labels.receiver]
 
                     job_name = "node-exporter"
                   }
@@ -312,7 +312,7 @@ spec:
                     bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
                     targets           = prometheus.exporter.self.alloy.targets
                     scrape_interval   = "60s"
-                    forward_to        = [prometheus.relabel.drop_container_label.receiver]
+                    forward_to        = [prometheus.relabel.drop_unused_labels.receiver]
 
                     job_name = "alloy"
                   }
@@ -321,7 +321,7 @@ spec:
                     targets = [
                       {__address__ = "vm-victoria-metrics-operator.observability.svc.cluster.local:8080"},
                     ]
-                    forward_to = [prometheus.relabel.drop_container_label.receiver]
+                    forward_to = [prometheus.relabel.drop_unused_labels.receiver]
 
                     job_name = "vm-operator"
                   }
@@ -330,7 +330,7 @@ spec:
                     targets = [
                       {__address__ = "vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429"},
                     ]
-                    forward_to = [prometheus.relabel.drop_container_label.receiver]
+                    forward_to = [prometheus.relabel.drop_unused_labels.receiver]
 
                     job_name = "vm-single"
                   }
@@ -339,7 +339,7 @@ spec:
                     targets = [
                       {__address__ = "vmalertmanager-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:9093"},
                     ]
-                    forward_to = [prometheus.relabel.drop_container_label.receiver]
+                    forward_to = [prometheus.relabel.drop_unused_labels.receiver]
 
                     job_name = "vm-alertmanager"
                   }
@@ -348,7 +348,7 @@ spec:
                     targets = [
                       {__address__ = "vmalert-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8080"},
                     ]
-                    forward_to = [prometheus.relabel.drop_container_label.receiver]
+                    forward_to = [prometheus.relabel.drop_unused_labels.receiver]
 
                     job_name = "vm-alert"
                   }
@@ -357,13 +357,13 @@ spec:
                     targets = [
                       {__address__ = "victorialogs-server.observability.svc.cluster.local:9428"},
                     ]
-                    forward_to = [prometheus.relabel.drop_container_label.receiver]
+                    forward_to = [prometheus.relabel.drop_unused_labels.receiver]
 
                     job_name = "victorialogs"
                   }
 
                   prometheus.relabel "kube_state_metrics" {
-                    forward_to = [prometheus.relabel.drop_container_label.receiver]
+                    forward_to = [prometheus.relabel.drop_unused_labels.receiver]
 
                     rule {
                       replacement  = "kube-state-metrics"
@@ -371,12 +371,12 @@ spec:
                     }
                   }
 
-                  prometheus.relabel "drop_container_label" {
+                  prometheus.relabel "drop_unused_labels" {
                     forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
                     rule {
                       action = "labeldrop"
-                      regex  = "^(container|container_id|uid|mountpoint|created_by_name|interface|device)$"
+                      regex  = "^(container_id|uid|mountpoint|created_by_name|interface|device)$"
                     }
                   }
 
