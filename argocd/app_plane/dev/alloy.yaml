@@ -539,13 +539,11 @@ spec:
                       action        = "drop"
                     }
 
-                    # Drop 'instance' label globally (just in case one slips through)
                     rule {
                       action = "labeldrop"
                       regex  = "^instance$"
                     }
 
-                    # Drop 'prometheus' / 'scrape' meta labels
                     rule {
                       action = "labeldrop"
                       regex  = "^(job|scrape_job|prometheus)$"
