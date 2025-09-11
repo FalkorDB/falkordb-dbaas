@@ -22,6 +22,7 @@ spec:
           for: 10m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeMemoryOvercommit
           annotations:
             description: Cluster {{ $labels.cluster }} has overcommitted memory resource requests for Pods by {{ $value | humanize }} bytes and cannot tolerate node failure.
@@ -34,6 +35,7 @@ spec:
           for: 10m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeCPUQuotaOvercommit
           annotations:
             description: Cluster {{ $labels.cluster }}  has overcommitted CPU resource requests for Namespaces.
@@ -47,6 +49,7 @@ spec:
           for: 5m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeMemoryQuotaOvercommit
           annotations:
             description: Cluster {{ $labels.cluster }}  has overcommitted memory resource requests for Namespaces.
@@ -60,6 +63,7 @@ spec:
           for: 5m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeQuotaAlmostFull
           annotations:
             description: Namespace {{ $labels.namespace }} is using {{ $value | humanizePercentage }} of its {{ $labels.resource }} quota.
@@ -73,6 +77,7 @@ spec:
           for: 15m
           labels:
             severity: info
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeQuotaFullyUsed
           annotations:
             description: Namespace {{ $labels.namespace }} is using {{ $value | humanizePercentage }} of its {{ $labels.resource }} quota.
@@ -86,6 +91,7 @@ spec:
           for: 15m
           labels:
             severity: info
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeQuotaExceeded
           annotations:
             description: Namespace {{ $labels.namespace }} is using {{ $value | humanizePercentage }} of its {{ $labels.resource }} quota.
@@ -99,6 +105,7 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: CPUThrottlingHigh
           annotations:
             description: '{{ $value | humanizePercentage }} throttling of CPU in namespace {{ $labels.namespace }} for container {{ $labels.container }} in pod {{ $labels.pod }}.'
@@ -112,3 +119,4 @@ spec:
           for: 15m
           labels:
             severity: info
+            cluster: '{{ $labels.cluster }}'

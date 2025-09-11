@@ -12,7 +12,7 @@ spec:
         - alert: AlloyNoDataDeliveryToControlPlane
           annotations:
             description: |
-              Grafana Alloy on app plane clusters is not delivering metrics or logs to the control plane.
+              [cluster={{ $labels.cluster }}] Grafana Alloy on app plane clusters is not delivering metrics or logs to the control plane.
               This indicates a failure in the data delivery pipeline from app plane clusters.
               Either Prometheus remote storage samples or VictoriaLogs rows have been absent for 10 minutes.
             summary: 'Alloy data delivery failure from app plane clusters to control plane'
@@ -30,3 +30,4 @@ spec:
           for: 0m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'

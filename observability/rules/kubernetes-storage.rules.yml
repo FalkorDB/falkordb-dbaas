@@ -30,6 +30,7 @@ spec:
           for: 1m
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'
         - alert: KubePersistentVolumeFillingUp
           annotations:
             description: Based on recent sampling, the PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} in Namespace {{ $labels.namespace }} {{ with $labels.cluster -}} on Cluster {{ . }} {{- end }} is expected to fill up within four days. Currently {{ $value | humanizePercentage }} is available.
@@ -52,6 +53,7 @@ spec:
           for: 1h
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubePersistentVolumeInodesFillingUp
           annotations:
             description: The PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} in Namespace {{ $labels.namespace }} {{ with $labels.cluster -}} on Cluster {{ . }} {{- end }} only has {{ $value | humanizePercentage }} free inodes.
@@ -72,6 +74,7 @@ spec:
           for: 1m
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'
         - alert: KubePersistentVolumeInodesFillingUp
           annotations:
             description: Based on recent sampling, the PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} in Namespace {{ $labels.namespace }} {{ with $labels.cluster -}} on Cluster {{ . }} {{- end }} is expected to run out of inodes within four days. Currently {{ $value | humanizePercentage }} of its inodes are free.
@@ -94,6 +97,7 @@ spec:
           for: 1h
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubePersistentVolumeErrors
           annotations:
             description: The persistent volume {{ $labels.persistentvolume }} {{ with $labels.cluster -}} on Cluster {{ . }} {{- end }} has status {{ $labels.phase }}.
@@ -103,3 +107,4 @@ spec:
           for: 5m
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'

@@ -12,16 +12,17 @@ spec:
       rules:
         - alert: KubePodCrashLooping
           annotations:
-            description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is in waiting state (reason: "CrashLoopBackOff").'
+            description: '[cluster={{ $labels.cluster }}] Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is in waiting state (reason: "CrashLoopBackOff").'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodcrashlooping
             summary: Pod is crash looping.
           expr: max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff", job="kube-state-metrics", namespace=~".*"}[5m]) >= 1
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubePodNotReady
           annotations:
-            description: Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state for longer than 15 minutes.
+            description: '[cluster={{ $labels.cluster }}] Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state for longer than 15 minutes.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodnotready
             summary: Pod has been in a non-ready state for more than 15 minutes.
           expr: |-
@@ -35,9 +36,10 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeDeploymentGenerationMismatch
           annotations:
-            description: Deployment generation for {{ $labels.namespace }}/{{ $labels.deployment }} does not match, this indicates that the Deployment has failed but has not been rolled back.
+            description: '[cluster={{ $labels.cluster }}] Deployment generation for {{ $labels.namespace }}/{{ $labels.deployment }} does not match, this indicates that the Deployment has failed but has not been rolled back.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubedeploymentgenerationmismatch
             summary: Deployment generation mismatch due to possible roll-back
           expr: |-
@@ -47,9 +49,10 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeDeploymentReplicasMismatch
           annotations:
-            description: Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has not matched the expected number of replicas for longer than 15 minutes.
+            description: '[cluster={{ $labels.cluster }}] Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has not matched the expected number of replicas for longer than 15 minutes.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubedeploymentreplicasmismatch
             summary: Deployment has not matched the expected number of replicas.
           expr: |-
@@ -65,9 +68,10 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeDeploymentRolloutStuck
           annotations:
-            description: Rollout of deployment {{ $labels.namespace }}/{{ $labels.deployment }} is not progressing for longer than 15 minutes.
+            description: '[cluster={{ $labels.cluster }}] Rollout of deployment {{ $labels.namespace }}/{{ $labels.deployment }} is not progressing for longer than 15 minutes.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubedeploymentrolloutstuck
             summary: Deployment rollout is not progressing.
           expr: |-
@@ -76,9 +80,10 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeStatefulSetReplicasMismatch
           annotations:
-            description: StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has not matched the expected number of replicas for longer than 15 minutes.
+            description: '[cluster={{ $labels.cluster }}] StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} has not matched the expected number of replicas for longer than 15 minutes.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubestatefulsetreplicasmismatch
             summary: StatefulSet has not matched the expected number of replicas.
           expr: |-
@@ -94,9 +99,10 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeStatefulSetGenerationMismatch
           annotations:
-            description: StatefulSet generation for {{ $labels.namespace }}/{{ $labels.statefulset }} does not match, this indicates that the StatefulSet has failed but has not been rolled back.
+            description: '[cluster={{ $labels.cluster }}] StatefulSet generation for {{ $labels.namespace }}/{{ $labels.statefulset }} does not match, this indicates that the StatefulSet has failed but has not been rolled back.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubestatefulsetgenerationmismatch
             summary: StatefulSet generation mismatch due to possible roll-back
           expr: |-
@@ -106,9 +112,10 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeStatefulSetUpdateNotRolledOut
           annotations:
-            description: StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} update has not been rolled out.
+            description: '[cluster={{ $labels.cluster }}] StatefulSet {{ $labels.namespace }}/{{ $labels.statefulset }} update has not been rolled out.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubestatefulsetupdatenotrolledout
             summary: StatefulSet update has not been rolled out.
           expr: |-
@@ -132,9 +139,10 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeDaemonSetRolloutStuck
           annotations:
-            description: DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} has not finished or progressed for at least 15m.
+            description: '[cluster={{ $labels.cluster }}] DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} has not finished or progressed for at least 15m.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubedaemonsetrolloutstuck
             summary: DaemonSet rollout is stuck.
           expr: |-
@@ -164,18 +172,20 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeContainerWaiting
           annotations:
-            description: 'pod/{{ $labels.pod }} in namespace {{ $labels.namespace }} on container {{ $labels.container}} has been in waiting state for longer than 1 hour. (reason: "{{ $labels.reason }}").'
+            description: '[cluster={{ $labels.cluster }}] pod/{{ $labels.pod }} in namespace {{ $labels.namespace }} on container {{ $labels.container}} has been in waiting state for longer than 1 hour. (reason: "{{ $labels.reason }}").'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubecontainerwaiting
             summary: Pod container waiting longer than 1 hour
           expr: kube_pod_container_status_waiting_reason{reason!="CrashLoopBackOff", job="kube-state-metrics", namespace=~".*"} > 0
           for: 1h
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeDaemonSetNotScheduled
           annotations:
-            description: '{{ $value }} Pods of DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} are not scheduled.'
+            description: '[cluster={{ $labels.cluster }}] {{ $value }} Pods of DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} are not scheduled.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubedaemonsetnotscheduled
             summary: DaemonSet pods are not scheduled.
           expr: |-
@@ -185,18 +195,20 @@ spec:
           for: 10m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeDaemonSetMisScheduled
           annotations:
-            description: '{{ $value }} Pods of DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} are running where they are not supposed to run.'
+            description: '[cluster={{ $labels.cluster }}] {{ $value }} Pods of DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} are running where they are not supposed to run.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubedaemonsetmisscheduled
             summary: DaemonSet pods are misscheduled.
           expr: kube_daemonset_status_number_misscheduled{job="kube-state-metrics", namespace=~".*"} > 0
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeJobNotCompleted
           annotations:
-            description: Job {{ $labels.namespace }}/{{ $labels.job_name }} is taking more than {{ "43200" | humanizeDuration }} to complete.
+            description: '[cluster={{ $labels.cluster }}] Job {{ $labels.namespace }}/{{ $labels.job_name }} is taking more than {{ "43200" | humanizeDuration }} to complete.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobnotcompleted
             summary: Job did not complete in time
           expr: |-
@@ -205,18 +217,20 @@ spec:
             kube_job_status_active{job="kube-state-metrics", namespace=~".*"} > 0) > 43200
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeJobFailed
           annotations:
-            description: Job {{ $labels.namespace }}/{{ $labels.job_name }} failed to complete. Removing failed job after investigation should clear this alert.
+            description: '[cluster={{ $labels.cluster }}] Job {{ $labels.namespace }}/{{ $labels.job_name }} failed to complete. Removing failed job after investigation should clear this alert.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubejobfailed
             summary: Job failed to complete.
           expr: kube_job_failed{job="kube-state-metrics", namespace=~".*"}  > 0
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeHpaReplicasMismatch
           annotations:
-            description: HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler  }} has not matched the desired number of replicas for longer than 15 minutes.
+            description: '[cluster={{ $labels.cluster }}] HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler  }} has not matched the desired number of replicas for longer than 15 minutes.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubehpareplicasmismatch
             summary: HPA has not matched desired number of replicas.
           expr: |-
@@ -236,9 +250,10 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeHpaMaxedOut
           annotations:
-            description: HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler  }} has been running at max replicas for longer than 15 minutes.
+            description: '[cluster={{ $labels.cluster }}] HPA {{ $labels.namespace }}/{{ $labels.horizontalpodautoscaler  }} has been running at max replicas for longer than 15 minutes.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubehpamaxedout
             summary: HPA is running at max replicas
           expr: |-
@@ -248,3 +263,4 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
