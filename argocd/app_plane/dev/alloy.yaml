@@ -400,10 +400,6 @@ spec:
                       regex  = "^instance$"
                     }
 
-                    rule {
-                      action = "labeldrop"
-                      regex  = "^(job|scrape_job|prometheus)$"
-                    }
                   }
 
                   prometheus.relabel "add_cluster_label" {
