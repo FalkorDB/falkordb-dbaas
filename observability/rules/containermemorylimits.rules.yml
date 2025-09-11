@@ -16,7 +16,6 @@ spec:
             group_left() max by (namespace,pod,cluster) (
               (kube_pod_status_phase{phase=~"Pending|Running"} == 1)
             )
-          labels: {}
           record: cluster:namespace:pod_memory:active:kube_pod_container_resource_limits
         - annotations: {}
           expr: |-
@@ -29,5 +28,4 @@ spec:
                     )
                 )
             )
-          labels: {}
           record: namespace_memory:kube_pod_container_resource_limits:sum

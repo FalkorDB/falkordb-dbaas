@@ -9,7 +9,6 @@ spec:
     repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
     targetRevision: dev
     path: argocd/kustomize/fluentbit
-    kustomize: {}
   destination:
     server: https://kubernetes.default.svc
     namespace: fluent-bit

@@ -15,14 +15,12 @@ spec:
             count without (cpu, mode) (
               node_cpu_seconds_total{job="node-exporter",mode="idle"}
             )
-          labels: {}
           record: instance:node_num_cpu:sum
         - annotations: {}
           expr: |-
             1 - avg without (cpu) (
               sum without (mode) (rate(node_cpu_seconds_total{job="node-exporter", mode=~"idle|iowait|steal"}[5m]))
             )
-          labels: {}
           record: instance:node_cpu_utilisation:rate5m
         - annotations: {}
           expr: |-
@@ -31,7 +29,6 @@ spec:
             /
               instance:node_num_cpu:sum{job="node-exporter"}
             )
-          labels: {}
           record: instance:node_load1_per_cpu:ratio
         - annotations: {}
           expr: |-
@@ -52,47 +49,39 @@ spec:
             /
               node_memory_MemTotal_bytes{job="node-exporter"}
             )
-          labels: {}
           record: instance:node_memory_utilisation:ratio
         - annotations: {}
           expr: rate(node_vmstat_pgmajfault{job="node-exporter"}[5m])
-          labels: {}
           record: instance:node_vmstat_pgmajfault:rate5m
         - annotations: {}
           expr: rate(node_disk_io_time_seconds_total{job="node-exporter", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)"}[5m])
-          labels: {}
           record: instance_device:node_disk_io_time_seconds:rate5m
         - annotations: {}
           expr: rate(node_disk_io_time_weighted_seconds_total{job="node-exporter", device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)"}[5m])
-          labels: {}
           record: instance_device:node_disk_io_time_weighted_seconds:rate5m
         - annotations: {}
           expr: |-
             sum without (device) (
               rate(node_network_receive_bytes_total{job="node-exporter", device!="lo"}[5m])
             )
-          labels: {}
           record: instance:node_network_receive_bytes_excluding_lo:rate5m
         - annotations: {}
           expr: |-
             sum without (device) (
               rate(node_network_transmit_bytes_total{job="node-exporter", device!="lo"}[5m])
             )
-          labels: {}
           record: instance:node_network_transmit_bytes_excluding_lo:rate5m
         - annotations: {}
           expr: |-
             sum without (device) (
               rate(node_network_receive_drop_total{job="node-exporter", device!="lo"}[5m])
             )
-          labels: {}
           record: instance:node_network_receive_drop_excluding_lo:rate5m
         - annotations: {}
           expr: |-
             sum without (device) (
               rate(node_network_transmit_drop_total{job="node-exporter", device!="lo"}[5m])
             )
-          labels: {}
           record: instance:node_network_transmit_drop_excluding_lo:rate5m
     - name: node-exporter
       params: {}
@@ -113,6 +102,7 @@ spec:
           for: 1h
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeFilesystemSpaceFillingUp
           annotations:
             description: Filesystem on {{ $labels.device }}, mounted on {{ $labels.mountpoint }}, at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available space left and is filling up fast.
@@ -129,6 +119,7 @@ spec:
           for: 1h
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeFilesystemAlmostOutOfSpace
           annotations:
             description: Filesystem on {{ $labels.device }}, mounted on {{ $labels.mountpoint }}, at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available space left.
@@ -143,6 +134,7 @@ spec:
           for: 30m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeFilesystemAlmostOutOfSpace
           annotations:
             description: Filesystem on {{ $labels.device }}, mounted on {{ $labels.mountpoint }}, at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available space left.
@@ -157,6 +149,7 @@ spec:
           for: 30m
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeFilesystemFilesFillingUp
           annotations:
             description: Filesystem on {{ $labels.device }}, mounted on {{ $labels.mountpoint }}, at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available inodes left and is filling up.
@@ -173,6 +166,7 @@ spec:
           for: 1h
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeFilesystemFilesFillingUp
           annotations:
             description: Filesystem on {{ $labels.device }}, mounted on {{ $labels.mountpoint }}, at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available inodes left and is filling up fast.
@@ -189,6 +183,7 @@ spec:
           for: 1h
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeFilesystemAlmostOutOfFiles
           annotations:
             description: Filesystem on {{ $labels.device }}, mounted on {{ $labels.mountpoint }}, at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available inodes left.
@@ -203,6 +198,7 @@ spec:
           for: 1h
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeFilesystemAlmostOutOfFiles
           annotations:
             description: Filesystem on {{ $labels.device }}, mounted on {{ $labels.mountpoint }}, at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available inodes left.
@@ -217,6 +213,7 @@ spec:
           for: 1h
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeNetworkReceiveErrs
           annotations:
             description: '{{ $labels.instance }} interface {{ $labels.device }} has encountered {{ printf "%.0f" $value }} receive errors in the last two minutes.'
@@ -226,6 +223,7 @@ spec:
           for: 1h
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeNetworkTransmitErrs
           annotations:
             description: '{{ $labels.instance }} interface {{ $labels.device }} has encountered {{ printf "%.0f" $value }} transmit errors in the last two minutes.'
@@ -235,6 +233,7 @@ spec:
           for: 1h
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeHighNumberConntrackEntriesUsed
           annotations:
             description: "{{ $labels.instance }} {{ $value | humanizePercentage }} of conntrack entries are used."
@@ -243,6 +242,7 @@ spec:
           expr: (node_nf_conntrack_entries{job="node-exporter"} / node_nf_conntrack_entries_limit) > 0.75
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeTextFileCollectorScrapeError
           annotations:
             description: Node Exporter text file collector on {{ $labels.instance }} failed to scrape.
@@ -251,6 +251,7 @@ spec:
           expr: node_textfile_scrape_error{job="node-exporter"} == 1
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeClockSkewDetected
           annotations:
             description: Clock at {{ $labels.instance }} is out of sync by more than 0.05s. Ensure NTP is configured correctly on this host.
@@ -271,6 +272,7 @@ spec:
           for: 10m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeClockNotSynchronising
           annotations:
             description: Clock at {{ $labels.instance }} is not synchronising. Ensure NTP is configured on this host.
@@ -283,6 +285,7 @@ spec:
           for: 10m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeRAIDDegraded
           annotations:
             description: RAID array '{{ $labels.device }}' at {{ $labels.instance }} is in degraded state due to one or more disks failures. Number of spare drives is insufficient to fix issue automatically.
@@ -292,6 +295,7 @@ spec:
           for: 15m
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeRAIDDiskFailure
           annotations:
             description: At least one device in RAID array at {{ $labels.instance }} failed. Array '{{ $labels.device }}' needs attention and possibly a disk swap.
@@ -300,6 +304,7 @@ spec:
           expr: node_md_disks{state="failed",job="node-exporter",device=~"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)"} > 0
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeFileDescriptorLimit
           annotations:
             description: File descriptors limit at {{ $labels.instance }} is currently at {{ printf "%.2f" $value }}%.
@@ -312,6 +317,7 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeFileDescriptorLimit
           annotations:
             description: File descriptors limit at {{ $labels.instance }} is currently at {{ printf "%.2f" $value }}%.
@@ -324,6 +330,7 @@ spec:
           for: 15m
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeCPUHighUsage
           annotations:
             description: |
@@ -334,6 +341,7 @@ spec:
           for: 15m
           labels:
             severity: info
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeSystemSaturation
           annotations:
             description: |
@@ -347,6 +355,7 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeMemoryMajorPagesFaults
           annotations:
             description: |
@@ -358,6 +367,7 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeMemoryHighUtilization
           annotations:
             description: |
@@ -368,6 +378,7 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeDiskIOSaturation
           annotations:
             description: |
@@ -379,6 +390,7 @@ spec:
           for: 30m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeSystemdServiceFailed
           annotations:
             description: Systemd service {{ $labels.name }} has entered failed state at {{ $labels.instance }}
@@ -388,6 +400,7 @@ spec:
           for: 5m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeBondingDegraded
           annotations:
             description: Bonding interface {{ $labels.master }} on {{ $labels.instance }} is in degraded state due to one or more slave failures.
@@ -397,3 +410,4 @@ spec:
           for: 5m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
