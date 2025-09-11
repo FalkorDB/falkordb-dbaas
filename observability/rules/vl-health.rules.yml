@@ -25,3 +25,4 @@ spec:
           for: 30m
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'

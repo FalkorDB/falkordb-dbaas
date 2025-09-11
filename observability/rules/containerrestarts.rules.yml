@@ -33,9 +33,10 @@ spec:
           for: 5m
           labels:
             severity: info
+            cluster: '{{ $labels.cluster }}'
           annotations:
             summary: "Pod Restart Info"
-            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 10 or more times in the last hour. Investigate potential instability."
+            description: "[cluster={{ $labels.cluster }}] Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 10 or more times in the last hour. Investigate potential instability."
 
         # Warning Alert: Pods restarting 2+ times in 5 minutes
         - alert: PodRestartWarning
@@ -44,9 +45,10 @@ spec:
           for: 5m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
           annotations:
             summary: "Pod Restart Warning"
-            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted at least 2 times in the last 5 minutes."
+            description: "[cluster={{ $labels.cluster }}] Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted at least 2 times in the last 5 minutes."
 
         - alert: PodRestartCritical
           expr: |
@@ -54,9 +56,10 @@ spec:
           for: 5m
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'
           annotations:
             summary: "Pod Restart Critical"
-            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 5 or more times in the last 10 minutes. Possible crash-loop detected."
+            description: "[cluster={{ $labels.cluster }}] Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 5 or more times in the last 10 minutes. Possible crash-loop detected."
 
         - alert: PodRestartWarning24H
           expr: |
@@ -64,7 +67,8 @@ spec:
           for: 5m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
           annotations:
             summary: "Pod Restart Warning 24H"
-            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 5 or more times in the last 24 hours. Investigate potential instability."
+            description: "[cluster={{ $labels.cluster }}] Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 5 or more times in the last 24 hours. Investigate potential instability."
 

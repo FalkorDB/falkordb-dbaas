@@ -16,7 +16,8 @@ spec:
               max by (node,namespace,pod,cluster) (
                 label_replace(kube_pod_info{job="kube-state-metrics",node!=""}, "pod", "$1", "pod", "(.*)")
             ))
-          labels: {}
+          labels:
+            cluster: '{{ $labels.cluster }}'
           record: 'node_namespace_pod:kube_pod_info:'
         - annotations: {}
           expr: |-
@@ -25,7 +26,8 @@ spec:
               * on (namespace,pod,cluster) group_left(node)
               topk by (namespace,pod,cluster) (1, node_namespace_pod:kube_pod_info:)
             )
-          labels: {}
+          labels:
+            cluster: '{{ $labels.cluster }}'
           record: node:node_num_cpu:sum
         - annotations: {}
           expr: |-
@@ -38,7 +40,8 @@ spec:
                 node_memory_Slab_bytes{job="node-exporter"}
               )
             ) by (cluster)
-          labels: {}
+          labels:
+            cluster: '{{ $labels.cluster }}'
           record: :node_memory_MemAvailable_bytes:sum
         - annotations: {}
           expr: |-
@@ -47,12 +50,14 @@ spec:
                 rate(node_cpu_seconds_total{mode!="idle",mode!="iowait",mode!="steal",job="node-exporter"}[5m])
               )
             )
-          labels: {}
+          labels:
+            cluster: '{{ $labels.cluster }}'
           record: node:node_cpu_utilization:ratio_rate5m
         - annotations: {}
           expr: |-
             avg by (cluster) (
               node:node_cpu_utilization:ratio_rate5m
             )
-          labels: {}
+          labels:
+            cluster: '{{ $labels.cluster }}'
           record: cluster:node_cpu:ratio_rate5m

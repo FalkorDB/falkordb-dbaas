@@ -27,6 +27,7 @@ spec:
           labels:
             severity: warning
             show_at: dashboard
+            cluster: '{{ $labels.cluster }}'
         - alert: ReconcileErrors
           annotations:
             dashboard: '{{ $externalURL }}/d/1H179hunk/victoriametrics-operator?ds={{ $labels.dc }}&orgId=1&viewPanel=10'
@@ -44,6 +45,7 @@ spec:
           labels:
             severity: warning
             show_at: dashboard
+            cluster: '{{ $labels.cluster }}'
         - alert: HighQueueDepth
           annotations:
             dashboard: '{{ $externalURL }}/d/1H179hunk/victoriametrics-operator?ds={{ $labels.dc }}&orgId=1&viewPanel=20'
@@ -60,6 +62,7 @@ spec:
           labels:
             severity: warning
             show_at: dashboard
+            cluster: '{{ $labels.cluster }}'
         - alert: BadObjects
           annotations:
             dashboard: '{{ $externalURL }}/d/1H179hunk/victoriametrics-operator?ds={{ $labels.dc }}&orgId=1'
@@ -73,3 +76,4 @@ spec:
           labels:
             severity: warning
             show_at: dashboard
+            cluster: '{{ $labels.cluster }}'

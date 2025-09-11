@@ -19,3 +19,4 @@ spec:
           for: 2m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'

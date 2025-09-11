@@ -30,6 +30,7 @@ spec:
           for: 30m
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeBecomesReadonlyIn3Days
           annotations:
             dashboard: grafana.domain.com/d/oS7Bi_0Wz?viewPanel=113&var-instance={{ $labels.instance }}
@@ -48,6 +49,7 @@ spec:
           for: 30m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: DiskRunsOutOfSpace
           annotations:
             dashboard: grafana.domain.com/d/wNf0q_kZk?viewPanel=53&var-instance={{ $labels.instance }}
@@ -64,6 +66,7 @@ spec:
           for: 30m
           labels:
             severity: critical
+            cluster: '{{ $labels.cluster }}'
         - alert: RequestErrorsToAPI
           annotations:
             dashboard: grafana.domain.com/d/wNf0q_kZk?viewPanel=35&var-instance={{ $labels.instance }}
@@ -73,6 +76,7 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: TooHighChurnRate
           annotations:
             dashboard: grafana.domain.com/d/wNf0q_kZk?viewPanel=66&var-instance={{ $labels.instance }}
@@ -90,6 +94,7 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: TooHighChurnRate24h
           annotations:
             dashboard: grafana.domain.com/d/wNf0q_kZk?viewPanel=66&var-instance={{ $labels.instance }}
@@ -105,6 +110,7 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
         - alert: TooHighSlowInsertsRate
           annotations:
             dashboard: grafana.domain.com/d/wNf0q_kZk?viewPanel=68&var-instance={{ $labels.instance }}
@@ -119,3 +125,4 @@ spec:
           for: 15m
           labels:
             severity: warning
+            cluster: '{{ $labels.cluster }}'
