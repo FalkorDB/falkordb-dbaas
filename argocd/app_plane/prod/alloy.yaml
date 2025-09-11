@@ -378,7 +378,7 @@ spec:
                     rule {
                       action = "labeldrop"
                       regex  = "^(container|container_id|uid|mountpoint|created_by_name|interface|device)$"
-                    }            
+                    }
                   }
 
                   prometheus.relabel "drop_unwanted_metrics" {
