@@ -378,6 +378,26 @@ spec:
                       action = "labeldrop"
                       regex  = "^container$"
                     }
+
+                    rule {
+                      action = "labeldrop"
+                      regex  = "^container_id$"
+                    }
+
+                    rule {
+                      action = "labeldrop"
+                      regex  = "^uid$"
+                    }
+
+                    rule {
+                      action = "labeldrop"
+                      regex  = "^mountpoint$"
+                    }
+
+                    rule {
+                      action = "labeldrop"
+                      regex  = "^created_by_name$"
+                    }
                   }
 
                   prometheus.relabel "drop_unwanted_metrics" {
