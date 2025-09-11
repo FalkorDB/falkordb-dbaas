@@ -395,11 +395,6 @@ spec:
                       action        = "drop"
                     }
 
-                    rule {
-                      action = "labeldrop"
-                      regex  = "^instance$"
-                    }
-
                   }
 
                   prometheus.relabel "add_cluster_label" {
