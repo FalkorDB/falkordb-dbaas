@@ -47,7 +47,7 @@ spec:
             storage:
               resources:
                 requests:
-                  storage: 500Gi
+                  storage: 750Gi
             serviceSpec:
               metadata:
                 annotations:
