@@ -29,11 +29,6 @@ data:
         HTTP_Listen   0.0.0.0
         HTTP_Port     2020
 
-    [INPUT]
-        name            fluentbit_metrics
-        tag             internal_metrics
-        scrape_interval 30
-
     # Collects logs from Kubernetes containers
     [INPUT]
         Name              tail
