@@ -1,0 +1,29 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  namespace: observability
+  name: fluent-bit.rules
+spec:
+  groups:
+  - name: fluent-bit
+    rules:
+    - alert: FluentBitError
+      expr: rate(fluentbit_output_errors_total[5m]) > 0
+      for: 5m
+      labels:
+        severity: critical
+        cluster: '{{ $labels.cluster }}'
+      annotations:
+        summary: "Fluent Bit errors detected"
+        description: "[cluster={{ $labels.cluster }}] Fluent Bit is experiencing errors"  
+    - alert: NoOutputBytesProcessed
+      expr: rate(fluentbit_output_proc_bytes_total[5m]) == 0
+      annotations:
+        message: |
+          [cluster={{ $labels.cluster }}]  Fluent Bit instance output plugin has not processed any
+          bytes for at least 15 minutes.
+        summary: No Output Bytes Processed
+      for: 15m
+      labels:
+        severity: warning
+        cluster: '{{ $labels.cluster }}'
