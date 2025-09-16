@@ -248,10 +248,19 @@ spec:
                     targets           = discovery.relabel.fluentbit.output
                     metrics_path      = "/api/v1/metrics/prometheus"
                     scrape_interval   = "30s"
-                    forward_to        = [prometheus.relabel.drop_unused_labels.receiver]
+                    forward_to        = [prometheus.relabel.drop_fluent_bit_labels.receiver]
 
 
                     job_name = "fluentbit"
+                  }
+
+                  prometheus.relabel "drop_fluent_bit_labels" {
+                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+
+                    rule {
+                      action = "labeldrop"
+                      regex  = "^(instance|name)$"
+                    }
                   }
 
                   discovery.relabel "falkordb_pods" {
