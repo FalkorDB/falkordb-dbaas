@@ -82,3 +82,15 @@ spec:
     name: dashboards-k8s-views-vmauth
     key: json
 ---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: fluent-bit
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  configMapRef:
+    name: dashboards-k8s-views-fluent-bit
+    key: json
+---
