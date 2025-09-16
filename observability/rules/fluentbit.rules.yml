@@ -2,7 +2,7 @@ apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMRule
 metadata:
   namespace: observability
-  name: falkordb.rules
+  name: fluent-bit.rules
 spec:
   groups:
   - name: fluent-bit
