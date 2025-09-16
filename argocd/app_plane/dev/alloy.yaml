@@ -239,15 +239,17 @@ spec:
                     rule {
                       source_labels = ["__meta_kubernetes_pod_ip"]
                       regex         = "(.+)"
-                      replacement   = "$1:2021"
+                      replacement   = "$1:2020"
                       target_label  = "__address__"
                     }
                   }
 
                   prometheus.scrape "fluentbit" {
                     targets           = discovery.relabel.fluentbit.output
+                    metrics_path      = "/api/v1/metrics/prometheus"
                     scrape_interval   = "30s"
                     forward_to        = [prometheus.relabel.drop_unused_labels.receiver]
+
 
                     job_name = "fluentbit"
                   }
