@@ -49,6 +49,6 @@ export async function createObservabilityNodePool(cluster: Cluster): Promise<voi
 
     logger.info({ cluster: cluster.name }, 'Observability node pool created.');
   } catch (error) {
-    logger.error({ cluster: cluster.name, error }, 'Failed to create observability node pool:',);
+    logger.error({ cluster: cluster.name, error, errorName: error.name, errorMessage: error.message }, 'Failed to create observability node pool');
   }
 }
