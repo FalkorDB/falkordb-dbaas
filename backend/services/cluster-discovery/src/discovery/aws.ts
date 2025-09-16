@@ -152,6 +152,31 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
       logger.error(error, "Failed to create access policy for cluster " + cluster.name)
       return;
     }
+
+    if (process.env.AWS_SSO_ROLE_ARN) {
+      try {
+        accessEntry = await client.send(new CreateAccessEntryCommand({
+          clusterName: cluster.name,
+          principalArn: process.env.AWS_SSO_ROLE_ARN,
+          type: 'STANDARD',
+        }))
+      } catch (error) {
+        logger.error(error, "Failed to create access entries for cluster " + cluster.name)
+        return;
+      }
+
+      try {
+        await client.send(new AssociateAccessPolicyCommand({
+          clusterName: cluster.name,
+          accessScope: { type: AccessScopeType.cluster, },
+          policyArn: 'arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy',
+          principalArn: accessEntry.accessEntry.principalArn,
+        }))
+      } catch (error) {
+        logger.error(error, "Failed to create access policy for cluster " + cluster.name)
+        return;
+      }
+    }
   }
 }
 
