@@ -29,6 +29,11 @@ data:
         HTTP_Listen   0.0.0.0
         HTTP_Port     2020
 
+    [INPUT]
+        name            fluentbit_metrics
+        tag             internal_metrics
+        scrape_interval 30
+
     # Collects logs from Kubernetes containers
     [INPUT]
         Name              tail
@@ -90,6 +95,12 @@ data:
         URI           /loki/api/v1/push
         Labels        job=node/syslog,node_name=${HOST_NAME}
         Retry_Limit   3
+
+    [OUTPUT]
+        name            prometheus_exporter
+        match           internal_metrics
+        host            0.0.0.0
+        port            2021
 
   parsers.conf: |
     [PARSER]
