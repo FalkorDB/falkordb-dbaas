@@ -2,7 +2,6 @@ import { ClusterSchema, Cluster } from '../types';
 import logger from '../logger';
 import { AccountClient, ListRegionsCommand } from "@aws-sdk/client-account";
 import { EKSClient, DescribeClusterCommand, ListClustersCommand, ListAccessEntriesCommand, CreateAccessEntryCommand, AssociateAccessPolicyCommand, AccessScopeType, CreateAccessEntryCommandOutput, DescribeAccessEntryCommand, InvalidRequestException, UpdateClusterConfigCommand } from '@aws-sdk/client-eks';
-import axios from 'axios';
 import { AWSCredentials, getAWSCredentials } from '../common/aws';
 
 export async function discoverAWSClusters(): Promise<{ clusters: Cluster[], credentials: AWSCredentials }> {

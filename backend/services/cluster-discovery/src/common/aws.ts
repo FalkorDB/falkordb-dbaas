@@ -1,5 +1,7 @@
+import { DescribeClusterCommand, EKSClient } from '@aws-sdk/client-eks';
 import { STSClient, AssumeRoleWithWebIdentityCommand } from '@aws-sdk/client-sts';
 import axios from 'axios';
+
 
 export type AWSCredentials = {
   accessKeyId: string;
@@ -37,5 +39,42 @@ export async function getAWSCredentials(): Promise<AWSCredentials> {
     accessKeyId: Credentials.AccessKeyId,
     secretAccessKey: Credentials.SecretAccessKey,
     sessionToken: Credentials.SessionToken,
+  };
+}
+
+export async function getEKSCredentials(clusterId: string, region: string) {
+
+  const {
+    accessKeyId,
+    secretAccessKey,
+    sessionToken,
+  } = await getAWSCredentials();
+
+  const eks = new EKSClient({
+    credentials: {
+      accessKeyId,
+      secretAccessKey,
+      sessionToken,
+    },
+    region,
+  });
+
+  const { cluster } = await eks.send(new DescribeClusterCommand({ name: clusterId }));
+
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const EKSToken = require('aws-eks-token');
+  EKSToken.config = {
+    accessKeyId,
+    secretAccessKey,
+    sessionToken,
+    region,
+  };
+
+  const token = await EKSToken.renew(clusterId);
+
+  return {
+    endpoint: cluster.endpoint,
+    certificateAuthority: cluster.certificateAuthority.data,
+    accessToken: token,
   };
 }
