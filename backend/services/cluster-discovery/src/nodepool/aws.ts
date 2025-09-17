@@ -1,7 +1,7 @@
 import { Cluster } from '../types';
 import logger from '../logger';
 import { EKSClient, DescribeClusterCommand, CreateNodegroupCommand } from '@aws-sdk/client-eks';
-import { getAWSCredentials } from '../common/aws';
+import { getAWSCredentials } from '../common/k8s';
 
 export async function createObservabilityNodePool(cluster: Cluster): Promise<void> {
   try {
