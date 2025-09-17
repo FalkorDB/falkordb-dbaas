@@ -30,7 +30,7 @@ export const createTargetClusterPagerDutySecret = async (cluster: Cluster) => {
       logger.info(`Updating existing PagerDuty secret in cluster ${cluster.name}...`);
       const updatedSecret: k8s.V1Secret = {
         metadata: secret.body.metadata,
-        stringData: {
+        data: {
           ...secret.body.data,
           ...secretData,
         },
@@ -50,7 +50,7 @@ export const createTargetClusterPagerDutySecret = async (cluster: Cluster) => {
           name: PAGERDUTY_INTEGRATION_KEY_SECRET_NAME,
           namespace: PAGERDUTY_INTEGRATION_KEY_SECRET_NAMESPACE,
         },
-        stringData: secretData,
+        data: secretData,
       };
       try {
         await k8sApi.createNamespace({
