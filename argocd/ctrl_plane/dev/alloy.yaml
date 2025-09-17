@@ -58,6 +58,10 @@ spec:
                     pull_frequency = "15m"
                   }
 
+                  discovery.kubernetes "pods" {
+                    role = "pod"
+                  }
+
                   discovery.kubernetes "nodes" {
                     role = "node"
                   }

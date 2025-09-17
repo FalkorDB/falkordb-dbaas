@@ -88,6 +88,10 @@ spec:
                     role = "node"
                   }
 
+                  discovery.kubernetes "pods" {
+                    role = "pod"
+                  }
+
                   discovery.kubernetes "falkordb_pods" {
                     role = "pod"
 
