@@ -53,6 +53,9 @@ export const createTargetClusterPagerDutySecret = async (cluster: Cluster) => {
         stringData: secretData,
       };
       try {
+        await k8sApi.createNamespace({
+          metadata: { name: PAGERDUTY_INTEGRATION_KEY_SECRET_NAMESPACE }
+        }).catch(() => { });
         await k8sApi.createNamespacedSecret(PAGERDUTY_INTEGRATION_KEY_SECRET_NAMESPACE, secretManifest);
         logger.info(`Successfully created PagerDuty secret in cluster ${cluster.name}`);
       } catch (createErr) {
