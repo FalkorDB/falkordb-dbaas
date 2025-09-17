@@ -7,8 +7,8 @@ export async function getGKECredentials(clusterId: string, region: string, opts?
 }) {
   const client = new googleContainerV1.ClusterManagerClient();
 
-  const projectId = opts?.projectId ?? process.env.APPLICATION_PLANE_PROJECT_ID;
-  assert(projectId, 'Env var APPLICATION_PLANE_PROJECT_ID is required');
+  const projectId = opts?.projectId ?? process.env.APPLICATION_PLANE_GOOGLE_CLOUD_PROJECT;
+  assert(projectId, 'Env var APPLICATION_PLANE_GOOGLE_CLOUD_PROJECT is required');
   const accessToken = await client.auth.getAccessToken();
 
   const [response] = await client.getCluster({
