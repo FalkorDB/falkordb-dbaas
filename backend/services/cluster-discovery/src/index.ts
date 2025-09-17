@@ -75,7 +75,9 @@ async function main() {
       await createTargetClusterPagerDutySecret(cluster).catch((e) => { });
     }
 
-    await createOrUpdateTargetClusterVMUserSecretJob(cluster).catch((e) => { });
+    await createOrUpdateTargetClusterVMUserSecretJob(cluster).catch((e) => {
+      logger.error(e, `Error creating/updating vmuser secret job for cluster ${cluster.name}`);
+    });
   }
 
   // Remove secrets for clusters that are no longer discovered

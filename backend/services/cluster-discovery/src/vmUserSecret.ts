@@ -60,7 +60,7 @@ export const createOrUpdateTargetClusterVMUserSecretJob = async (cluster: Cluste
       await targetApi.createNamespacedSecret(VMUSER_SECRET_NAMESPACE, secretManifest);
       logger.info(`Created vmuser secret in target cluster ${cluster.name}`);
     } else {
-      throw new Error(`Error managing vmuser secret in target cluster: ${err}`);
+      logger.error(err, `Error managing vmuser secret in target cluster ${cluster.name}:`);
     }
   }
 }
