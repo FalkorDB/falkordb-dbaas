@@ -353,9 +353,18 @@ spec:
                     bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
                     targets           = prometheus.exporter.self.alloy.targets
                     scrape_interval   = "60s"
-                    forward_to        = [prometheus.relabel.drop_unused_labels.receiver]
+                    forward_to        = [prometheus.relabel.drop_alloy_labels.receiver]
 
                     job_name = "alloy"
+                  }
+
+                  prometheus.relabel "drop_alloy_labels" {
+                    forward_to = [prometheus.relabel.drop_unwanted_metrics.receiver]
+
+                    rule {
+                      action = "labeldrop"
+                      regex  = "^(component_path|instance|remote_name)$"
+                    }
                   }
 
                   prometheus.scrape "vm_operator" {
