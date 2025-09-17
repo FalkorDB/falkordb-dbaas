@@ -22,6 +22,7 @@ export const createOrUpdateTargetClusterVMUserSecretJob = async (cluster: Cluste
   let sourceSecret: k8s.V1Secret | undefined;
   try {
     const resp = await sourceApi.readNamespacedSecret(VMUSER_SOURCE_SECRET_NAME(cluster.name), VMUSER_SECRET_NAMESPACE);
+    logger.info(`Found source vmuser secret in namespace ${VMUSER_SECRET_NAMESPACE}, proceeding to create/update vmuser secret in target cluster ${cluster.name}`);
     sourceSecret = resp.body;
   } catch (err) {
     logger.warn(`Source vmuser secret not found in namespace ${VMUSER_SECRET_NAMESPACE}, skipping vmuser secret job creation for cluster ${cluster.name}`);
@@ -34,6 +35,7 @@ export const createOrUpdateTargetClusterVMUserSecretJob = async (cluster: Cluste
 
   try {
     const targetResp = await targetApi.readNamespacedSecret(VMUSER_TARGET_SECRET_NAME, VMUSER_SECRET_NAMESPACE);
+    logger.info(`Found existing vmuser secret in target cluster ${cluster.name}, checking if update is needed...`);
     const targetSecret = targetResp.body;
 
     // Compare data
@@ -45,8 +47,9 @@ export const createOrUpdateTargetClusterVMUserSecretJob = async (cluster: Cluste
       };
       await targetApi.replaceNamespacedSecret(VMUSER_TARGET_SECRET_NAME, VMUSER_SECRET_NAMESPACE, updatedSecret);
       logger.info(`Updated vmuser secret in target cluster ${cluster.name}`);
+    } else {
+      logger.info(`vmuser secret in target cluster ${cluster.name} is already up to date`);
     }
-    // else: already up to date
   } catch (err: any) {
     if (err.statusCode === 404) {
       // Create secret
