@@ -14,7 +14,7 @@ spec:
       valuesObject:
         fullnameOverride: "redis"
         image:
-          repository: bitnamilegacy/mongodb
+          repository: bitnamilegacy/redis
         architecture: standalone
         auth:
           enabled: true
