@@ -13,6 +13,11 @@ spec:
       releaseName: mongodb
       valuesObject:
         fullnameOverride: "mongodb"
+        global:
+          security:
+            allowInsecureImages: true
+        image:
+          repository: bitnamilegacy/mongodb
         architecture: standalone
         nodeSelector:
           node_pool: backend

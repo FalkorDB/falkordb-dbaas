@@ -101,7 +101,7 @@ spec:
 
         - alert: FalkorDBAOFFileSizeExceededWarning
           expr: redis_aof_file_size_bytes > 64 * 1024 * 1024
-          for: 5m
+          for: 15m
           labels:
             severity: warning
             cluster: '{{ $labels.cluster }}'
@@ -111,7 +111,7 @@ spec:
 
         - alert: FalkorDBAOFFileSizeExceededCritical
           expr: redis_aof_file_size_bytes >= 512 * 1024 * 1024
-          for: 5m
+          for: 15m
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
