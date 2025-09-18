@@ -83,7 +83,7 @@ data:
           restartPolicy: Never
           containers:
           - name: tls-rotator
-            image: bitnami/kubectl:latest
+            image: bitnamilegacy/kubectl:latest
             securityContext:
               runAsNonRoot: true
               runAsUser: 1000
@@ -250,7 +250,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: namespace-scanner
-              image: bitnami/kubectl:latest
+              image: bitnamilegacy/kubectl:latest
               securityContext:
                 runAsNonRoot: true
                 runAsUser: 1000
