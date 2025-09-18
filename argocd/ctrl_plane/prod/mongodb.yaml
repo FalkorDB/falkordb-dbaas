@@ -13,6 +13,8 @@ spec:
       releaseName: mongodb
       valuesObject:
         fullnameOverride: "mongodb"
+        image:
+          repository: bitnamilegacy/mongodb
         architecture: standalone
         nodeSelector:
           node_pool: backend

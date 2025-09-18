@@ -13,6 +13,8 @@ spec:
       releaseName: redis
       valuesObject:
         fullnameOverride: "redis"
+        image:
+          repository: bitnamilegacy/mongodb
         architecture: standalone
         auth:
           enabled: true
