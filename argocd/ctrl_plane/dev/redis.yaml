@@ -13,6 +13,9 @@ spec:
       releaseName: redis
       valuesObject:
         fullnameOverride: "redis"
+        global:
+          security:
+            allowInsecureImages: true
         image:
           repository: bitnamilegacy/redis
         architecture: standalone
