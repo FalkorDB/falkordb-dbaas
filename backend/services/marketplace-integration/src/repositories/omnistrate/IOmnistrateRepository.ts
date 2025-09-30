@@ -22,5 +22,5 @@ export abstract class IOmnistrateRepository {
     password: string;
   }>;
 
-  abstract deleteDeployments(params: { marketplaceAccountId: string }): Promise<void>;
+  abstract deleteDeployments(params: { marketplaceAccountId: string, productTierId: string }): Promise<void>;
 }
