@@ -11,11 +11,12 @@ export const deleteEntitlementHandler: RouteHandlerMethod<undefined, undefined, 
   const omnistrateRepository = request.diScope.resolve<IOmnistrateRepository>(IOmnistrateRepository.repositoryName);
   const commitRepository = request.diScope.resolve<ICommitRepository>(ICommitRepository.repositoryName);
 
-  const { entitlementId, marketplaceAccountId } = request.body as DeleteEntitlementMessageType;
+  const { entitlementId, marketplaceAccountId, productTierId } = request.body as DeleteEntitlementMessageType;
 
   try {
     await omnistrateRepository.deleteDeployments({
       marketplaceAccountId,
+      productTierId
     });
   } catch (error) {
     // Check if instance was not found
