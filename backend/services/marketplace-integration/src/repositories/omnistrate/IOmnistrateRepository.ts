@@ -23,4 +23,8 @@ export abstract class IOmnistrateRepository {
   }>;
 
   abstract deleteDeployments(params: { marketplaceAccountId: string, productTierId: string }): Promise<void>;
+
+  abstract removeUsersFromSubscription(params: { marketplaceAccountId: string; productTierId: string }): Promise<void>;
+
+  abstract cancelSubscription(params: { marketplaceAccountId: string; productTierId: string }): Promise<void>;
 }
