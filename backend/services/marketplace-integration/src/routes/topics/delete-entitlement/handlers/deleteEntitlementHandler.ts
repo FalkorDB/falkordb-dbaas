@@ -13,10 +13,29 @@ export const deleteEntitlementHandler: RouteHandlerMethod<undefined, undefined, 
 
   const { entitlementId, marketplaceAccountId, productTierId } = request.body as DeleteEntitlementMessageType;
 
+  let productTierMapped = "";
+  switch (productTierId) {
+    case 'free':
+      productTierMapped = request.server.config.OMNISTRATE_FREE_PRODUCT_TIER_ID;
+      break;
+    case 'startup':
+      productTierMapped = request.server.config.OMNISTRATE_STARTUP_PRODUCT_TIER_ID;
+      break;
+    case 'pro':
+      productTierMapped = request.server.config.OMNISTRATE_PRO_PRODUCT_TIER_ID;
+      break;
+    case 'enterprise':
+      productTierMapped = request.server.config.OMNISTRATE_ENTERPRISE_PRODUCT_TIER_ID;
+      break;
+    default:
+      request.log.error({ entitlementId, marketplaceAccountId, productTierId }, `Unknown product tier ID: ${productTierId}`);
+      return;
+  }
+
   try {
     await omnistrateRepository.deleteDeployments({
       marketplaceAccountId,
-      productTierId
+      productTierId: productTierMapped
     });
   } catch (error) {
     // Check if instance was not found
