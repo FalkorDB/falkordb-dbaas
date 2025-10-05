@@ -8,12 +8,13 @@ spec:
   source:
     chart: alert-reaction-operator
     repoURL: ghcr.io/dudizimber/charts
-    targetRevision: v0.1.0
+    targetRevision: 0.1.0
     helm:
       valuesObject:
         fullnameOverride: "alert-reaction-operator"
         image:
           repository: docker.io/dudizimber/k8s-alert-reaction-operator
+          tag: v0.1.0
         nodeSelector:
           node_pool: observability-resources
   destination:
