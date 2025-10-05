@@ -9,6 +9,7 @@ spec:
   actions:
   - name: execute-memory-threshold-email-workflow
     image: dudizimber/alert-reactions-gcp-workflows:v0.1.1
+    command: ["./gcp-workflows"]
     serviceAccount: alert-reaction-actions-sa
     env:
     - name: GCP_PROJECT_ID
@@ -37,6 +38,7 @@ spec:
   actions:
   - name: execute-memory-threshold-email-workflow
     image: dudizimber/alert-reactions-gcp-workflows:v0.1.1
+    command: ["./gcp-workflows"]
     serviceAccount: alert-reaction-actions-sa
     env:
     - name: GCP_PROJECT_ID
