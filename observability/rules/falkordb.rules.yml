@@ -78,6 +78,7 @@ spec:
             summary: FalkorDB out of configured maxmemory (instance {{ $labels.namespace }})
             description: "[cluster={{ $labels.cluster }}] FalkorDB is running out of configured maxmemory (> 90%)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
             runbook_url: "https://github.com/FalkorDB/runbooks/blob/main/alerts/FalkorDBOutOfConfiguredMaxmemoryRunbook.md"
+            threshold: "{{ $value }}"
 
         - alert: FalkorDBOutOfConfiguredMaxmemoryCritical
           expr: ceil(redis_memory_used_bytes / redis_memory_max_bytes * 100) >= 100 and on(instance) redis_memory_max_bytes > 0
@@ -89,6 +90,7 @@ spec:
             summary: FalkorDB out of configured maxmemory (instance {{ $labels.namespace }})
             description: "[cluster={{ $labels.cluster }}] FalkorDB is running out of configured maxmemory (> 90%)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
             runbook_url: "https://github.com/FalkorDB/runbooks/blob/main/alerts/FalkorDBOutOfConfiguredMaxmemoryRunbook.md"
+            threshold: "{{ $value }}"
 
         - alert: FalkorDBTooManyConnections
           expr: redis_connected_clients / redis_config_maxclients * 100 > 90
