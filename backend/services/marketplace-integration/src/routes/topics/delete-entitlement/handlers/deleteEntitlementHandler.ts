@@ -47,17 +47,6 @@ export const deleteEntitlementHandler: RouteHandlerMethod<undefined, undefined, 
   }
 
   try {
-    await omnistrateRepository.removeUsersFromSubscription({
-      marketplaceAccountId,
-      productTierId: productTierMapped,
-    })
-  } catch (error) {
-    request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to remove users from subscription: ${error}`);
-    throw error;
-  }
-
-
-  try {
     await omnistrateRepository.cancelSubscription({
       marketplaceAccountId,
       productTierId: productTierMapped,

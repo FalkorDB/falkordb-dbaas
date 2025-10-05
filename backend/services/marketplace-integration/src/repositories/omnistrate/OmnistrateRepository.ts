@@ -469,6 +469,41 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     await Promise.all(
       instances.map((i) => this._deleteInstance(i.instanceId)),
     );
+
+    await this._waitUntilInstancesDeleted(instances.map(i => i.instanceId));
+  }
+
+  private async _waitUntilInstancesDeleted(instanceIds: string[]): Promise<void> {
+    this._opts.logger.info({ instanceIds }, 'Waiting until instances are deleted');
+
+    await Promise.all(
+      instanceIds.map((id) => this._waitForInstanceDeletion(id))
+    );
+  }
+
+  private async _waitForInstanceDeletion(instanceId: string): Promise<void> {
+    const maxRetries = 30;
+    const delayMs = 10000; // 10 seconds
+    let attempts = 0;
+    while (attempts < maxRetries) {
+      try {
+        await this._getInstanceDetails(instanceId);
+        return;
+      } catch (error) {
+        if (isAxiosError(error)) {
+          if (error.response?.status === 404) {
+            return;
+          }
+        }
+        if (error instanceof Error && error.message.includes('not found')) {
+          return;
+        }
+        this._opts.logger.error({ error, instanceId }, `Failed to check instance deletion: ${error}`);
+      }
+      attempts++;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    throw new Error(`Instance ${instanceId} was not deleted after ${maxRetries} attempts`);
   }
 
   async createServiceAccount(params: {
