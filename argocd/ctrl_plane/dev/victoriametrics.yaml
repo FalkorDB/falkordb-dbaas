@@ -89,8 +89,6 @@ spec:
                 webhook_configs:
                 - url: 'http://alert-reaction-operator-webhook.observability.svc.local:9090/webhook'
                   send_resolved: false
-                  http_config:
-                    timeout: 10s
               - name: "pagerduty"
                 pagerduty_configs:
                   - service_key_file: "/etc/vm/secrets/pagerduty-service-key/api-key"
