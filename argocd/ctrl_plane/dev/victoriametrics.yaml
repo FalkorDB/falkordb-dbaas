@@ -87,7 +87,7 @@ spec:
               - name: blackhole
               - name: 'k8s-alert-reaction-operator'
                 webhook_configs:
-                - url: 'http://alert-reaction-operator-webhook.observability.svc.local:9090/webhook'
+                - url: 'http://alert-reaction-operator-webhook.observability.svc.cluster.local:9090/webhook'
                   send_resolved: false
               - name: "pagerduty"
                 pagerduty_configs:
