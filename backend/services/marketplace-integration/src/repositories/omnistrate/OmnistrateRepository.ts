@@ -256,15 +256,15 @@ export class OmnistrateRepository implements IOmnistrateRepository {
 
     const bearerToken = await OmnistrateRepository._getCustomerBearer(saEmail, this._serviceAccountSecret);
 
-    await axios.post(
+    await axios.delete(
       `${OmnistrateRepository._baseUrl}/2022-09-01-00/resource-instance/subscription/${subscriptionId}/revoke-user-role`,
-      {
-        email,
-        roleType: role,
-      },
       {
         headers: {
           Authorization: `Bearer ${bearerToken}`,
+        },
+        data: {
+          email,
+          roleType: role,
         },
       },
     );
