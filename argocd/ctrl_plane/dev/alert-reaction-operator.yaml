@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     chart: alert-reaction-operator
-    repoURL: ghcr.io/dudizimber/charts/alert-reaction-operator
+    repoURL: ghcr.io/dudizimber/charts
     targetRevision: 0.1.0
     helm:
       valuesObject:
