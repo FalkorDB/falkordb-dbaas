@@ -31,7 +31,7 @@ spec:
 apiVersion: alertreaction.io/v1alpha1
 kind: AlertReaction
 metadata:
-  name: falkordb-out-of-memory-alert
+  name: falkordb-out-of-memory-alert-critical
   namespace: observability
 spec:
   alertName: FalkorDBOutOfConfiguredMaxmemoryCritical
