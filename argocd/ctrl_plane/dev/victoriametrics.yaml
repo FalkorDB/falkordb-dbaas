@@ -77,8 +77,6 @@ spec:
                 - match:
                     alertname: Watchdog
                   receiver: "blackhole"
-                - match:
-                    alertname: InfoInhibitor
                 - receiver: 'k8s-alert-reaction-operator'
                   continue: true
                 - receiver: "pagerduty"
