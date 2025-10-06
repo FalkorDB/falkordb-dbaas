@@ -442,7 +442,7 @@ main:
     - final_success:
         return: "Alert processed successfully for instance: $${instance_id}"
 EOF
-  
+
 }
 
 # invoker role for the workflow
