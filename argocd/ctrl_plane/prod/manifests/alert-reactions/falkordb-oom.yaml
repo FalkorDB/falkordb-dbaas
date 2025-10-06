@@ -1,0 +1,59 @@
+---
+apiVersion: alertreaction.io/v1alpha1
+kind: AlertReaction
+metadata:
+  name: falkordb-out-of-memory-alert
+  namespace: observability
+spec:
+  alertName: FalkorDBOutOfConfiguredMaxmemory
+  actions:
+  - name: execute-memory-threshold-email-workflow
+    image: dudizimber/alert-reactions-gcp-workflows:v0.1.1
+    command: ["./gcp-workflows"]
+    serviceAccount: alert-reaction-actions-sa
+    env:
+    - name: GCP_PROJECT_ID
+      value: "ctrl-plane-prod-b1b92df2"
+    - name: GCP_LOCATION
+      value: "us-central1"
+    - name: WORKFLOW_NAME
+      value: "falkordb-instance-memory-threshold-exceeded"
+    - name: TIMEOUT_SECONDS
+      value: "600"
+    - name: WAIT_FOR_COMPLETION
+      value: "true"
+    # Alert data passed to workflow
+    - name: ALERT_JSON
+      valueFrom:
+        alertRef:
+          fieldPath: "."
+---
+apiVersion: alertreaction.io/v1alpha1
+kind: AlertReaction
+metadata:
+  name: falkordb-out-of-memory-alert-critical
+  namespace: observability
+spec:
+  alertName: FalkorDBOutOfConfiguredMaxmemoryCritical
+  actions:
+  - name: execute-memory-threshold-email-workflow
+    image: dudizimber/alert-reactions-gcp-workflows:v0.1.1
+    command: ["./gcp-workflows"]
+    serviceAccount: alert-reaction-actions-sa
+    env:
+    - name: GCP_PROJECT_ID
+      value: "ctrl-plane-prod-b1b92df2"
+    - name: GCP_LOCATION
+      value: "us-central1"
+    - name: WORKFLOW_NAME
+      value: "falkordb-instance-memory-threshold-exceeded"
+    - name: TIMEOUT_SECONDS
+      value: "600"
+    - name: WAIT_FOR_COMPLETION
+      value: "true"
+    # Alert data passed to workflow
+    - name: ALERT_JSON
+      valueFrom:
+        alertRef:
+          fieldPath: "."
+---

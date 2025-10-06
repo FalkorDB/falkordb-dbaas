@@ -9,7 +9,9 @@
       "TF_VAR_ip_range_pods": "TF_CTRL_PLANE_IP_RANGE_PODS",
       "TF_VAR_ip_range_services": "TF_CTRL_PLANE_IP_RANGE_SERVICES",
       "TF_VAR_default_max_pods_per_node": "TF_DEFAULT_MAX_PODS_PER_NODE",
-      "TF_VAR_db_exporter_sa_id": "TF_DB_EXPORTER_SA_ID"
+      "TF_VAR_db_exporter_sa_id": "TF_DB_EXPORTER_SA_ID",
+      "TF_VAR_omnistrate_service_id": "TF_OMNISTRATE_SERVICE_ID",
+      "TF_VAR_omnistrate_environment_id": "TF_OMNISTRATE_ENVIRONMENT_ID"
     },
     "init_param": "-backend-config=bucket=TF_STATE_BUCKET" 
   },

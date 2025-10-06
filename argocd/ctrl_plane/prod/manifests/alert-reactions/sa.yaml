@@ -1,0 +1,9 @@
+---
+# service account for the memory threshold workflow action
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alert-reaction-actions-sa
+  namespace: observability
+  annotations:
+    iam.gke.io/gcp-service-account: "alert-reaction-actions@ctrl-plane-prod-b1b92df2.iam.gserviceaccount.com"
