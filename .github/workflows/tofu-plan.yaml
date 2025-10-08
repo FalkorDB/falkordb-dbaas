@@ -141,11 +141,12 @@ jobs:
             const botComment = comments.find(comment => {
               return comment.user.type === 'Bot' && comment.body.includes('Tofu Plan Output - ${{ matrix.stack.name }}');
             });
-            const output = `#### Tofu Plan Output - ${{ matrix.stack.name }}
-            \`\`\`
-            ${{ steps.plan-run.outputs.PLAN_OUTPUT }}
-            \`\`\`
-                `;
+            const output = 
+              '#### Tofu Plan Output - ${{ matrix.stack.name }}\n' +
+              '```\n' +
+              '${{ steps.plan-run.outputs.PLAN_OUTPUT }}' + // This is now a simple string concatenation
+              '\n```\n';
+              
             // 3. Delete previous comment so PR timeline makes sense
             if (botComment) {
               github.rest.issues.deleteComment({
