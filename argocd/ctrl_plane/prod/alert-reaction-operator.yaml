@@ -8,7 +8,7 @@ spec:
   source:
     chart: alert-reaction-operator
     repoURL: ghcr.io/dudizimber/charts
-    targetRevision: v0.1.6
+    targetRevision: v0.1.12
     helm:
       valuesObject:
         fullnameOverride: "alert-reaction-operator"
