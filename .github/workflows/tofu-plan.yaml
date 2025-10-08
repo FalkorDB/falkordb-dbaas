@@ -113,7 +113,6 @@ jobs:
         id: plan-run
         working-directory: ${{ matrix.stack.path }}
         run: |
-          cd ${{ matrix.stack.path }}
           tofu plan -input=false -out=tfplan
           tofu show -json tfplan > tfplan.json
 
