@@ -11,11 +11,31 @@ export const deleteEntitlementHandler: RouteHandlerMethod<undefined, undefined, 
   const omnistrateRepository = request.diScope.resolve<IOmnistrateRepository>(IOmnistrateRepository.repositoryName);
   const commitRepository = request.diScope.resolve<ICommitRepository>(ICommitRepository.repositoryName);
 
-  const { entitlementId, marketplaceAccountId } = request.body as DeleteEntitlementMessageType;
+  const { entitlementId, marketplaceAccountId, productTierId } = request.body as DeleteEntitlementMessageType;
+
+  let productTierMapped = "";
+  switch (productTierId) {
+    case 'free':
+      productTierMapped = request.server.config.OMNISTRATE_FREE_PRODUCT_TIER_ID;
+      break;
+    case 'startup':
+      productTierMapped = request.server.config.OMNISTRATE_STARTUP_PRODUCT_TIER_ID;
+      break;
+    case 'pro':
+      productTierMapped = request.server.config.OMNISTRATE_PRO_PRODUCT_TIER_ID;
+      break;
+    case 'enterprise':
+      productTierMapped = request.server.config.OMNISTRATE_ENTERPRISE_PRODUCT_TIER_ID;
+      break;
+    default:
+      request.log.error({ entitlementId, marketplaceAccountId, productTierId }, `Unknown product tier ID: ${productTierId}`);
+      return;
+  }
 
   try {
     await omnistrateRepository.deleteDeployments({
       marketplaceAccountId,
+      productTierId: productTierMapped
     });
   } catch (error) {
     // Check if instance was not found
@@ -24,6 +44,15 @@ export const deleteEntitlementHandler: RouteHandlerMethod<undefined, undefined, 
     }
     request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to delete deployments: ${error}`);
     return;
+  }
+
+  try {
+    await omnistrateRepository.cancelSubscription({
+      marketplaceAccountId,
+      productTierId: productTierMapped,
+    });
+  } catch (error) {
+    request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to cancel subscription: ${error}`);
   }
 
   try {

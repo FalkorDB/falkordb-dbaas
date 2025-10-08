@@ -24,3 +24,11 @@ variable "default_max_pods_per_node" {
 variable "db_exporter_sa_id" {
   type = string
 }
+
+variable "omnistrate_service_id" {
+  type = string
+}
+
+variable "omnistrate_environment_id" {
+  type = string
+}

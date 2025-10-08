@@ -76,6 +76,8 @@ jobs:
           TF_GRAFANA_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_SECRET }}
           TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
           TF_ARGOCD_SA_ID: ${{ secrets.TF_ARGOCD_SA_ID }}
+          TF_OMNISTRATE_SERVICE_ID: ${{ secrets.TF_OMNISTRATE_SERVICE_ID }}
+          TF_OMNISTRATE_ENVIRONMENT_ID: ${{ secrets.TF_OMNISTRATE_ENVIRONMENT_ID }}
         run: |
           json=$(echo '${{ toJson(matrix) }}' | envsubst)
           # set the matrix values as environment variables
@@ -109,14 +111,10 @@ jobs:
 
       - name: Plan Tofu
         id: plan-run
+        working-directory: ${{ matrix.stack.path }}
         run: |
-          cd ${{ matrix.stack.path }}
-          tofu plan -no-color -input=false -out=tfplan
-          plan=$(tofu show tfplan | sed -e "s/\`/'/g")
-          delimiter="$(openssl rand -hex 8)"
-          echo "PLAN_OUTPUT<<EOF-$delimiter" >> "$GITHUB_OUTPUT"
-          echo "$plan" >> "$GITHUB_OUTPUT"
-          echo "EOF-$delimiter" >> "$GITHUB_OUTPUT"
+          tofu plan -input=false -out=tfplan
+          tofu show -json tfplan > tfplan.json
 
       - name: Upload Plan Artifact
         uses: actions/upload-artifact@v4
@@ -124,37 +122,9 @@ jobs:
           name: tofu-plan-${{ env.ENVIRONMENT }}-${{ matrix.stack.name }}
           path: ${{ matrix.stack.path }}/tfplan
 
-      - name: Update PR
-        uses: actions/github-script@v6
-        id: plan-comment
+      - name: Comment Plan Changes
+        uses: liatrio/terraform-change-pr-commenter@v1.10.0
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            // 1. Retrieve existing bot comments for the PR
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            const botComment = comments.find(comment => {
-              return comment.user.type === 'Bot' && comment.body.includes('Tofu Plan Output - ${{ matrix.stack.name }}');
-            });
-            const output = `#### Tofu Plan Output - ${{ matrix.stack.name }}
-            \`\`\`
-            ${{ steps.plan-run.outputs.PLAN_OUTPUT }}
-            \`\`\`
-                `;
-            // 3. Delete previous comment so PR timeline makes sense
-            if (botComment) {
-              github.rest.issues.deleteComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-              });
-            }
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            });
+          json-file: ${{ matrix.stack.path }}/tfplan.json
+          comment-header: "Tofu Plan for ${{ matrix.stack.name }} in ${{ env.ENVIRONMENT }} environment"
+          expand-comment: 'true'

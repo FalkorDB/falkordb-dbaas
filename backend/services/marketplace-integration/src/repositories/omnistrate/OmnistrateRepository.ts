@@ -245,6 +245,31 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     );
   }
 
+  private async _removeUser(marketplaceAccountId: string, subscriptionId: string, email: string, role: 'reader' | 'editor'): Promise<void> {
+    this._opts.logger.info({ subscriptionId, marketplaceAccountId, email, dryRun: this._opts.dryRun }, 'Removing user from subscription');
+
+    if (this._opts?.dryRun) {
+      return;
+    }
+
+    const saEmail = this._getSAEmail(marketplaceAccountId);
+
+    const bearerToken = await OmnistrateRepository._getCustomerBearer(saEmail, this._serviceAccountSecret);
+
+    await axios.delete(
+      `${OmnistrateRepository._baseUrl}/2022-09-01-00/resource-instance/subscription/${subscriptionId}/revoke-user-role`,
+      {
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+        },
+        data: {
+          email,
+          roleType: role,
+        },
+      },
+    );
+  }
+
   private async _getFreeSubscriptionIdFromEmail(email: string): Promise<{ subscriptionId: string }> {
     const { userId } = await this._getUser(email);
 
@@ -444,6 +469,41 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     await Promise.all(
       instances.map((i) => this._deleteInstance(i.instanceId)),
     );
+
+    await this._waitUntilInstancesDeleted(instances.map(i => i.instanceId));
+  }
+
+  private async _waitUntilInstancesDeleted(instanceIds: string[]): Promise<void> {
+    this._opts.logger.info({ instanceIds }, 'Waiting until instances are deleted');
+
+    await Promise.all(
+      instanceIds.map((id) => this._waitForInstanceDeletion(id))
+    );
+  }
+
+  private async _waitForInstanceDeletion(instanceId: string): Promise<void> {
+    const maxRetries = 30;
+    const delayMs = 10000; // 10 seconds
+    let attempts = 0;
+    while (attempts < maxRetries) {
+      try {
+        await this._getInstanceDetails(instanceId);
+        return;
+      } catch (error) {
+        if (isAxiosError(error)) {
+          if (error.response?.status === 404) {
+            return;
+          }
+        }
+        if (error instanceof Error && error.message.includes('not found')) {
+          return;
+        }
+        this._opts.logger.error({ error, instanceId }, `Failed to check instance deletion: ${error}`);
+      }
+      attempts++;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    throw new Error(`Instance ${instanceId} was not deleted after ${maxRetries} attempts`);
   }
 
   async createServiceAccount(params: {
@@ -551,6 +611,98 @@ export class OmnistrateRepository implements IOmnistrateRepository {
         'Failed to invite user',
       );
       throw new Error('Failed to invite user');
+    }
+  }
+
+  async removeUsersFromSubscription(params: { marketplaceAccountId: string; productTierId: string }): Promise<void> {
+    this._opts.logger.info(
+      { marketplaceAccountId: params.marketplaceAccountId, productTierId: params.productTierId, dryRun: this._opts.dryRun },
+      'Removing users from subscription',
+    );
+
+    if (this._opts?.dryRun) {
+      return;
+    }
+
+    const user = await this._getUser(this._getSAEmail(params.marketplaceAccountId));
+
+    const subscriptions = await this._getUserSubscriptions(user.userId);
+    const subscription = subscriptions.find((s) => s.productTierId === params.productTierId);
+
+    if (!subscription) {
+      this._opts.logger.info(
+        { marketplaceAccountId: params.marketplaceAccountId, productTierId: params.productTierId },
+        'No subscription found',
+      );
+      return;
+    }
+
+    try {
+      const users = await OmnistrateRepository._client.get(
+        `/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/users?subscriptionId=${subscription.subscriptionId}`,
+      ).then((response) => response.data['users']);
+
+      await Promise.all(
+        users.filter(u => u['role'] !== 'root').map((u: unknown) => this._removeUser(params.marketplaceAccountId, subscription.subscriptionId, u['email'], u['userSubscriptionRole'])),
+      );
+    } catch (error) {
+      if (isAxiosError(error)) {
+        this._opts.logger.error(
+          { error, subscriptionId: subscription.subscriptionId, marketplaceAccountId: params.marketplaceAccountId },
+          'Failed to remove users from subscription',
+        );
+        throw new Error(`Failed to remove users from subscription: ${error.response?.data?.message || error.message}`);
+      }
+
+      this._opts.logger.error(
+        { error, subscriptionId: subscription.subscriptionId, marketplaceAccountId: params.marketplaceAccountId },
+        'Failed to remove users from subscription',
+      );
+      throw new Error('Failed to remove users from subscription');
+    }
+  }
+
+  async cancelSubscription(params: { marketplaceAccountId: string; productTierId: string }): Promise<void> {
+    this._opts.logger.info(
+      { marketplaceAccountId: params.marketplaceAccountId, productTierId: params.productTierId, dryRun: this._opts.dryRun },
+      'Cancelling subscription',
+    );
+
+    if (this._opts?.dryRun) {
+      return;
+    }
+
+    const user = await this._getUser(this._getSAEmail(params.marketplaceAccountId));
+
+    const subscriptions = await this._getUserSubscriptions(user.userId);
+    const subscription = subscriptions.find((s) => s.productTierId === params.productTierId);
+
+    if (!subscription) {
+      this._opts.logger.info(
+        { marketplaceAccountId: params.marketplaceAccountId, productTierId: params.productTierId },
+        'No subscription found',
+      );
+      return;
+    }
+
+    try {
+      await OmnistrateRepository._client.delete(
+        `/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/subscription/${subscription.subscriptionId}`,
+      );
+    } catch (error) {
+      if (isAxiosError(error)) {
+        this._opts.logger.error(
+          { error, subscriptionId: subscription.subscriptionId, marketplaceAccountId: params.marketplaceAccountId },
+          'Failed to cancel subscription',
+        );
+        throw new Error(`Failed to cancel subscription: ${error.response?.data?.message || error.message}`);
+      }
+
+      this._opts.logger.error(
+        { error, subscriptionId: subscription.subscriptionId, marketplaceAccountId: params.marketplaceAccountId },
+        'Failed to cancel subscription',
+      );
+      throw new Error('Failed to cancel subscription');
     }
   }
 

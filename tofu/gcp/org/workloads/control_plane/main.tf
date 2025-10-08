@@ -25,6 +25,7 @@ module "project" {
     "secretmanager.googleapis.com",
     "identitytoolkit.googleapis.com",
     "logging.googleapis.com",
+    "workflows.googleapis.com",
   ]
 }
 

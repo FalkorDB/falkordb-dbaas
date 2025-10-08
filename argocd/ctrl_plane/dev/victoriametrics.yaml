@@ -72,16 +72,21 @@ spec:
               group_wait: 30s
               group_interval: 5m
               repeat_interval: 12h
-              receiver: "pagerduty"
+              receiver: "k8s-alert-reaction-operator"
               routes:
                 - match:
                     alertname: Watchdog
                   receiver: "blackhole"
-                - match:
-                    alertname: InfoInhibitor
+                - receiver: 'k8s-alert-reaction-operator'
+                  continue: true
                 - receiver: "pagerduty"
+                  continue: true
             receivers:
               - name: blackhole
+              - name: 'k8s-alert-reaction-operator'
+                webhook_configs:
+                - url: 'http://alert-reaction-operator-webhook.observability.svc.cluster.local:9090/webhook'
+                  send_resolved: false
               - name: "pagerduty"
                 pagerduty_configs:
                   - service_key_file: "/etc/vm/secrets/pagerduty-service-key/api-key"

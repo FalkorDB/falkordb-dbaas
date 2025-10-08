@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alert-reaction-operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: alert-reaction-operator
+    repoURL: ghcr.io/dudizimber/charts
+    targetRevision: v0.1.6
+    helm:
+      valuesObject:
+        fullnameOverride: "alert-reaction-operator"
+        nodeSelector:
+          node_pool: observability-resources
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
