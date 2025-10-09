@@ -49,8 +49,9 @@ const processor: Processor<RdbImportMonitorSizeValidationProgressProcessorData> 
       throw new Error(`Invalid RDB size: ${rdbSize}`);
     }
 
-    if ((parseInt(rdbSize) / 1024 / 1024) > job.data.maxRdbSize) {
-      throw new Error(`RDB size ${rdbSize} exceeds maximum allowed size ${job.data.maxRdbSize}`);
+    const rdbSizeInMB = parseInt(rdbSize) / 1024 / 1024;
+    if (rdbSizeInMB > job.data.maxRdbSize) {
+      throw new Error(`RDB size ${rdbSizeInMB.toFixed(2)} MB exceeds the maximum allowed size of ${job.data.maxRdbSize} MB`);
     }
 
   } catch (error) {
