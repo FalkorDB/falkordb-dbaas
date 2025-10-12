@@ -26,3 +26,13 @@ spec:
               url: http://vmsingle-vm.observability.svc.cluster.local:8429
             write:
               url: http://vmsingle-vm.observability.svc.cluster.local:8429/api/v1/write
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+    automated:
+      prune: true
+      selfHeal: true
