@@ -26,7 +26,7 @@ spec:
             fullnameOverride: "vm-alert-logs"
             server:
               nodeSelector:
-                node_pool: observability-resources
+                node_pool: observability
               datasource:
                 url: http://victorialogs-server.observability.svc.cluster.local:9428
               notifier:
