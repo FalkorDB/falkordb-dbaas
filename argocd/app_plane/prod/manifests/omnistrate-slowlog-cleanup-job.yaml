@@ -158,6 +158,7 @@ metadata:
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
   successfulJobsHistoryLimit: 3
+spec:
   jobTemplate:
     spec:
       template:
