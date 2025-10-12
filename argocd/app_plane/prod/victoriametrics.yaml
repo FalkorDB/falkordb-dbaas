@@ -98,6 +98,8 @@ spec:
               spec:
                 nodeSelector:
                   node_pool: observability
+                datasource:
+                  url: http://victorialogs-server.observability.svc.cluster.local:9428
             vmagent:
               enabled: false
             grafana:
