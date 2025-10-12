@@ -102,6 +102,9 @@ data:
 
       done
 
+      # Reset PASSWORD variable for next namespace
+      PASSWORD=""
+
       echo "Slowlog-cleanup execution process completed for namespace $namespace"
 
     done
