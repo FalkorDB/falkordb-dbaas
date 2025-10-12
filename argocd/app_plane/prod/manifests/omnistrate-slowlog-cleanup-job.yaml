@@ -77,7 +77,7 @@ data:
     kind: Job
     metadata:
       name: $JOB_NAME
-      namespace: slowlog-cleanup-job
+      namespace: $namespace
       labels:
         app: slowlog-cleanup-job
         target-namespace: $namespace
