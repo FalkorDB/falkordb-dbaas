@@ -60,6 +60,14 @@ data:
       for POD_NAME in $NODE_PODS; do
         echo "Processing pod: $POD_NAME"
 
+        # Check if TKS is enabled for the pod by checking the TLS=true environment variable
+        TLS=$(echo "$PODS" | jq -r '.items[] | select(.metadata.name == "'"$POD_NAME"'") | .spec.containers[]?.env[]? | select(.name == "TLS") | .value' || echo "false")
+        if [ "$TLS" = "true" ]; then
+          TLS="--tls"
+        else
+          TLS=""
+        fi
+
         # Check if pod is running
         POD_STATUS=$(kubectl get pod -n $namespace $POD_NAME -o jsonpath='{.status.phase}')
         if [ "$POD_STATUS" != "Running" ]; then
@@ -69,7 +77,7 @@ data:
 
         # Check pod's role
         ROLE=$(kubectl exec -n $namespace $POD_NAME -c service -- \
-          redis-cli -a "\$(cat /run/secrets/adminpassword)" INFO replication | grep '^role:' | cut -d: -f2 | tr -d '\r')
+          redis-cli -a "\$(cat /run/secrets/adminpassword)" $TLS INFO replication | grep '^role:' | cut -d: -f2 | tr -d '\r')
         
         if [ "$ROLE" != "master" ]; then
           echo "Pod $POD_NAME is not a master (role: $ROLE), skipping..."
@@ -78,15 +86,15 @@ data:
 
         # Delete telemetry* keys
         kubectl exec -n $namespace $POD_NAME -c service -- \
-          redis-cli -a "\$(cat /run/secrets/adminpassword)" --scan --pattern "telemetry*" \
+          redis-cli -a "\$(cat /run/secrets/adminpassword)" $TLS --scan --pattern "telemetry*" \
           | xargs -r -I {} kubectl exec -n $namespace $POD_NAME -c service -- \
-            redis-cli -a "\$(cat /run/secrets/adminpassword)" UNLINK {}
+            redis-cli -a "\$(cat /run/secrets/adminpassword)" $TLS UNLINK {}
 
         # Reset GRAPH.SLOWLOG for all keys
         kubectl exec -n $namespace $POD_NAME -c service -- \
-          redis-cli -a "\$(cat /run/secrets/adminpassword)" --scan \
+          redis-cli -a "\$(cat /run/secrets/adminpassword)" $TLS --scan \
           | xargs -r -I {} kubectl exec -n $namespace $POD_NAME -c service -- \
-            redis-cli -a "\$(cat /run/secrets/adminpassword)" GRAPH.SLOWLOG {} RESET
+            redis-cli -a "\$(cat /run/secrets/adminpassword)" $TLS GRAPH.SLOWLOG {} RESET
 
       done
 
