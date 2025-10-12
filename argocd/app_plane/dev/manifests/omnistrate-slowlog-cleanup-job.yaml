@@ -75,6 +75,10 @@ data:
           continue
         fi
 
+        if [ -z "$PASSWORD" ]; then
+          PASSWORD=$(kubectl exec -n $namespace $POD_NAME -c service -- cat /run/secrets/adminpassword)
+        fi
+
         # Check pod's role
         ROLE=$(kubectl exec -n $namespace $POD_NAME -c service -- \
           redis-cli -a "\$(cat /run/secrets/adminpassword)" $TLS INFO replication | grep '^role:' | cut -d: -f2 | tr -d '\r')
