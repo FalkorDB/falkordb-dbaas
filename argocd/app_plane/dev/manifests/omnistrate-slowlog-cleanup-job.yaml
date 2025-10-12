@@ -1,8 +1,4 @@
 ---
-# Kubernetes CronJob for executing bgrewriteaof on FalkorDB instance-* namespaces
-# This CronJob scans for namespaces matching the pattern "instance-*" and creates
-# individual Jobs to perform background AOF rewriting on FalkorDB node pods.
-
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -57,6 +53,7 @@ data:
       fi
       
       # Filter pods with RUN_NODE=1
+      # The jq filter below selects pods where any container has an environment variable named RUN_NODE set to "1".
       NODE_PODS=$(echo "$PODS" | jq -r '.items[] | select(
         ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0)
       ) | .metadata.name' | sort | uniq)
@@ -66,127 +63,46 @@ data:
         continue
       fi
 
-      echo "Creating slowlog-cleanup job for namespace: $namespace"
-      
-      # Generate unique job name
-      JOB_NAME="slowlog-cleanup-$namespace-$(date +%s)"
+      echo "Found FalkorDB node pods in $namespace: $NODE_PODS"
 
-      # Create the job manifest
-      cat <<EOF | kubectl apply -f -
-    apiVersion: batch/v1
-    kind: Job
-    metadata:
-      name: $JOB_NAME
-      namespace: $namespace
-      labels:
-        app: slowlog-cleanup-job
-        target-namespace: $namespace
-        created-by: slowlog-cleanup-cronjob
-    spec:
-      ttlSecondsAfterFinished: 300
-      template:
-        spec:
-          restartPolicy: Never
-          containers:
-          - name: slowlog-cleanup-executor
-            image: bitnamilegacy/kubectl:latest
-            securityContext:
-              runAsNonRoot: true
-              runAsUser: 1000
-              allowPrivilegeEscalation: false
-            env:
-            - name: TARGET_NAMESPACE
-              value: "$namespace"
-            volumeMounts:
-            - name: slowlog-cleanup-script
-              mountPath: /scripts
-            command:
-            - /bin/bash
-            - /scripts/slowlog-cleanup.sh
-          volumes:
-          - name: slowlog-cleanup-script
-            configMap:
-              name: slowlog-cleanup-execution-script
-              defaultMode: 0755
-    EOF
-      
-      echo "Job $JOB_NAME created successfully"
+      for POD_NAME in $NODE_PODS; do
+        echo "Processing pod: $POD_NAME"
+
+        # Check if pod is running
+        POD_STATUS=$(kubectl get pod -n $namespace $POD_NAME -o jsonpath='{.status.phase}')
+        if [ "$POD_STATUS" != "Running" ]; then
+          echo "Pod $POD_NAME is not running (status: $POD_STATUS), skipping..."
+          continue
+        fi
+
+        # Check pod's role
+        ROLE=$(kubectl exec -n $namespace $POD_NAME -c service -- \
+          redis-cli -a "\$(cat /run/secrets/adminpassword)" INFO replication | grep '^role:' | cut -d: -f2 | tr -d '\r')
+        
+        if [ "$ROLE" != "master" ]; then
+          echo "Pod $POD_NAME is not a master (role: $ROLE), skipping..."
+          continue
+        fi
+
+        # Delete telemetry* keys
+        kubectl exec -n $namespace $POD_NAME -c service -- \
+          redis-cli -a "\$(cat /run/secrets/adminpassword)" --scan --pattern "telemetry*" \
+          | xargs -r -I {} kubectl exec -n $namespace $POD_NAME -c service -- \
+            redis-cli -a "\$(cat /run/secrets/adminpassword)" UNLINK {}
+
+        # Reset GRAPH.SLOWLOG for all keys
+        kubectl exec -n $namespace $POD_NAME -c service -- \
+          redis-cli -a "\$(cat /run/secrets/adminpassword)" --scan \
+          | xargs -r -I {} kubectl exec -n $namespace $POD_NAME -c service -- \
+            redis-cli -a "\$(cat /run/secrets/adminpassword)" GRAPH.SLOWLOG {} RESET
+
+      done
+
+      echo "Slowlog-cleanup execution process completed for namespace $namespace"
+
     done
 
     echo "All slowlog-cleanup jobs created successfully"
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: slowlog-cleanup-execution-script
-  namespace: slowlog-cleanup-job
-data:
-  slowlog-cleanup.sh: |
-    #!/bin/bash
-    set -e
-
-    echo "Starting slowlog-cleanup execution for namespace: $TARGET_NAMESPACE"
-
-    # Get all pods in the namespace
-    PODS=$(kubectl get pods -n $TARGET_NAMESPACE -o json 2>/dev/null || echo '{"items":[]}')
-
-    if [ "$PODS" = '{"items":[]}' ]; then
-      echo "No pods found in namespace $TARGET_NAMESPACE"
-      exit 0
-    fi
-
-    # Filter pods with RUN_NODE=1
-    NODE_PODS=$(echo "$PODS" | jq -r '.items[] | select(
-      ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0)
-    ) | .metadata.name' | sort | uniq)
-
-    if [ -z "$NODE_PODS" ]; then
-      echo "No FalkorDB node pods found in namespace $TARGET_NAMESPACE"
-      exit 0
-    fi
-
-    echo "Found FalkorDB node pods in $TARGET_NAMESPACE: $NODE_PODS"
-
-    for POD_NAME in $NODE_PODS; do
-      echo "Processing pod: $POD_NAME"
-
-      # Check if pod is running
-      POD_STATUS=$(kubectl get pod -n $TARGET_NAMESPACE $POD_NAME -o jsonpath='{.status.phase}')
-      if [ "$POD_STATUS" != "Running" ]; then
-        echo "Pod $POD_NAME is not running (status: $POD_STATUS), skipping..."
-        continue
-      fi
-
-      # Get Redis password from secret file inside the first pod
-      if [[ -z "$PASSWORD" ]]; then
-        PASSWORD=$(kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- cat /run/secrets/adminpassword)
-      fi
-
-      # Check pod's role
-      ROLE=$(kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- \
-        redis-cli -a "$PASSWORD" INFO replication | grep '^role:' | cut -d: -f2 | tr -d '\r')
-      
-      if [ "$ROLE" != "master" ]; then
-        echo "Pod $POD_NAME is not a master (role: $ROLE), skipping..."
-        continue
-      fi
-
-      # Delete telemetry* keys
-      kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- \
-        redis-cli -a "$PASSWORD" -h "$POD_NAME" --scan --pattern "telemetry*" \
-        | xargs -r -I {} kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- \
-          redis-cli -a "$PASSWORD" -h "$POD_NAME" UNLINK {}
-
-      # Reset GRAPH.SLOWLOG for all keys
-      kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- \
-        redis-cli -a "$PASSWORD" -h "$POD_NAME" --scan \
-        | xargs -r -I {} kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- \
-          redis-cli -a "$PASSWORD" -h "$POD_NAME" GRAPH.SLOWLOG {} RESET
-
-    done
-
-    echo "Slowlog-cleanup execution process completed for namespace $TARGET_NAMESPACE"
 
 ---
 apiVersion: v1
@@ -245,8 +161,7 @@ metadata:
   namespace: slowlog-cleanup-job
   labels:
     app: slowlog-cleanup
-spec:
-  # Run every 6 hours
+  # Runs at minute 0 every 6th hour (e.g., 00:00, 06:00, 12:00, 18:00)
   schedule: "0 */6 * * *"
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
