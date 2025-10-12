@@ -86,7 +86,6 @@ data:
       ttlSecondsAfterFinished: 300
       template:
         spec:
-          serviceAccountName: instance-kubectl-exec-sa
           restartPolicy: Never
           containers:
           - name: slowlog-cleanup-executor
