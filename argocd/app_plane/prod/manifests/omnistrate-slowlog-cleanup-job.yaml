@@ -153,12 +153,12 @@ metadata:
   namespace: slowlog-cleanup-job
   labels:
     app: slowlog-cleanup
+spec:
   # Runs at minute 0 every 6th hour (e.g., 00:00, 06:00, 12:00, 18:00)
   schedule: "0 */6 * * *"
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 3
   successfulJobsHistoryLimit: 3
-spec:
   jobTemplate:
     spec:
       template:
