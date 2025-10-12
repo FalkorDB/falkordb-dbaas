@@ -1,0 +1,20 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAlert
+metadata:
+  name: vmalert-logs
+  namespace: observability
+spec:
+  evaluationInterval: "10s"
+  nodeSelector:
+    node_pool: observability
+  ruleSelector:
+    matchLabels:
+      is_logs: "true"
+  datasource:
+    url: http://victorialogs-server.observability.svc.cluster.local:9428
+  notifiers:
+    - url: http://vmalertmanager-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:9093
+  remoteRead:
+    url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429
+  remoteWrite:
+    url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429/api/v1/write

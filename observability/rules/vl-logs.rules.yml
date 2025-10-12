@@ -4,6 +4,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: vl-logs
+  labels:
+    is_logs: "true"
 spec:
   groups:
     - name: kubernetes-logs-errors
