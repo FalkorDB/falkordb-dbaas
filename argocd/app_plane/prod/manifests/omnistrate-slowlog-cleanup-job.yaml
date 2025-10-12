@@ -61,7 +61,7 @@ data:
         echo "Processing pod: $POD_NAME"
 
         # Check if TKS is enabled for the pod by checking the TLS=true environment variable
-        TLS=$(echo "$PODS" | jq -r '.items[] | select(.metadata.name == "'"$POD_NAME"'") | .spec.containers[]?.env[]? | select(.name == "TLS") | .value' || echo "false")
+        TLS=$(echo "$PODS" | jq -r '.items[] | select(.metadata.name == "'"$POD_NAME"'") | .spec.containers[] | select(.name == "service") | .env[]? | select(.name == "TLS") | .value' || echo "false")
         if [ "$TLS" = "true" ]; then
           TLS="--tls"
         else
