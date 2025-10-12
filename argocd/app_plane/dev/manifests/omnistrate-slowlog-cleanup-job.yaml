@@ -81,7 +81,7 @@ data:
 
         # Check pod's role
         ROLE=$(kubectl exec -n $namespace $POD_NAME -c service -- \
-          redis-cli -a "\$(cat /run/secrets/adminpassword)" $TLS INFO replication | grep '^role:' | cut -d: -f2 | tr -d '\r')
+          redis-cli -a "$PASSWORD" $TLS INFO replication | grep '^role:' | cut -d: -f2 | tr -d '\r')
         
         if [ "$ROLE" != "master" ]; then
           echo "Pod $POD_NAME is not a master (role: $ROLE), skipping..."
@@ -90,15 +90,15 @@ data:
 
         # Delete telemetry* keys
         kubectl exec -n $namespace $POD_NAME -c service -- \
-          redis-cli -a "\$(cat /run/secrets/adminpassword)" $TLS --scan --pattern "telemetry*" \
+          redis-cli -a "$PASSWORD" $TLS --scan --pattern "telemetry*" \
           | xargs -r -I {} kubectl exec -n $namespace $POD_NAME -c service -- \
-            redis-cli -a "\$(cat /run/secrets/adminpassword)" $TLS UNLINK {}
+            redis-cli -a "$PASSWORD" $TLS UNLINK {}
 
         # Reset GRAPH.SLOWLOG for all keys
         kubectl exec -n $namespace $POD_NAME -c service -- \
-          redis-cli -a "\$(cat /run/secrets/adminpassword)" $TLS --scan \
+          redis-cli -a "$PASSWORD" $TLS --scan \
           | xargs -r -I {} kubectl exec -n $namespace $POD_NAME -c service -- \
-            redis-cli -a "\$(cat /run/secrets/adminpassword)" $TLS GRAPH.SLOWLOG {} RESET
+            redis-cli -a "$PASSWORD" $TLS GRAPH.SLOWLOG {} RESET
 
       done
 
