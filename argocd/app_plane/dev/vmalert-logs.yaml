@@ -37,3 +37,13 @@ spec:
                   url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429
                 write:
                   url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429/api/v1/write
+      destination:
+        server: "{{.server}}"
+        namespace: observability
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+          - RespectIgnoreDifferences=true
+        automated:
+          prune: true
+          selfHeal: true
