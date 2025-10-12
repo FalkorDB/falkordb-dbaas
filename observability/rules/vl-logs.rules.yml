@@ -5,45 +5,44 @@ metadata:
   namespace: observability
   name: vl-logs
 spec:
-# VMAlert Rules for VictoriaLogs using LogsQL
-groups:
-- name: kubernetes-logs-errors
-  type: vlogs
-  interval: 1m
-  rules:
-  - alert: SustainedErrorLogInK8s
-    # LogsQL: Filter for error level logs, then group and count them by the pod and namespace.
-    # Trigger if any pod/namespace combination generates more than 10 error logs per minute.
-    expr: |
-      level: "error" | 
-      stats by (pod, namespace) count() as error_count | 
-      filter error_count :> 10
-    for: 5m 
-    labels:
-      severity: warning
-      cluster: '{{ $labels.cluster }}'
-    annotations:
-      summary: "WARNING: Sustained Error Rate in {{ $labels.pod }} ({{ $labels.namespace }})"
-      description: |
-        The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
-        has exceeded 10 errors per minute for the last 5 minutes.
-        Latest 1-minute count: {{ $value }}.
+  groups:
+    - name: kubernetes-logs-errors
+      type: vlogs
+      interval: 1m
+      rules:
+        - alert: SustainedErrorLogInK8s
+          # LogsQL: Filter for error level logs, then group and count them by the pod and namespace.
+          # Trigger if any pod/namespace combination generates more than 10 error logs per minute.
+          expr: |
+            level: "error" | 
+            stats by (pod, namespace) count() as error_count | 
+            filter error_count :> 10
+          for: 5m
+          labels:
+            severity: warning
+            cluster: "{{ $labels.cluster }}"
+          annotations:
+            summary: "WARNING: Sustained Error Rate in {{ $labels.pod }} ({{ $labels.namespace }})"
+            description: |
+              The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
+              has exceeded 10 errors per minute for the last 5 minutes.
+              Latest 1-minute count: {{ $value }}.
 
-  - alert: CriticalErrorLogSpikeInK8s
-    # LogsQL: Similar to the warning, but triggers on an unacceptably high absolute count.
-    # Trigger if a single pod/namespace combination generates more than 150 error logs per minute 
-    # (equivalent to 2.5 errors/second, indicating a potential crash loop or critical bug).
-    expr: |
-      level: "error" | 
-      stats by (pod, namespace) count() as error_count | 
-      filter error_count :> 150
-    for: 2m
-    labels:
-      severity: critical
-      cluster: '{{ $labels.cluster }}'
-    annotations:
-      summary: "CRITICAL: Major Error Log Spike in {{ $labels.pod }} ({{ $labels.namespace }})"
-      description: |
-        CRITICAL FAILURE: The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
-        is generating error logs at an extremely high rate (over 150 per minute).
-        Latest 1-minute count: {{ $value }}.
+        - alert: CriticalErrorLogSpikeInK8s
+          # LogsQL: Similar to the warning, but triggers on an unacceptably high absolute count.
+          # Trigger if a single pod/namespace combination generates more than 150 error logs per minute
+          # (equivalent to 2.5 errors/second, indicating a potential crash loop or critical bug).
+          expr: |
+            level: "error" | 
+            stats by (pod, namespace) count() as error_count | 
+            filter error_count :> 150
+          for: 2m
+          labels:
+            severity: critical
+            cluster: "{{ $labels.cluster }}"
+          annotations:
+            summary: "CRITICAL: Major Error Log Spike in {{ $labels.pod }} ({{ $labels.namespace }})"
+            description: |
+              CRITICAL FAILURE: The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
+              is generating error logs at an extremely high rate (over 150 per minute).
+              Latest 1-minute count: {{ $value }}.
