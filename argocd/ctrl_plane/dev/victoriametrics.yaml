@@ -97,8 +97,6 @@ spec:
           spec:
             nodeSelector:
               node_pool: observability-resources
-            datasource:
-              url: http://victorialogs-server.observability.svc.cluster.local:9428
         vmauth:
           enabled: true
           spec:

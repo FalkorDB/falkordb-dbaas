@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vmalert-logs
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: app-plane
+  template:
+    metadata:
+      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-vmalert-logs'
+    spec:
+      project: default
+      source:
+        chart: victoria-metrics-alert
+        repoURL: https://victoriametrics.github.io/helm-charts
+        targetRevision: 0.25.5
+        helm:
+          releaseName: vm-alert-logs
+          valuesObject:
+            fullnameOverride: "vm-alert-logs"
+            server:
+              nodeSelector:
+                node_pool: observability-resources
+              datasource:
+                url: http://victorialogs-server.observability.svc.cluster.local:9428
+              notifier:
+                alertmanager:
+                  url: http://vmalertmanager-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:9093
+              remote:
+                read:
+                  url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429
+                write:
+                  url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429/api/v1/write
