@@ -4,6 +4,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: vl-health
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: vl-health

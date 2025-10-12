@@ -4,6 +4,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: alloy-health
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: alloy-health

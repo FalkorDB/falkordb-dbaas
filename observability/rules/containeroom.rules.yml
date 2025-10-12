@@ -3,6 +3,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: k8s.rules.containeroom
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: k8s.rules.container_oom

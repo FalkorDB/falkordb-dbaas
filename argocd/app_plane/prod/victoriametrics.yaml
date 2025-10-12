@@ -98,6 +98,9 @@ spec:
               spec:
                 nodeSelector:
                   node_pool: observability
+                ruleSelector:
+                  matchLabels:
+                    is_logs: "false"
             vmagent:
               enabled: false
             grafana:

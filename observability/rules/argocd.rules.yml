@@ -4,6 +4,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: argocd.rules
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: argocd.rules

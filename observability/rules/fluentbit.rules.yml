@@ -3,6 +3,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: fluent-bit.rules
+  labels:
+    is_logs: "false"
 spec:
   groups:
   - name: fluent-bit

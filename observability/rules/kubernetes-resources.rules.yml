@@ -5,6 +5,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: kubernetes-resources
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: kubernetes-resources

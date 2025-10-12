@@ -5,6 +5,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: kubernetes-storage
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: kubernetes-storage
