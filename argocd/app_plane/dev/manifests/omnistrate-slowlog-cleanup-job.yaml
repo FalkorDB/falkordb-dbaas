@@ -33,14 +33,6 @@ data:
 
     echo "Found namespaces: $INSTANCE_NAMESPACES"
 
-    # Count current running jobs to avoid overwhelming the cluster
-    CURRENT_JOBS=$(kubectl get jobs -l app=bgrewriteaof-job --field-selector status.successful!=1 -o name | wc -l)
-
-    if [ "$CURRENT_JOBS" -ge "$MAX_CONCURRENT_JOBS" ]; then
-      echo "Maximum concurrent jobs ($MAX_CONCURRENT_JOBS) reached. Skipping this run."
-      exit 0
-    fi
-
     # For each instance namespace, create a job
     for namespace in $INSTANCE_NAMESPACES; do
 
