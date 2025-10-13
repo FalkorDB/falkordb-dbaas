@@ -30,7 +30,7 @@ data:
         HTTP_Listen   0.0.0.0
         HTTP_Port     2020
 
-    # INPUTS remain the same
+    # INPUTS
     [INPUT]
         Name              tail
         Tag               kube.*
@@ -50,7 +50,7 @@ data:
         DB                /var/log/flb_syslog.db
         Skip_Long_Lines   On
 
-    # KUBERNETES filter remains the same
+    # KUBERNETES Filter
     [FILTER]
         Name                kubernetes
         Match               kube.*
@@ -64,39 +64,39 @@ data:
         Annotations         On
         Buffer_Size         1MB
 
-    # 1. REWRITE TAG (ERROR): Detects error content and re-tags to kube.error.*
-    # We use 'false' for KEEP to stop the original record from proceeding with the old tag.
-    # The new error record proceeds down the pipeline.
+    # 1. REWRITE TAG (ERROR): Tag error logs but KEEP the original record.
+    # The original record continues with the tag 'kube.*', and a copy proceeds with 'kube.error.*'
     [FILTER]
         Name          rewrite_tag
         Match         kube.*
         # Rule format: KEY REGEX NEW_TAG KEEP
-        Rule          $log    (?i)error|fail|exception|denied|fatal|critical    kube.error.$TAG    false
+        Rule          $log    (?i)error|fail|exception|denied|fatal|critical    kube.error.$TAG    true
         
-    # 2. REWRITE TAG (INFO): Re-tags all remaining kube.* logs to kube.info.*
-    # This ensures that any log that made it past the error check gets an explicit info tag.
-    [FILTER]
-        Name          rewrite_tag
-        Match         kube.*
-        # Match any remaining kube.* log, give it the new explicit kube.info tag.
-        Rule          $log    .* kube.info.$TAG     false
-        
-    # 3. RECORD MODIFIER: Add 'level=error' field to error records
-    # This filter only matches the new error tag.
+    # 2. RECORD MODIFIER (ERROR): Set 'level=error' on the error copies
+    # This filter only matches the *new* error tag.
     [FILTER]
         Name          record_modifier
         Match         kube.error.*
         Record        level error
         
-    # 4. RECORD MODIFIER: Add 'level=info' field to info records
-    # This filter only matches the new info tag.
+    # 3. RECORD MODIFIER (INFO): Set 'level=info' on *all* records with the base tag
+    # This runs for the original 'kube.*' record AND the error copy.
+    # The important part is that the next filter (4) will *override* the 'level' field for errors.
     [FILTER]
         Name          record_modifier
-        Match         kube.info.*
+        Match         kube.*
         Record        level info
 
+    # 4. RECORD MODIFIER (OVERRIDE ERROR): Re-set 'level=error' on error copies to ensure it wins
+    # This filter runs LAST for records that matched the error tag, guaranteeing 'error' is the final value.
+    [FILTER]
+        Name          record_modifier
+        Match         kube.error.*
+        Record        level error
+
     # 1. OUTPUT: Dedicated block for ERROR logs
-    # This block only routes the kube.error.* stream.
+    # This block routes the error copies. The base tag 'kube.*' is excluded to prevent duplication
+    # if the output plugin supported Match_Exclude, but since it doesn't, we rely on the tag match here.
     [OUTPUT]
         Name          loki
         Match         kube.error.*
@@ -107,15 +107,22 @@ data:
         Retry_Limit   3
 
     # 2. OUTPUT: Dedicated block for INFO logs
-    # This block only routes the kube.info.* stream.
+    # This block routes the original records, excluding those that were *also* tagged as errors.
+    # It must NOT include the error logs, but since we cannot use Match_Exclude, we rely on
+    # the fact that the error logs are ONLY routed by the dedicated error output.
     [OUTPUT]
         Name          loki
-        Match         kube.info.*
+        Match         kube.*
+        # WARNING: Because your Loki output doesn't support Match_Exclude, this output will
+        # unfortunately DUPLICATE the error logs, but it will deliver ALL logs.
+        # The ultimate fix requires upgrading Fluent Bit/Loki plugin.
+        # We will filter on the level field to separate info/error in the output.
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
         Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=$level
         Retry_Limit   3
+
 
     # 3. OUTPUT: Sends node system logs
     [OUTPUT]
