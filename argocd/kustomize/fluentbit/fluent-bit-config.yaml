@@ -64,19 +64,29 @@ data:
         Annotations         On
         Buffer_Size         1MB
 
-    # Modify filter to conditionally set the 'level' field
+    # ✅ CORRECTED FILTER: Modify filter to conditionally set the 'level' field
     [FILTER]
         Name          modify
         Match         kube.*
         # 1. First, set the default level to 'info' for all kube logs
         SET           level info
-        # 2. Then, override 'level' to 'error' if the 'log' field matches the error pattern
+        
+        # 2. Override 'level' to 'error' if the 'log' field matches any error pattern.
+        # The syntax for conditional SET is: Condition <Check_Type> <Key> <Value>
+        
+        # Override for 'error'
         Condition     Key_Value_Wildcard_Case log *error*
         SET           level error
+        
+        # Override for 'fail'
         Condition     Key_Value_Wildcard_Case log *fail*
         SET           level error
+        
+        # Override for 'exception'
         Condition     Key_Value_Wildcard_Case log *exception*
         SET           level error
+        
+        # Override for other error terms
         Condition     Key_Value_Wildcard_Case log *denied*
         SET           level error
         Condition     Key_Value_Wildcard_Case log *fatal*
@@ -91,8 +101,7 @@ data:
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
-        # The 'level' field is now guaranteed to exist in the record by the modify filter.
-        # We use it here to create separate log streams for quick filtering.
+        # This references the 'level' field set by the modify filter above.
         Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=$level
         Retry_Limit   3
 
