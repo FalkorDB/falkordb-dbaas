@@ -66,6 +66,14 @@ data:
         Buffer_Size         1MB
 
     [FILTER]
+        Name          rewrite_tag
+        Match         kube.*
+        # Rule format: KEY REGEX NEW_TAG KEEP
+        # If the 'stream' field is 'stderr', change the tag to 'kube.stderr.original_tag' 
+        # and keep the original record (true) to proceed through the pipeline.
+        Rule          $stream       ^stderr$      kube.stderr.$TAG    true
+
+    [FILTER]
         Name                lua
         Match               *
         script              /fluent-bit/config/victoria-logs-filter.lua
@@ -75,20 +83,42 @@ data:
     [OUTPUT]
         Name          loki
         Match         kube.*
+        Match_Exclude kube.stderr.*
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
         Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name']
         Retry_Limit   3
 
+    [OUTPUT]
+        Name          loki
+        Match         kube.stderr.*
+        Host          alloy.observability.svc.cluster.local
+        Port          3100
+        URI           /loki/api/v1/push
+        # Use the same labels but explicitly set the stream level to error
+        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=error
+        Retry_Limit   3
+
     # Sends node system logs to VictoriaLogs with specified labels
     [OUTPUT]
         Name          loki
         Match         node_syslog
+        Match_Exclude kube.stderr.*
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
         Labels        job=node/syslog,node_name=${HOST_NAME}
+        Retry_Limit   3
+
+    [OUTPUT]
+        Name          loki
+        Match         kube.stderr.*
+        Host          alloy.observability.svc.cluster.local
+        Port          3100
+        URI           /loki/api/v1/push
+        # Use the same labels but explicitly set the stream level to error
+        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=error
         Retry_Limit   3
 
   parsers.conf: |
