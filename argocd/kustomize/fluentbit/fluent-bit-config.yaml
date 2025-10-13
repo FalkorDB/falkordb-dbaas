@@ -38,8 +38,6 @@ data:
         Mem_Buf_Limit     5MB
         DB                /var/log/flb_kube.db
         Skip_Long_Lines   On
-        # The 'Path_Key' is important for the 'kubernetes' filter to
-        # correctly identify the log source.
         Path_Key          log_file
 
     # Collects logs from the node's syslog
@@ -69,56 +67,48 @@ data:
         Name          rewrite_tag
         Match         kube.*
         # Rule format: KEY REGEX NEW_TAG KEEP
-        # If the 'stream' field is 'stderr', change the tag to 'kube.stderr.original_tag' 
-        # and keep the original record (true) to proceed through the pipeline.
-        Rule          $stream       ^stderr$      kube.stderr.$TAG    true
-
+        # This rule uses a case-insensitive regex on the 'log' field to find common error indicators.
+        # If a match is found, it copies the record and gives it the 'kube.error.*' tag.
+        Rule          $log    (?i)error|fail|exception|denied|fatal|critical    kube.error.$TAG    true
+        
     [FILTER]
         Name                lua
         Match               *
         script              /fluent-bit/config/victoria-logs-filter.lua
         call                map_log_to_msg
         
-    # Sends Kubernetes container logs to VictoriaLogs with the specified labels
+    # Sends general container logs (everything not tagged as error) to VictoriaLogs
     [OUTPUT]
         Name          loki
         Match         kube.*
-        Match_Exclude kube.stderr.*
+        # Exclude logs explicitly tagged as errors by the filter above
+        Match_Exclude kube.error.*
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
-        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name']
+        # Logs matched here are implicitly NOT errors
+        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=info
         Retry_Limit   3
 
     [OUTPUT]
         Name          loki
-        Match         kube.stderr.*
+        Match         kube.error.*
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
-        # Use the same labels but explicitly set the stream level to error
+        # These logs get the explicit level=error label
         Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=error
         Retry_Limit   3
 
     # Sends node system logs to VictoriaLogs with specified labels
+    # NOTE: Node system logs are NOT affected by the content-based error tagging.
     [OUTPUT]
         Name          loki
         Match         node_syslog
-        Match_Exclude kube.stderr.*
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
         Labels        job=node/syslog,node_name=${HOST_NAME}
-        Retry_Limit   3
-
-    [OUTPUT]
-        Name          loki
-        Match         kube.stderr.*
-        Host          alloy.observability.svc.cluster.local
-        Port          3100
-        URI           /loki/api/v1/push
-        # Use the same labels but explicitly set the stream level to error
-        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=error
         Retry_Limit   3
 
   parsers.conf: |
