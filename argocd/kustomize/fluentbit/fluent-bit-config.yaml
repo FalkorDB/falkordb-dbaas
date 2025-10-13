@@ -5,6 +5,9 @@ metadata:
   namespace: fluent-bit
 data:
   victoria-logs-filter.lua: |
+    # The Lua script is no longer strictly necessary if all you need is to move 'log' to '_msg',
+    # and setting 'level' can be done with record_modifier.
+    # Keeping the file here for reference, but the LUA FILTER is REMOVED below.
     function map_log_to_msg(tag, timestamp, record)
         if record["log"] then
             record["_msg"] = record["log"]
@@ -63,52 +66,60 @@ data:
         Annotations         On
         Buffer_Size         1MB
 
+    # 1. REWRITE TAG: Detects errors in the log content and re-tags the record
     [FILTER]
         Name          rewrite_tag
         Match         kube.*
         # Rule format: KEY REGEX NEW_TAG KEEP
-        # This rule uses a case-insensitive regex on the 'log' field to find common error indicators.
-        # If a match is found, it copies the record and gives it the 'kube.error.*' tag.
         Rule          $log    (?i)error|fail|exception|denied|fatal|critical    kube.error.$TAG    true
         
+    # 2. RECORD MODIFIER: Add 'level=error' to records that were re-tagged
     [FILTER]
-        Name                lua
-        Match               *
-        script              /fluent-bit/config/victoria-logs-filter.lua
-        call                map_log_to_msg
+        Name          record_modifier
+        Match         kube.error.*
+        Record        level error
         
-    # Sends general container logs (everything not tagged as error) to VictoriaLogs
+    # 3. RECORD MODIFIER: Add 'level=info' to all other general Kubernetes logs (non-errors)
+    [FILTER]
+        Name          record_modifier
+        Match         kube.*
+        Match_Exclude kube.error.*
+        Record        level info
+
+    # 4. OUTPUT: Sends INFO container logs to VictoriaLogs
     [OUTPUT]
         Name          loki
         Match         kube.*
-        # Exclude logs explicitly tagged as errors by the filter above
+        # This will match logs with the 'level' field set to 'info'
         Match_Exclude kube.error.*
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
-        # Logs matched here are implicitly NOT errors
-        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=info
+        # Note: The 'level' field is already in the record, 
+        # but we add it to the Labels here for robust log stream indexing.
+        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=$level
         Retry_Limit   3
 
+    # 5. OUTPUT: Sends ERROR container logs to VictoriaLogs
     [OUTPUT]
         Name          loki
         Match         kube.error.*
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
-        # These logs get the explicit level=error label
-        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=error
+        # The 'level' field is in the record and used for stream indexing.
+        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=$level
         Retry_Limit   3
 
     # Sends node system logs to VictoriaLogs with specified labels
-    # NOTE: Node system logs are NOT affected by the content-based error tagging.
+    # Adding a default 'level=syslog' label just to categorize them
     [OUTPUT]
         Name          loki
         Match         node_syslog
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
-        Labels        job=node/syslog,node_name=${HOST_NAME}
+        Labels        job=node/syslog,node_name=${HOST_NAME},level=syslog
         Retry_Limit   3
 
   parsers.conf: |
