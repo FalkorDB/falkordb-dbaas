@@ -30,7 +30,7 @@ data:
         HTTP_Listen   0.0.0.0
         HTTP_Port     2020
 
-    # Collects logs from Kubernetes containers
+    # INPUTS remain the same
     [INPUT]
         Name              tail
         Tag               kube.*
@@ -41,7 +41,6 @@ data:
         Skip_Long_Lines   On
         Path_Key          log_file
 
-    # Collects logs from the node's syslog
     [INPUT]
         Name              tail
         Tag               node_syslog
@@ -51,6 +50,7 @@ data:
         DB                /var/log/flb_syslog.db
         Skip_Long_Lines   On
 
+    # KUBERNETES filter remains the same
     [FILTER]
         Name                kubernetes
         Match               kube.*
@@ -64,57 +64,60 @@ data:
         Annotations         On
         Buffer_Size         1MB
 
-    # 1. REWRITE TAG: Detects errors in the log content and re-tags the record
+    # 1. REWRITE TAG (ERROR): Detects error content and re-tags to kube.error.*
+    # We use 'false' for KEEP to stop the original record from proceeding with the old tag.
+    # The new error record proceeds down the pipeline.
     [FILTER]
         Name          rewrite_tag
         Match         kube.*
         # Rule format: KEY REGEX NEW_TAG KEEP
-        Rule          $log    (?i)error|fail|exception|denied|fatal|critical    kube.error.$TAG    true
+        Rule          $log    (?i)error|fail|exception|denied|fatal|critical    kube.error.$TAG    false
         
-    # 2. RECORD MODIFIER: Add 'level=error' to records that were re-tagged
-    # This specifically targets the new error tag.
+    # 2. REWRITE TAG (INFO): Re-tags all remaining kube.* logs to kube.info.*
+    # This ensures that any log that made it past the error check gets an explicit info tag.
+    [FILTER]
+        Name          rewrite_tag
+        Match         kube.*
+        # Match any remaining kube.* log, give it the new explicit kube.info tag.
+        Rule          $log    .* kube.info.$TAG     false
+        
+    # 3. RECORD MODIFIER: Add 'level=error' field to error records
+    # This filter only matches the new error tag.
     [FILTER]
         Name          record_modifier
         Match         kube.error.*
         Record        level error
         
-    # 3. RECORD MODIFIER: Add 'level=info' to all logs with the original tag
-    # This filter targets the original tag, including the records that were COPIED 
-    # and re-emitted with the error tag. It runs first and sets level=info, 
-    # but the error records will be processed by the error-specific output later.
+    # 4. RECORD MODIFIER: Add 'level=info' field to info records
+    # This filter only matches the new info tag.
     [FILTER]
         Name          record_modifier
-        Match         kube.*
+        Match         kube.info.*
         Record        level info
 
-    # 1. OUTPUT: Sends all logs to VictoriaLogs
-    # We still rely on two separate output blocks to handle the two tags created by the rewrite_tag filter.
-    
-    # OUTPUT for ERROR logs (which have the 'level' field set to 'error')
+    # 1. OUTPUT: Dedicated block for ERROR logs
+    # This block only routes the kube.error.* stream.
     [OUTPUT]
         Name          loki
         Match         kube.error.*
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
-        # The 'level' field is guaranteed to exist by the Record Modifier filter (step 2).
         Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=$level
         Retry_Limit   3
 
-    # OUTPUT for ALL OTHER logs (which have the 'level' field set to 'info')
+    # 2. OUTPUT: Dedicated block for INFO logs
+    # This block only routes the kube.info.* stream.
     [OUTPUT]
         Name          loki
-        Match         kube.*
-        Match_Exclude kube.error.*
+        Match         kube.info.*
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
-        # The 'level' field is guaranteed to exist by the Record Modifier filter (step 3).
         Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=$level
         Retry_Limit   3
 
-
-    # Sends node system logs to VictoriaLogs with specified labels
+    # 3. OUTPUT: Sends node system logs
     [OUTPUT]
         Name          loki
         Match         node_syslog
