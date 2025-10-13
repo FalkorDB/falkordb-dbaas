@@ -5,9 +5,7 @@ metadata:
   namespace: fluent-bit
 data:
   victoria-logs-filter.lua: |
-    # The Lua script is no longer strictly necessary if all you need is to move 'log' to '_msg',
-    # and setting 'level' can be done with record_modifier.
-    # Keeping the file here for reference, but the LUA FILTER is REMOVED below.
+    # The Lua script remains unused, but is kept for reference as it was in the original configuration.
     function map_log_to_msg(tag, timestamp, record)
         if record["log"] then
             record["_msg"] = record["log"]
@@ -66,53 +64,39 @@ data:
         Annotations         On
         Buffer_Size         1MB
 
-    # 1. REWRITE TAG: Detects errors in the log content and re-tags the record
+    # Modify filter to conditionally set the 'level' field
     [FILTER]
-        Name          rewrite_tag
+        Name          modify
         Match         kube.*
-        # Rule format: KEY REGEX NEW_TAG KEEP
-        Rule          $log    (?i)error|fail|exception|denied|fatal|critical    kube.error.$TAG    true
-        
-    # 2. RECORD MODIFIER: Add 'level=error' to records that were re-tagged
-    [FILTER]
-        Name          record_modifier
-        Match         kube.error.*
-        Record        level error
-        
-    # 3. RECORD MODIFIER: Add 'level=info' to all other general Kubernetes logs (non-errors)
-    [FILTER]
-        Name          record_modifier
-        Match         kube.*
-        Match_Exclude kube.error.*
-        Record        level info
+        # 1. First, set the default level to 'info' for all kube logs
+        SET           level info
+        # 2. Then, override 'level' to 'error' if the 'log' field matches the error pattern
+        Condition     Key_Value_Wildcard_Case log *error*
+        SET           level error
+        Condition     Key_Value_Wildcard_Case log *fail*
+        SET           level error
+        Condition     Key_Value_Wildcard_Case log *exception*
+        SET           level error
+        Condition     Key_Value_Wildcard_Case log *denied*
+        SET           level error
+        Condition     Key_Value_Wildcard_Case log *fatal*
+        SET           level error
+        Condition     Key_Value_Wildcard_Case log *critical*
+        SET           level error
 
-    # 4. OUTPUT: Sends INFO container logs to VictoriaLogs
+    # 1. OUTPUT: Sends all container logs to VictoriaLogs
     [OUTPUT]
         Name          loki
         Match         kube.*
-        # This will match logs with the 'level' field set to 'info'
-        Match_Exclude kube.error.*
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
-        # Note: The 'level' field is already in the record, 
-        # but we add it to the Labels here for robust log stream indexing.
+        # The 'level' field is now guaranteed to exist in the record by the modify filter.
+        # We use it here to create separate log streams for quick filtering.
         Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=$level
         Retry_Limit   3
 
-    # 5. OUTPUT: Sends ERROR container logs to VictoriaLogs
-    [OUTPUT]
-        Name          loki
-        Match         kube.error.*
-        Host          alloy.observability.svc.cluster.local
-        Port          3100
-        URI           /loki/api/v1/push
-        # The 'level' field is in the record and used for stream indexing.
-        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=$level
-        Retry_Limit   3
-
-    # Sends node system logs to VictoriaLogs with specified labels
-    # Adding a default 'level=syslog' label just to categorize them
+    # 2. OUTPUT: Sends node system logs to VictoriaLogs
     [OUTPUT]
         Name          loki
         Match         node_syslog
