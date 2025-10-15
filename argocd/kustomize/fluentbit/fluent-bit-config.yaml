@@ -31,6 +31,7 @@ data:
         end
         return 1, timestamp, record
     end
+    
 ---
 apiVersion: v1
 kind: ConfigMap
