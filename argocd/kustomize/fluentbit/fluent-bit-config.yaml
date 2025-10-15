@@ -93,7 +93,7 @@ data:
         Match               kube.*
         script              /fluent-bit/config/victoria-logs-error-label.lua
         call                map_log_to_error_label
-     
+
     [OUTPUT]
         Name          loki
         Match         kube.*
