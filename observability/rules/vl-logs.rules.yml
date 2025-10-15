@@ -17,7 +17,7 @@ spec:
           # Trigger if any pod/namespace combination generates more than 10 error logs per minute.
           expr: |
             level: "error" | 
-            stats by (pod, namespace) count() as error_count | 
+            stats by (pod, namespace, cluster) count() as error_count | 
             filter error_count :> 10
           for: 5m
           labels:
@@ -36,7 +36,7 @@ spec:
           # (equivalent to 2.5 errors/second, indicating a potential crash loop or critical bug).
           expr: |
             level: "error" | 
-            stats by (pod, namespace) count() as error_count | 
+            stats by (pod, namespace, cluster) count() as error_count | 
             filter error_count :> 150
           for: 2m
           labels:
