@@ -6,7 +6,7 @@ metadata:
 spec:
   evaluationInterval: "10s"
   nodeSelector:
-    node_pool: observability
+    node_pool: observability-resources
   ruleSelector:
     matchLabels:
       is_logs: "true"
