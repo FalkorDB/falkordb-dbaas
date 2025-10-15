@@ -12,9 +12,11 @@ spec:
       is_logs: "true"
   datasource:
     url: http://victorialogs-server.observability.svc.cluster.local:9428
-  notifier:
-    selector:
-      namespaceSelector: observability
+  notifiers:
+    - selector:
+        namespaceSelector:
+          matchNames:
+            - observability
   remoteRead:
     url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429
   remoteWrite:

@@ -5,7 +5,6 @@ metadata:
   namespace: fluent-bit
 data:
   victoria-logs-filter.lua: |
-    # The Lua script remains unused, but is kept for reference as it was in the original configuration.
     function map_log_to_msg(tag, timestamp, record)
         if record["log"] then
             record["_msg"] = record["log"]
