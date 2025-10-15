@@ -17,4 +17,4 @@ spec:
   remoteRead:
     url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429
   remoteWrite:
-    url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429/api/v1/write
+    url: http://vmsingle-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:8429
