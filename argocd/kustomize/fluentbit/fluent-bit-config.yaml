@@ -15,8 +15,8 @@ data:
   victoria-logs-error-label.lua: |
     function map_log_to_error_label(tag, timestamp, record)
         local msg = ""
-        if record["log"] ~= nil then
-            msg = string.lower(record["log"])
+        if record["_msg"] ~= nil then
+            msg = string.lower(record["_msg"])
         end
         if string.find(msg, "error") or
            string.find(msg, "critical") or
