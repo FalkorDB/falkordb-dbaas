@@ -10,7 +10,7 @@ spec:
     - name: falkordb.rules.general
       rules:
         - alert: FalkorDBDown
-          expr: redis_up == 0
+          expr: redis_up{container="service"} == 0
           for: 15s
           labels:
             severity: critical

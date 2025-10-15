@@ -79,7 +79,7 @@
           "disableTextWrap": false,
           "editorMode": "builder",
           "exemplar": false,
-          "expr": "redis_instance_info{namespace=\"$namespace\", pod=\"$pod\"}",
+          "expr": "redis_instance_info{namespace=\"$namespace\", pod=\"$pod\", container=\"service\"}",
           "format": "table",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
