@@ -1,0 +1,212 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: slowlog-cleanup-job
+  labels:
+    app: slowlog-cleanup-job
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: slowlog-cleanup-scanner-script
+  namespace: slowlog-cleanup-job
+data:
+  namespace-scanner.sh: |
+    #!/bin/bash
+    set -e
+
+    # Configuration
+    NAMESPACE_PATTERN="${NAMESPACE_PATTERN:-instance-}"
+
+    echo "Starting namespace scan for ${NAMESPACE_PATTERN}* pattern..."
+
+    # Get all namespaces matching the pattern
+    INSTANCE_NAMESPACES=$(kubectl get namespaces -o name | grep "namespace/${NAMESPACE_PATTERN}" | sed 's/namespace\///')
+
+    if [ -z "$INSTANCE_NAMESPACES" ]; then
+      echo "No namespaces found matching '${NAMESPACE_PATTERN}*' pattern"
+      exit 0
+    fi
+
+    echo "Found namespaces: $INSTANCE_NAMESPACES"
+
+    # For each instance namespace, create a job
+    for namespace in $INSTANCE_NAMESPACES; do
+
+      # Get all pods in the namespace
+      PODS=$(kubectl get pods -n $namespace -o json 2>/dev/null || echo '{"items":[]}')
+      
+      if [ "$PODS" = '{"items":[]}' ]; then
+        echo "No pods found in namespace $namespace"
+        continue
+      fi
+      
+      # Filter pods with RUN_NODE=1
+      # The jq filter below selects pods where any container has an environment variable named RUN_NODE set to "1".
+      NODE_PODS=$(echo "$PODS" | jq -r '.items[] | select(
+        ([.spec.containers[]?.env[]? | select(.name == "RUN_NODE" and .value == "1")] | length > 0)
+      ) | .metadata.name' | sort | uniq)
+      
+      if [ -z "$NODE_PODS" ]; then
+        echo "No FalkorDB node pods found in namespace $namespace"
+        continue
+      fi
+
+      echo "Found FalkorDB node pods in $namespace: $NODE_PODS"
+
+      for POD_NAME in $NODE_PODS; do
+        echo "Processing pod: $POD_NAME"
+
+        # Check if TKS is enabled for the pod by checking the TLS=true environment variable
+        TLS=$(echo "$PODS" | jq -r '.items[] | select(.metadata.name == "'"$POD_NAME"'") | .spec.containers[] | select(.name == "service") | .env[]? | select(.name == "TLS") | .value' || echo "false")
+        if [ "$TLS" = "true" ]; then
+          TLS="--tls"
+        else
+          TLS=""
+        fi
+
+        # Check if pod is running
+        POD_STATUS=$(kubectl get pod -n $namespace $POD_NAME -o jsonpath='{.status.phase}')
+        if [ "$POD_STATUS" != "Running" ]; then
+          echo "Pod $POD_NAME is not running (status: $POD_STATUS), skipping..."
+          continue
+        fi
+
+        if [ -z "$PASSWORD" ]; then
+          PASSWORD=$(kubectl exec -n $namespace $POD_NAME -c service -- cat /run/secrets/adminpassword)
+        fi
+
+        # Check pod's role
+        ROLE=$(kubectl exec -n $namespace $POD_NAME -c service -- \
+          redis-cli -a "$PASSWORD" $TLS INFO replication | grep '^role:' | cut -d: -f2 | tr -d '\r')
+        
+        if [ "$ROLE" != "master" ]; then
+          echo "Pod $POD_NAME is not a master (role: $ROLE), skipping..."
+          continue
+        fi
+
+        # Delete telemetry* keys
+        kubectl exec -n $namespace $POD_NAME -c service -- \
+          redis-cli -a "$PASSWORD" $TLS --scan --pattern "telemetry*" \
+          | xargs -r -I {} kubectl exec -n $namespace $POD_NAME -c service -- \
+            redis-cli -a "$PASSWORD" $TLS UNLINK {}
+
+        # Reset GRAPH.SLOWLOG for all keys
+        kubectl exec -n $namespace $POD_NAME -c service -- \
+          redis-cli -a "$PASSWORD" $TLS --scan \
+          | xargs -r -I {} kubectl exec -n $namespace $POD_NAME -c service -- \
+            redis-cli -a "$PASSWORD" $TLS GRAPH.SLOWLOG {} RESET
+
+      done
+
+      # Reset PASSWORD variable for next namespace
+      PASSWORD=""
+
+      echo "Slowlog-cleanup execution process completed for namespace $namespace"
+
+    done
+
+    echo "All slowlog-cleanup jobs created successfully"
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: instance-kubectl-exec-sa
+  namespace: slowlog-cleanup-job
+  labels:
+    app: instance-kubectl-exec
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: slowlog-cleanup-kubectl-exec-role
+  labels:
+    app: slowlog-cleanup-kubectl-exec
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["list", "get"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list", "get"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: slowlog-cleanup-kubectl-exec-binding
+  labels:
+    app: slowlog-cleanup-kubectl-exec
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: slowlog-cleanup-kubectl-exec-role
+subjects:
+  - kind: ServiceAccount
+    name: instance-kubectl-exec-sa
+    namespace: slowlog-cleanup-job
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: slowlog-cleanup-cronjob
+  namespace: slowlog-cleanup-job
+  labels:
+    app: slowlog-cleanup
+spec:
+  # Runs at minute 0 every 6th hour (e.g., 00:00, 06:00, 12:00, 18:00)
+  schedule: "0 */6 * * *"
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 3
+  successfulJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: slowlog-cleanup-scanner
+        spec:
+          serviceAccountName: instance-kubectl-exec-sa
+          restartPolicy: OnFailure
+          containers:
+            - name: namespace-scanner
+              image: bitnamilegacy/kubectl:latest
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+              resources:
+                requests:
+                  memory: "64Mi"
+                  cpu: "50m"
+                limits:
+                  memory: "128Mi"
+                  cpu: "100m"
+              env:
+                - name: NAMESPACE_PATTERN
+                  value: "instance-"
+              volumeMounts:
+                - name: scanner-script
+                  mountPath: /scripts
+              command:
+                - /bin/bash
+                - /scripts/namespace-scanner.sh
+          volumes:
+            - name: scanner-script
+              configMap:
+                name: slowlog-cleanup-scanner-script
+                defaultMode: 0755

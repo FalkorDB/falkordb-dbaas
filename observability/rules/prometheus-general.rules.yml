@@ -5,6 +5,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: kube-prometheus-general.rules
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: kube-prometheus-general.rules

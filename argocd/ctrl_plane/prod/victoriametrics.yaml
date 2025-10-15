@@ -94,6 +94,9 @@ spec:
           spec:
             nodeSelector:
               node_pool: observability-resources
+            ruleSelector:
+              matchLabels:
+                is_logs: "false"
         vmauth:
           enabled: true
           spec:

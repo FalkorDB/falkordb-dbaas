@@ -12,6 +12,23 @@ data:
         end
         return 1, timestamp, record
     end
+  victoria-logs-error-label.lua: |
+    function map_log_to_error_label(tag, timestamp, record)
+        local msg = ""
+        if record["_msg"] ~= nil then
+            msg = string.lower(record["_msg"])
+        end
+        if string.find(msg, "error") or
+           string.find(msg, "critical") or
+           string.find(msg, "fatal") or
+           string.find(msg, "crash") or
+           string.find(msg, "panic") then
+                record["level"] = "error"
+            else
+                record["level"] = "info"
+            end
+        return 1, timestamp, record
+    end
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -29,7 +46,7 @@ data:
         HTTP_Listen   0.0.0.0
         HTTP_Port     2020
 
-    # Collects logs from Kubernetes containers
+    # INPUTS
     [INPUT]
         Name              tail
         Tag               kube.*
@@ -38,11 +55,8 @@ data:
         Mem_Buf_Limit     5MB
         DB                /var/log/flb_kube.db
         Skip_Long_Lines   On
-        # The 'Path_Key' is important for the 'kubernetes' filter to
-        # correctly identify the log source.
         Path_Key          log_file
 
-    # Collects logs from the node's syslog
     [INPUT]
         Name              tail
         Tag               node_syslog
@@ -52,6 +66,7 @@ data:
         DB                /var/log/flb_syslog.db
         Skip_Long_Lines   On
 
+    # KUBERNETES Filter
     [FILTER]
         Name                kubernetes
         Match               kube.*
@@ -70,8 +85,13 @@ data:
         Match               *
         script              /fluent-bit/config/victoria-logs-filter.lua
         call                map_log_to_msg
-        
-    # Sends Kubernetes container logs to VictoriaLogs with the specified labels
+
+    [FILTER]
+        Name                lua
+        Match               kube.*
+        script              /fluent-bit/config/victoria-logs-error-label.lua
+        call                map_log_to_error_label
+
     [OUTPUT]
         Name          loki
         Match         kube.*
@@ -81,14 +101,13 @@ data:
         Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name']
         Retry_Limit   3
 
-    # Sends node system logs to VictoriaLogs with specified labels
     [OUTPUT]
         Name          loki
         Match         node_syslog
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
-        Labels        job=node/syslog,node_name=${HOST_NAME}
+        Labels        job=node/syslog,node_name=${HOST_NAME},level=syslog
         Retry_Limit   3
 
   parsers.conf: |

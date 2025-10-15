@@ -5,6 +5,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: vmoperator
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: vmoperator

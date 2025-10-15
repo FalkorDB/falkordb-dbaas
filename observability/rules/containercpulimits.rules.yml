@@ -5,6 +5,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: k8s.rules.containercpulimits
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: k8s.rules.container_cpu_limits

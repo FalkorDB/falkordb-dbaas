@@ -5,6 +5,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: node-exporter
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: node-exporter.rules

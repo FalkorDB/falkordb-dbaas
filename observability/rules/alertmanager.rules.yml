@@ -5,6 +5,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: alertmanager.rules
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: alertmanager.rules

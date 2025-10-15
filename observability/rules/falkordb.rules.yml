@@ -3,6 +3,8 @@ kind: VMRule
 metadata:
   namespace: observability
   name: falkordb.rules
+  labels:
+    is_logs: "false"
 spec:
   groups:
     - name: falkordb.rules.general

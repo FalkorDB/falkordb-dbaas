@@ -54,6 +54,9 @@ spec:
   instanceSelector:
     matchLabels:
       dashboards: "grafana"
+  plugins:
+    - name: victoriametrics-logs-datasource
+      version: 0.19.2
   configMapRef:
     name: dashboards-k8s-views-falkordb
     key: json
@@ -94,3 +97,4 @@ spec:
     name: dashboards-k8s-views-fluent-bit
     key: json
 ---
+

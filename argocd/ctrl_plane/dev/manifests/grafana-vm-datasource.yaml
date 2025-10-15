@@ -15,6 +15,8 @@ spec:
     jsonData:
       timeInterval: 5s
       tlsSkipVerify: true
+      backend: true
+      alerting: true
     name: VictoriaMetrics
     type: prometheus
     url: http://vmsingle-vm.observability.svc.cluster.local:8429
@@ -38,3 +40,6 @@ spec:
     name: VictoriaLogs
     type: victoriametrics-logs-datasource
     url: http://victorialogs-server.observability.svc.cluster.local:9428
+    jsonData:
+      backend: true
+      alerting: true
