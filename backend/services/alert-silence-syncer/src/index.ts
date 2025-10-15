@@ -34,7 +34,11 @@ async function main() {
     // Create or update ArgoCD Applications for new/active silences
     for (const silence of activeSilences) {
       const clusterMatcher = silence.matchers.find(m => m.name === 'cluster');
-      if (!clusterMatcher && silence.comment?.includes('[all-clusters]')) {
+      if (!clusterMatcher) {
+        if (!silence.comment?.includes('[all-clusters]')) {
+          logger.info({ silence }, 'Silence does not specify a cluster matcher or [all-clusters] comment. Skipping.');
+          continue;
+        }
         logger.info({ silence }, 'Silence applies to all clusters. Creating ArgoCD Applications for all registered clusters.');
         const appSetManifest = generateArgoCDAppSetManifest(alertmanagerSilenceToSilence(silence));
 
