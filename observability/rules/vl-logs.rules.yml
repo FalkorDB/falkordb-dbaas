@@ -26,7 +26,7 @@ spec:
           annotations:
             summary: "WARNING: Sustained Error Rate in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
-              The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
+              [cluster={{ $labels.cluster }}] The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
               has exceeded 10 errors per minute for the last 5 minutes.
               Latest 1-minute count: {{ $value }}.
 
@@ -45,6 +45,6 @@ spec:
           annotations:
             summary: "CRITICAL: Major Error Log Spike in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
-              CRITICAL FAILURE: The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
+              [cluster={{ $labels.cluster }}] CRITICAL FAILURE: The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
               is generating error logs at an extremely high rate (over 150 per minute).
               Latest 1-minute count: {{ $value }}.
