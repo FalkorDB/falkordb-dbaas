@@ -41,6 +41,9 @@ spec:
             - name: fluent-bit-lua-scripts
               mountPath: /fluent-bit/config/victoria-logs-filter.lua
               subPath: victoria-logs-filter.lua
+            - name: fluent-bit-lua-scripts
+              mountPath: /fluent-bit/config/victoria-logs-error-label.lua
+              subPath: victoria-logs-error-label.lua
       # Mount the ConfigMap with the Fluent Bit configuration.
       volumes:
         - name: varlog
