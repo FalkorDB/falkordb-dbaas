@@ -21,7 +21,7 @@ rules:
     resources: ["secrets"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["argoproj.io"]
-    resources: ["applications"]
+    resources: ["applications", "applicationsets"]
     verbs: ["get", "list", "create", "update", "delete"]
 ---
 # RoleBinding to bind the Role to the ServiceAccount

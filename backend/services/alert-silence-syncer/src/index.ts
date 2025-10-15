@@ -1,7 +1,7 @@
 import { SILENCE_APP_NAME } from './constants';
 import logger from './logger';
 import { fetchActiveSilences } from './services/alertmanager';
-import { generateArgoCDAppManifest } from './services/argocd';
+import { generateArgoCDAppManifest, generateArgoCDAppSetManifest } from './services/argocd';
 import { createApplicationIfNotExists, deleteApplication, fetchClusterSecretServer, fetchSilenceApplications } from './services/k8s';
 import { AlertmanagerSilence, Silence } from './types';
 
@@ -35,7 +35,14 @@ async function main() {
     for (const silence of activeSilences) {
       const clusterMatcher = silence.matchers.find(m => m.name === 'cluster');
       if (!clusterMatcher) {
-        logger.info({ silence }, `Silence ID ${silence.id} has no 'cluster' label. Skipping.`);
+        if (!silence.comment?.includes('[all-clusters]')) {
+          logger.info({ silence }, 'Silence does not specify a cluster matcher or [all-clusters] comment. Skipping.');
+          continue;
+        }
+        logger.info({ silence }, 'Silence applies to all clusters. Creating ArgoCD Applications for all registered clusters.');
+        const appSetManifest = generateArgoCDAppSetManifest(alertmanagerSilenceToSilence(silence));
+
+        await createApplicationIfNotExists('applicationsets', appSetManifest);
         continue;
       }
       const clusterServer = await fetchClusterSecretServer(clusterMatcher.value);
@@ -51,7 +58,7 @@ async function main() {
       });
 
 
-      await createApplicationIfNotExists(appManifest);
+      await createApplicationIfNotExists('applications', appManifest);
     }
 
     if (!existingArgoApps.length) {

@@ -290,6 +290,11 @@ spec:
                       regex         = "instance-.+;(.+)"
                       target_label  = "pod"
                     }
+
+                    rule {
+                      source_labels     = ["__meta_kubernetes_pod_container_name"]
+                      target_label      = "container"
+                    }
                   }
 
                   prometheus.scrape "falkordb_pods" {
@@ -326,6 +331,11 @@ spec:
                       source_labels = ["__meta_kubernetes_namespace","__meta_kubernetes_pod_name"]
                       regex         = "instance-.+;(.+)"
                       target_label  = "pod"
+                    }
+                    
+                    rule {
+                      source_labels     = ["__meta_kubernetes_pod_container_name"]
+                      target_label      = "container"
                     }
                   }
 
