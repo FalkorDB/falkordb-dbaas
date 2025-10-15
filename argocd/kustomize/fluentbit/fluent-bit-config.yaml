@@ -13,6 +13,24 @@ data:
         end
         return 1, timestamp, record
     end
+  victoria-logs-error-label.lua: |
+    function map_log_to_error_label(tag, timestamp, record)
+        local msg = ""
+        if record["log"] ~= nil then
+            msg = string.lower(record["log"])
+        end
+        if string.find(msg, "error") or
+           string.find(msg, "critical") or
+           string.find(msg, "fatal") or
+           string.find(msg, "crash") or
+           string.find(msg, "panic") then
+                record["level"] = "error"
+            else
+                record["level"] = "info"
+            end
+        end
+        return 1, timestamp, record
+    end
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -64,67 +82,27 @@ data:
         Annotations         On
         Buffer_Size         1MB
 
-    # 1. REWRITE TAG (ERROR): Tag error logs but KEEP the original record.
-    # The original record continues with the tag 'kube.*', and a copy proceeds with 'kube.error.*'
     [FILTER]
-        Name          rewrite_tag
-        Match         kube.*
-        # Rule format: KEY REGEX NEW_TAG KEEP
-        Rule          $log    (?i)error|fail|exception|denied|fatal|critical    kube.error.$TAG    true
-        
-    # 2. RECORD MODIFIER (ERROR): Set 'level=error' on the error copies
-    # This filter only matches the *new* error tag.
-    [FILTER]
-        Name          record_modifier
-        Match         kube.error.*
-        Record        level error
-        
-    # 3. RECORD MODIFIER (INFO): Set 'level=info' on *all* records with the base tag
-    # This runs for the original 'kube.*' record AND the error copy.
-    # The important part is that the next filter (4) will *override* the 'level' field for errors.
-    [FILTER]
-        Name          record_modifier
-        Match         kube.*
-        Record        level info
+        Name                lua
+        Match               *
+        script              /fluent-bit/config/victoria-logs-filter.lua
+        call                map_log_to_msg
 
-    # 4. RECORD MODIFIER (OVERRIDE ERROR): Re-set 'level=error' on error copies to ensure it wins
-    # This filter runs LAST for records that matched the error tag, guaranteeing 'error' is the final value.
     [FILTER]
-        Name          record_modifier
-        Match         kube.error.*
-        Record        level error
-
-    # 1. OUTPUT: Dedicated block for ERROR logs
-    # This block routes the error copies. The base tag 'kube.*' is excluded to prevent duplication
-    # if the output plugin supported Match_Exclude, but since it doesn't, we rely on the tag match here.
-    [OUTPUT]
-        Name          loki
-        Match         kube.error.*
-        Host          alloy.observability.svc.cluster.local
-        Port          3100
-        URI           /loki/api/v1/push
-        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=$level
-        Retry_Limit   3
-
-    # 2. OUTPUT: Dedicated block for INFO logs
-    # This block routes the original records, excluding those that were *also* tagged as errors.
-    # It must NOT include the error logs, but since we cannot use Match_Exclude, we rely on
-    # the fact that the error logs are ONLY routed by the dedicated error output.
+        Name                lua
+        Match               kube.*
+        script              /fluent-bit/config/victoria-logs-error-label.lua
+        call                map_log_to_error_label
+     
     [OUTPUT]
         Name          loki
         Match         kube.*
-        # WARNING: Because your Loki output doesn't support Match_Exclude, this output will
-        # unfortunately DUPLICATE the error logs, but it will deliver ALL logs.
-        # The ultimate fix requires upgrading Fluent Bit/Loki plugin.
-        # We will filter on the level field to separate info/error in the output.
         Host          alloy.observability.svc.cluster.local
         Port          3100
         URI           /loki/api/v1/push
-        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name'],level=$level
+        Labels        namespace=$kubernetes['namespace_name'],pod=$kubernetes['pod_name'],container=$kubernetes['container_name']
         Retry_Limit   3
 
-
-    # 3. OUTPUT: Sends node system logs
     [OUTPUT]
         Name          loki
         Match         node_syslog
