@@ -202,6 +202,36 @@ resource "google_container_node_pool" "public" {
 
 }
 
+resource "google_gke_backup_backup_plan" "backup_plan" {
+  name     = "ctrl-plane-backup-plan"
+  project  = var.project_id
+  location = var.region
+  cluster  = module.gke.cluster_id
+
+  backup_config {
+    include_volume_data = true
+    include_secrets     = true
+    selected_namespaces {
+      namespaces = [
+        "api",
+        "observability",
+        "argocd",
+        "customer-observability",
+        "crossplane-system",
+        "sealed-secrets",
+      ]
+    }
+  }
+
+  backup_schedule {
+    cron_schedule = "0 1 * * *" # Daily at 1 AM UTC
+  }
+  retention_policy {
+    backup_retain_days      = 3
+    backup_delete_lock_days = 1
+  }
+}
+
 # ArgoCD IP Address
 module "argocd_ip" {
   source  = "terraform-google-modules/address/google"
