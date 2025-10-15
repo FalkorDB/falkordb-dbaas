@@ -206,7 +206,7 @@ resource "google_gke_backup_backup_plan" "backup_plan" {
   name     = "ctrl-plane-backup-plan"
   project  = var.project_id
   location = var.region
-  cluster  = module.gke.name
+  cluster  = module.gke.cluster_id
 
   backup_config {
     include_volume_data = true
