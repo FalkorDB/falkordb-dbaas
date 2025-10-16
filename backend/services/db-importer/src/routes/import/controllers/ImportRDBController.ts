@@ -201,7 +201,7 @@ export class ImportRDBController {
         this._importBucketName,
         payload.fileName,
         'application/octet-stream',
-        60 * 60, // 1 hour
+        60 * 60 * 1000, // 1 hour
       );
     } catch (error) {
       await this.tasksRepository.updateTask({
