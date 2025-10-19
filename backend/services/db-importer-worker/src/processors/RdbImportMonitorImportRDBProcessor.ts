@@ -22,7 +22,7 @@ const processor: Processor<RdbImportMonitorImportRDBProcessorData> = async (job,
   try {
     Value.Assert(RdbImportMonitorImportRDBProcessorDataSchema, job.data);
 
-    const jobStatus = await k8sRepository.getJobStatus(
+    const [jobStatus] = await k8sRepository.getJobStatus(
       job.data.projectId,
       job.data.cloudProvider,
       job.data.clusterId,
@@ -65,7 +65,7 @@ const processor: Processor<RdbImportMonitorImportRDBProcessorData> = async (job,
     logger.error(error, `Error processing job ${job.id}: ${error}`);
     await tasksRepository.updateTask({
       taskId: job.data.taskId,
-      error: error.message ?? error.toString(),
+      errors: [error.message ?? error.toString()],
       status: 'failed',
     });
     throw error;

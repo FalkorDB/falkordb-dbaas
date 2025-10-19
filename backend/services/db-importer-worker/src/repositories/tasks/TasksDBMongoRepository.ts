@@ -38,7 +38,9 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
   async updateTask(task: RDBTaskType) {
     const db = this._client.db(this._db);
     task.updatedAt = new Date().toISOString();
-    await db.collection(this._collection).updateOne({ taskId: task.taskId }, { $set: flatten(task) });
+    // separate `errors` field handling to avoid overwriting
+    const { errors = [], ...rest } = task;
+    await db.collection(this._collection).updateOne({ taskId: task.taskId }, { $set: flatten(rest), $addToSet: { errors: { $each: errors } } });
   }
 
 }

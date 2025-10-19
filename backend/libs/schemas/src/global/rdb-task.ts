@@ -71,7 +71,11 @@ export const ExportRDBTaskSchema = Type.Object({
   createdAt: Type.String(),
   updatedAt: Type.String(),
   status: TaskStatusSchema,
+  /**
+   * @deprecated Use 'errors' field instead
+   */
   error: Type.Optional(Type.String()),
+  errors: Type.Optional(Type.Array(Type.String())),
   payload: RDBExportTaskPayloadSchema,
   output: Type.Optional(RDBExportOutputSchema),
 });
@@ -106,7 +110,11 @@ export const ImportRDBTaskSchema = Type.Object({
   createdAt: Type.String(),
   updatedAt: Type.String(),
   status: TaskStatusSchema,
+  /**
+   * @deprecated Use 'errors' field instead
+   */
   error: Type.Optional(Type.String()),
+  errors: Type.Optional(Type.Array(Type.String())),
   payload: RDBImportTaskPayloadSchema,
   output: Type.Optional(RDBImportOutputSchema),
 });

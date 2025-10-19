@@ -73,9 +73,9 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     };
   }
 
-  async updateTask(task: Partial<TaskDocumentType> & { taskId: string; }): Promise<TaskDocumentType> {
+  async updateTask(task: Partial<TaskDocumentType> & { taskId: string; errors?: string[] }): Promise<TaskDocumentType> {
     this._options.logger.info({ task }, 'Updating task');
-    const { taskId, ...update } = task;
+    const { taskId, errors, ...update } = task;
     const result = await this._client.db(this._db).collection<TaskDocumentType>(this._collection).findOneAndUpdate({
       taskId,
     }, {
@@ -83,6 +83,7 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
         ...update,
         updatedAt: new Date().toISOString(),
       },
+      $addToSet: { errors: { $each: errors || [] } },
     }, { returnDocument: 'after' });
     if (!result) {
       throw new Error(`Task ${taskId} not found`);

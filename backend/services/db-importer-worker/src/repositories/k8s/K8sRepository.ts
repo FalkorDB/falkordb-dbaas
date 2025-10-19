@@ -758,24 +758,41 @@ export class K8sRepository {
     region: string,
     namespace: string,
     jobId: string,
-  ): Promise<'pending' | 'completed' | 'failed'> {
+  ): Promise<['pending' | 'completed' | 'failed', string?]> {
     this._options.logger.info({ clusterId, region, namespace, jobId }, 'Getting job status');
 
     const kubeConfig = await this._getK8sConfig(cloudProvider, clusterId, region, { projectId });
 
     const k8sApi = kubeConfig.makeApiClient(k8s.BatchV1Api);
+    const k8sCoreApi = kubeConfig.makeApiClient(k8s.CoreV1Api);
     const { body } = await k8sApi.readNamespacedJob(`${jobId}`, namespace);
     const { status } = body;
 
     if (status?.failed > 0) {
-      return 'failed';
+      // get logs
+      const pods = await k8sCoreApi.listNamespacedPod(namespace, undefined, undefined, undefined, undefined, `job-name=${body.metadata?.name}`);
+      const logs = await k8sCoreApi.readNamespacedPodLog(
+        pods.body.items?.[0]?.metadata?.name || '',
+        namespace,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        1000,
+      ).catch((e) => {
+        this._options.logger.error(e, 'Error getting job logs');
+        return { body: '' };
+      });
+      return ['failed', logs.body];
     }
 
     if (status?.succeeded > 0) {
-      return 'completed';
+      return ['completed'];
     }
 
-    return 'pending';
+    return ['pending'];
   }
 
   async makeLocalBackup(

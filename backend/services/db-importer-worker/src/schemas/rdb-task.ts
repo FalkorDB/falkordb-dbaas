@@ -80,6 +80,7 @@ export interface IExportRDBTask {
   updatedAt: string;
   status: 'pending' | 'in_progress' | 'completed' | 'failed';
   error?: string;
+  errors?: string[];
   payload: SingleShardRDBExportPayloadType | MultiShardRDBExportPayloadType | RDBImportPayloadType;
   output?: RDBExportOutputType | RDBImportOutputType;
 }
@@ -95,7 +96,11 @@ export const RDBTask: Yup.ObjectSchema<IExportRDBTask> = Yup.object({
     'completed',
     'failed',
   ]).default('pending').required(),
+  /**
+   * @deprecated Use 'errors' field instead
+   */
   error: Yup.string().optional(),
+  errors: Yup.array(Yup.string()).optional(),
   payload: Yup.lazy((_, opt) => {
     switch (opt.parent.type) {
       case TaskTypes.SingleShardRDBExport:

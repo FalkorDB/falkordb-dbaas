@@ -206,7 +206,7 @@ export class ExportRDBController {
       this.tasksRepository.updateTask({
         taskId: task.taskId,
         status: 'failed',
-        error: 'Error submitting task',
+        errors: ['Error submitting task'],
       });
       throw ApiError.internalServerError("Error submitting task", 'TASK_SUBMISSION_ERROR');
     }
