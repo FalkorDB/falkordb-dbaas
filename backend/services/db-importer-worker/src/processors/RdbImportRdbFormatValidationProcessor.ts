@@ -35,7 +35,7 @@ const processor: Processor<RdbImportValidateRDBFormatProcessorData> = async (job
     logger.error(error, `Error processing job ${job.id}: ${error}`);
     await tasksRepository.updateTask({
       taskId: job.data.taskId,
-      error: error.message ?? error.toString(),
+      errors: [error.message ?? error.toString()],
       status: 'failed',
     });
 

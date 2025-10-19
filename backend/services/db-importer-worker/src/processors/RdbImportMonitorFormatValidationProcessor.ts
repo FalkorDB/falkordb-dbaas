@@ -21,7 +21,7 @@ const processor: Processor<RdbImportMonitorFormatValidationProgressProcessorData
   try {
     Value.Assert(RdbImportMonitorFormatValidationProgressProcessorDataSchema, job.data);
 
-    const jobStatus = await k8sRepository.getJobStatus(
+    const [jobStatus, logs] = await k8sRepository.getJobStatus(
       job.data.projectId,
       job.data.cloudProvider,
       job.data.clusterId,
@@ -31,6 +31,9 @@ const processor: Processor<RdbImportMonitorFormatValidationProgressProcessorData
     );
 
     if (jobStatus === 'failed') {
+      if (logs.includes("can't read MAGIC STRING [REDIS]")) {
+        throw new Error("Invalid RDB file format");
+      }
       throw new Error(`K8s Job ${job.data.taskId} failed`);
     }
 
@@ -62,7 +65,7 @@ const processor: Processor<RdbImportMonitorFormatValidationProgressProcessorData
     logger.error(error, `Error processing job ${job.id}: ${error}`);
     await tasksRepository.updateTask({
       taskId: job.data.taskId,
-      error: error.message ?? error.toString(),
+      errors: [error.message ?? error.toString()],
       status: 'failed',
     });
     throw error;

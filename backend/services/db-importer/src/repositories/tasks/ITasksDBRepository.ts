@@ -1,4 +1,4 @@
-import { ExportRDBTaskType, RDBExportTaskPayloadType, RDBImportTaskPayloadType, TaskDocumentType, TaskStatusType, TaskTypesType } from "@falkordb/schemas/global";
+import { RDBExportTaskPayloadType, RDBImportTaskPayloadType, TaskDocumentType, TaskStatusType, TaskTypesType } from "@falkordb/schemas/global";
 
 export abstract class ITasksDBRepository {
 
@@ -22,6 +22,7 @@ export abstract class ITasksDBRepository {
   abstract updateTask(
     task: Partial<TaskDocumentType> & {
       taskId: string;
+      errors?: string[];
     }
   ): Promise<TaskDocumentType>;
 

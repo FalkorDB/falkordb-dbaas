@@ -207,7 +207,7 @@ export class ImportRDBController {
       await this.tasksRepository.updateTask({
         taskId: task.taskId,
         status: 'failed',
-        error: 'Internal error'
+        errors: ['Internal error']
       })
       throw error;
     }

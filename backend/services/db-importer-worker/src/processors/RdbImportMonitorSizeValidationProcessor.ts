@@ -22,7 +22,7 @@ const processor: Processor<RdbImportMonitorSizeValidationProgressProcessorData> 
   try {
     Value.Assert(RdbImportMonitorSizeValidationProgressProcessorDataSchema, job.data);
 
-    const jobStatus = await k8sRepository.getJobStatus(
+    const [jobStatus, logs] = await k8sRepository.getJobStatus(
       job.data.projectId,
       job.data.cloudProvider,
       job.data.clusterId,
@@ -32,6 +32,15 @@ const processor: Processor<RdbImportMonitorSizeValidationProgressProcessorData> 
     );
 
     if (jobStatus === 'failed') {
+      if (logs.includes("'used-mem' auxiliary field not found")) {
+        throw new Error(`RDB size validation failed: 'used-mem' auxiliary field not found in RDB file.`);
+      }
+      if (logs.includes("Unsupported encoding byte")) {
+        throw new Error(`RDB size validation failed: Unsupported encoding byte found in RDB file.`);
+      }
+      if (logs.includes("Invalid data size")) {
+        throw new Error(`RDB size validation failed: Invalid data size for 'used-mem' auxiliary field in RDB file.`);
+      }
       throw new Error(`K8s Job ${job.data.taskId} failed`);
     }
 
@@ -61,7 +70,7 @@ const processor: Processor<RdbImportMonitorSizeValidationProgressProcessorData> 
     logger.error(error, `Error processing job ${job.id}: ${error}`);
     await tasksRepository.updateTask({
       taskId: job.data.taskId,
-      error: error.message ?? error.toString(),
+      errors: [error.message ?? error.toString()],
       status: 'failed',
     });
     throw error;
