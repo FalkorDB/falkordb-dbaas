@@ -32,13 +32,13 @@ const processor: Processor<RdbImportMonitorSizeValidationProgressProcessorData> 
     );
 
     if (jobStatus === 'failed') {
-      if (logs.includes("'used-mem' auxiliary field not found")) {
+      if (logs?.includes("'used-mem' auxiliary field not found")) {
         throw new Error(`RDB size validation failed: 'used-mem' auxiliary field not found in RDB file.`);
       }
-      if (logs.includes("Unsupported encoding byte")) {
+      if (logs?.includes("Unsupported encoding byte")) {
         throw new Error(`RDB size validation failed: Unsupported encoding byte found in RDB file.`);
       }
-      if (logs.includes("Invalid data size")) {
+      if (logs?.includes("Invalid data size")) {
         throw new Error(`RDB size validation failed: Invalid data size for 'used-mem' auxiliary field in RDB file.`);
       }
       throw new Error(`K8s Job ${job.data.taskId} failed`);

@@ -39,7 +39,7 @@ export class TasksDBMongoRepository implements ITasksDBRepository {
     const db = this._client.db(this._db);
     task.updatedAt = new Date().toISOString();
     // separate `errors` field handling to avoid overwriting
-    const { errors, ...rest } = task;
+    const { errors = [], ...rest } = task;
     await db.collection(this._collection).updateOne({ taskId: task.taskId }, { $set: flatten(rest), $addToSet: { errors: { $each: errors } } });
   }
 

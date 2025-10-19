@@ -772,7 +772,7 @@ export class K8sRepository {
       // get logs
       const pods = await k8sCoreApi.listNamespacedPod(namespace, undefined, undefined, undefined, undefined, `job-name=${body.metadata?.name}`);
       const logs = await k8sCoreApi.readNamespacedPodLog(
-        pods.body.items[0].metadata?.name || '',
+        pods.body.items?.[0]?.metadata?.name || '',
         namespace,
         undefined,
         undefined,

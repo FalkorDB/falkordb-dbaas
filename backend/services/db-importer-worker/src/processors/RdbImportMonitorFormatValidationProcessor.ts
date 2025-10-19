@@ -31,7 +31,7 @@ const processor: Processor<RdbImportMonitorFormatValidationProgressProcessorData
     );
 
     if (jobStatus === 'failed') {
-      if (logs.includes("can't read MAGIC STRING [REDIS]")) {
+      if (logs?.includes("can't read MAGIC STRING [REDIS]")) {
         throw new Error("Invalid RDB file format");
       }
       throw new Error(`K8s Job ${job.data.taskId} failed`);
