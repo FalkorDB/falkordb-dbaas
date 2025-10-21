@@ -64,3 +64,14 @@ spec:
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
+        - alert: KubePodFailedScheduling
+          annotations:
+            description: '[cluster={{ $labels.cluster }}] Pod {{ $labels.namespace }}/{{ $labels.pod }} is failing to schedule due to: {{ $labels.reason }}.'
+            runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodnotready
+            summary: Pod is failing to schedule.
+          expr: |-
+            kube_pod_status_reason{job="kube-state-metrics", reason=~"FailedScheduling|Unschedulable"} == 1
+          for: 10m
+          labels:
+            severity: warning
+            cluster: '{{ $labels.cluster }}'
