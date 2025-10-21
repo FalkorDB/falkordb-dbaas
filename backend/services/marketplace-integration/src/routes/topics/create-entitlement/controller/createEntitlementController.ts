@@ -40,6 +40,8 @@ export class CreateEntitlementController {
         return this._handleProEntitlement(params);
       case 'enterprise':
         return this._handleEnterpriseEntitlement(params);
+      case 'enterprise-usage':
+        return this._handleEnterpriseWithUsageEntitlement(params);
       default:
         this._opts.logger.info({
           entitlementId: params.entitlementId,
@@ -306,6 +308,64 @@ export class CreateEntitlementController {
         subscriptionId,
         email: userEmail,
         role: 'reader'
+      });
+    } catch (error) {
+      this._opts.logger.error({ error, entitlementId, marketplaceAccountId, userEmail }, `Failed to invite user: ${error.response?.data ?? error}`);
+    }
+  }
+
+
+  private async _handleEnterpriseWithUsageEntitlement({
+    entitlementId,
+    marketplaceAccountId,
+    productTierId,
+    userEmail,
+  }: {
+    entitlementId: string;
+    marketplaceAccountId: string;
+    productTierId: string;
+    userEmail: string;
+  }): Promise<void> {
+    this._opts.logger.info({
+      entitlementId,
+      productTierId,
+      marketplaceAccountId,
+      userEmail
+    }, 'Handling enterprise usage entitlement');
+
+    let subscriptionId: string;
+    try {
+      await this.omnistrateRepository.createSubscription({
+        productTierId: this.params.omnistrateEnterpriseProductTierId,
+        marketplaceAccountId,
+        entitlementId,
+      }).then((result) => {
+        subscriptionId = result.subscriptionId;
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('User not found')) {
+        throw ApiError.notFound('User not found', 'USER_NOT_FOUND');
+      }
+
+      this._opts.logger.error({ error, entitlementId, marketplaceAccountId, userEmail }, `Failed to create subscription: ${error.response?.data ?? error}`);
+      return;
+    }
+
+    try {
+      await this.commitRepository.verifyEntitlementCreated(marketplaceAccountId, entitlementId);
+    } catch (error) {
+      this._opts.logger.error(
+        { error, entitlementId, marketplaceAccountId, userEmail },
+        `Failed to verify entitlement creation: ${error.response?.data ?? error}`,
+      );
+    }
+
+    try {
+      await this.omnistrateRepository.inviteUserToSubscription({
+        marketplaceAccountId,
+        subscriptionId,
+        email: userEmail,
+        role: 'editor'
       });
     } catch (error) {
       this._opts.logger.error({ error, entitlementId, marketplaceAccountId, userEmail }, `Failed to invite user: ${error.response?.data ?? error}`);
