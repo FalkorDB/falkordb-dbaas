@@ -120,7 +120,8 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
       return false;
     }
     if (error instanceof InvalidRequestException && error.message === "The cluster's authentication mode must be set to one of [API, API_AND_CONFIG_MAP] to perform this operation.") {
-      await addApiAuthMode(client, cluster);
+      const wasAdded = await addApiAuthMode(client, cluster);
+      if (!wasAdded) return false;
       return resolveClusterAccessEntry(client, cluster);
     }
     if (error instanceof InvalidRequestException && error.message.includes(`Cannot AccessConfigUpdate because cluster ${cluster.name} currently has update`)) {
@@ -186,7 +187,7 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
   return true;
 }
 
-async function addApiAuthMode(client: EKSClient, cluster: Cluster): Promise<void> {
+async function addApiAuthMode(client: EKSClient, cluster: Cluster): Promise<boolean> {
   try {
     logger.info(`Requesting API authentication mode for cluster ${cluster.name}`);
     await client.send(new UpdateClusterConfigCommand({
@@ -196,6 +197,10 @@ async function addApiAuthMode(client: EKSClient, cluster: Cluster): Promise<void
       }
     }));
   } catch (error) {
+    if (error instanceof InvalidRequestException && error.message.includes("Cluster is currently not in Active State, so it cannot be updated")) {
+      return false;
+    }
     logger.error(error, `Failed to set API authentication mode for cluster ${cluster.name}`);
+    return false;
   }
 }
