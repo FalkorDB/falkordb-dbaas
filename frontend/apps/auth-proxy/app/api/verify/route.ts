@@ -69,7 +69,7 @@ export const GET = async (req: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const orgId = req.headers.get('X-Org-ID') || new URL(req.headers.get('X-Original-URI') || '').searchParams.get('orgId');
+  const orgId = req.headers.get('X-Org-ID') || new URL(process.env.INTERNAL_GRAFANA_URL + (req.headers.get('X-Original-URI') || '')).searchParams.get('orgId');
   console.log("Verifying userID: %s for orgId: %s - full uri: %s", userID, orgId, req.headers.get('X-Original-URI'));
 
   const cachedUserEmail = Cache.get(userID);
