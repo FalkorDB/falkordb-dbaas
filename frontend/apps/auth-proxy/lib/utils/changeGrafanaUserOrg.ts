@@ -1,27 +1,8 @@
-import { Document, OpenAPIClientAxios } from "openapi-client-axios";
-import grafanaApi from '../openapi/grafana-api.json';
+
 import { Client } from '../types/grafana-api';
 
-export async function changeUserCurrentOrg(userEmail: string, orgID: string) {
+export async function changeUserCurrentOrg(client: Client, userEmail: string, orgID: number) {
   try {
-    let client: Client;
-    try {
-      const api = new OpenAPIClientAxios({
-        definition: grafanaApi as unknown as Document,
-        axiosConfigDefaults: {
-          baseURL: process.env.INTERNAL_GRAFANA_URL,
-          auth: {
-            username: process.env.GRAFANA_SA_USERNAME ?? "",
-            password: process.env.GRAFANA_SA_PASSWORD ?? "",
-          },
-        },
-      });
-      client = await api.init<Client>();
-    } catch (error) {
-      console.error("failed to initialize client", error);
-      throw error;
-    }
-
     let userId: number | undefined;
     try {
       const user = await client.getUserByLoginOrEmail(userEmail);
