@@ -65,6 +65,11 @@ async function getRegionClusters(credentials: AWSCredentials, region: string): P
         name: clusterName,
       }))
 
+      if (!cluster.certificateAuthority.data) {
+        logger.info(`Skipping cluster ${clusterName} in region ${region} due to missing certificate authority`)
+        continue;
+      }
+
       const didResolve = await resolveClusterAccessEntry(client, cluster);
       if (didResolve) {
         clusters.push({

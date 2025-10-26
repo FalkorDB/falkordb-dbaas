@@ -73,7 +73,7 @@ export const GET = async (req: NextRequest) => {
   const orgID = queryParams.get("orgID");
   const cachedUserEmail = Cache.get(userID);
   if (cachedUserEmail) {
-    if (orgID) await changeUserCurrentOrg(userID, orgID);
+    if (orgID) await changeUserCurrentOrg(cachedUserEmail, orgID);
     return NextResponse.json(
       {},
       {
@@ -104,7 +104,7 @@ export const GET = async (req: NextRequest) => {
 
     Cache.put(userID, response.data.email, 1000 * 60 * 60); // cache for 1 hour
 
-    if (orgID) await changeUserCurrentOrg(userID, orgID);
+    if (orgID) await changeUserCurrentOrg(response.data.email, orgID);
     return NextResponse.json(
       {},
       {

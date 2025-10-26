@@ -2,7 +2,7 @@ import { Document, OpenAPIClientAxios } from "openapi-client-axios";
 import grafanaApi from '../openapi/grafana-api.json';
 import { Client } from '../types/grafana-api';
 
-export async function changeUserCurrentOrg(userId: string, orgID: string) {
+export async function changeUserCurrentOrg(userEmail: string, orgID: string) {
   try {
     let client: Client;
     try {
@@ -20,6 +20,19 @@ export async function changeUserCurrentOrg(userId: string, orgID: string) {
     } catch (error) {
       console.error("failed to initialize client", error);
       throw error;
+    }
+
+    let userId: number | undefined;
+    try {
+      const user = await client.getUserByLoginOrEmail(userEmail);
+      userId = user.data.id;
+    } catch (error) {
+      console.error("failed to get user by email", userEmail, error);
+      throw error;
+    }
+
+    if (!userId) {
+      throw new Error("User ID not found for email: " + userEmail);
     }
 
     try {
