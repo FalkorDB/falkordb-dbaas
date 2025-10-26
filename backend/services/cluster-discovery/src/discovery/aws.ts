@@ -65,26 +65,29 @@ async function getRegionClusters(credentials: AWSCredentials, region: string): P
         name: clusterName,
       }))
 
-      clusters.push({
-        name: clusterName,
-        region,
-        cloud: 'aws',
-        endpoint: cluster.endpoint,
-        labels: cluster.tags,
-        secretConfig: {
-          awsAuthConfig: {
-            clusterName: cluster.name,
-            roleARN: process.env.AWS_ROLE_ARN,
-            profile: 'default'
-          },
-          tlsClientConfig: {
-            insecure: false,
-            caData: cluster.certificateAuthority.data,
+      const didResolve = await resolveClusterAccessEntry(client, cluster);
+      if (didResolve) {
+        clusters.push({
+          name: clusterName,
+          region,
+          cloud: 'aws',
+          endpoint: cluster.endpoint,
+          labels: cluster.tags,
+          secretConfig: {
+            awsAuthConfig: {
+              clusterName: cluster.name,
+              roleARN: process.env.AWS_ROLE_ARN,
+              profile: 'default'
+            },
+            tlsClientConfig: {
+              insecure: false,
+              caData: cluster.certificateAuthority.data,
+            }
           }
-        }
-      })
-
-      await resolveClusterAccessEntry(client, cluster);
+        })
+      } else {
+        logger.warn(`Skipping cluster ${clusterName} in region ${region} due to missing access entries`)
+      }
     }
 
     return clusters;
@@ -94,7 +97,7 @@ async function getRegionClusters(credentials: AWSCredentials, region: string): P
   }
 }
 
-async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): Promise<void> {
+async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): Promise<boolean> {
 
   let hasAccessEntries = false;
   try {
@@ -113,6 +116,9 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
       )
     ).some(a => !!a)
   } catch (error) {
+    if (error instanceof InvalidRequestException && error.message.includes("Cluster is currently not in Active State, so it cannot be updated")) {
+      return false;
+    }
     if (error instanceof InvalidRequestException && error.message === "The cluster's authentication mode must be set to one of [API, API_AND_CONFIG_MAP] to perform this operation.") {
       await addApiAuthMode(client, cluster);
       return resolveClusterAccessEntry(client, cluster);
@@ -124,7 +130,7 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
       return resolveClusterAccessEntry(client, cluster);
     }
     logger.error(error, "Failed to get access entries for cluster " + cluster.name)
-    return;
+    return false;
   }
 
   if (!hasAccessEntries) {
@@ -137,7 +143,7 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
       }))
     } catch (error) {
       logger.error(error, "Failed to create access entries for cluster " + cluster.name)
-      return;
+      return false;
     }
 
     try {
@@ -149,7 +155,7 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
       }))
     } catch (error) {
       logger.error(error, "Failed to create access policy for cluster " + cluster.name)
-      return;
+      return false;
     }
 
     if (process.env.AWS_SSO_ROLE_ARN) {
@@ -161,7 +167,7 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
         }))
       } catch (error) {
         logger.error(error, "Failed to create access entries for cluster " + cluster.name)
-        return;
+        return false;
       }
 
       try {
@@ -173,10 +179,11 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
         }))
       } catch (error) {
         logger.error(error, "Failed to create access policy for cluster " + cluster.name)
-        return;
+        return false;
       }
     }
   }
+  return true;
 }
 
 async function addApiAuthMode(client: EKSClient, cluster: Cluster): Promise<void> {
