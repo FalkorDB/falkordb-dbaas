@@ -69,11 +69,11 @@ export const GET = async (req: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const queryParams = new URL(req.url).searchParams;
-  const orgID = queryParams.get("orgID");
+  const orgId = req.nextUrl.searchParams.get('orgId');
+
   const cachedUserEmail = Cache.get(userID);
   if (cachedUserEmail) {
-    if (orgID) await changeUserCurrentOrg(cachedUserEmail, orgID);
+    if (orgId) await changeUserCurrentOrg(cachedUserEmail, orgId);
     return NextResponse.json(
       {},
       {
@@ -104,7 +104,7 @@ export const GET = async (req: NextRequest) => {
 
     Cache.put(userID, response.data.email, 1000 * 60 * 60); // cache for 1 hour
 
-    if (orgID) await changeUserCurrentOrg(response.data.email, orgID);
+    if (orgId) await changeUserCurrentOrg(response.data.email, orgId);
     return NextResponse.json(
       {},
       {
