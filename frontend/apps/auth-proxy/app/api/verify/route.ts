@@ -69,7 +69,8 @@ export const GET = async (req: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const orgId = req.nextUrl.searchParams.get('orgId');
+  const orgId = req.headers.get('X-Org-ID');
+  console.log("Verifying userID: %s for orgId: %s", userID, orgId);
 
   const cachedUserEmail = Cache.get(userID);
   if (cachedUserEmail) {
