@@ -3,13 +3,12 @@ import { decode, verify } from "jsonwebtoken";
 import { AxiosError } from "axios";
 import Cache from 'memory-cache';
 import { axiosClient as axios } from '../../../axios';
+import { changeUserCurrentOrg } from "../../../lib/utils/changeGrafanaUserOrg";
 
 export const GET = async (req: NextRequest) => {
   // get basic auth
   const basicAuth = req.headers.get("Authorization");
-  console.log('has authorization header', !!basicAuth);
   if (basicAuth) {
-    console.log("Got authentication header");
     const [username, password] = Buffer.from(basicAuth.split(" ")[1] ?? "", "base64")
       .toString()
       .split(":");
@@ -70,8 +69,11 @@ export const GET = async (req: NextRequest) => {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const queryParams = new URL(req.url).searchParams;
+  const orgID = queryParams.get("orgID");
   const cachedUserEmail = Cache.get(userID);
   if (cachedUserEmail) {
+    if (orgID) await changeUserCurrentOrg(userID, orgID);
     return NextResponse.json(
       {},
       {
@@ -102,6 +104,7 @@ export const GET = async (req: NextRequest) => {
 
     Cache.put(userID, response.data.email, 1000 * 60 * 60); // cache for 1 hour
 
+    if (orgID) await changeUserCurrentOrg(userID, orgID);
     return NextResponse.json(
       {},
       {
