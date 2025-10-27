@@ -4,6 +4,9 @@ import { AxiosError } from "axios";
 import Cache from 'memory-cache';
 import { axiosClient as axios } from '../../../axios';
 import { changeUserCurrentOrg } from "../../../lib/utils/changeGrafanaUserOrg";
+import OpenAPIClientAxios, { Document } from "openapi-client-axios";
+import { Client } from "../../../lib/types/grafana-api";
+import grafanaApi from '../../../lib/openapi/grafana-api.json';
 
 export const GET = async (req: NextRequest) => {
   // get basic auth
@@ -72,9 +75,37 @@ export const GET = async (req: NextRequest) => {
   const orgId = req.headers.get('X-Org-ID') || new URL(process.env.INTERNAL_GRAFANA_URL + (req.headers.get('X-Original-URI') || '')).searchParams.get('orgId');
   console.log("Verifying userID: %s for orgId: %s - full uri: %s", userID, orgId, req.headers.get('X-Original-URI'));
 
+  let client: Client | undefined = undefined;
+  try {
+    const api = new OpenAPIClientAxios({
+      definition: grafanaApi as unknown as Document,
+      axiosConfigDefaults: {
+        baseURL: process.env.INTERNAL_GRAFANA_URL,
+        auth: {
+          username: process.env.GRAFANA_SA_USERNAME ?? "",
+          password: process.env.GRAFANA_SA_PASSWORD ?? "",
+        },
+      },
+    });
+    client = await api.init<Client>();
+  } catch (error) {
+    console.error("failed to initialize client", error);
+  }
+
+
+  let grafanaOrgId: number | undefined = undefined;
+  if (client && orgId) {
+    grafanaOrgId = await client.getOrgByName({
+      org_name: orgId,
+    }).then(res => res.data.id).catch(err => {
+      console.error("failed to get org by name", err);
+      return undefined;
+    });
+  }
+
   const cachedUserEmail = Cache.get(userID);
   if (cachedUserEmail) {
-    if (orgId) await changeUserCurrentOrg(cachedUserEmail, orgId);
+    if (client && grafanaOrgId) await changeUserCurrentOrg(client, cachedUserEmail, grafanaOrgId);
     return NextResponse.json(
       {},
       {
@@ -105,7 +136,7 @@ export const GET = async (req: NextRequest) => {
 
     Cache.put(userID, response.data.email, 1000 * 60 * 60); // cache for 1 hour
 
-    if (orgId) await changeUserCurrentOrg(response.data.email, orgId);
+    if (client && grafanaOrgId) await changeUserCurrentOrg(client, response.data.email, grafanaOrgId);
     return NextResponse.json(
       {},
       {
