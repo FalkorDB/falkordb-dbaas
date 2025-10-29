@@ -16,7 +16,7 @@
     "@falkordb/configs": "workspace:*",
     "@falkordb/errors": "workspace:*",
     "@falkordb/schemas": "workspace:^",
-    "axios": "^1.6.7",
+    "axios": "^1.12.0",
     "fastify-axios": "^1.2.8",
     "fastify-plugin": "^4.5.1"
   }
