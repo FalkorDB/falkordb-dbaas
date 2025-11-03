@@ -41,6 +41,7 @@ export class CreateEntitlementController {
       case 'enterprise':
         return this._handleEnterpriseEntitlement(params);
       case 'enterprise-usage':
+      case 'enterprise-usage-commitment':
         return this._handleEnterpriseWithUsageEntitlement(params);
       default:
         this._opts.logger.info({
