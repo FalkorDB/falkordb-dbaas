@@ -18,6 +18,8 @@ spec:
           annotations:
             summary: FalkorDB down (instance {{ $labels.namespace }})
             description: "[cluster={{ $labels.cluster }}] FalkorDB instance is down\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 | date "2006-01-02T15:04:05Z" }}%22,%22to%22:%22now%22}}
+            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 | date "2006-01-02T15:04:05Z" }}%22,%22to%22:%22now%22}}
         
         - alert: FalkorDBSentinelMasterDisagreement
           expr: count(count_values("master_address", redis_sentinel_master_status[1m]) by (namespace)) by (namespace) > 1
@@ -28,7 +30,7 @@ spec:
           annotations:
             summary: "Sentinel master disagreement in {{ $labels.namespace }}"
             description: "[cluster={{ $labels.cluster }}] Sentinels in '{{ $labels.namespace }}' report multiple master_address values — they do not agree on the master.\n VALUE = {{ $value }}\n LABELS = {{ $labels }}"
-            runbook_url: "https://github.com/FalkorDB/runbooks/blob/main/alerts/SentinelSplitBrainAlertsRunbook.md"
+            runbook_url: "https://FalkorDB.github.io/runbooks/alerts/sentinelsplitbrainalertsrunbook"
             
         - alert: FalkorDBMissingMaster
           expr: absent(redis_instance_info) == 0 and count(redis_instance_info{role="master"}) by (namespace) < 1
@@ -133,7 +135,9 @@ spec:
           annotations:
             summary: "FalkorDB AOF file size exceeded the 512MB threshold in namespace {{ $labels.namespace }}"
             description: "[cluster={{ $labels.cluster }}] The AOF file size for FalkorDB in namespace {{ $labels.namespace }} has exceeded 512MB. Current size: {{ $value | humanize1024 }}"
-            runbook_url: "https://github.com/FalkorDB/runbooks/blob/main/alerts/FalkorDBAOFFileSizeExceededCriticalRunbook.md"
+            runbook_url: "https://FalkorDB.github.io/runbooks/alerts/falkordbaoffilesizeexceededcriticalrunbook"
+            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%20AND%20container:%5C%22service%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 | date "2006-01-02T15:04:05Z" }}%22,%22to%22:%22now%22}}
+            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%20AND%20container:%5C%22service%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 | date "2006-01-02T15:04:05Z" }}%22,%22to%22:%22now%22}}
 
         - alert: FalkorDBAOFPendingRewriteWarning
           expr: |
@@ -157,7 +161,9 @@ spec:
           annotations:
             summary: "AOF pending rewrite is critically delayed (namespace {{ $labels.namespace }})"
             description: "[cluster={{ $labels.cluster }}] AOF pending rewrite has been pending for more than 20 minutes on namespace {{ $labels.namespace }}. This is a critical issue that could impact data durability."
-            runbook_url: "https://github.com/FalkorDB/runbooks/blob/main/alerts/FalkorDBAOFPendingRewriteCriticalRunbook.md"
+            runbook_url: "https://FalkorDB.github.io/runbooks/alerts/falkordbaofpendingrewritecriticalrunbook"
+            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 | date "2006-01-02T15:04:05Z" }}%22,%22to%22:%22now%22}}
+            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 | date "2006-01-02T15:04:05Z" }}%22,%22to%22:%22now%22}}
     - name: falkordb.rules.standalone
       rules: []
 
@@ -172,6 +178,8 @@ spec:
           annotations:
             summary: FalkorDB replication broken (instance {{ $labels.namespace }})
             description: "[cluster={{ $labels.cluster }}] FalkorDB instance lost a slave\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%20AND%20container:%5C%22service%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 | date "2006-01-02T15:04:05Z" }}%22,%22to%22:%22now%22}}
+            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%20AND%20container:%5C%22service%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 | date "2006-01-02T15:04:05Z" }}%22,%22to%22:%22now%22}}
 
     - name: falkordb.rules.cluster
       rules:

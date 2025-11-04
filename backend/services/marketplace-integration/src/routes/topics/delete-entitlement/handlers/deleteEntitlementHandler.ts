@@ -26,6 +26,7 @@ export const deleteEntitlementHandler: RouteHandlerMethod<undefined, undefined, 
       break;
     case 'enterprise':
     case 'enterprise-usage':
+    case 'enterprise-usage-commitment':
       productTierMapped = request.server.config.OMNISTRATE_ENTERPRISE_PRODUCT_TIER_ID;
       break;
     default:
