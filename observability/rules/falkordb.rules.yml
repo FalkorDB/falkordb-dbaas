@@ -162,6 +162,8 @@ spec:
             summary: "AOF pending rewrite is critically delayed (namespace {{ $labels.namespace }})"
             description: "[cluster={{ $labels.cluster }}] AOF pending rewrite has been pending for more than 20 minutes on namespace {{ $labels.namespace }}. This is a critical issue that could impact data durability."
             runbook_url: "https://FalkorDB.github.io/runbooks/alerts/falkordbaofpendingrewritecriticalrunbook"
+            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 | date "2006-01-02T15:04:05Z" }}%22,%22to%22:%22now%22}}
+            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 | date "2006-01-02T15:04:05Z" }}%22,%22to%22:%22now%22}}
     - name: falkordb.rules.standalone
       rules: []
 
