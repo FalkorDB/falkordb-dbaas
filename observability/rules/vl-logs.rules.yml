@@ -59,7 +59,7 @@ spec:
           expr: |
             ~"Failed to resolve hostname .+f2e0a955bb84.cloud.+" and ~namespace: 'instance-.*' | 
             stats by (pod, namespace, cluster) count() as failure_count | 
-            filter failure_count :> 0
+            filter failure_count :> 10
           for: 2m
           labels:
             severity: critical
