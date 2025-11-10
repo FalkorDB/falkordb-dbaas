@@ -51,7 +51,7 @@ spec:
           annotations:
             summary: "Even number of sentinels in {{ $labels.namespace }}"
             description: "[cluster={{ $labels.cluster }}] FalkorDB deployment in '{{ $labels.namespace }}' has an even number of sentinels ({{ $value }}). This can lead to split-brain scenarios. Use an odd number of sentinels.\n VALUE = {{ $value }}\n LABELS = {{ $labels }}"
-            
+
         - alert: FalkorDBMissingMaster
           expr: absent(redis_instance_info) == 0 and count(redis_instance_info{role="master"}) by (namespace) < 1
           for: 5m
