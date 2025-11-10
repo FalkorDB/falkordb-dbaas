@@ -31,6 +31,26 @@ spec:
             summary: "Sentinel master disagreement in {{ $labels.namespace }}"
             description: "[cluster={{ $labels.cluster }}] Sentinels in '{{ $labels.namespace }}' report multiple master_address values — they do not agree on the master.\n VALUE = {{ $value }}\n LABELS = {{ $labels }}"
             runbook_url: "https://FalkorDB.github.io/runbooks/alerts/sentinelsplitbrainalertsrunbook"
+
+        - alert: FalkorDBInsufficientSentinels
+          expr: redis_sentinel_master_sentinels < 3
+          for: 5m
+          labels:
+            severity: warning
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: "Insufficient sentinels in {{ $labels.namespace }}"
+            description: "[cluster={{ $labels.cluster }}] FalkorDB deployment in '{{ $labels.namespace }}' has less than 3 sentinels (current: {{ $value }}). A minimum of 3 sentinels is required for proper high availability.\n VALUE = {{ $value }}\n LABELS = {{ $labels }}"
+
+        - alert: FalkorDBEvenNumberOfSentinels
+          expr: redis_sentinel_master_sentinels % 2 == 0 and redis_sentinel_master_sentinels > 0
+          for: 5m
+          labels:
+            severity: warning
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: "Even number of sentinels in {{ $labels.namespace }}"
+            description: "[cluster={{ $labels.cluster }}] FalkorDB deployment in '{{ $labels.namespace }}' has an even number of sentinels ({{ $value }}). This can lead to split-brain scenarios. Use an odd number of sentinels.\n VALUE = {{ $value }}\n LABELS = {{ $labels }}"
             
         - alert: FalkorDBMissingMaster
           expr: absent(redis_instance_info) == 0 and count(redis_instance_info{role="master"}) by (namespace) < 1
