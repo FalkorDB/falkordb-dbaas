@@ -33,7 +33,7 @@ spec:
             runbook_url: "https://FalkorDB.github.io/runbooks/alerts/sentinelsplitbrainalertsrunbook"
 
         - alert: FalkorDBInsufficientSentinels
-          expr: redis_sentinel_master_sentinels < 3
+          expr: min(redis_sentinel_master_sentinels) by (namespace) < 3
           for: 5m
           labels:
             severity: warning
