@@ -43,7 +43,7 @@ spec:
             description: "[cluster={{ $labels.cluster }}] FalkorDB deployment in '{{ $labels.namespace }}' has less than 3 sentinels (current: {{ $value }}). A minimum of 3 sentinels is required for proper high availability.\n VALUE = {{ $value }}\n LABELS = {{ $labels }}"
 
         - alert: FalkorDBEvenNumberOfSentinels
-          expr: redis_sentinel_master_sentinels % 2 == 0 and redis_sentinel_master_sentinels >= 4
+          expr: max(redis_sentinel_master_sentinels) by (namespace) % 2 == 0 and max(redis_sentinel_master_sentinels) by (namespace) >= 4
           for: 5m
           labels:
             severity: warning
