@@ -35,3 +35,6 @@ configMapGenerator:
 
   - name: dashboards-k8s-views-vmauth
     files: [json=./dashboards/vmauth.json]
+
+  - name: dashboards-k8s-views-fluent-bit
+    files: [json=./dashboards/fluent-bit.json]
