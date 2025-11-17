@@ -52,6 +52,16 @@ spec:
             summary: "Even number of sentinels in {{ $labels.namespace }}"
             description: "[cluster={{ $labels.cluster }}] FalkorDB deployment in '{{ $labels.namespace }}' has an even number of sentinels ({{ $value }}). This can lead to split-brain scenarios. Use an odd number of sentinels.\n VALUE = {{ $value }}\n LABELS = {{ $labels }}"
 
+        - alert: FalkorDBSentinelDownAfterMillisecondsTooLow
+          expr: min(redis_sentinel_master_setting_down_after_milliseconds) by (namespace) < 30000
+          for: 5m
+          labels:
+            severity: warning
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: "Sentinel down-after-milliseconds setting too low in {{ $labels.namespace }}"
+            description: "[cluster={{ $labels.cluster }}] Redis Sentinel's down-after-milliseconds setting in '{{ $labels.namespace }}' is configured below 30 seconds (current: {{ $value }}ms). This may cause premature failover decisions. Consider increasing this value to at least 30000ms.\n VALUE = {{ $value }}\n LABELS = {{ $labels }}"
+
         - alert: FalkorDBMissingMaster
           expr: absent(redis_instance_info) == 0 and count(redis_instance_info{role="master"}) by (namespace) < 1
           for: 5m
