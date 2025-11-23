@@ -73,3 +73,22 @@ spec:
               Failure count in last 2 minutes: {{ $value }}.
             view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%20AND%20container:%5C%22service%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 }}%22,%22to%22:%22now%22}} 
             view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%20AND%20container:%5C%22service%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 }}%22,%22to%22:%22now%22}} 
+
+        - alert: RedisCrashed
+          # LogsQL: Detect Redis crash by signal
+          # Triggers when Redis crashes with a signal, which indicates a critical failure
+          expr: |
+            ~"Redis .+ crashed by signal" | 
+            stats by (pod, namespace, cluster) count() as crash_count
+          for: 0m
+          labels:
+            severity: critical
+            cluster: "{{ $labels.cluster }}"
+          annotations:
+            summary: "CRITICAL: Redis crashed in {{ $labels.pod }} ({{ $labels.namespace }})"
+            description: |
+              [cluster={{ $labels.cluster }}] Redis in pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
+              has crashed due to a signal. This is a critical failure requiring immediate attention.
+              Crash count: {{ $value }}.
+            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%20AND%20container:%5C%22service%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 }}%22,%22to%22:%22now%22}} 
+            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%20AND%20container:%5C%22service%5C%22%22}],%22range%22:{%22from%22:%22{{ (index .Alerts 0).StartsAt.Add -300000000000 }}%22,%22to%22:%22now%22}} 
