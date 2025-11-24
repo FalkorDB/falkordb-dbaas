@@ -1,0 +1,58 @@
+---
+apiVersion: alertreaction.io/v1alpha1
+kind: RedisCrashed
+metadata:
+  name: falkordb-out-of-memory-alert-critical
+  namespace: observability
+spec:
+  alertName: RedisCrashed
+  actions:
+  - name: call-n8n-redis-crash-webhook
+    image: dudizimber/karo-reactions-webhook-sender:v0.2.0
+    command: ["./gcp-workflows"]
+    serviceAccount: alert-reaction-actions-sa
+    env:
+    - name: WEBHOOK_URL
+      valueFrom:
+        secretKeyRef:
+          name: falkordb-out-of-memory-alert-critical-config-env
+          key: url
+    - name: TIMEOUT_SECONDS
+      value: "30"
+    - name: AUTH_HEADER
+      valueFrom:
+        secretKeyRef:
+          name: falkordb-out-of-memory-alert-critical-config-env
+          key: auth-header
+    - name: ALERT_JSON
+      valueFrom:
+        alertRef:
+          fieldPath: "."
+    - name: ALERT_NAME
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.alertname"
+    - name: ALERT_STATUS
+      valueFrom:
+        alertRef:
+          fieldPath: "status"
+    - name: ALERT_SEVERITY
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.severity"
+    - name: INSTANCE
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.instance"
+    - name: NAMESPACE
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.namespace"
+    - name: ALERT_SUMMARY
+      valueFrom:
+        alertRef:
+          fieldPath: "annotations.summary"
+    - name: ALERT_DESCRIPTION
+      valueFrom:
+        alertRef:
+          fieldPath: "annotations.description"
