@@ -9,7 +9,6 @@ spec:
   actions:
   - name: call-n8n-redis-crash-webhook
     image: dudizimber/karo-reactions-webhook-sender:v0.2.0
-    command: ["./gcp-workflows"]
     serviceAccount: alert-reaction-actions-sa
     env:
     - name: WEBHOOK_URL
