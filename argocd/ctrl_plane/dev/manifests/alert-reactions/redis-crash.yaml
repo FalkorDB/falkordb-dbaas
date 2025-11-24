@@ -2,7 +2,7 @@
 apiVersion: alertreaction.io/v1alpha1
 kind: RedisCrashed
 metadata:
-  name: falkordb-out-of-memory-alert-critical
+  name: redis-crash-alert
   namespace: observability
 spec:
   alertName: RedisCrashed
@@ -15,14 +15,14 @@ spec:
     - name: WEBHOOK_URL
       valueFrom:
         secretKeyRef:
-          name: falkordb-out-of-memory-alert-critical-config-env
+          name: redis-crash-alert-env
           key: url
     - name: TIMEOUT_SECONDS
       value: "30"
     - name: AUTH_HEADER
       valueFrom:
         secretKeyRef:
-          name: falkordb-out-of-memory-alert-critical-config-env
+          name: redis-crash-alert-env
           key: auth-header
     - name: ALERT_JSON
       valueFrom:
