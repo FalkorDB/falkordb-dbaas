@@ -28,27 +28,3 @@ spec:
       valueFrom:
         alertRef:
           fieldPath: "."
-    - name: ALERT_NAME
-      valueFrom:
-        alertRef:
-          fieldPath: "labels.alertname"
-    - name: ALERT_STATUS
-      valueFrom:
-        alertRef:
-          fieldPath: "status"
-    - name: ALERT_SEVERITY
-      valueFrom:
-        alertRef:
-          fieldPath: "labels.severity"
-    - name: INSTANCE
-      valueFrom:
-        alertRef:
-          fieldPath: "labels.instance"
-    - name: ALERT_SUMMARY
-      valueFrom:
-        alertRef:
-          fieldPath: "annotations.summary"
-    - name: ALERT_DESCRIPTION
-      valueFrom:
-        alertRef:
-          fieldPath: "annotations.description"
