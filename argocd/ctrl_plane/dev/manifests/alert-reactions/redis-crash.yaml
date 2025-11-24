@@ -44,10 +44,6 @@ spec:
       valueFrom:
         alertRef:
           fieldPath: "labels.instance"
-    - name: NAMESPACE
-      valueFrom:
-        alertRef:
-          fieldPath: "labels.namespace"
     - name: ALERT_SUMMARY
       valueFrom:
         alertRef:
