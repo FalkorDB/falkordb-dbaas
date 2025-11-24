@@ -1,6 +1,6 @@
 ---
 apiVersion: alertreaction.io/v1alpha1
-kind: RedisCrashed
+kind: AlertReaction
 metadata:
   name: redis-crash-alert
   namespace: observability
