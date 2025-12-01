@@ -57,7 +57,7 @@ configs:
             - profile
             - https://www.googleapis.com/auth/admin.directory.group.readonly
             - https://www.googleapis.com/auth/admin.directory.user.readonly
-        type: oidc
+        type: google
         id: google
         name: Google
   rbac:
