@@ -65,9 +65,7 @@ configs:
     policy.default: role:readonly
     policy.csv: |
       g, devops@falkordb.com, role:admin
-    scopes:
-      - groups
-      - email
+    scopes: "[groups, email]"
 
 dex:
   volumeMounts:
