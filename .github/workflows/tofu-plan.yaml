@@ -117,7 +117,7 @@ jobs:
           tofu show -json tfplan > tfplan.json
 
       - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: tofu-plan-${{ env.ENVIRONMENT }}-${{ matrix.stack.name }}
           path: ${{ matrix.stack.path }}/tfplan
