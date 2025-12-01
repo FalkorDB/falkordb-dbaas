@@ -46,6 +46,10 @@ configs:
           clientSecret: $dex.google.clientSecret
           serviceAccountFilePath: /tmp/oidc/googleAuth.json
           adminEmail: $dex.google.adminEmail
+          domainToAdminEmail: 
+            falkordb.com: $dex.google.adminEmail
+          groups:
+            - devops@falkordb.com
           fetchTransitiveGroupMembership: True
           scopes:
             - openid
