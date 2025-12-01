@@ -47,6 +47,12 @@ configs:
           serviceAccountFilePath: /tmp/oidc/googleAuth.json
           adminEmail: $dex.google.adminEmail
           fetchTransitiveGroupMembership: True
+          scopes:
+            - openid
+            - email
+            - profile
+            - https://www.googleapis.com/auth/admin.directory.group.readonly
+            - https://www.googleapis.com/auth/admin.directory.user.readonly
         type: oidc
         id: google
         name: Google
