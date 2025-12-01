@@ -64,7 +64,7 @@ configs:
     create: true
     policy.default: role:readonly
     policy.csv: |
-      g, devops@falkordb.com, role:org-admin
+      g, devops@falkordb.com, role:admin
     scopes: "[groups, email]"
 
 dex:
