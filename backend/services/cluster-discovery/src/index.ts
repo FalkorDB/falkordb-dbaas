@@ -8,6 +8,7 @@ import { Cluster } from './types'
 import { createObservabilityNodePool } from './nodepool';
 import { createTargetClusterPagerDutySecret } from './pagerDutySecret';
 import { createOrUpdateTargetClusterVMUserSecretJob } from './vmUserSecret';
+import { discoverBYOAClusters } from './discovery/omnistrate';
 
 // Parse environment variables as comma-separated lists
 const WHITELIST_CLUSTERS = process.env.WHITELIST_CLUSTERS?.split(',').map((name) => name.trim().toLowerCase()) || [];
@@ -30,9 +31,13 @@ async function main() {
   //   logger.error(err, 'Error discovering Azure clusters:');
   //   return { clusters: [] };
   // });
+  const { clusters: byoaClusters } = await discoverBYOAClusters().catch((err) => {
+    logger.error(err, 'Error discovering BYOA clusters:');
+    return { clusters: [] };
+  });
 
   // Combine all discovered clusters
-  let discoveredClusters: Cluster[] = [...gcpClusters, ...awsClusters] // ...azureClusters];
+  let discoveredClusters: Cluster[] = [...gcpClusters, ...awsClusters, ...byoaClusters] // ...azureClusters];
 
   // Apply whitelist and blacklist filters
   if (WHITELIST_CLUSTERS.length > 0) {
