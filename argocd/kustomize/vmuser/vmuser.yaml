@@ -9,8 +9,6 @@ spec:
   passwordRef:
     key: password
     name: vmuser
-  headers:
-    - name: 
   targetRefs:
     - crd:
         kind: VMSingle
