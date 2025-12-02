@@ -9,6 +9,8 @@ spec:
   passwordRef:
     key: password
     name: vmuser
+  headers:
+    - name: 
   targetRefs:
     - crd:
         kind: VMSingle
@@ -20,6 +22,9 @@ spec:
         - "/api/v1/query"
         - "/api/v1/query_range"
         - "/vmui.*"
+      query_args:
+        - name: extra_label
+          value: cluster_new=cluster
     - static:
         url: http://victorialogs-server.observability.svc.cluster.local:9428
       paths:
