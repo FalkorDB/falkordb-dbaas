@@ -17,14 +17,15 @@ spec:
       paths:
         - "/api/v1/write"
         - "/prometheus/api/v1/write"
-        - "/api/v1/query"
-        - "/api/v1/query_range"
-        - "/vmui.*"
       query_args:
         - name: extra_label
           values: 
-            - cluster_new=cluster
+            - cluster=cluster
     - static:
         url: http://victorialogs-server.observability.svc.cluster.local:9428
       paths:
         - "/insert/loki/api/v1/push"
+      query_args:
+        - name: extra_label
+          values: 
+            - cluster=cluster
