@@ -22,7 +22,8 @@ spec:
         - "/vmui.*"
       query_args:
         - name: extra_label
-          value: cluster_new=cluster
+          values: 
+            - cluster_new=cluster
     - static:
         url: http://victorialogs-server.observability.svc.cluster.local:9428
       paths:
