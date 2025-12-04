@@ -36,6 +36,7 @@ spec:
             node_pool: observability-resources
         vmsingle:
           spec:
+            port: 8429
             retentionPeriod: 365d
             logFormat: json
             nodeSelector:
@@ -57,7 +58,6 @@ spec:
                   cloud.google.com/load-balancer-type: Internal
               spec:
                 type: LoadBalancer
-                servicePort: 8429
         alertmanager:
           spec:
             nodeSelector:
