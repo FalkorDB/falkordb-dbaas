@@ -26,6 +26,6 @@ spec:
       paths:
         - "/insert/loki/api/v1/push"
       query_args:
-        - name: extra_label
+        - name: extra_fields
           values: 
             - cluster=cluster
