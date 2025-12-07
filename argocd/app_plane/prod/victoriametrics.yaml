@@ -19,7 +19,7 @@ spec:
       source:
         chart: victoria-metrics-k8s-stack
         repoURL: https://victoriametrics.github.io/helm-charts
-        targetRevision: 0.65.0
+        targetRevision: 0.35.1
         helm:
           releaseName: vm
           valuesObject:
@@ -46,7 +46,6 @@ spec:
                 node_pool: observability
             vmsingle:
               spec:
-                port: "8429"
                 resources:
                   requests:
                     memory: "1000Mi"
