@@ -43,7 +43,7 @@ spec:
                   value: 'cluster={{ regexFind "h?c-[A-Za-z0-9]+" .name }}'
                 - op: replace
                   path: /spec/targetRefs/1/query_args/0/values/0
-                  value: 'cluster={{ regexFind "h?c-[A-Za-z0-9]+" .name }}'
+                  value: 'cluster_new={{ regexFind "h?c-[A-Za-z0-9]+" .name }}'
             - target:
                 kind: StringSecret
                 name: vmuser-secret
