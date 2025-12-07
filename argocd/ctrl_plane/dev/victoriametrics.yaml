@@ -8,7 +8,7 @@ spec:
   source:
     chart: victoria-metrics-k8s-stack
     repoURL: https://victoriametrics.github.io/helm-charts
-    targetRevision: 0.35.1
+    targetRevision: 0.65.0
     helm:
       releaseName: vm
       valuesObject:
@@ -36,7 +36,8 @@ spec:
             node_pool: observability-resources
         vmsingle:
           spec:
-            retentionPeriod: 365d
+            port: "8429"
+            retentionPeriod: 180d
             logFormat: json
             nodeSelector:
               node_pool: observability-resources
@@ -50,7 +51,7 @@ spec:
             storage:
               resources:
                 requests:
-                  storage: 200Gi
+                  storage: 300Gi
             serviceSpec:
               metadata:
                 annotations:
