@@ -78,7 +78,7 @@ spec:
           # LogsQL: Detect Redis crash by signal
           # Triggers when Redis crashes with a signal, which indicates a critical failure
           expr: |
-            ~"Redis .+ crashed by signal" and pod:!="vmalert*" | 
+            ~"Redis .+ crashed by signal" and -pod:~"vmalert*" | 
             stats by (pod, namespace, cluster) count() as crash_count    
           for: 0m
           labels:
