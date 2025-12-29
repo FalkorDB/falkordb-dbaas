@@ -1,34 +1,40 @@
-import assert from "assert";
-import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
+import assert from 'assert';
+import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { JwtPayload, decode } from 'jsonwebtoken';
-import logger from "../logger";
-import { Cluster } from "../types";
-
+import logger from '../logger';
+import { Cluster } from '../types';
 
 export const discoverBYOAClusters = async (): Promise<{ clusters: Cluster[] }> => {
   logger.info('Discovering BYOA clusters from Omnistrate...');
 
+  const clusters = await getClusters();
+
+  return { clusters };
+};
+
+async function getClusters(): Promise<Cluster[]> {
   const omnistrateUser = process.env.OMNISTRATE_USER;
   const omnistratePassword = process.env.OMNISTRATE_PASSWORD;
 
   if (!omnistrateUser || !omnistratePassword) {
     logger.warn('Omnistrate credentials are not set. Skipping BYOA cluster discovery.');
-    return { clusters: [] };
+    return [];
   }
 
-  const omnistrateClient = new OmnistrateClient(
-    omnistrateUser,
-    omnistratePassword,
-  );
+  const omnistrateClient = new OmnistrateClient(omnistrateUser, omnistratePassword);
 
-  const deploymentCells = await omnistrateClient.getDeploymentCells('BYOA', 'RUNNING');
+  const deploymentCells = await omnistrateClient.getDeploymentCells(
+    'BYOA',
+    'RUNNING',
+    process.env.OMNISTRATE_AWS_INTERMEDIARY_ACCOUNT_ID,
+  );
 
   const clusters: Cluster[] = [];
 
   for await (const cell of deploymentCells) {
     try {
       const credentials = await omnistrateClient.getDeploymentCellCredentials(cell.id);
-      const clusterName = cell.cloudProvider === "gcp" ? `c-${cell.id.replace(/-/g, '')}` : cell.id;
+      const clusterName = cell.cloudProvider === 'gcp' ? `c-${cell.id.replace(/-/g, '')}` : cell.id;
       clusters.push({
         name: clusterName,
         cloud: cell.cloudProvider,
@@ -43,15 +49,16 @@ export const discoverBYOAClusters = async (): Promise<{ clusters: Cluster[] }> =
           clientKeyData: credentials.clientKeyDataBase64,
           serviceAccountToken: credentials.serviceAccountToken,
         },
+        hostMode: 'byoa',
       });
       logger.info(`Discovered BYOA cluster ${cell.id} in region ${cell.region}`);
     } catch (error) {
       logger.error({ error, cellId: cell.id }, 'Failed to get credentials for BYOA deployment cell');
     }
   }
-
-  return { clusters };
-};
+  logger.info({ clusterCount: clusters.length }, `Found ${clusters.length} BYOA clusters.`);
+  return clusters;
+}
 
 export class OmnistrateClient {
   private static _client: AxiosInstance;
@@ -84,10 +91,7 @@ export class OmnistrateClient {
   ): (config: InternalAxiosRequestConfig) => Promise<InternalAxiosRequestConfig> {
     return async (config: InternalAxiosRequestConfig) => {
       try {
-        if (
-          OmnistrateClient._token &&
-          (decode(OmnistrateClient._token) as JwtPayload).exp * 1000 < Date.now()
-        ) {
+        if (OmnistrateClient._token && (decode(OmnistrateClient._token) as JwtPayload).exp * 1000 < Date.now()) {
           config.headers.Authorization = `Bearer ${OmnistrateClient._token}`;
           return config;
         }
@@ -108,23 +112,37 @@ export class OmnistrateClient {
     return response.data.jwtToken;
   }
 
-  async getDeploymentCells(modelType?: 'CUSTOMER_HOSTED' | 'BYOA', status?: "RUNNING"): Promise<{
-    cloudProvider: 'gcp' | 'aws' | 'azure';
-    region: string;
-    id: string;
-    status: string;
-    modelType: string;
-    customer_email?: string;
-  }[]> {
-    const response = await OmnistrateClient._client.get(`/2022-09-01-00/fleet/host-clusters/service/${this.omnistrateServiceId}/environment/${this.omnistrateEnvironmentId}/host-clusters`);
-    return (response.data.hostClusters?.map((hc: any) => ({
-      cloudProvider: hc.cloudProvider,
-      region: hc.region,
-      id: hc.id,
-      status: hc.status,
-      modelType: hc.modelType,
-      customer_email: hc.customer_email,
-    })) || []).filter((hc: any) => (status ? hc.status === status : true) && (modelType ? hc.modelType === modelType : true));
+  async getDeploymentCells(
+    modelType?: 'CUSTOMER_HOSTED' | 'BYOA',
+    status?: 'RUNNING',
+    intermediaryAccountId?: string,
+  ): Promise<
+    {
+      cloudProvider: 'gcp' | 'aws' | 'azure';
+      region: string;
+      id: string;
+      status: string;
+      modelType: string;
+      customer_email?: string;
+    }[]
+  > {
+    const response = await OmnistrateClient._client.get(`/2022-09-01-00/fleet/host-clusters`);
+    return (
+      response.data.hostClusters?.map((hc: any) => ({
+        cloudProvider: hc.cloudProvider,
+        region: hc.region,
+        id: hc.id,
+        status: hc.status,
+        modelType: hc.modelType,
+        customer_email: hc.customer_email,
+        intermediaryAccountID: hc.intermediaryAccountDetail?.intermediaryAccountID,
+      })) || []
+    ).filter(
+      (hc: any) =>
+        (status ? hc.status === status : true) &&
+        (modelType ? hc.modelType === modelType : true) &&
+        (intermediaryAccountId ? hc?.intermediaryAccountID === intermediaryAccountId : true),
+    );
   }
 
   async getDeploymentCellCredentials(deploymentCellId: string): Promise<{
@@ -138,10 +156,13 @@ export class OmnistrateClient {
   }> {
     const params = {
       role: 'cluster-admin',
-    }
-    const response = await OmnistrateClient._client.get(`/2022-09-01-00/fleet/host-cluster/${deploymentCellId}/kubeconfig`, {
-      params,
-    });
+    };
+    const response = await OmnistrateClient._client.get(
+      `/2022-09-01-00/fleet/host-cluster/${deploymentCellId}/kubeconfig`,
+      {
+        params,
+      },
+    );
     const data = response.data;
     return {
       apiServerEndpoint: data.apiServerEndpoint,
@@ -153,5 +174,4 @@ export class OmnistrateClient {
       userName: data.userName,
     };
   }
-
 }

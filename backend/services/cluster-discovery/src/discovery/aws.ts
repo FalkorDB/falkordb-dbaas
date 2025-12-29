@@ -88,7 +88,8 @@ async function getRegionClusters(credentials: AWSCredentials, region: string): P
               insecure: false,
               caData: cluster.certificateAuthority.data,
             }
-          }
+          },
+          hostMode: 'managed',
         })
       } else {
         logger.warn(`Skipping cluster ${clusterName} in region ${region} due to missing access entries`)
