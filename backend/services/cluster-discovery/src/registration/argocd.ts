@@ -1,6 +1,6 @@
 import { Cluster } from '../types';
 import logger from '../logger';
-import * as k8s from '@kubernetes/client-node'
+import * as k8s from '@kubernetes/client-node';
 import { ARGOCD_NAMESPACE, AWS_CREDENTIALS_SECRET_NAME } from '../constants';
 
 export async function createClusterSecret(cluster: Cluster): Promise<void> {
@@ -26,29 +26,46 @@ export async function updateClusterSecret(secretName: string, cluster: Cluster):
   kubeconfig.loadFromDefault();
 
   const k8sApi = kubeconfig.makeApiClient(k8s.CoreV1Api);
-  const body = makeSecret(cluster)
+  const body = makeSecret(cluster);
   body.metadata.name = secretName;
   try {
-    await k8sApi.patchNamespacedSecret(secretName, ARGOCD_NAMESPACE, body, undefined, undefined, undefined, undefined, undefined, {
-      headers: {
-        'Content-Type': 'application/strategic-merge-patch+json'
-      }
-    });
+    await k8sApi.patchNamespacedSecret(
+      secretName,
+      ARGOCD_NAMESPACE,
+      body,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        headers: {
+          'Content-Type': 'application/strategic-merge-patch+json',
+        },
+      },
+    );
     logger.info({ clusterName: cluster.name }, 'Successfully updated ArgoCD secret for cluster');
   } catch (error) {
     logger.error({ clusterName: cluster.name, error }, 'Failed to update ArgoCD secret for cluster');
   }
 }
 
-export async function listClusterSecrets(): Promise<{ name: string, labels: { [key: string]: string } }[]> {
+export async function listClusterSecrets(): Promise<{ name: string; labels: { [key: string]: string } }[]> {
   const kubeconfig = new k8s.KubeConfig();
   kubeconfig.loadFromDefault();
 
   const k8sApi = kubeconfig.makeApiClient(k8s.CoreV1Api);
 
   try {
-    const secrets = await k8sApi.listNamespacedSecret(ARGOCD_NAMESPACE, undefined, undefined, undefined, undefined, "argocd.argoproj.io/secret-type=cluster");
-    return secrets.body.items.map(s => ({
+    const secrets = await k8sApi.listNamespacedSecret(
+      ARGOCD_NAMESPACE,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'argocd.argoproj.io/secret-type=cluster',
+    );
+    return secrets.body.items.map((s) => ({
       name: s.metadata.name,
       labels: s.metadata.labels || {},
     }));
@@ -77,9 +94,10 @@ export function makeClusterLabels(cluster: Cluster): { [key: string]: string } {
     ...(cluster.labels ?? {}),
     cluster: cluster.name,
     'argocd.argoproj.io/secret-type': 'cluster',
-    'cloud_provider': cluster.cloud,
-    'region': cluster.region,
-    'role': 'app-plane',
+    cloud_provider: cluster.cloud,
+    region: cluster.region,
+    role: 'app-plane',
+    host_mode: cluster.hostMode,
   };
 }
 
@@ -94,13 +112,13 @@ function makeSecret(cluster: Cluster): k8s.V1Secret {
         ...makeClusterLabels(cluster),
       },
       annotations: {
-        "argocd.argoproj.io/secret-type": "cluster"
-      }
+        'argocd.argoproj.io/secret-type': 'cluster',
+      },
     },
     stringData: {
       name: cluster.name,
       server: cluster.endpoint,
-      config: JSON.stringify(cluster.secretConfig)
+      config: JSON.stringify(cluster.secretConfig),
     },
   };
 }
@@ -127,29 +145,38 @@ export async function rotateAWSSecret(credentials: {
       aws_access_key_id = ${credentials.accessKeyId}
       aws_secret_access_key = ${credentials.secretAccessKey}
       aws_session_token = ${credentials.sessionToken}
-        `
-      }
+        `,
+      },
     };
   }
 
-  if (!await k8sApi.readNamespacedSecret(AWS_CREDENTIALS_SECRET_NAME, ARGOCD_NAMESPACE).catch((e) => undefined)) {
+  if (!(await k8sApi.readNamespacedSecret(AWS_CREDENTIALS_SECRET_NAME, ARGOCD_NAMESPACE).catch((e) => undefined))) {
     try {
-      await k8sApi.createNamespacedSecret(ARGOCD_NAMESPACE, makeSecretBody())
-      logger.info('Created aws secret successfully')
+      await k8sApi.createNamespacedSecret(ARGOCD_NAMESPACE, makeSecretBody());
+      logger.info('Created aws secret successfully');
     } catch (error) {
-      logger.error(error, 'Failed to create aws secret')
+      logger.error(error, 'Failed to create aws secret');
     }
   } else {
     try {
-      await k8sApi.patchNamespacedSecret(AWS_CREDENTIALS_SECRET_NAME, ARGOCD_NAMESPACE, makeSecretBody(), undefined, undefined, undefined, undefined, undefined, {
-        headers: {
-          'Content-Type': 'application/strategic-merge-patch+json'
-        }
-      });
-      logger.info('Rotated aws secret successfully')
+      await k8sApi.patchNamespacedSecret(
+        AWS_CREDENTIALS_SECRET_NAME,
+        ARGOCD_NAMESPACE,
+        makeSecretBody(),
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        {
+          headers: {
+            'Content-Type': 'application/strategic-merge-patch+json',
+          },
+        },
+      );
+      logger.info('Rotated aws secret successfully');
     } catch (error) {
-      logger.error(error, 'Failed to rotate aws secret')
+      logger.error(error, 'Failed to rotate aws secret');
     }
   }
-
 }
