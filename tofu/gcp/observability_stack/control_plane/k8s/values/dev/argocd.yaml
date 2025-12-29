@@ -46,15 +46,25 @@ configs:
           clientSecret: $dex.google.clientSecret
           serviceAccountFilePath: /tmp/oidc/googleAuth.json
           adminEmail: $dex.google.adminEmail
+          domainToAdminEmail: 
+            falkordb.com: $dex.google.adminEmail
+          groups:
+            - devops@falkordb.com
           fetchTransitiveGroupMembership: True
-        type: oidc
+          scopes:
+            - openid
+            - email
+            - profile
+            - https://www.googleapis.com/auth/admin.directory.group.readonly
+            - https://www.googleapis.com/auth/admin.directory.user.readonly
+        type: google
         id: google
         name: Google
   rbac:
     create: true
     policy.default: role:readonly
     policy.csv: |
-      g, devops@falkordb.com, role:org-admin
+      g, devops@falkordb.com, role:admin
     scopes: "[groups, email]"
 
 dex:

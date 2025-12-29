@@ -232,7 +232,7 @@ export class K8sRepository {
     const receivedAt = response.split('\n')[2];
 
     if (!receivedAt) {
-      throw new Error('Could not parse last query time');
+      throw new Error('Could not parse last query time for instance ' + instanceId);
     }
 
     return parseInt(receivedAt);
