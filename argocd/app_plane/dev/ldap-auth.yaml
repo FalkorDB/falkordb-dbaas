@@ -27,6 +27,9 @@ spec:
         server: "{{.server}}"
         namespace: ldap-auth
       syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
         syncOptions:
           - CreateNamespace=true
 ---
@@ -73,5 +76,8 @@ spec:
         server: "{{.server}}"
         namespace: ldap-auth
       syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
         syncOptions:
           - CreateNamespace=true
