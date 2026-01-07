@@ -20,6 +20,23 @@ spec:
         - repoURL: https://github.com/FalkorDB/ldap-auth-rs.git
           targetRevision: main
           path: k8s/overlays/dev
+          kustomize:
+            patches:
+              - target:
+                  kind: ServiceMonitor
+                patch: |-
+                  - op: remove
+                    path: /metadata
+              - target:
+                  kind: ConfigMap
+                  name: ldap-auth-config
+                patch: |-
+                  - op: replace
+                    path: /data/LDAP_BASE_DN
+                    value: "dc=falkordb,dc=cloud"
+                  - op: add
+                    path: /data/LDAP_SEARCH_BIND_ORG
+                    value: "admin"
         - repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
           targetRevision: dev
           path: argocd/kustomize/ldap-auth/base
