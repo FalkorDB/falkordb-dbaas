@@ -47,9 +47,11 @@ spec:
             secretKeyRef:
               name: ldap-auth-admin-secret
               key: LDAP_ADMIN_PASSWORD
-        envFrom:
-        - secretRef:
-            name: ldap-auth-secrets
+        - name: LDAP_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: ldap-auth-secrets
+              key: API_BEARER_TOKEN
         securityContext:
           runAsNonRoot: true
           runAsUser: 1000
