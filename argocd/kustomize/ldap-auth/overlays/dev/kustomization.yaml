@@ -24,6 +24,13 @@ patches:
       - op: replace
         path: /data/LDAP_SEARCH_BIND_ORG
         value: "admin"
+  - target:
+      kind: StringSecret
+      name: ldap-auth-secrets
+    patch: |-
+      - op: replace
+        path: /spec/fields/1/encoding
+        value: base64url
 
 patchesStrategicMerge:
   - |-
