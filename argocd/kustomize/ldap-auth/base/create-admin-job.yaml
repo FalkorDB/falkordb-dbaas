@@ -18,7 +18,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: create-admin
-        image: docker.io/falkordb/ldap-auth-rs:v0.2.0
+        image: docker.io/falkordb/ldap-auth-rs:0.2.0
         command:
         - /bin/sh
         - -c
