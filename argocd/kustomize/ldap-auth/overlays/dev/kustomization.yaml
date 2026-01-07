@@ -3,7 +3,6 @@ kind: Kustomization
 namespace: ldap-auth
 
 resources:
-  - https://github.com/FalkorDB/ldap-auth-rs.git/k8s/overlays/dev?ref=main
   - ../../base/
 
 patches:
