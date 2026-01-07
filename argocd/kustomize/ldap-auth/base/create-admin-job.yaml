@@ -24,6 +24,8 @@ spec:
         - -c
         - |
           set -e
+          export LDAP_AUTH_URL="https://ldap-auth-service:8080"
+          export LDAP_AUTH_INSECURE=1
           echo "Waiting for LDAP auth server to be ready..."
           
           # Wait for the server to be healthy
