@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ldap-auth-create-admin
+  namespace: ldap-auth
+  labels:
+    app: ldap-auth
+    component: admin-setup
+spec:
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app: ldap-auth
+        component: admin-setup
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: create-admin
+        image: docker.io/falkordb/ldap-auth-rs:v0.2.0
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "Waiting for LDAP auth server to be ready..."
+          
+          # Wait for the server to be healthy
+          until ldap-auth-cli health; do
+            echo "LDAP auth server not ready yet, retrying in 5 seconds..."
+            sleep 5
+          done
+          
+          echo "LDAP auth server is ready!"
+          echo "Creating admin user..."
+          
+          # Create the admin user
+          ldap-auth-cli user create --org admin --username admin --password "$LDAP_ADMIN_PASSWORD"
+          
+          echo "Admin user created successfully!"
+        env:
+        - name: LDAP_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ldap-auth-admin-secret
+              key: password
+        envFrom:
+        - secretRef:
+            name: ldap-auth-secrets
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL

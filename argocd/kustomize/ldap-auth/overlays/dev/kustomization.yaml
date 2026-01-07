@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: ldap-auth
+
+resources:
+  - https://github.com/FalkorDB/ldap-auth-rs.git/k8s/overlays/dev?ref=main
+  - ../../base/
+
+patches:
+  - target:
+      kind: Deployment
+      name: ldap-auth-rs
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: "docker.io/falkordb/ldap-auth-rs:latest"
