@@ -4,6 +4,7 @@ namespace: ldap-auth
 
 resources:
   - ../../base/
+  - https://github.com/FalkorDB/ldap-auth-rs.git//k8s/overlays/dev
 
 patches:
   - target:
@@ -13,3 +14,21 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/image
         value: "docker.io/falkordb/ldap-auth-rs:latest"
+  - target:
+      kind: ConfigMap
+      name: ldap-auth-config
+    patch: |-
+      - op: replace
+        path: /data/LDAP_BASE_DN
+        value: "dc=falkordb,dc=cloud"
+      - op: replace
+        path: /data/LDAP_SEARCH_BIND_ORG
+        value: "admin"
+
+patchesStrategicMerge:
+  - |-
+    apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: ldap-auth-metrics
+    $patch: delete
