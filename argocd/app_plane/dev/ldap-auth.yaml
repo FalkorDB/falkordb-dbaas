@@ -19,7 +19,7 @@ spec:
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: dev
-        path: argocd/kustomize/ldap-auth/dev
+        path: argocd/kustomize/ldap-auth/overlays/dev
         kustomize:
           patches:
             - target:
