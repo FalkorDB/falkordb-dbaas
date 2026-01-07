@@ -44,7 +44,7 @@ spec:
           valueFrom:
             secretKeyRef:
               name: ldap-auth-admin-secret
-              key: password
+              key: LDAP_ADMIN_PASSWORD
         envFrom:
         - secretRef:
             name: ldap-auth-secrets
