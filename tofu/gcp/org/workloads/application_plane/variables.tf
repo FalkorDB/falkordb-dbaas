@@ -36,3 +36,6 @@ variable "metering_bucket_name" {
 variable "argocd_sa_email" {
   type = string
 }
+variable "customer_ldap_api_sa_email" {
+  type = string
+}

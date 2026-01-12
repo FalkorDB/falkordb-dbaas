@@ -29,3 +29,11 @@ output "argocd_sa_id" {
 output "argocd_sa_email" {
   value = google_service_account.argocd_sa.email
 }
+
+output "customer_ldap_api_sa_id" {
+  value = google_service_account.customer_ldap_api_sa.id
+}
+
+output "customer_ldap_api_sa_email" {
+  value = google_service_account.customer_ldap_api_sa.email
+}

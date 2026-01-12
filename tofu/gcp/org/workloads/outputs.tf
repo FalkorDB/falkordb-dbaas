@@ -41,3 +41,6 @@ output "ctrl_plane_argocd_sa_id" {
 output "ctrl_plane_argocd_sa_email" {
   value = module.control_plane.argocd_sa_email
 }
+output "ctrl_plane_customer_ldap_api_sa_id" {
+  value = module.control_plane.customer_ldap_api_sa_id
+}

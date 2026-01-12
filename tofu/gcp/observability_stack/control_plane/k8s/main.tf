@@ -189,3 +189,20 @@ resource "google_service_account_iam_binding" "argocd_sa_token_creator" {
     "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.argocd.metadata.0.name}/argocd-application-controller]",
   ]
 }
+
+// attach customer-ldap-api sa to workload identity federation
+resource "google_service_account_iam_binding" "customer_ldap_api_sa_iam" {
+  service_account_id = var.customer_ldap_api_sa_id
+  role               = "roles/iam.workloadIdentityUser"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.api.metadata.0.name}/customer-ldap-api-sa]",
+  ]
+}
+
+resource "google_service_account_iam_binding" "customer_ldap_api_sa_token_creator" {
+  service_account_id = var.customer_ldap_api_sa_id
+  role               = "roles/iam.serviceAccountTokenCreator"
+  members = [
+    "serviceAccount:${var.project_id}.svc.id.goog[${kubernetes_namespace.api.metadata.0.name}/customer-ldap-api-sa]",
+  ]
+}

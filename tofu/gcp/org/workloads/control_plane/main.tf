@@ -207,3 +207,9 @@ resource "google_service_account" "argocd_sa" {
   account_id   = "argocd-sa"
   display_name = "ArgoCD SA"
 }
+
+resource "google_service_account" "customer_ldap_api_sa" {
+  project      = var.project_id
+  account_id   = "customer-ldap-api-sa"
+  display_name = "Customer LDAP API SA"
+}
