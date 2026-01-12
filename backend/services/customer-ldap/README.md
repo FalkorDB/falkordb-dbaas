@@ -85,7 +85,6 @@ GET /v1/readiness
   "timestamp": "2026-01-12T08:00:00.000Z"
 }
 ```
-v1/
 #### List Users
 
 ```

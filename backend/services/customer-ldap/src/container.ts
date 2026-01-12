@@ -35,7 +35,7 @@ export const setupGlobalContainer = (fastify: FastifyInstance) => {
 };
 
 export const setupContainer = (req: FastifyRequest) => {
-  diContainer.register({
+  req.diScope.register({
     [IK8sRepository.repositoryName]: asFunction(() => {
       return new K8sRepository({ logger: req.log });
     }).scoped(),

@@ -30,9 +30,7 @@ export const modifyUserHandler: RouteHandlerMethod<
   try {
     // Execute the user operation
     const k8sRepository = request.diScope.resolve<IK8sRepository>(IK8sRepository.repositoryName);
-    const ldapRepository = request.diScope.resolve<ILdapRepository>(
-      ILdapRepository.repositoryName,
-    );
+    const ldapRepository = request.diScope.resolve<ILdapRepository>(ILdapRepository.repositoryName);
     const connectionCache = request.diScope.resolve<IConnectionCacheRepository>(
       IConnectionCacheRepository.repositoryName,
     );
@@ -55,8 +53,6 @@ export const modifyUserHandler: RouteHandlerMethod<
     }
 
     request.log.error({ error }, 'Error modifying user');
-    throw request.server.httpErrors.createError(500, error.message || 'Internal Server Error', {
-      error,
-    });
+    throw request.server.httpErrors.createError(500, 'Internal Server Error');
   }
 };

@@ -49,8 +49,6 @@ export const listUsersHandler: RouteHandlerMethod<
     }
 
     request.log.error({ error }, 'Error listing users');
-    throw request.server.httpErrors.createError(500, error.message || 'Internal Server Error', {
-      error,
-    });
+    throw request.server.httpErrors.createError(500, 'Internal Server Error');
   }
 };

@@ -134,21 +134,21 @@ describe('AuthService', () => {
 
   describe('checkPermission', () => {
     it('should return true when user has root role', () => {
-      expect(service.checkPermission('root', 'reader')).toBe(true);
-      expect(service.checkPermission('root', 'writer')).toBe(true);
+      expect(AuthService.checkPermission('root', 'reader')).toBe(true);
+      expect(AuthService.checkPermission('root', 'writer')).toBe(true);
     });
 
     it('should return true when user has writer role for writer requirement', () => {
-      expect(service.checkPermission('writer', 'writer')).toBe(true);
-      expect(service.checkPermission('writer', 'reader')).toBe(true);
+      expect(AuthService.checkPermission('writer', 'writer')).toBe(true);
+      expect(AuthService.checkPermission('writer', 'reader')).toBe(true);
     });
 
     it('should return false when user has reader role for writer requirement', () => {
-      expect(service.checkPermission('reader', 'writer')).toBe(false);
+      expect(AuthService.checkPermission('reader', 'writer')).toBe(false);
     });
 
     it('should return true when user has reader role for reader requirement', () => {
-      expect(service.checkPermission('reader', 'reader')).toBe(true);
+      expect(AuthService.checkPermission('reader', 'reader')).toBe(true);
     });
   });
 });

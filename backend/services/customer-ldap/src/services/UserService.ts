@@ -1,7 +1,7 @@
 import { FastifyBaseLogger } from 'fastify';
 import { IK8sRepository } from '../repositories/k8s/IK8sRepository';
 import { ILdapRepository, LdapUser, CreateUserRequest, ModifyUserRequest } from '../repositories/ldap/ILdapRepository';
-import { IConnectionCacheRepository } from '../repositories/connection-cache/IConnectionCacheRepository';
+import { IConnectionCacheRepository, CachedConnection } from '../repositories/connection-cache/IConnectionCacheRepository';
 import { LdapService } from './LdapService';
 import * as assert from 'assert';
 import { LDAP_NAMESPACE, LDAP_SERVICE_PORT } from '../constants';
@@ -11,6 +11,9 @@ export interface UserServiceOptions {
 }
 
 export class UserService {
+  // Track in-flight connection creation promises to prevent race conditions
+  private _inFlightConnections: Map<string, Promise<CachedConnection>> = new Map();
+
   constructor(
     private _options: UserServiceOptions,
     private _k8sRepository: IK8sRepository,
@@ -101,6 +104,13 @@ export class UserService {
     k8sClusterName: string,
     region: string,
   ) {
+    // Check if there's an in-flight connection creation for this instance
+    const inFlightPromise = this._inFlightConnections.get(instanceId);
+    if (inFlightPromise) {
+      this._options.logger.info({ instanceId }, 'Awaiting in-flight connection creation');
+      return await inFlightPromise;
+    }
+
     // Check cache first
     const cached = this._connectionCache.getConnection(instanceId);
     if (cached) {
@@ -113,36 +123,82 @@ export class UserService {
       this._options.logger.info({ instanceId }, 'Cached connection unhealthy, creating new connection');
     }
 
-    // Create new connection
+    // Create a promise for the new connection and store it to prevent concurrent creation
+    const connectionPromise = this._createConnection(instanceId, cloudProvider, k8sClusterName, region);
+    this._inFlightConnections.set(instanceId, connectionPromise);
+
+    try {
+      const connection = await connectionPromise;
+      return connection;
+    } finally {
+      // Always remove the in-flight promise, whether successful or not
+      this._inFlightConnections.delete(instanceId);
+    }
+  }
+
+  private async _createConnection(
+    instanceId: string,
+    cloudProvider: 'gcp' | 'aws' | 'azure',
+    k8sClusterName: string,
+    region: string,
+  ): Promise<CachedConnection> {
     this._options.logger.info({ instanceId }, 'Creating new K8s connection');
-    const kubeConfig = await this._k8sRepository.getK8sConfig(cloudProvider, k8sClusterName, region);
-    const podName = await this._ldapRepository.getPodName(kubeConfig, LDAP_NAMESPACE);
-    const portForward = await this._k8sRepository.createPortForward(kubeConfig, LDAP_NAMESPACE, podName, LDAP_SERVICE_PORT);
-    const bearerToken = await this._ldapRepository.getBearerToken(kubeConfig, LDAP_NAMESPACE);
-    const caCert = await this._ldapRepository.getCaCertificate(portForward.localPort);
 
-    // Create LdapService
-    const ldapService = new LdapService(
-      {
-        logger: this._options.logger,
+    let portForward: { localPort: number; close: () => void } | null = null;
+
+    try {
+      const kubeConfig = await this._k8sRepository.getK8sConfig(cloudProvider, k8sClusterName, region);
+      const podName = await this._ldapRepository.getPodName(kubeConfig, LDAP_NAMESPACE);
+      portForward = await this._k8sRepository.createPortForward(kubeConfig, LDAP_NAMESPACE, podName, LDAP_SERVICE_PORT);
+      const bearerToken = await this._ldapRepository.getBearerToken(kubeConfig, LDAP_NAMESPACE);
+      const caCert = await this._ldapRepository.getCaCertificate(portForward.localPort);
+
+      // Create LdapService
+      const ldapService = new LdapService(
+        {
+          logger: this._options.logger,
+          localPort: portForward.localPort,
+          org: instanceId,
+          bearerToken,
+          caCert,
+        },
+        this._ldapRepository,
+      );
+
+      // Cache it
+      const cachedConnection = {
+        ldapService,
+        close: portForward.close,
+        createdAt: new Date(),
+        instanceId,
         localPort: portForward.localPort,
-        org: instanceId,
-        bearerToken,
-        caCert,
-      },
-      this._ldapRepository,
-    );
+      };
+      this._connectionCache.setConnection(instanceId, cachedConnection);
 
-    // Cache it
-    const cachedConnection = {
-      ldapService,
-      close: portForward.close,
-      createdAt: new Date(),
-      instanceId,
-      localPort: portForward.localPort,
-    };
-    this._connectionCache.setConnection(instanceId, cachedConnection);
+      return cachedConnection;
+    } catch (error) {
+      this._options.logger.error(
+        { error, instanceId, cloudProvider, k8sClusterName, region },
+        'Failed to create connection, cleaning up resources',
+      );
 
-    return cachedConnection;
+      // Cleanup: close port forward if it was created
+      if (portForward) {
+        try {
+          portForward.close();
+          this._options.logger.info({ instanceId }, 'Cleaned up port forward after connection failure');
+        } catch (closeError) {
+          this._options.logger.error(
+            { error: closeError, instanceId },
+            'Failed to close port forward during cleanup',
+          );
+        }
+      }
+
+      // Remove from cache if somehow it was added
+      this._connectionCache.removeConnection(instanceId);
+
+      throw error;
+    }
   }
 }

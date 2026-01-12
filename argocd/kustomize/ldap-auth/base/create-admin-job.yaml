@@ -61,6 +61,9 @@ spec:
             secretKeyRef:
               name: ldap-auth-secrets
               key: API_BEARER_TOKEN
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         securityContext:
           runAsNonRoot: true
           runAsUser: 1000
@@ -69,3 +72,6 @@ spec:
           capabilities:
             drop:
             - ALL
+      volumes:
+      - name: tmp
+        emptyDir: {}

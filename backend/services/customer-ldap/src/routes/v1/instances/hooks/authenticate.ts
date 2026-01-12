@@ -18,6 +18,10 @@ export function createAuthenticateHook(
     const { instanceId } = request.params as { instanceId: string };
     const { subscriptionId } = request.query as { subscriptionId: string };
 
+    if (!instanceId || !subscriptionId) {
+      throw request.server.httpErrors.badRequest('Missing required instanceId or subscriptionId');
+    }
+
     // Check for session cookie first
     const sessionCookie = request.cookies[SESSION_COOKIE_NAME];
     let sessionData: SessionData | null = null;
@@ -36,8 +40,7 @@ export function createAuthenticateHook(
         sessionData.subscriptionId === subscriptionId
       ) {
         // Check if user has required permissions
-        const authService = new AuthService(opts, null as unknown as IOmnistrateRepository, sessionRepository);
-        if (!authService.checkPermission(sessionData.role, requiredPermission)) {
+        if (!AuthService.checkPermission(sessionData.role, requiredPermission)) {
           throw request.server.httpErrors.forbidden('Insufficient permissions');
         }
       } else {
@@ -47,7 +50,8 @@ export function createAuthenticateHook(
 
     // If no valid session, authenticate with Omnistrate
     if (!sessionData) {
-      const authHeader = request.headers['authorization'] as string | undefined;
+      const authHeaderRaw = request.headers['authorization'];
+      const authHeader = Array.isArray(authHeaderRaw) ? authHeaderRaw[0] : authHeaderRaw;
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         throw request.server.httpErrors.unauthorized('Missing or invalid authorization header');
       }

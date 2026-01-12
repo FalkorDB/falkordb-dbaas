@@ -12,30 +12,54 @@ const envToLogger = {
       },
     },
     redact: {
-      paths: ['username', 'password', 'bearerToken', 'token', '*.username', '*.password', 'req.body.password', 'req.headers.authorization'],
+      paths: [
+        'username',
+        'password',
+        'bearerToken',
+        'token',
+        '*.username',
+        '*.password',
+        'req.body.password',
+        'req.headers.authorization',
+      ],
       censor: '***',
     },
   },
   production: {
     level: 'info',
     redact: {
-      paths: ['username', 'password', 'bearerToken', 'token', '*.username', '*.password', 'req.body.password', 'req.headers.authorization'],
+      paths: [
+        'username',
+        'password',
+        'bearerToken',
+        'token',
+        '*.username',
+        '*.password',
+        'req.body.password',
+        'req.headers.authorization',
+      ],
       censor: '***',
     },
   },
   test: false,
 };
 
+type Environment = keyof typeof envToLogger;
+
+function getLoggerConfig(env: string | undefined) {
+  const validEnv = (env && env in envToLogger ? env : 'production') as Environment;
+  return envToLogger[validEnv];
+}
+
 export async function start() {
   const fastify = Fastify({
-    logger: envToLogger[process.env.NODE_ENV || 'development'],
+    logger: getLoggerConfig(process.env.NODE_ENV),
     trustProxy: true,
     requestTimeout: parseInt(process.env.REQUEST_TIMEOUT_MS, 10) || 30000,
   });
 
   await fastify.register(App);
 
-  
   const port = fastify.config?.PORT || parseInt(process.env.PORT, 10) || 3013;
   const host = '0.0.0.0';
 
@@ -45,7 +69,10 @@ export async function start() {
   });
 
   // Graceful shutdown
+  let isShuttingDown = false;
   const closeGracefully = async (signal: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
     fastify.log.info(`Received ${signal}, closing server gracefully`);
     await fastify.close();
     fastify.log.info('Server closed');

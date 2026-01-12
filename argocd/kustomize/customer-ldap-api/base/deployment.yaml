@@ -26,7 +26,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: customer-ldap-api
-          image: falkordb/customer-ldap:latest
+          image: falkordb/customer-ldap:1.0.0  # Pin to specific version
           imagePullPolicy: Always
           ports:
             - name: http
@@ -53,7 +53,7 @@ spec:
             - name: REQUEST_TIMEOUT
               valueFrom:
                 configMapKeyRef:
-                  name: customer-ldap-config
+                  name: customer-ldap-api-config
                   key: REQUEST_TIMEOUT
                   optional: true
             - name: OMNISTRATE_EMAIL
@@ -163,22 +163,10 @@ metadata:
     app: customer-ldap-api
     app.kubernetes.io/name: customer-ldap-api
 rules:
-  # Allow listing clusters in GKE
-  - apiGroups: ["container.googleapis.com"]
-    resources: ["clusters"]
-    verbs: ["get", "list"]
-  # Allow EKS cluster access
-  - apiGroups: ["eks.amazonaws.com"]
-    resources: ["clusters"]
-    verbs: ["get", "list", "describe"]
   # Allow reading pods and secrets in ldap-auth namespace
   - apiGroups: [""]
     resources: ["pods", "secrets"]
     verbs: ["get", "list"]
-  # Allow port-forward to ldap-auth pods
-  - apiGroups: [""]
-    resources: ["pods/portforward"]
-    verbs: ["create", "get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -191,6 +179,41 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: customer-ldap-api
+subjects:
+  - kind: ServiceAccount
+    name: customer-ldap-api
+    namespace: api
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: customer-ldap-api-ldap-access
+  namespace: ldap-auth
+  labels:
+    app: customer-ldap-api
+    app.kubernetes.io/name: customer-ldap-api
+rules:
+  # Allow reading pods and secrets in ldap-auth namespace only
+  - apiGroups: [""]
+    resources: ["pods", "secrets"]
+    verbs: ["get", "list"]
+  # Allow port-forward to ldap-auth pods
+  - apiGroups: [""]
+    resources: ["pods/portforward"]
+    verbs: ["create", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: customer-ldap-api-ldap-access
+  namespace: ldap-auth
+  labels:
+    app: customer-ldap-api
+    app.kubernetes.io/name: customer-ldap-api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: customer-ldap-api-ldap-access
 subjects:
   - kind: ServiceAccount
     name: customer-ldap-api

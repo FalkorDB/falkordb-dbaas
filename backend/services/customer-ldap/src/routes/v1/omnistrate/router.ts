@@ -28,15 +28,15 @@ export default fp(async function omnistrateRoutes(fastify) {
             error: Type.String(),
             message: Type.String(),
           }),
-          422: Type.Object({
-            error: Type.String(),
-            message: Type.String(),
-          }),
           429: Type.Object({
             error: Type.String(),
             message: Type.String(),
           }),
           500: Type.Object({
+            error: Type.String(),
+            message: Type.String(),
+          }),
+          503: Type.Object({
             error: Type.String(),
             message: Type.String(),
           }),
@@ -64,6 +64,22 @@ export default fp(async function omnistrateRoutes(fastify) {
             deletedCount: Type.Number(),
             failedCount: Type.Optional(Type.Number()),
             error: Type.Optional(Type.String()),
+          }),
+          404: Type.Object({
+            error: Type.String(),
+            message: Type.String(),
+          }),
+          422: Type.Object({
+            error: Type.String(),
+            message: Type.String(),
+          }),
+          429: Type.Object({
+            error: Type.String(),
+            message: Type.String(),
+          }),
+          500: Type.Object({
+            error: Type.String(),
+            message: Type.String(),
           }),
         },
       },

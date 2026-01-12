@@ -1,20 +1,32 @@
 import Fastify, { FastifyInstance } from 'fastify';
 
+// Mock the @falkordb/configs module - must be at module scope for hoisting
+jest.mock('@falkordb/configs', () => ({
+  init: jest.fn(),
+}));
+
+// Mock the @falkordb/plugins module - must be at module scope for hoisting
+jest.mock('@falkordb/plugins', () => ({
+  swaggerPlugin: jest.fn().mockImplementation(async () => {}),
+  omnistratePlugin: jest.fn().mockImplementation(async () => {}),
+}));
+
+// Mock opentelemetry plugin
+jest.mock('@autotelic/fastify-opentelemetry', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(async () => {}),
+}));
+
+// Mock the DI container setup
+jest.mock('../../src/container', () => ({
+  setupGlobalContainer: jest.fn(),
+  setupContainer: jest.fn(),
+}));
+
 describe('Customer LDAP API Integration Tests', () => {
   let server: FastifyInstance;
 
   beforeAll(async () => {
-    // Mock the @falkordb/configs module
-    jest.mock('@falkordb/configs', () => ({
-      init: jest.fn(),
-    }));
-
-    // Mock the @falkordb/plugins module
-    jest.mock('@falkordb/plugins', () => ({
-      swaggerPlugin: jest.fn().mockImplementation(async () => {}),
-      omnistratePlugin: jest.fn().mockImplementation(async () => {}),
-    }));
-
     server = Fastify({
       logger: false,
     });
@@ -54,7 +66,7 @@ describe('Customer LDAP API Integration Tests', () => {
   });
 
   describe('GET /instances/:instanceId/users', () => {
-    it('should return 404 for unregistered route (routes not loaded in minimal test setup)', async () => {
+    it('should return 404 for routes not registered (mocked plugins prevent AutoLoad)', async () => {
       const response = await server.inject({
         method: 'GET',
         url: '/v1/instances/test-instance-id/users?subscriptionId=test-sub-id',
@@ -63,11 +75,13 @@ describe('Customer LDAP API Integration Tests', () => {
       expect(response.statusCode).toBe(404);
     });
 
-    // Add more integration tests with real Omnistrate tokens and instances
+    // Note: Full integration tests with actual routes require complete DI container setup,
+    // including all repositories and services. These tests verify basic server setup.
+    // Add end-to-end tests with real Omnistrate tokens and instances in a separate test suite.
   });
 
   describe('POST /instances/:instanceId/users', () => {
-    it('should return 404 for unregistered route (routes not loaded in minimal test setup)', async () => {
+    it('should return 404 for routes not registered (mocked plugins prevent AutoLoad)', async () => {
       const response = await server.inject({
         method: 'POST',
         url: '/v1/instances/test-instance-id/users?subscriptionId=test-sub-id',
@@ -85,7 +99,7 @@ describe('Customer LDAP API Integration Tests', () => {
   });
 
   describe('DELETE /instances/:instanceId/users/:username', () => {
-    it('should return 404 for unregistered route (routes not loaded in minimal test setup)', async () => {
+    it('should return 404 for routes not registered (mocked plugins prevent AutoLoad)', async () => {
       const response = await server.inject({
         method: 'DELETE',
         url: '/v1/instances/test-instance-id/users/testuser?subscriptionId=test-sub-id',
@@ -98,10 +112,7 @@ describe('Customer LDAP API Integration Tests', () => {
   });
 
   describe('Session Cookie Flow', () => {
-    it('should set session cookie on first request and reuse on subsequent requests', async () => {
-      // This test would require a valid Omnistrate token
-      // and a real instance to test the full flow
-      // Implement with real credentials in a secure test environment
-    });
+    it.todo('should set session cookie on first request and reuse on subsequent requests');
+    // TODO: Implement with real credentials in a secure test environment
   });
 });

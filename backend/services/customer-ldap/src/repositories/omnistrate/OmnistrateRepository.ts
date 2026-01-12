@@ -3,11 +3,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, isAxiosError } from '
 import { createDecoder } from 'fast-jwt';
 import assert from 'assert';
 import { FastifyBaseLogger } from 'fastify';
-import {
-  IOmnistrateRepository,
-  OmnistrateInstance,
-  SubscriptionUser,
-} from './IOmnistrateRepository';
+import { IOmnistrateRepository, OmnistrateInstance, SubscriptionUser } from './IOmnistrateRepository';
 
 export class OmnistrateRepository implements IOmnistrateRepository {
   private static _client: AxiosInstance;
@@ -30,9 +26,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
         baseURL: 'https://api.omnistrate.cloud',
       });
 
-      OmnistrateRepository._client.interceptors.request.use(
-        this._getBearer(_omnistrateUser, _omnistratePassword),
-      );
+      OmnistrateRepository._client.interceptors.request.use(this._getBearer(_omnistrateUser, _omnistratePassword));
     }
   }
 
@@ -54,11 +48,16 @@ export class OmnistrateRepository implements IOmnistrateRepository {
         // Token decode failed, get a new one
       }
 
-      const response = await axios.post('https://api.omnistrate.cloud/2022-09-01-00/signin', {
-        email: user,
-        password,
-      });
-      
+      let response;
+      try {
+        response = await axios.post('https://api.omnistrate.cloud/2022-09-01-00/signin', {
+          email: user,
+          password,
+        });
+      } catch (error) {
+        throw new Error('Failed to authenticate with Omnistrate API');
+      }
+
       OmnistrateRepository._token = response.data.jwtToken;
       config.headers.Authorization = `Bearer ${response.data.jwtToken}`;
       return config;
@@ -105,9 +104,6 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       throw new Error('Error getting instance');
     }
 
-    if (!instance) {
-      throw new Error('Instance not found');
-    }
 
     return {
       id: instance?.['consumptionResourceInstanceResult']?.['id'],
@@ -123,14 +119,18 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       environmentId: instance?.['environmentId'],
       productTierId: instance?.['productTierId'],
       status: instance?.['consumptionResourceInstanceResult']?.['status'],
-      resourceId: Object.entries(
-        instance?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology'],
-      ).filter((ob) => (ob[1] as unknown)?.['main'])[0][0],
+      resourceId:
+        Object.entries(instance?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology'] ?? {}).filter(
+          (ob) => (ob[1] as unknown)?.['main'],
+        )?.[0]?.[0] ?? null,
       cloudProvider: instance?.['cloudProvider'],
       productTierName: instance?.['productTierName'],
-      deploymentType: Object.values(
-        instance?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology'],
-      ).find((ob) => (ob as any).main)['resourceName'],
+      deploymentType:
+        (
+          Object.values(instance?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology'] ?? {}).find(
+            (ob) => (ob as any)?.main,
+          ) as any
+        )?.['resourceName'] ?? null,
       subscriptionId: instance?.['subscriptionId'],
       resultParams: instance?.['consumptionResourceInstanceResult']?.['result_params'] || {},
     } as OmnistrateInstance;
@@ -162,9 +162,6 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     assert(userId, 'OmnistrateRepository: User ID is required');
 
     const instance = await this.getInstance(instanceId);
-    if (!instance) {
-      return { hasAccess: false };
-    }
 
     this._options.logger.debug({ instance }, 'Checking if user has access to instance');
 

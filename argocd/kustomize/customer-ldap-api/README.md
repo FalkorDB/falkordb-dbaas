@@ -9,7 +9,7 @@ The customer-ldap-api service is deployed to the **Control Plane** cluster in th
 ## Structure
 
 ```
-customer-ldap/
+customer-ldap-api/
 ├── base/                    # Base manifests (environment-agnostic)
 │   ├── deployment.yaml     # Deployment (customer-ldap-api), ServiceAccount, RBAC
 │   ├── service.yaml        # Service definition
@@ -78,7 +78,7 @@ The service requires the following environment variables:
 
 ```bash
 # Navigate to the dev overlay directory
-cd argocd/kustomize/customer-ldap/overlays/dev
+cd argocd/kustomize/customer-ldap-api/overlays/dev
 
 # Create the secret (replace with actual values)
 kubectl create secret generic customer-ldap-api-env \
@@ -100,10 +100,10 @@ kubectl create secret generic customer-ldap-api-env \
 
 ```bash
 # Apply directly
-kubectl apply -k argocd/kustomize/customer-ldap/overlays/dev
+kubectl apply -k argocd/kustomize/customer-ldap-api/overlays/dev
 
 # Or build and review first
-kubectl kustomize argocd/kustomize/customer-ldap/overlays/dev
+kubectl kustomize argocd/kustomize/customer-ldap-api/overlays/dev
 ```
 
 3. **Deploy via ArgoCD** (recommended):
@@ -117,7 +117,7 @@ kubectl apply -f argocd/ctrl_plane/dev/customer-ldap-api.yaml
 1. **Create sealed secrets** (same as dev, but in prod overlay):
 
 ```bash
-cd argocd/kustomize/customer-ldap/overlays/prod
+cd argocd/kustomize/customer-ldap-api/overlays/prod
 
 # Create production secrets
 kubectl create secret generic customer-ldap-api-env \
@@ -211,11 +211,11 @@ kubectl describe secret customer-ldap-api-env -n api
 
 Once deployed, access the Swagger UI at:
 ```
-http://customer-ldap-api.api.svc.cluster.local/documentation
+http://customer-ldap-api.api.svc.cluster.local/docs
 ```
 
 Or port-forward:
 ```bash
 kubectl port-forward -n api svc/customer-ldap-api 8080:80
-open http://localhost:8080/documentation
+open http://localhost:8080/docs
 ```

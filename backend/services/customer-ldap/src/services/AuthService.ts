@@ -51,6 +51,10 @@ export class AuthService {
       throw new Error('User does not have access to this instance');
     }
 
+    if (!role) {
+      throw new Error('User role not found for instance access');
+    }
+
     // Step 4: Get instance details
     const instance = await this._omnistrateRepository.getInstance(instanceId);
 
@@ -67,7 +71,7 @@ export class AuthService {
       cloudProvider: instance.cloudProvider,
       region: instance.region,
       k8sClusterName: instance.clusterId,
-      role: role!,
+      role: role,
     };
 
     const session = this._sessionRepository.createSession(sessionData);
@@ -85,7 +89,7 @@ export class AuthService {
     return this._sessionRepository.decodeSession(cookie);
   }
 
-  checkPermission(role: 'root' | 'writer' | 'reader', requiredRole: 'writer' | 'reader'): boolean {
+  static checkPermission(role: 'root' | 'writer' | 'reader', requiredRole: 'writer' | 'reader'): boolean {
     const roleHierarchy = { root: 3, writer: 2, reader: 1 };
     return roleHierarchy[role] >= roleHierarchy[requiredRole];
   }

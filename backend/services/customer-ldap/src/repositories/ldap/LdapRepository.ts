@@ -88,7 +88,7 @@ export class LdapRepository implements ILdapRepository {
 
     try {
       // Get users
-      const usersResponse = await axios.get(`https://localhost:${localPort}/api/users/${org}`, {
+      const usersResponse = await axios.get(`https://localhost:${localPort}/api/users/${encodeURIComponent(org)}`, {
         headers: {
           'Authorization': `Bearer ${bearerToken}`,
         },
@@ -99,7 +99,7 @@ export class LdapRepository implements ILdapRepository {
       const users = usersResponse.data.users || [];
 
       // Get all groups to retrieve ACL from descriptions
-      const groupsResponse = await axios.get(`https://localhost:${localPort}/api/groups/${org}`, {
+      const groupsResponse = await axios.get(`https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}`, {
         headers: {
           'Authorization': `Bearer ${bearerToken}`,
         },
@@ -185,7 +185,7 @@ export class LdapRepository implements ILdapRepository {
 
       // Add user to the group
       await axios.post(
-        `https://localhost:${localPort}/api/groups/${org}/${user.username}/members`,
+        `https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}/members`,
         {
           username: user.username,
         },
@@ -207,7 +207,7 @@ export class LdapRepository implements ILdapRepository {
       if (groupCreated) {
         try {
           await axios.delete(
-            `https://localhost:${localPort}/api/groups/${org}/${user.username}`,
+            `https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}`,
             {
               headers: {
                 'Authorization': `Bearer ${bearerToken}`,
@@ -229,7 +229,7 @@ export class LdapRepository implements ILdapRepository {
       if (userCreated) {
         try {
           await axios.delete(
-            `https://localhost:${localPort}/api/users/${org}/${user.username}`,
+            `https://localhost:${localPort}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}`,
             {
               headers: {
                 'Authorization': `Bearer ${bearerToken}`,
@@ -268,7 +268,7 @@ export class LdapRepository implements ILdapRepository {
       // Update user password if provided
       if (user.password) {
         await axios.put(
-          `https://localhost:${localPort}/api/users/${org}/${username}`,
+          `https://localhost:${localPort}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
           {
             password: user.password,
           },
@@ -285,7 +285,7 @@ export class LdapRepository implements ILdapRepository {
       // Update group description (ACL) if provided
       if (user.acl) {
         await axios.put(
-          `https://localhost:${localPort}/api/groups/${org}/${username}`,
+          `https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
           {
             description: user.acl,
           },
@@ -319,7 +319,7 @@ export class LdapRepository implements ILdapRepository {
 
     try {
       // Delete user
-      await axios.delete(`https://localhost:${localPort}/api/users/${org}/${username}`, {
+      await axios.delete(`https://localhost:${localPort}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(username)}`, {
         headers: {
           'Authorization': `Bearer ${bearerToken}`,
         },
@@ -328,7 +328,7 @@ export class LdapRepository implements ILdapRepository {
       });
 
       // Delete associated group
-      await axios.delete(`https://localhost:${localPort}/api/groups/${org}/${username}`, {
+      await axios.delete(`https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(username)}`, {
         headers: {
           'Authorization': `Bearer ${bearerToken}`,
         },

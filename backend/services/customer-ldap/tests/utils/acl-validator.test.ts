@@ -53,11 +53,9 @@ describe('ACL Validator', () => {
       expect(result.invalidCommands).toEqual([]);
     });
 
-    it('should allow subcategory when category is allowed', () => {
-      // If MODULE is in allowed list, MODULE|LIST should be accepted
+    it('should reject subcategory when only specific subcategories are allowed', () => {
+      // MODULE|LOAD is not in ALLOWED_ACL, only MODULE|LIST is
       const result = validateAcl('+MODULE|LOAD +MODULE|LIST');
-      // This depends on whether MODULE itself is in ALLOWED_ACL
-      // Since MODULE is not explicitly in ALLOWED_ACL, only MODULE|LIST is
       expect(result.valid).toBe(false);
       expect(result.invalidCommands).toContain('MODULE|LOAD');
     });
@@ -85,6 +83,7 @@ describe('ACL Validator', () => {
       const result = validateAcl('+INFO PING +GRAPH.QUERY');
       expect(result.valid).toBe(true);
       // PING without + should be ignored, not treated as invalid
+      expect(result.invalidCommands).toEqual([]);
     });
   });
 });

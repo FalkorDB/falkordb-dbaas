@@ -1,12 +1,11 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: api-ingress
+  name: customer-ldap-api-ingress
   namespace: api
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/use-regex: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
     nginx.ingress.kubernetes.io/configuration-snippet: |
       rewrite ^/v1/customer-ldap(/|$)(.*) /v1/$2 break;
 spec:
@@ -26,6 +25,26 @@ spec:
                 name: customer-ldap-api
                 port:
                   number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress
+  namespace: api
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.dev.falkordb.cloud
+      secretName: api-tls
+  rules:
+    - host: api.dev.falkordb.cloud
+      http:
+        paths:
           - path: /v1/db-importer(/|$)(.*)
             pathType: ImplementationSpecific
             backend:

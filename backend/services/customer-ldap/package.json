@@ -2,7 +2,7 @@
   "name": "customer-ldap",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "lint": "eslint src/**/*.ts",
     "format": "eslint src/**/*.ts --fix",
@@ -18,8 +18,11 @@
   "license": "SSPL",
   "dependencies": {
     "@autotelic/fastify-opentelemetry": "^0.20.0",
+    "@aws-crypto/sha256-js": "^5.2.0",
     "@aws-sdk/client-eks": "^3.735.0",
     "@aws-sdk/client-sts": "^3.734.0",
+    "@aws-sdk/protocol-http": "^3.374.0",
+    "@aws-sdk/signature-v4": "^3.374.0",
     "@falkordb/configs": "workspace:*",
     "@falkordb/errors": "workspace:*",
     "@falkordb/plugins": "workspace:*",
@@ -43,7 +46,6 @@
     "@opentelemetry/exporter-jaeger": "^1.22.0",
     "@sinclair/typebox": "^0.34.33",
     "awilix": "^10.0.1",
-    "aws-eks-token": "^1.0.5",
     "bullmq": "^5.45.2",
     "dotenv": "^16.4.5",
     "falkordb": "^6.2.7",
@@ -53,7 +55,6 @@
     "fastify-user": "^1.4.0",
     "mongodb": "^6.3.0",
     "short-unique-id": "^5.0.3",
-    "tap": "^18.7.0",
     "unique-names-generator": "^4.7.1",
     "zod": "^3.22.4"
   },
@@ -70,6 +71,7 @@
     "nodemon": "^3.1.0",
     "pino-pretty": "^10.3.1",
     "prettier": "^3.2.5",
+    "tap": "^18.7.0",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"

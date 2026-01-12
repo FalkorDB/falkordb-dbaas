@@ -29,9 +29,14 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   await fastify.register(Sensible);
 
   // Parse CORS origins from comma-separated string
-  const corsOrigins = fastify.config.CORS_ORIGINS === '*' 
-    ? true 
-    : fastify.config.CORS_ORIGINS.split(',').map(o => o.trim());
+  const corsOrigins =
+    fastify.config.CORS_ORIGINS === '*'
+      ? true
+      : fastify.config.CORS_ORIGINS
+        ? fastify.config.CORS_ORIGINS.split(',')
+            .map((o) => o.trim())
+            .filter(Boolean)
+        : false;
 
   await fastify.register(Cors, {
     origin: corsOrigins,
@@ -66,8 +71,24 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   await fastify.register(omnistratePlugin, {
     omnistrateRepository: fastify.diContainer.resolve<IOmnistrateRepository>(IOmnistrateRepository.repositoryName),
-  })
+  });
 
+  fastify.addHook('onRequest', (request, _, done) => {
+    setupContainer(request);
+
+    done();
+  });
+
+  fastify.addHook('preHandler', (request, reply, done) => {
+    // Add trace ID
+    const { activeSpan } = request.openTelemetry();
+    const traceId = activeSpan?.spanContext()?.traceId;
+    if (traceId) {
+      reply.header('x-trace-id', traceId);
+    }
+    done();
+  });
+  
   await fastify.register(AutoLoad, {
     dir: join(__dirname, 'routes'),
     routeParams: true,
@@ -80,20 +101,6 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     options: Object.assign({}, opts),
   });
 
-  fastify.addHook('onRequest', (request, _, done) => {
-    setupContainer(request);
-
-    done();
-  });
-
-  fastify.addHook('preHandler', (request, reply, done) => {
-    // Add trace ID
-    const { activeSpan } = request.openTelemetry();
-    if (activeSpan.spanContext().traceId) {
-      reply.header('x-trace-id', activeSpan.spanContext().traceId);
-    }
-    done();
-  });
 
   if (fastify.config.NODE_ENV === 'development') {
     console.log('CURRENT ROUTES:');

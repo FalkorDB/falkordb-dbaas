@@ -22,6 +22,9 @@ export class K8sRepository implements IK8sRepository {
       name: `projects/${projectId}/locations/${region}/clusters/${clusterId}`,
     });
 
+    assert(response.endpoint, `Cluster ${clusterId} endpoint not found`);
+    assert(response.masterAuth?.clusterCaCertificate, `Cluster ${clusterId} CA certificate not found`);
+
     return {
       endpoint: `https://${response.endpoint}`,
       certificateAuthority: response.masterAuth.clusterCaCertificate,
@@ -40,6 +43,7 @@ export class K8sRepository implements IK8sRepository {
         headers: {
           'Metadata-Flavor': 'Google',
         },
+        timeout: 10000,
       },
     );
 
@@ -57,6 +61,10 @@ export class K8sRepository implements IK8sRepository {
         WebIdentityToken: idToken,
       }),
     );
+
+    assert(Credentials?.AccessKeyId, 'STS response missing AccessKeyId');
+    assert(Credentials?.SecretAccessKey, 'STS response missing SecretAccessKey');
+    assert(Credentials?.SessionToken, 'STS response missing SessionToken');
 
     return {
       accessKeyId: Credentials.AccessKeyId,
@@ -79,22 +87,93 @@ export class K8sRepository implements IK8sRepository {
 
     const { cluster } = await eks.send(new DescribeClusterCommand({ name: clusterId }));
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const EKSToken = require('aws-eks-token');
-    EKSToken.config = {
+    // Generate EKS token directly using presigned STS URL approach
+    // This avoids mutating global state in aws-eks-token module
+    const token = await this._generateEKSToken(clusterId, region, {
       accessKeyId,
       secretAccessKey,
       sessionToken,
-      region,
-    };
+    });
 
-    const token = await EKSToken.renew(clusterId);
+    assert(cluster, `EKS cluster '${clusterId}' not found`);
+    assert(cluster.endpoint, 'EKS cluster response missing endpoint');
+    assert(cluster.certificateAuthority?.data, 'EKS cluster response missing CA data');
 
     return {
       endpoint: cluster.endpoint,
       certificateAuthority: cluster.certificateAuthority.data,
       accessToken: token,
     };
+  }
+
+  private async _generateEKSToken(
+    clusterName: string,
+    region: string,
+    credentials: { accessKeyId: string; secretAccessKey: string; sessionToken: string },
+  ): Promise<string> {
+    // Generate a presigned STS GetCallerIdentity URL for EKS authentication
+    // This is the standard EKS authentication mechanism
+    const { GetCallerIdentityCommand } = await import('@aws-sdk/client-sts');
+    const { SignatureV4 } = await import('@aws-sdk/signature-v4');
+    const { Sha256 } = await import('@aws-crypto/sha256-js');
+    const { HttpRequest } = await import('@aws-sdk/protocol-http');
+
+    const endpoint = `https://sts.${region}.amazonaws.com/`;
+    const request = new HttpRequest({
+      method: 'GET',
+      protocol: 'https:',
+      hostname: `sts.${region}.amazonaws.com`,
+      path: '/',
+      query: {
+        Action: 'GetCallerIdentity',
+        Version: '2011-06-15',
+      },
+      headers: {
+        host: `sts.${region}.amazonaws.com`,
+        'x-k8s-aws-id': clusterName,
+      },
+    });
+
+    const signer = new SignatureV4({
+      credentials: credentials,
+      region: region,
+      service: 'sts',
+      sha256: Sha256,
+    });
+
+    const signedRequest = await signer.sign(request);
+
+    // Build the presigned URL
+    const url = new URL(endpoint);
+    url.searchParams.set('Action', 'GetCallerIdentity');
+    url.searchParams.set('Version', '2011-06-15');
+
+    // Add signature parameters
+    for (const [key, value] of Object.entries(signedRequest.query || {})) {
+      url.searchParams.set(key, value as string);
+    }
+
+    // Add signature headers as query params
+    if (signedRequest.headers['x-amz-security-token']) {
+      url.searchParams.set('X-Amz-Security-Token', signedRequest.headers['x-amz-security-token'] as string);
+    }
+    if (signedRequest.headers['x-amz-date']) {
+      url.searchParams.set('X-Amz-Date', signedRequest.headers['x-amz-date'] as string);
+    }
+    if (signedRequest.headers['authorization']) {
+      const auth = signedRequest.headers['authorization'] as string;
+      const credentialMatch = auth.match(/Credential=([^,]+)/);
+      const signedHeadersMatch = auth.match(/SignedHeaders=([^,]+)/);
+      const signatureMatch = auth.match(/Signature=(.+)$/);
+
+      if (credentialMatch) url.searchParams.set('X-Amz-Credential', credentialMatch[1]);
+      if (signedHeadersMatch) url.searchParams.set('X-Amz-SignedHeaders', signedHeadersMatch[1]);
+      if (signatureMatch) url.searchParams.set('X-Amz-Signature', signatureMatch[1]);
+    }
+
+    // EKS expects the token in the format: k8s-aws-v1.<base64-encoded-url>
+    const encodedUrl = Buffer.from(url.toString()).toString('base64').replace(/=+$/, '');
+    return `k8s-aws-v1.${encodedUrl}`;
   }
 
   async getK8sConfig(
@@ -137,6 +216,7 @@ export class K8sRepository implements IK8sRepository {
 
     kubeConfig.applyToRequest = async (opts) => {
       opts.ca = Buffer.from(k8sCredentials.certificateAuthority, 'base64');
+      opts.headers = opts.headers || {};
       opts.headers.Authorization = 'Bearer ' + k8sCredentials.accessToken;
     };
 
@@ -156,16 +236,18 @@ export class K8sRepository implements IK8sRepository {
     // Find an available local port
     const localPort = await this._findAvailablePort();
 
-    const server = net.createServer((socket) => {
-      forward.portForward(namespace, podName, [port], socket, null, socket);
+    const server = net.createServer(async (socket) => {
+      try {
+        await forward.portForward(namespace, podName, [port], socket, null, socket);
+      } catch (err) {
+        this._options.logger.error({ err, namespace, podName, port }, 'Port forward connection error');
+        socket.destroy();
+      }
     });
 
     await new Promise<void>((resolve, reject) => {
       server.listen(localPort, 'localhost', () => {
-        this._options.logger.info(
-          { localPort, namespace, podName, port },
-          'Port forward established',
-        );
+        this._options.logger.info({ localPort, namespace, podName, port }, 'Port forward established');
         resolve();
       });
 

@@ -35,7 +35,7 @@ export async function instanceCreatedHandler(request: FastifyRequest<{ Body: Ins
 
     if (!falkordbUsername || !falkordbPassword) {
       request.log.error({ instanceId, hasResultParams: !!instance.resultParams }, 'Missing FalkorDB credentials in resultParams');
-      return reply.code(422).send({ 
+      return reply.code(503).send({ 
         error: 'Missing credentials',
         message: 'Missing falkordbUsername or falkordbPassword in instance resultParams - webhook will be retried',
       });
@@ -48,7 +48,7 @@ export async function instanceCreatedHandler(request: FastifyRequest<{ Body: Ins
 
     if (!cloudProvider || !k8sClusterName || !region) {
       request.log.error({ instanceId, cloudProvider, k8sClusterName, region }, 'Missing required instance details');
-      return reply.code(422).send({ 
+      return reply.code(503).send({ 
         error: 'Invalid instance data',
         message: 'Missing cloud_provider, cluster name, or region in instance - webhook will be retried',
       });
@@ -87,7 +87,7 @@ export async function instanceCreatedHandler(request: FastifyRequest<{ Body: Ins
         });
       }
 
-      // For other errors, return 4xx to trigger retry
+      // For other errors, propagate to outer catch which returns 500 to trigger retry
       throw error;
     }
   } catch (error) {

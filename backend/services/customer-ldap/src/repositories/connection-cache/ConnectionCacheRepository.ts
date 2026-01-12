@@ -18,7 +18,7 @@ export class ConnectionCacheRepository implements IConnectionCacheRepository {
 
   async validateConnection(instanceId: string): Promise<boolean> {
     const connection = this._cache.get(instanceId);
-    
+
     if (!connection) {
       this._options.logger.debug({ instanceId }, 'No connection to validate');
       return false;
@@ -26,6 +26,7 @@ export class ConnectionCacheRepository implements IConnectionCacheRepository {
 
     try {
       // Try to reach the port-forwarded LDAP server
+      // Disable SSL verification to retrieve the CA certificate
       const httpsAgent = new https.Agent({
         rejectUnauthorized: false,
       });
@@ -38,7 +39,10 @@ export class ConnectionCacheRepository implements IConnectionCacheRepository {
       this._options.logger.debug({ instanceId }, 'Connection is healthy');
       return true;
     } catch (error) {
-      this._options.logger.warn({ instanceId, error: error instanceof Error ? error.message : 'Unknown error' }, 'Connection is unhealthy, removing from cache');
+      this._options.logger.warn(
+        { instanceId, error: error instanceof Error ? error.message : 'Unknown error' },
+        'Connection is unhealthy, removing from cache',
+      );
       this.removeConnection(instanceId);
       return false;
     }
@@ -46,7 +50,7 @@ export class ConnectionCacheRepository implements IConnectionCacheRepository {
 
   getConnection(instanceId: string): CachedConnection | null {
     const connection = this._cache.get(instanceId);
-    
+
     if (!connection) {
       this._options.logger.debug({ instanceId }, 'Connection cache miss');
       return null;
@@ -63,8 +67,17 @@ export class ConnectionCacheRepository implements IConnectionCacheRepository {
     this._options.logger.debug({ instanceId }, 'Connection cache hit');
     return connection;
   }
-
   setConnection(instanceId: string, connection: CachedConnection): void {
+    // Close existing connection if present to prevent resource leaks
+    const existing = this._cache.get(instanceId);
+    if (existing) {
+      this._options.logger.debug({ instanceId }, 'Closing existing connection before caching new one');
+      try {
+        existing.close();
+      } catch (error) {
+        this._options.logger.error({ error, instanceId }, 'Error closing existing connection');
+      }
+    }
     this._options.logger.info({ instanceId }, 'Caching connection');
     this._cache.set(instanceId, connection);
   }

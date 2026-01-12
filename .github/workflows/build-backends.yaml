@@ -46,7 +46,7 @@ jobs:
       - name: Run Tests
         if: matrix.service.test == 'true'
         working-directory: ./backend/services/${{ matrix.service.name }}
-        run: pnpm test --reporter=jest-junit --ci --coverage
+        run: pnpm test -- --reporter=jest-junit --ci --coverage
 
       - name: Authenticate to Google Cloud
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')
