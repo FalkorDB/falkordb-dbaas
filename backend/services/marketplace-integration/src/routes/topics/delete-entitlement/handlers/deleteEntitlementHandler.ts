@@ -13,7 +13,7 @@ export const deleteEntitlementHandler: RouteHandlerMethod<undefined, undefined, 
 
   const { entitlementId, marketplaceAccountId, productTierId } = request.body as DeleteEntitlementMessageType;
 
-  let productTierMapped = "";
+  let productTierMapped = '';
   switch (productTierId) {
     case 'free':
       productTierMapped = request.server.config.OMNISTRATE_FREE_PRODUCT_TIER_ID;
@@ -30,36 +30,48 @@ export const deleteEntitlementHandler: RouteHandlerMethod<undefined, undefined, 
       productTierMapped = request.server.config.OMNISTRATE_ENTERPRISE_PRODUCT_TIER_ID;
       break;
     default:
-      request.log.error({ entitlementId, marketplaceAccountId, productTierId }, `Unknown product tier ID: ${productTierId}`);
+      request.log.error(
+        { entitlementId, marketplaceAccountId, productTierId },
+        `Unknown product tier ID: ${productTierId}`,
+      );
       return;
   }
 
-  try {
-    await omnistrateRepository.deleteDeployments({
-      marketplaceAccountId,
-      productTierId: productTierMapped
-    });
-  } catch (error) {
-    // Check if instance was not found
-    if (error instanceof Error && error.message.includes('not found')) {
-      throw error;
+  if (productTierId.startsWith('enterprise')) {
+    request.log.info(
+      { entitlementId, marketplaceAccountId, productTierId },
+      `Skipping deletion of deployments and subscription cancellation for enterprise tier.`,
+    );
+  } else {
+    try {
+      await omnistrateRepository.deleteDeployments({
+        marketplaceAccountId,
+        productTierId: productTierMapped,
+      });
+    } catch (error) {
+      // Check if instance was not found
+      if (error instanceof Error && error.message.includes('not found')) {
+        throw error;
+      }
+      request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to delete deployments: ${error}`);
+      return;
     }
-    request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to delete deployments: ${error}`);
-    return;
-  }
 
-  try {
-    await omnistrateRepository.cancelSubscription({
-      marketplaceAccountId,
-      productTierId: productTierMapped,
-    });
-  } catch (error) {
-    request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to cancel subscription: ${error}`);
+    try {
+      await omnistrateRepository.cancelSubscription({
+        marketplaceAccountId,
+        productTierId: productTierMapped,
+      });
+    } catch (error) {
+      request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to cancel subscription: ${error}`);
+    }
   }
-
   try {
     await commitRepository.verifyEntitlementDeleted(marketplaceAccountId, entitlementId);
   } catch (error) {
-    request.log.error({ error, entitlementId, marketplaceAccountId }, `Failed to verify entitlement deletion: ${error}`);
+    request.log.error(
+      { error, entitlementId, marketplaceAccountId },
+      `Failed to verify entitlement deletion: ${error}`,
+    );
   }
 };
