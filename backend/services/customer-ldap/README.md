@@ -59,8 +59,43 @@ This service provides a unified API for managing LDAP users on different applica
 3. Fetch instance details from Omnistrate API
 4. Extract FalkorDB credentials from `resultParams`
 5. Create LDAP user with allowed ACL permissions
-6. Returns 200 (idempotent), 201 (created), 429 (rate limited), or 4xx (retry)
-Health Checks
+6. Returns 200 (idempotent), 201 (created), 503 (retry), or 500 (error)
+
+**Instance Deleted:**
+1. Omnistrate sends webhook to `/v1/omnistrate/instance-deleted`
+2. Authenticate webhook using `OMNISTRATE_WEBHOOK_SECRET` bearer token
+3. Fetch instance details from Omnistrate API
+4. List and delete all users for the instance
+5. Always returns 200 (inconsistent state acceptable)
+
+### Request Flow
+
+1. Client sends request with Omnistrate JWT token (or session cookie if available)
+2. If session cookie exists and is valid, skip to step 6
+3. Validate token against Omnistrate API
+4. Check user's subscription role (root/writer/reader)
+5. Create session cookie and set it in response
+6. Retrieve instance details (cloud provider, region, cluster) from session
+7. Check connection cache for existing K8s port forward (cache key: instanceId)
+8. Validate cached connection health (3-second timeout check)
+9. If cache miss or unhealthy: Establish K8s connection and create port forward to LDAP pod, then cache it
+10. If cache hit and healthy: Reuse existing port forward connection
+11. Execute LDAP operation with automatic rollback on failure
+12. Return result (connection remains open in cache for 15 minutes)
+
+## API Documentation
+
+### Authentication
+
+All requests require either:
+- **Authorization header**: `Bearer <omnistrate-jwt-token>`
+- **Session cookie**: `ldap-session` (automatically set after first successful request)
+
+### Endpoints
+
+### Health Checks
+
+### Health Checks
 
 ```
 GET /v1/health
@@ -85,49 +120,79 @@ GET /v1/readiness
   "timestamp": "2026-01-12T08:00:00.000Z"
 }
 ```
+
 #### List Users
-
-```
-GET /v1uthenticate webhook using `OMNISTRATE_WEBHOOK_SECRET` bearer token
-3. Fetch instance details from Omnistrate API
-4. List and delete all users for the instance
-5. Always returns 200 (inconsistent state acceptable (writer only)
-
-### Request Flow
-
-1. Client sends request with Omnistrate JWT token (or session cookie if available)
-2. If session cookie exists and is valid, skip to step 6
-3. Validate token against Omnistrate API
-4. Check user's subscription role (root/writer/reader)
-5. Create session cookie and set it in response
-6. Retrieve instance details (cloud provider, region, cluster) from session
-7. Check connection cache for existing K8s port forward (cache key: instanceId)
-8. If cache miss: Establish K8s connection and create port forward to LDAP pod, then cache it
-9. If cache hit: Reuse existing port forward connection
-10. Execute LDAP operation
-11. Return result (connection remains open in cache for 15 minutes)
-v1/
-## API Documentation
-
-### Authentication
-
-All requests require either:
-- **Authorization header**: `Bearer <omnistrate-jwt-token>`
-- **Session cookie**: `ldap-session` (automatically set after first successful request)
-
-### Endpoints
 
 #### List Users
 
 ```
-GET /instances/:instanceId/users?subscriptionId=<subscription-id>
+GET /v1/instances/:instanceId/users?subscriptionId=<subscription-id>
 ```
 
 **Response:**
 ```json
 {
   "users": [
-    {v1/instances/:instanceId/users/:username?subscriptionId=<subscription-id>
+    {
+      "username": "user1",
+      "acl": "rw"
+    },
+    {
+      "username": "user2",
+      "acl": "r"
+    }
+  ]
+}
+```
+
+#### Create User
+#### Create User
+
+```
+POST /v1/instances/:instanceId/users?subscriptionId=<subscription-id>
+```
+
+**Request Body:**
+```json
+{
+  "username": "newuser",
+  "password": "securepassword",
+  "acl": "rw"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "User created successfully"
+}
+```
+
+#### Update User
+
+```
+PATCH /v1/instances/:instanceId/users/:username?subscriptionId=<subscription-id>
+```
+
+**Request Body:**
+```json
+{
+  "password": "newpassword",
+  "acl": "r"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "User modified successfully"
+}
+```
+
+#### Delete User
+
+```
+DELETE /v1/instances/:instanceId/users/:username?subscriptionId=<subscription-id>
 ```
 
 **Response:**
@@ -149,8 +214,71 @@ Authorization: Bearer <OMNISTRATE_WEBHOOK_SECRET>
 **Request Body:**
 ```json
 {
-  "instanceId": "inst-123", Default |
+  "instanceId": "inst-123",
+  "subscriptionId": "sub-456"
+}
+```
+
+**Response (201):**
+```json
+{
+  "message": "User created successfully"
+}
+```
+
+**Response (200 - Idempotent):**
+```json
+{
+  "message": "User already exists"
+}
+```
+
+##### Instance Deleted
+
+```
+POST /v1/omnistrate/instance-deleted
+Authorization: Bearer <OMNISTRATE_WEBHOOK_SECRET>
+```
+
+**Request Body:**
+```json
+{
+  "instanceId": "inst-123",
+  "subscriptionId": "sub-456"
+}
+```
+
+**Response (200):**
+```json
+{
+  "message": "User deletion completed",
+  "deletedCount": 3,
+  "failedCount": 0
+}
+```
+
+## Environment Variables
+
+| Variable | Required | Description | Default |
 |----------|----------|-------------|---------|
+| `NODE_ENV` | No | Environment (development/production/test) | `development` |
+| `PORT` | No | Server port | `3013` |
+| `OMNISTRATE_EMAIL` | Yes | Omnistrate API email | - |
+| `OMNISTRATE_PASSWORD` | Yes | Omnistrate API password | - |
+| `OMNISTRATE_SERVICE_ID` | Yes | Omnistrate service ID | - |
+| `OMNISTRATE_ENVIRONMENT_ID` | Yes | Omnistrate environment ID | - |
+| `OMNISTRATE_WEBHOOK_SECRET` | Yes | Secret for authenticating Omnistrate webhooks | - |
+| `JWT_SECRET` | Yes | Secret key for signing session cookies | - |
+| `APPLICATION_PLANE_GOOGLE_CLOUD_PROJECT` | No | GCP project ID for application planes | - |
+| `AWS_TARGET_AUDIENCE` | No | AWS target audience for authentication | - |
+| `AWS_ROLE_ARN` | No | AWS role ARN for authentication | - |
+| `SERVICE_NAME` | No | Service name | `customer-ldap` |
+| `CORS_ORIGINS` | No | CORS origins (comma-separated or `*`) | `*` |
+| `REQUEST_TIMEOUT_MS` | No | Global request timeout | `30000` |
+| `LDAP_CONNECTION_TIMEOUT_MS` | No | LDAP API call timeout | `10000` |
+| `K8S_PORT_FORWARD_TIMEOUT_MS` | No | K8s operation timeout | `15000` |
+
+## Development
 | `NODE_ENV` | No | Environment (development/production/test) | `development` |
 | `PORT` | No | Server port | `3013` |
 | `OMNISTRATE_EMAIL` | Yes | Omnistrate API email | - |
@@ -215,7 +343,7 @@ POST /instances/:instanceId/users?subscriptionId=<subscription-id>
 {
   "message": "User created successfully"
 }
-```& Production Features
+## Security & Production Features
 
 ### Security
 
@@ -230,7 +358,20 @@ POST /instances/:instanceId/users?subscriptionId=<subscription-id>
 ### Production Features
 
 1. **Graceful Shutdown**: Handles SIGTERM/SIGINT, closes connections cleanly
-2.Health validation overhead: ~50ms (3-second timeout, fails fast)
+2. **Connection Caching**: Cached K8s port forwards with 15-minute TTL
+3. **Health Validation**: Connection health checks with 3-second timeout
+4. **Automatic Cleanup**: Expired connections automatically closed every 5 minutes
+5. **Transaction Rollback**: Multi-step operations roll back on failure
+6. **Request Timeouts**: Configurable per operation type
+7. **Connection Health**: Validates cached connections before reuse
+8. **Performance**: 60-75% faster for repeated operations on same instance
+
+### Performance
+
+**Connection Caching Benefits**:
+- First request to an instance: ~2-3 seconds (K8s auth + port forward + LDAP operation)
+- Subsequent requests (within 15 minutes): ~100-200ms (only LDAP operation)
+- Health validation overhead: ~50ms (3-second timeout, fails fast)
 - Multiple operations on same instance: 60-75% faster
 
 **Webhook Performance**:
@@ -238,9 +379,16 @@ POST /instances/:instanceId/users?subscriptionId=<subscription-id>
 - New user creation: ~2-3 seconds (first connection) or ~100-200ms (cached)
 - Rollback on failure: Automatically deletes partially created resources
 
-See [CONNECTION_CACHING.md](./CONNECTION_CACHING.md) and [PRODUCTION_IMPROVEMENTS.md](./PRODUCTION_IMPROVEMENTS.md) for detailed
-5. **Transaction Rollback**: Multi-step operations roll back on failure
-6.Store bearer token in Kubernetes secret: `ldap-auth-secret` (key: `token`)
+See [CONNECTION_CACHING.md](./CONNECTION_CACHING.md) and [PRODUCTION_IMPROVEMENTS.md](./PRODUCTION_IMPROVEMENTS.md) for detailed documentation.
+
+## LDAP Server Requirements
+## LDAP Server Requirements
+
+The LDAP server must:
+- Run in namespace: `ldap-auth`
+- Have a service: `ldap-auth-service` on port `8080`
+- Have pods starting with prefix: `ldap-auth-rs`
+- Store bearer token in Kubernetes secret: `ldap-auth-secret` (key: `token`)
 - Expose REST API endpoints:
   - `GET /api/v1/ca-certificate` - Get CA certificate
   - `GET /api/users/:org` - List users in organization
@@ -321,50 +469,7 @@ When deploying to Kubernetes:
        value: "https://console.falkordb.com,https://api.falkordb.com"
    ```
 
-5. Implement rate limiting at Ingress/LoadBalancer levelth automatic cleanup every 5 minutes
-8. **Request Timeouts**: Configurable per operation type
-```json
-{
-  "password": "newpassword",
-  "acl": "r"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "User modified successfully"
-}
-```
-
-#### Delete User
-
-```
-DELETE /instances/:instanceId/users/:username?subscriptionId=<subscription-id>
-```
-
-**Response:**
-```json
-{
-  "message": "User deleted successfully"
-}
-```
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NODE_ENV` | No | Environment (development/production/test) |
-| `PORT` | No | Server port (default: 3013) |
-| `OMNISTRATE_EMAIL` | Yes | Omnistrate API email |
-| `OMNISTRATE_PASSWORD` | Yes | Omnistrate API password |
-| `OMNISTRATE_SERVICE_ID` | Yes | Omnistrate service ID |
-| `OMNISTRATE_ENVIRONMENT_ID` | Yes | Omnistrate environment ID |
-| `JWT_SECRET` | Yes | Secret key for signing session cookies |
-| `APPLICATION_PLANE_GOOGLE_CLOUD_PROJECT` | No | GCP project ID for application planes |
-| `AWS_TARGET_AUDIENCE` | No | AWS target audience for authentication |
-| `AWS_ROLE_ARN` | No | AWS role ARN for authentication |
-| `SERVICE_NAME` | No | Service name (default: customer-ldap) |
+5. Implement rate limiting at Ingress/LoadBalancer level
 
 ## Development
 

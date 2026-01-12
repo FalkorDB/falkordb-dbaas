@@ -79,9 +79,19 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       return true;
     } catch (error) {
       if (isAxiosError(error) && error.response?.status === 401) {
-        this._options.logger.error({ error }, 'Invalid token');
+        const sanitizedError = {
+          message: error.message,
+          status: error.response?.status,
+          code: error.code,
+        };
+        this._options.logger.error({ error: sanitizedError }, 'Invalid token');
       } else {
-        this._options.logger.error({ error }, 'Error validating token');
+        const sanitizedError = {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          status: isAxiosError(error) ? error.response?.status : undefined,
+          code: isAxiosError(error) ? error.code : undefined,
+        };
+        this._options.logger.error({ error: sanitizedError }, 'Error validating token');
       }
       return false;
     }
@@ -100,17 +110,26 @@ export class OmnistrateRepository implements IOmnistrateRepository {
         )
         .then((response) => response.data);
     } catch (error) {
-      this._options.logger.error({ error }, 'Error getting instance');
+      const sanitizedError = {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        status: isAxiosError(error) ? error.response?.status : undefined,
+        code: isAxiosError(error) ? error.code : undefined,
+      };
+      this._options.logger.error({ error: sanitizedError }, 'Error getting instance');
       throw new Error('Error getting instance');
     }
 
+    const deploymentCellID = instance?.['deploymentCellID'];
+    if (!deploymentCellID) {
+      throw new Error('Missing deploymentCellID in instance data');
+    }
 
     return {
       id: instance?.['consumptionResourceInstanceResult']?.['id'],
       clusterId: `${
         instance?.['cloudProvider'] === 'gcp'
-          ? 'c-' + instance?.['deploymentCellID'].replace(/-/g, '')
-          : instance?.['deploymentCellID']
+          ? 'c-' + deploymentCellID.replace(/-/g, '')
+          : deploymentCellID
       }`,
       region: instance?.['consumptionResourceInstanceResult']?.['region'],
       userId: instance?.['consumptionResourceInstanceResult']?.['createdByUserId'],

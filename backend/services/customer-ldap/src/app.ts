@@ -88,11 +88,11 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     }
     done();
   });
-  
+
   await fastify.register(AutoLoad, {
     dir: join(__dirname, 'routes'),
     routeParams: true,
-    indexPattern: /.*routes(\.js|\.cjs)$/i,
+    indexPattern: /.*(routes|router)(\.ts|\.js|\.cjs)$/i,
     ignorePattern: /spec\.ts$/,
     autoHooksPattern: /.*hooks(\.js|\.cjs|\.ts)$/i,
     autoHooks: true,

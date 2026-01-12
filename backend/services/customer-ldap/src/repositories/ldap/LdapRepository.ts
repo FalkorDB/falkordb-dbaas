@@ -14,6 +14,22 @@ import { LDAP_POD_PREFIX, LDAP_SECRET_NAME, LDAP_SECRET_TOKEN_KEY } from '../../
 export class LdapRepository implements ILdapRepository {
   constructor(private _options: { logger: FastifyBaseLogger }) {}
 
+  private _sanitizeError(error: unknown, operation: string): Record<string, unknown> {
+    const sanitized: Record<string, unknown> = { operation };
+    
+    if (error instanceof Error) {
+      sanitized.message = error.message;
+    }
+    
+    if (axios.isAxiosError(error)) {
+      sanitized.status = error.response?.status ?? error.status;
+      sanitized.code = error.code;
+      sanitized.url = error.config?.url ?? error.response?.request?.path;
+    }
+    
+    return sanitized;
+  }
+
   async getPodName(kubeConfig: k8s.KubeConfig, namespace: string): Promise<string> {
     this._options.logger.info({ namespace }, 'Getting LDAP pod name');
 
@@ -47,7 +63,8 @@ export class LdapRepository implements ILdapRepository {
       // Decode base64
       return Buffer.from(token, 'base64').toString('utf-8');
     } catch (error) {
-      this._options.logger.error({ error, namespace }, 'Error reading LDAP bearer token secret');
+      const sanitizedError = this._sanitizeError(error, 'getBearerToken');
+      this._options.logger.error({ error: sanitizedError, namespace }, 'Error reading LDAP bearer token secret');
       throw new Error('Failed to read LDAP bearer token from Kubernetes secret');
     }
   }
@@ -69,7 +86,8 @@ export class LdapRepository implements ILdapRepository {
 
       return response.data;
     } catch (error) {
-      this._options.logger.error({ error, localPort }, 'Error getting LDAP CA certificate');
+      const sanitizedError = this._sanitizeError(error, 'getCaCertificate');
+      this._options.logger.error({ error: sanitizedError, localPort }, 'Error getting LDAP CA certificate');
       throw new Error('Failed to get CA certificate from LDAP server');
     }
   }
@@ -123,7 +141,8 @@ export class LdapRepository implements ILdapRepository {
 
       return usersWithAcl;
     } catch (error) {
-      this._options.logger.error({ error, localPort, org }, 'Error listing LDAP users');
+      const sanitizedError = this._sanitizeError(error, 'listUsers');
+      this._options.logger.error({ error: sanitizedError, localPort, org }, 'Error listing LDAP users');
       throw new Error('Failed to list users from LDAP server');
     }
   }
@@ -198,8 +217,9 @@ export class LdapRepository implements ILdapRepository {
         },
       );
     } catch (error) {
+      const sanitizedError = this._sanitizeError(error, 'createUser');
       this._options.logger.error(
-        { error, localPort, org, username: user.username, userCreated, groupCreated },
+        { error: sanitizedError, localPort, org, username: user.username, userCreated, groupCreated },
         'Error creating LDAP user, attempting rollback',
       );
 
@@ -218,8 +238,9 @@ export class LdapRepository implements ILdapRepository {
           );
           this._options.logger.info({ username: user.username }, 'Rolled back: deleted group');
         } catch (rollbackError) {
+          const sanitizedRollbackError = this._sanitizeError(rollbackError, 'rollbackGroupCreation');
           this._options.logger.error(
-            { error: rollbackError, username: user.username },
+            { error: sanitizedRollbackError, username: user.username },
             'Failed to rollback group creation',
           );
         }
@@ -240,8 +261,9 @@ export class LdapRepository implements ILdapRepository {
           );
           this._options.logger.info({ username: user.username }, 'Rolled back: deleted user');
         } catch (rollbackError) {
+          const sanitizedRollbackError = this._sanitizeError(rollbackError, 'rollbackUserCreation');
           this._options.logger.error(
-            { error: rollbackError, username: user.username },
+            { error: sanitizedRollbackError, username: user.username },
             'Failed to rollback user creation',
           );
         }
@@ -299,7 +321,8 @@ export class LdapRepository implements ILdapRepository {
         );
       }
     } catch (error) {
-      this._options.logger.error({ error, localPort, org, username }, 'Error modifying LDAP user');
+      const sanitizedError = this._sanitizeError(error, 'modifyUser');
+      this._options.logger.error({ error: sanitizedError, localPort, org, username }, 'Error modifying LDAP user');
       throw new Error('Failed to modify user in LDAP server');
     }
   }
@@ -336,7 +359,8 @@ export class LdapRepository implements ILdapRepository {
         timeout: 10000,
       });
     } catch (error) {
-      this._options.logger.error({ error, localPort, org, username }, 'Error deleting LDAP user');
+      const sanitizedError = this._sanitizeError(error, 'deleteUser');
+      this._options.logger.error({ error: sanitizedError, localPort, org, username }, 'Error deleting LDAP user');
       throw new Error('Failed to delete user from LDAP server');
     }
   }

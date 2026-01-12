@@ -15,7 +15,7 @@ export async function instanceCreatedHandler(request: FastifyRequest<{ Body: Ins
 
   try {
     // Get Omnistrate repository from DI container
-    const omnistrateRepo = request.diScope.resolve<IOmnistrateRepository>('omnistrateRepository');
+    const omnistrateRepo = request.diScope.resolve<IOmnistrateRepository>(IOmnistrateRepository.repositoryName);
     
     // Get instance details from Omnistrate
     const instance = await omnistrateRepo.getInstance(instanceId);
