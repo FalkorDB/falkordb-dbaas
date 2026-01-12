@@ -9,7 +9,8 @@
     "serve": "pnpm --filter './services/**' run serve",
     "deploy:dev": "pnpm --filter './services/*' run deploy:dev",
     "deploy:prod": "pnpm --filter './services/*' run deploy:prod",
-    "build": "pnpm --filter './services/**' run build"
+    "build": "pnpm --filter './services/**' run build",
+    "build:libs": "pnpm --filter './libs/**' run build"
   },
   "keywords": [],
   "author": "",

@@ -1,4 +1,4 @@
-ARG NODE_VERSION=22.6.0
+ARG NODE_VERSION=24.12.0
 
 # Alpine image
 FROM node:$NODE_VERSION-alpine AS alpine

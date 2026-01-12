@@ -2,7 +2,11 @@ name: Build frontends
 
 on:
   push:
+    paths:
+      - frontend
   pull_request:
+    paths:
+      - frontend
 
 permissions:
   contents: "read"

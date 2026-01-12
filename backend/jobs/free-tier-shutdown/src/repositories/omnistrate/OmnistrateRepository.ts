@@ -95,7 +95,7 @@ export class OmnistrateRepository {
         status: d?.['consumptionResourceInstanceResult']?.['status'],
         resourceId: Object.entries(d?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology'] ?? {}).filter(
           (ob) => (ob[1] as unknown)?.['main'],
-        )[0][0],
+        )?.[0]?.[0],
         cloudProvider: d?.['consumptionResourceInstanceResult']?.['cloud_provider'],
       }))
       .filter(
