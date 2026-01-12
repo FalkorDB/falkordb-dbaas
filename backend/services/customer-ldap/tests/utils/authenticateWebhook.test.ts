@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { authenticateWebhook } from './authenticateWebhook';
+import { authenticateWebhook } from '../../src/routes/v1/omnistrate/hooks/authenticateWebhook';
 
 describe('authenticateWebhook', () => {
   let mockRequest: Partial<FastifyRequest>;
