@@ -32,6 +32,9 @@ spec:
             - name: http
               containerPort: 3013
               protocol: TCP
+          envFrom:
+            - secretRef:
+                name: customer-ldap-api-env
           env:
             - name: NODE_ENV
               value: "production"
@@ -55,49 +58,6 @@ spec:
                 configMapKeyRef:
                   name: customer-ldap-api-config
                   key: REQUEST_TIMEOUT
-                  optional: true
-            - name: OMNISTRATE_EMAIL
-              valueFrom:
-                secretKeyRef:
-                  name: customer-ldap-api-env
-                  key: OMNISTRATE_EMAIL
-            - name: OMNISTRATE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: customer-ldap-api-env
-                  key: OMNISTRATE_PASSWORD
-            - name: OMNISTRATE_SERVICE_ID
-              valueFrom:
-                secretKeyRef:
-                  name: customer-ldap-api-env
-                  key: OMNISTRATE_SERVICE_ID
-            - name: OMNISTRATE_ENVIRONMENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: customer-ldap-api-env
-                  key: OMNISTRATE_ENVIRONMENT_ID
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: customer-ldap-api-env
-                  key: JWT_SECRET
-            - name: APPLICATION_PLANE_GOOGLE_CLOUD_PROJECT
-              valueFrom:
-                secretKeyRef:
-                  name: customer-ldap-api-env
-                  key: APPLICATION_PLANE_GOOGLE_CLOUD_PROJECT
-                  optional: true
-            - name: AWS_TARGET_AUDIENCE
-              valueFrom:
-                secretKeyRef:
-                  name: customer-ldap-api-env
-                  key: AWS_TARGET_AUDIENCE
-                  optional: true
-            - name: AWS_ROLE_ARN
-              valueFrom:
-                secretKeyRef:
-                  name: customer-ldap-api-env
-                  key: AWS_ROLE_ARN
                   optional: true
           livenessProbe:
             httpGet:
@@ -156,35 +116,6 @@ metadata:
     app.kubernetes.io/name: customer-ldap-api
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: customer-ldap-api
-  labels:
-    app: customer-ldap-api
-    app.kubernetes.io/name: customer-ldap-api
-rules:
-  # Allow reading pods and secrets in ldap-auth namespace
-  - apiGroups: [""]
-    resources: ["pods", "secrets"]
-    verbs: ["get", "list"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: customer-ldap-api
-  labels:
-    app: customer-ldap-api
-    app.kubernetes.io/name: customer-ldap-api
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: customer-ldap-api
-subjects:
-  - kind: ServiceAccount
-    name: customer-ldap-api
-    namespace: api
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: customer-ldap-api-ldap-access
@@ -193,14 +124,10 @@ metadata:
     app: customer-ldap-api
     app.kubernetes.io/name: customer-ldap-api
 rules:
-  # Allow reading pods and secrets in ldap-auth namespace only
+  # Allow reading secrets in ldap-auth namespace only
   - apiGroups: [""]
-    resources: ["pods", "secrets"]
+    resources: ["secrets"]
     verbs: ["get", "list"]
-  # Allow port-forward to ldap-auth pods
-  - apiGroups: [""]
-    resources: ["pods/portforward"]
-    verbs: ["create", "get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
