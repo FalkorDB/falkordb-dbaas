@@ -1,0 +1,75 @@
+import fp from 'fastify-plugin';
+import { Type } from '@sinclair/typebox';
+import { instanceCreatedHandler } from './handlers/instanceCreatedHandler';
+import { instanceDeletedHandler } from './handlers/instanceDeletedHandler';
+import { authenticateWebhook } from './hooks/authenticateWebhook';
+
+export default fp(async function omnistrateRoutes(fastify) {
+  // Webhook: Instance Created
+  fastify.post(
+    '/v1/omnistrate/instance-created',
+    {
+      onRequest: [authenticateWebhook],
+      schema: {
+        tags: ['Omnistrate Webhooks'],
+        description: 'Webhook handler for instance creation events from Omnistrate',
+        body: Type.Object({
+          instanceId: Type.String({ description: 'Omnistrate instance ID' }),
+          subscriptionId: Type.String({ description: 'Omnistrate subscription ID' }),
+        }),
+        response: {
+          200: Type.Object({
+            message: Type.String(),
+          }),
+          201: Type.Object({
+            message: Type.String(),
+          }),
+          404: Type.Object({
+            error: Type.String(),
+            message: Type.String(),
+          }),
+          422: Type.Object({
+            error: Type.String(),
+            message: Type.String(),
+          }),
+          429: Type.Object({
+            error: Type.String(),
+            message: Type.String(),
+          }),
+          500: Type.Object({
+            error: Type.String(),
+            message: Type.String(),
+          }),
+        },
+      },
+    },
+    instanceCreatedHandler
+  );
+
+  // Webhook: Instance Deleted
+  fastify.post(
+    '/v1/omnistrate/instance-deleted',
+    {
+      onRequest: [authenticateWebhook],
+      schema: {
+        tags: ['Omnistrate Webhooks'],
+        description: 'Webhook handler for instance deletion events from Omnistrate',
+        body: Type.Object({
+          instanceId: Type.String({ description: 'Omnistrate instance ID' }),
+          subscriptionId: Type.String({ description: 'Omnistrate subscription ID' }),
+        }),
+        response: {
+          200: Type.Object({
+            message: Type.String(),
+            deletedCount: Type.Number(),
+            failedCount: Type.Optional(Type.Number()),
+            error: Type.Optional(Type.String()),
+          }),
+        },
+      },
+    },
+    instanceDeletedHandler
+  );
+}, {
+  name: 'v1-omnistrate-routes',
+});

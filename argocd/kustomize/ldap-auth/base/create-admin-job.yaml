@@ -37,10 +37,19 @@ spec:
           echo "LDAP auth server is ready!"
           echo "Creating admin user..."
           
-          # Create the admin user
-          ldap-auth-cli user create --org admin --username admin --password "$LDAP_ADMIN_PASSWORD"
-          
-          echo "Admin user created successfully!"
+          # Create the admin user (gracefully handle if already exists)
+          if ldap-auth-cli user create --org admin --username admin --password "$LDAP_ADMIN_PASSWORD" 2>&1 | tee /tmp/output.txt; then
+            echo "Admin user created successfully!"
+          else
+            if grep -q "409 Conflict\|already exists" /tmp/output.txt; then
+              echo "Admin user already exists, skipping creation."
+              exit 0
+            else
+              echo "Failed to create admin user"
+              cat /tmp/output.txt
+              exit 1
+            fi
+          fi
         env:
         - name: LDAP_ADMIN_PASSWORD
           valueFrom:

@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: customer-ldap-api
+  labels:
+    app: customer-ldap-api
+    app.kubernetes.io/name: customer-ldap-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: customer-ldap-api

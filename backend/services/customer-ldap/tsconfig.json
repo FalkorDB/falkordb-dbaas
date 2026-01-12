@@ -1,0 +1,9 @@
+{
+  "extends": "@falkordb/configs/tsconfig.base.json",
+  "include": ["src/**/*"],
+  "compilerOptions": {
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "downlevelIteration": true
+  }
+}
