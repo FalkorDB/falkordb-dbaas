@@ -42,6 +42,10 @@ jobs:
       - name: Install pnpm
         working-directory: backend
         run: pnpm i --frozen-lockfile
+
+      - name: Build dependencies
+        working-directory: backend
+        run: pnpm run build:libs
       
       - name: Run Tests
         if: matrix.service.test == 'true'
