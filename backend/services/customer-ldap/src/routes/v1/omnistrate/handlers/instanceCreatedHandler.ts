@@ -37,7 +37,7 @@ export async function instanceCreatedHandler(
 
     // Extract FalkorDB credentials from resultParams
     const resultParams = instance.resultParams || {};
-    const falkordbUsername = resultParams.falkordbUsername;
+    const falkordbUsername = resultParams.falkordbUser;
     const falkordbPassword = resultParams.falkordbPassword;
 
     if (!falkordbUsername || !falkordbPassword) {
