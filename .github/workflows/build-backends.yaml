@@ -3,10 +3,12 @@ name: Build backends
 on:
   push:
     paths:
-      - backend
+      - 'backend/**'
+      - .github/workflows/build-backends.yaml
   pull_request:
     paths:
-      - backend
+      - 'backend/**'
+      - .github/workflows/build-backends.yaml
   workflow_dispatch:
 
 permissions:
