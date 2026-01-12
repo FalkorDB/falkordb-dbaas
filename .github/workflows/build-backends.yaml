@@ -2,7 +2,11 @@ name: Build backends
 
 on:
   push:
+    paths:
+      - backend
   pull_request:
+    paths:
+      - backend
 
 permissions:
   contents: "read"
@@ -20,10 +24,10 @@ jobs:
           - name: db-importer-worker
           - name: db-importer
           - name: cluster-discovery
-            test: 'false'
+            test: "false"
           - name: alert-silence-syncer
           - name: customer-ldap
-            test: 'true'
+            test: "true"
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -46,7 +50,7 @@ jobs:
       - name: Build dependencies
         working-directory: backend
         run: pnpm run build:libs
-      
+
       - name: Run Tests
         if: matrix.service.test == 'true'
         working-directory: ./backend/services/${{ matrix.service.name }}
