@@ -1,5 +1,8 @@
 import { type FastifyReply, type FastifyRequest } from 'fastify';
 import { IOmnistrateRepository } from '../../../../repositories/omnistrate/IOmnistrateRepository';
+import { IK8sRepository } from '../../../../repositories/k8s/IK8sRepository';
+import { ILdapRepository } from '../../../../repositories/ldap/ILdapRepository';
+import { IConnectionCacheRepository } from '../../../../repositories/connection-cache/IConnectionCacheRepository';
 import { UserService } from '../../../../services/UserService';
 
 interface InstanceDeletedBody {
@@ -61,8 +64,11 @@ export async function instanceDeletedHandler(
       });
     }
 
-    // Get UserService from DI container
-    const userService = request.diScope.resolve<UserService>('userService');
+    // Create UserService with dependencies from DI container
+    const k8sRepository = request.diScope.resolve<IK8sRepository>(IK8sRepository.repositoryName);
+    const ldapRepository = request.diScope.resolve<ILdapRepository>(ILdapRepository.repositoryName);
+    const connectionCache = request.diScope.resolve<IConnectionCacheRepository>(IConnectionCacheRepository.repositoryName);
+    const userService = new UserService({ logger: request.log }, k8sRepository, ldapRepository, connectionCache);
 
     // List all users in the organization (instance)
     let users;
