@@ -31,6 +31,13 @@ patches:
       - op: replace
         path: /spec/fields/1/encoding
         value: base64url
+  - target:
+      kind: Certificate
+      name: ldap-auth-tls-cert
+    patch: |-
+      - op: add
+        path: /spec/dnsNames/-  
+        value: "localhost"
 
 patchesStrategicMerge:
   - |-
