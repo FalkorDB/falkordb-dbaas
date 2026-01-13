@@ -3,9 +3,71 @@ import assert from 'assert';
 import { FastifyBaseLogger } from 'fastify';
 import * as https from 'https';
 import { ILdapRepository, LdapUser, CreateUserRequest, ModifyUserRequest } from './ILdapRepository';
+import { LDAP_SERVICE_NAME } from '../../constants';
 
 export class LdapRepository implements ILdapRepository {
   constructor(private _options: { logger: FastifyBaseLogger }) {}
+
+  private _getPortForwardBaseUrl(localPort: number): string {
+    return `https://${LDAP_SERVICE_NAME}:${localPort}`;
+  }
+
+  private _createPortForwardHttpsAgent(options: { ca?: string; rejectUnauthorized?: boolean }): https.Agent {
+    // We port-forward to localhost, but we must use a hostname that matches the
+    // service certificate SANs (ldap-auth-service...). We achieve this by:
+    // - Using LDAP_SERVICE_NAME in the URL (so SNI/hostname verification matches)
+    // - Overriding DNS lookup to always return 127.0.0.1 (so traffic still goes via the port-forward)
+    return new https.Agent({
+      ca: options.ca,
+      rejectUnauthorized: options.rejectUnauthorized,
+      servername: LDAP_SERVICE_NAME,
+      lookup: (hostname: string, lookupOptions: any, callback: any) => {
+        if (typeof lookupOptions === 'function') {
+          callback = lookupOptions;
+        }
+        callback(null, '127.0.0.1', 4);
+      },
+    });
+  }
+
+  private _extractCertificatePem(responseData: unknown): string {
+    if (typeof responseData === 'string') {
+      return responseData.trim();
+    }
+
+    if (responseData && typeof responseData === 'object') {
+      const anyData = responseData as any;
+
+      // Common patterns: { data: "...pem..." } or { data: { ... } }
+      const direct = anyData.data;
+      if (typeof direct === 'string') {
+        return direct.trim();
+      }
+
+      const nested = anyData.data?.data;
+      if (typeof nested === 'string') {
+        return nested.trim();
+      }
+
+      // Fallback for possible alternate keys
+      const candidates = [
+        anyData.caCert,
+        anyData.ca_certificate,
+        anyData.certificate,
+        anyData.cert,
+        anyData.data?.caCert,
+        anyData.data?.ca_certificate,
+        anyData.data?.certificate,
+        anyData.data?.cert,
+      ];
+      const found = candidates.find((c) => typeof c === 'string');
+      if (typeof found === 'string') {
+        return found.trim();
+      }
+    }
+
+    throw new Error('Unexpected CA certificate response format');
+  }
 
   private _sanitizeError(error: unknown, operation: string): Record<string, unknown> {
     const sanitized: Record<string, unknown> = { operation };
@@ -28,12 +90,10 @@ export class LdapRepository implements ILdapRepository {
 
     this._options.logger.info({ localPort }, 'Getting LDAP CA certificate');
 
-    const httpsAgent = new https.Agent({
-      rejectUnauthorized: false, // Allow insecure requests to fetch the CA cert
-    });
+    const httpsAgent = this._createPortForwardHttpsAgent({ rejectUnauthorized: false });
 
     try {
-      const response = await axios.get(`https://localhost:${localPort}/api/v1/ca-certificate`, {
+      const response = await axios.get(`${this._getPortForwardBaseUrl(localPort)}/api/v1/ca-certificate`, {
         httpsAgent,
         timeout: 10000,
         headers: {
@@ -41,7 +101,8 @@ export class LdapRepository implements ILdapRepository {
         },
       });
 
-      return response.data;
+      const pem = this._extractCertificatePem(response.data);
+      return pem;
     } catch (error) {
       const sanitizedError = this._sanitizeError(error, 'getCaCertificate');
       this._options.logger.error({ error: sanitizedError, localPort }, 'Error getting LDAP CA certificate');
@@ -57,13 +118,11 @@ export class LdapRepository implements ILdapRepository {
 
     this._options.logger.info({ localPort, org }, 'Listing LDAP users');
 
-    const httpsAgent = new https.Agent({
-      ca: caCert,
-    });
+    const httpsAgent = this._createPortForwardHttpsAgent({ ca: caCert });
 
     try {
       // Get users
-      const usersResponse = await axios.get(`https://localhost:${localPort}/api/users/${encodeURIComponent(org)}`, {
+      const usersResponse = await axios.get(`${this._getPortForwardBaseUrl(localPort)}/api/users/${encodeURIComponent(org)}`, {
         headers: {
           Authorization: `Bearer ${bearerToken}`,
         },
@@ -74,7 +133,7 @@ export class LdapRepository implements ILdapRepository {
       const users = usersResponse.data.data.users || [];
 
       // Get all groups to retrieve ACL from descriptions
-      const groupsResponse = await axios.get(`https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}`, {
+      const groupsResponse = await axios.get(`${this._getPortForwardBaseUrl(localPort)}/api/groups/${encodeURIComponent(org)}`, {
         headers: {
           Authorization: `Bearer ${bearerToken}`,
         },
@@ -121,9 +180,7 @@ export class LdapRepository implements ILdapRepository {
 
     this._options.logger.info({ localPort, org, username: user.username }, 'Creating LDAP user and group');
 
-    const httpsAgent = new https.Agent({
-      ca: caCert,
-    });
+    const httpsAgent = this._createPortForwardHttpsAgent({ ca: caCert });
 
     let userCreated = false;
     let groupCreated = false;
@@ -131,7 +188,7 @@ export class LdapRepository implements ILdapRepository {
     try {
       // Create user
       await axios.post(
-        `https://localhost:${localPort}/api/users`,
+        `${this._getPortForwardBaseUrl(localPort)}/api/users`,
         {
           org,
           username: user.username,
@@ -149,7 +206,7 @@ export class LdapRepository implements ILdapRepository {
 
       // Create group with same name and ACL in description
       await axios.post(
-        `https://localhost:${localPort}/api/groups`,
+        `${this._getPortForwardBaseUrl(localPort)}/api/groups`,
         {
           org,
           name: user.username,
@@ -167,7 +224,7 @@ export class LdapRepository implements ILdapRepository {
 
       // Add user to the group
       await axios.post(
-        `https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}/members`,
+        `${this._getPortForwardBaseUrl(localPort)}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}/members`,
         {
           username: user.username,
         },
@@ -190,7 +247,7 @@ export class LdapRepository implements ILdapRepository {
       if (groupCreated) {
         try {
           await axios.delete(
-            `https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}`,
+            `${this._getPortForwardBaseUrl(localPort)}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}`,
             {
               headers: {
                 Authorization: `Bearer ${bearerToken}`,
@@ -213,7 +270,7 @@ export class LdapRepository implements ILdapRepository {
       if (userCreated) {
         try {
           await axios.delete(
-            `https://localhost:${localPort}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}`,
+            `${this._getPortForwardBaseUrl(localPort)}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}`,
             {
               headers: {
                 Authorization: `Bearer ${bearerToken}`,
@@ -252,15 +309,13 @@ export class LdapRepository implements ILdapRepository {
 
     this._options.logger.info({ localPort, org, username }, 'Modifying LDAP user');
 
-    const httpsAgent = new https.Agent({
-      ca: caCert,
-    });
+    const httpsAgent = this._createPortForwardHttpsAgent({ ca: caCert });
 
     try {
       // Update user password if provided
       if (user.password) {
         await axios.put(
-          `https://localhost:${localPort}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
+          `${this._getPortForwardBaseUrl(localPort)}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
           {
             password: user.password,
           },
@@ -277,7 +332,7 @@ export class LdapRepository implements ILdapRepository {
       // Update group description (ACL) if provided
       if (user.acl) {
         await axios.put(
-          `https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
+          `${this._getPortForwardBaseUrl(localPort)}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
           {
             description: user.acl,
           },
@@ -312,14 +367,12 @@ export class LdapRepository implements ILdapRepository {
 
     this._options.logger.info({ localPort, org, username }, 'Deleting LDAP user and group');
 
-    const httpsAgent = new https.Agent({
-      ca: caCert,
-    });
+    const httpsAgent = this._createPortForwardHttpsAgent({ ca: caCert });
 
     try {
       // Delete user
       await axios.delete(
-        `https://localhost:${localPort}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
+        `${this._getPortForwardBaseUrl(localPort)}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
         {
           headers: {
             Authorization: `Bearer ${bearerToken}`,
@@ -331,7 +384,7 @@ export class LdapRepository implements ILdapRepository {
 
       // Delete associated group
       await axios.delete(
-        `https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
+        `${this._getPortForwardBaseUrl(localPort)}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
         {
           headers: {
             Authorization: `Bearer ${bearerToken}`,
@@ -352,12 +405,10 @@ export class LdapRepository implements ILdapRepository {
 
     this._options.logger.info({ localPort }, 'Checking LDAP server health');
 
-    const httpsAgent = new https.Agent({
-      rejectUnauthorized: false, // Allow insecure requests to fetch the CA cert
-    });
+    const httpsAgent = this._createPortForwardHttpsAgent({ rejectUnauthorized: false });
 
     try {
-      const response = await axios.get(`https://localhost:${localPort}/health`, {
+      const response = await axios.get(`${this._getPortForwardBaseUrl(localPort)}/health`, {
         httpsAgent,
         timeout: 10000,
       });
