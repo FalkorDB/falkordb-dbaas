@@ -17,6 +17,8 @@ describe('UserService', () => {
     logger = pino({ level: 'silent' });
 
     mockK8sRepo = {
+      getPodNameByPrefix: jest.fn(),
+      getSecretValueUtf8: jest.fn(),
       createPortForward: jest.fn(),
     };
 
@@ -29,9 +31,8 @@ describe('UserService', () => {
       createUser: jest.fn(),
       modifyUser: jest.fn(),
       deleteUser: jest.fn(),
-      getPodName: jest.fn(),
-      getBearerToken: jest.fn(),
       getCaCertificate: jest.fn(),
+      checkHealth: jest.fn(),
     };
 
     mockConnectionCache = {
@@ -63,12 +64,12 @@ describe('UserService', () => {
 
       mockConnectionCache.getConnection.mockReturnValue(null);
       mockK8sCredentialsRepo.getKubeConfig.mockResolvedValue(mockConfig);
-      mockLdapRepo.getPodName.mockResolvedValue('ldap-auth-rs-12345');
+      mockK8sRepo.getPodNameByPrefix.mockResolvedValue('ldap-auth-rs-12345');
       mockK8sRepo.createPortForward.mockResolvedValue({
         localPort: 12345,
         close: mockCloseFn,
       });
-      mockLdapRepo.getBearerToken.mockResolvedValue('bearer-token-123');
+      mockK8sRepo.getSecretValueUtf8.mockResolvedValue('bearer-token-123');
       mockLdapRepo.getCaCertificate.mockResolvedValue('-----BEGIN CERTIFICATE-----\nca-cert\n-----END CERTIFICATE-----');
       mockLdapRepo.listUsers.mockResolvedValue(mockUsers);
 
@@ -77,14 +78,19 @@ describe('UserService', () => {
       expect(result).toEqual(mockUsers);
       expect(mockConnectionCache.getConnection).toHaveBeenCalledWith('inst-1');
       expect(mockK8sCredentialsRepo.getKubeConfig).toHaveBeenCalledWith('gcp', 'c-test', 'us-central1');
-      expect(mockLdapRepo.getPodName).toHaveBeenCalledWith(mockConfig, 'ldap-auth');
+      expect(mockK8sRepo.getPodNameByPrefix).toHaveBeenCalledWith(mockConfig, 'ldap-auth', 'ldap-auth-rs');
       expect(mockK8sRepo.createPortForward).toHaveBeenCalledWith(
         mockConfig,
         'ldap-auth',
         'ldap-auth-rs-12345',
         8080,
       );
-      expect(mockLdapRepo.getBearerToken).toHaveBeenCalledWith(mockConfig, 'ldap-auth');
+      expect(mockK8sRepo.getSecretValueUtf8).toHaveBeenCalledWith(
+        mockConfig,
+        'ldap-auth',
+        'ldap-auth-secrets',
+        'API_BEARER_TOKEN',
+      );
       expect(mockLdapRepo.getCaCertificate).toHaveBeenCalledWith(12345);
       expect(mockLdapRepo.listUsers).toHaveBeenCalled();
       expect(mockConnectionCache.setConnection).toHaveBeenCalled();

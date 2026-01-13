@@ -2,9 +2,55 @@ import * as k8s from '@kubernetes/client-node';
 import { FastifyBaseLogger } from 'fastify';
 import { IK8sRepository } from './IK8sRepository';
 import net from 'net';
+import assert from 'assert';
 
 export class K8sRepository implements IK8sRepository {
   constructor(private _options: { logger: FastifyBaseLogger }) {}
+
+  async getPodNameByPrefix(
+    kubeConfig: k8s.KubeConfig,
+    namespace: string,
+    podNamePrefix: string,
+  ): Promise<string> {
+    assert(namespace, 'K8sRepository: namespace is required');
+    assert(podNamePrefix, 'K8sRepository: podNamePrefix is required');
+
+    this._options.logger.info({ namespace, podNamePrefix }, 'Getting pod name by prefix');
+
+    const k8sApi = kubeConfig.makeApiClient(k8s.CoreV1Api);
+    const podsResponse = await k8sApi.listNamespacedPod(namespace);
+    const pod = podsResponse.body.items.find((p) => p.metadata?.name?.startsWith(podNamePrefix));
+
+    if (!pod?.metadata?.name) {
+      throw new Error(`Pod not found in namespace ${namespace} with prefix: ${podNamePrefix}`);
+    }
+
+    this._options.logger.info({ namespace, podName: pod.metadata.name }, 'Found pod');
+    return pod.metadata.name;
+  }
+
+  async getSecretValueUtf8(
+    kubeConfig: k8s.KubeConfig,
+    namespace: string,
+    secretName: string,
+    key: string,
+  ): Promise<string> {
+    assert(namespace, 'K8sRepository: namespace is required');
+    assert(secretName, 'K8sRepository: secretName is required');
+    assert(key, 'K8sRepository: key is required');
+
+    this._options.logger.info({ namespace, secretName, key }, 'Getting secret value');
+
+    const k8sApi = kubeConfig.makeApiClient(k8s.CoreV1Api);
+    const secretResponse = await k8sApi.readNamespacedSecret(secretName, namespace);
+    const valueBase64 = secretResponse.body.data?.[key];
+
+    if (!valueBase64) {
+      throw new Error(`${key} not found in secret ${secretName}`);
+    }
+
+    return Buffer.from(valueBase64, 'base64').toString('utf-8');
+  }
 
   async createPortForward(
     kubeConfig: k8s.KubeConfig,

@@ -5,7 +5,13 @@ import { ILdapRepository, LdapUser, CreateUserRequest, ModifyUserRequest } from 
 import { IConnectionCacheRepository, CachedConnection } from '../repositories/connection-cache/IConnectionCacheRepository';
 import { LdapService } from './LdapService';
 import * as assert from 'assert';
-import { LDAP_NAMESPACE, LDAP_SERVICE_PORT } from '../constants';
+import {
+  LDAP_NAMESPACE,
+  LDAP_SERVICE_PORT,
+  LDAP_POD_PREFIX,
+  LDAP_SECRET_NAME,
+  LDAP_SECRET_TOKEN_KEY,
+} from '../constants';
 
 export interface UserServiceOptions {
   logger: FastifyBaseLogger;
@@ -150,9 +156,14 @@ export class UserService {
 
     try {
       const kubeConfig = await this._k8sCredentialsRepository.getKubeConfig(cloudProvider, k8sClusterName, region);
-      const podName = await this._ldapRepository.getPodName(kubeConfig, LDAP_NAMESPACE);
+      const podName = await this._k8sRepository.getPodNameByPrefix(kubeConfig, LDAP_NAMESPACE, LDAP_POD_PREFIX);
       portForward = await this._k8sRepository.createPortForward(kubeConfig, LDAP_NAMESPACE, podName, LDAP_SERVICE_PORT);
-      const bearerToken = await this._ldapRepository.getBearerToken(kubeConfig, LDAP_NAMESPACE);
+      const bearerToken = await this._k8sRepository.getSecretValueUtf8(
+        kubeConfig,
+        LDAP_NAMESPACE,
+        LDAP_SECRET_NAME,
+        LDAP_SECRET_TOKEN_KEY,
+      );
       const caCert = await this._ldapRepository.getCaCertificate(portForward.localPort);
 
       // Create LdapService

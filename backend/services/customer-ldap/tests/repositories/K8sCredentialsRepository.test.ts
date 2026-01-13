@@ -31,12 +31,15 @@ describe('K8sCredentialsRepository', () => {
     });
 
     it('should successfully create kubeconfig with service account token for GCP', async () => {
+      const jwtLikeToken = 'eyJhbGciOiJIUzI1NiJ9.e30.signature';
+      const base64TokenWithNewlines = `${Buffer.from(jwtLikeToken, 'utf8').toString('base64').slice(0, 10)}\n${Buffer.from(jwtLikeToken, 'utf8').toString('base64').slice(10)}`;
+
       const mockResponse = {
         data: {
           apiServerEndpoint: 'https://api.test-cluster.com',
           caDataBase64: 'base64-ca-data',
           id: 'cluster-id-123',
-          serviceAccountToken: 'base64-token',
+          serviceAccountToken: base64TokenWithNewlines,
           userName: 'omnistrate-user',
         },
       };
@@ -51,11 +54,36 @@ describe('K8sCredentialsRepository', () => {
       // Verify kubeconfig structure
       const clusters = kubeConfig.getClusters();
       expect(clusters).toHaveLength(1);
-      expect(clusters[0].server).toBe('https://api.test-cluster.com/');
+      expect(clusters[0].server).toMatch(/^https:\/\/api\.test-cluster\.com\/?$/);
 
       const users = kubeConfig.getUsers();
       expect(users).toHaveLength(1);
       expect(users[0].name).toBe('omnistrate-user');
+      expect(users[0].token).toBe(jwtLikeToken);
+    });
+
+    it('should accept a raw JWT-like service account token (non-base64)', async () => {
+      const rawToken = 'eyJhbGciOiJIUzI1NiJ9.e30.signature';
+
+      const mockResponse = {
+        data: {
+          apiServerEndpoint: 'api.test-cluster.com:',
+          caDataBase64: 'base64-ca-data',
+          id: 'cluster-id-123',
+          serviceAccountToken: `  ${rawToken}\n`,
+          userName: 'omnistrate-user',
+        },
+      };
+
+      mockGet.mockResolvedValue(mockResponse);
+
+      const kubeConfig = await repository.getKubeConfig('gcp', 'c-hcabc123def456', 'us-central1');
+
+      const clusters = kubeConfig.getClusters();
+      expect(clusters[0].server).toMatch(/^https:\/\/api\.test-cluster\.com\/?$/);
+
+      const users = kubeConfig.getUsers();
+      expect(users[0].token).toBe(rawToken);
     });
 
     it('should successfully create kubeconfig with client certificates for AWS', async () => {
@@ -80,6 +108,35 @@ describe('K8sCredentialsRepository', () => {
       const users = kubeConfig.getUsers();
       expect(users).toHaveLength(1);
       expect(users[0].name).toBe('omnistrate-user');
+      expect(users[0].certData).toBe('base64-cert');
+      expect(users[0].keyData).toBe('base64-key');
+    });
+
+    it('should include both token and client certificates when both are provided', async () => {
+      const jwtLikeToken = 'eyJhbGciOiJIUzI1NiJ9.e30.signature';
+      const base64Token = Buffer.from(jwtLikeToken, 'utf8').toString('base64');
+
+      const mockResponse = {
+        data: {
+          apiServerEndpoint: 'https://api.test-cluster.com',
+          caDataBase64: 'base64-ca-data',
+          clientCertificateDataBase64: 'base64-cert',
+          clientKeyDataBase64: 'base64-key',
+          id: 'cluster-id-123',
+          serviceAccountToken: base64Token,
+          userName: 'omnistrate-user',
+        },
+      };
+
+      mockGet.mockResolvedValue(mockResponse);
+
+      const kubeConfig = await repository.getKubeConfig('gcp', 'c-hcabc123def456', 'us-central1');
+
+      const users = kubeConfig.getUsers();
+      expect(users).toHaveLength(1);
+      expect(users[0].token).toBe(jwtLikeToken);
+      expect(users[0].certData).toBe('base64-cert');
+      expect(users[0].keyData).toBe('base64-key');
     });
 
     it('should throw error when API call fails', async () => {

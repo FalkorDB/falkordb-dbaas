@@ -1,77 +1,31 @@
 import axios from 'axios';
 import assert from 'assert';
 import { FastifyBaseLogger } from 'fastify';
-import * as k8s from '@kubernetes/client-node';
 import * as https from 'https';
-import {
-  ILdapRepository,
-  LdapUser,
-  CreateUserRequest,
-  ModifyUserRequest,
-} from './ILdapRepository';
-import { LDAP_POD_PREFIX, LDAP_SECRET_NAME, LDAP_SECRET_TOKEN_KEY } from '../../constants';
+import { ILdapRepository, LdapUser, CreateUserRequest, ModifyUserRequest } from './ILdapRepository';
 
 export class LdapRepository implements ILdapRepository {
   constructor(private _options: { logger: FastifyBaseLogger }) {}
 
   private _sanitizeError(error: unknown, operation: string): Record<string, unknown> {
     const sanitized: Record<string, unknown> = { operation };
-    
+
     if (error instanceof Error) {
       sanitized.message = error.message;
     }
-    
+
     if (axios.isAxiosError(error)) {
       sanitized.status = error.response?.status ?? error.status;
       sanitized.code = error.code;
       sanitized.url = error.config?.url ?? error.response?.request?.path;
     }
-    
+
     return sanitized;
-  }
-
-  async getPodName(kubeConfig: k8s.KubeConfig, namespace: string): Promise<string> {
-    this._options.logger.info({ namespace }, 'Getting LDAP pod name');
-
-    const k8sApi = kubeConfig.makeApiClient(k8s.CoreV1Api);
-    
-    const podsResponse = await k8sApi.listNamespacedPod(namespace);
-    const ldapPod = podsResponse.body.items.find((pod) =>
-      pod.metadata?.name?.startsWith(LDAP_POD_PREFIX),
-    );
-
-    if (!ldapPod) {
-      throw new Error('LDAP pod not found in namespace: ' + namespace);
-    }
-
-    return ldapPod.metadata.name;
-  }
-
-  async getBearerToken(kubeConfig: k8s.KubeConfig, namespace: string): Promise<string> {
-    this._options.logger.info({ namespace }, 'Getting LDAP bearer token from secret');
-
-    const k8sApi = kubeConfig.makeApiClient(k8s.CoreV1Api);
-    
-    try {
-      const secretResponse = await k8sApi.readNamespacedSecret(LDAP_SECRET_NAME, namespace);
-      const token = secretResponse.body.data?.[LDAP_SECRET_TOKEN_KEY];
-      
-      if (!token) {
-        throw new Error(`${LDAP_SECRET_TOKEN_KEY} not found in secret ${LDAP_SECRET_NAME}`);
-      }
-
-      // Decode base64
-      return Buffer.from(token, 'base64').toString('utf-8');
-    } catch (error) {
-      const sanitizedError = this._sanitizeError(error, 'getBearerToken');
-      this._options.logger.error({ error: sanitizedError, namespace }, 'Error reading LDAP bearer token secret');
-      throw new Error('Failed to read LDAP bearer token from Kubernetes secret');
-    }
   }
 
   async getCaCertificate(localPort: number): Promise<string> {
     assert(localPort, 'LdapRepository: Local port is required');
-    
+
     this._options.logger.info({ localPort }, 'Getting LDAP CA certificate');
 
     const httpsAgent = new https.Agent({
@@ -84,7 +38,7 @@ export class LdapRepository implements ILdapRepository {
         timeout: 10000,
       });
 
-      return response.data;
+      return response.data.data;
     } catch (error) {
       const sanitizedError = this._sanitizeError(error, 'getCaCertificate');
       this._options.logger.error({ error: sanitizedError, localPort }, 'Error getting LDAP CA certificate');
@@ -97,7 +51,7 @@ export class LdapRepository implements ILdapRepository {
     assert(org, 'LdapRepository: Organization is required');
     assert(bearerToken, 'LdapRepository: Bearer token is required');
     assert(caCert, 'LdapRepository: CA certificate is required');
-    
+
     this._options.logger.info({ localPort, org }, 'Listing LDAP users');
 
     const httpsAgent = new https.Agent({
@@ -108,24 +62,24 @@ export class LdapRepository implements ILdapRepository {
       // Get users
       const usersResponse = await axios.get(`https://localhost:${localPort}/api/users/${encodeURIComponent(org)}`, {
         headers: {
-          'Authorization': `Bearer ${bearerToken}`,
+          Authorization: `Bearer ${bearerToken}`,
         },
         httpsAgent,
         timeout: 10000,
       });
 
-      const users = usersResponse.data.users || [];
+      const users = usersResponse.data.data.users || [];
 
       // Get all groups to retrieve ACL from descriptions
       const groupsResponse = await axios.get(`https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}`, {
         headers: {
-          'Authorization': `Bearer ${bearerToken}`,
+          Authorization: `Bearer ${bearerToken}`,
         },
         httpsAgent,
         timeout: 10000,
       });
 
-      const groups = groupsResponse.data.groups || [];
+      const groups = groupsResponse.data.data.groups || [];
 
       // Create a map of username -> ACL from groups
       const aclMap = new Map<string, string>();
@@ -147,7 +101,13 @@ export class LdapRepository implements ILdapRepository {
     }
   }
 
-  async createUser(localPort: number, org: string, bearerToken: string, caCert: string, user: CreateUserRequest): Promise<void> {
+  async createUser(
+    localPort: number,
+    org: string,
+    bearerToken: string,
+    caCert: string,
+    user: CreateUserRequest,
+  ): Promise<void> {
     assert(localPort, 'LdapRepository: Local port is required');
     assert(org, 'LdapRepository: Organization is required');
     assert(bearerToken, 'LdapRepository: Bearer token is required');
@@ -176,7 +136,7 @@ export class LdapRepository implements ILdapRepository {
         },
         {
           headers: {
-            'Authorization': `Bearer ${bearerToken}`,
+            Authorization: `Bearer ${bearerToken}`,
           },
           httpsAgent,
           timeout: 10000,
@@ -194,7 +154,7 @@ export class LdapRepository implements ILdapRepository {
         },
         {
           headers: {
-            'Authorization': `Bearer ${bearerToken}`,
+            Authorization: `Bearer ${bearerToken}`,
           },
           httpsAgent,
           timeout: 10000,
@@ -210,7 +170,7 @@ export class LdapRepository implements ILdapRepository {
         },
         {
           headers: {
-            'Authorization': `Bearer ${bearerToken}`,
+            Authorization: `Bearer ${bearerToken}`,
           },
           httpsAgent,
           timeout: 10000,
@@ -230,7 +190,7 @@ export class LdapRepository implements ILdapRepository {
             `https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}`,
             {
               headers: {
-                'Authorization': `Bearer ${bearerToken}`,
+                Authorization: `Bearer ${bearerToken}`,
               },
               httpsAgent,
               timeout: 10000,
@@ -253,7 +213,7 @@ export class LdapRepository implements ILdapRepository {
             `https://localhost:${localPort}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}`,
             {
               headers: {
-                'Authorization': `Bearer ${bearerToken}`,
+                Authorization: `Bearer ${bearerToken}`,
               },
               httpsAgent,
               timeout: 10000,
@@ -273,7 +233,14 @@ export class LdapRepository implements ILdapRepository {
     }
   }
 
-  async modifyUser(localPort: number, org: string, bearerToken: string, caCert: string, username: string, user: ModifyUserRequest): Promise<void> {
+  async modifyUser(
+    localPort: number,
+    org: string,
+    bearerToken: string,
+    caCert: string,
+    username: string,
+    user: ModifyUserRequest,
+  ): Promise<void> {
     assert(localPort, 'LdapRepository: Local port is required');
     assert(org, 'LdapRepository: Organization is required');
     assert(bearerToken, 'LdapRepository: Bearer token is required');
@@ -296,7 +263,7 @@ export class LdapRepository implements ILdapRepository {
           },
           {
             headers: {
-              'Authorization': `Bearer ${bearerToken}`,
+              Authorization: `Bearer ${bearerToken}`,
             },
             httpsAgent,
             timeout: 10000,
@@ -313,7 +280,7 @@ export class LdapRepository implements ILdapRepository {
           },
           {
             headers: {
-              'Authorization': `Bearer ${bearerToken}`,
+              Authorization: `Bearer ${bearerToken}`,
             },
             httpsAgent,
             timeout: 10000,
@@ -327,7 +294,13 @@ export class LdapRepository implements ILdapRepository {
     }
   }
 
-  async deleteUser(localPort: number, org: string, bearerToken: string, caCert: string, username: string): Promise<void> {
+  async deleteUser(
+    localPort: number,
+    org: string,
+    bearerToken: string,
+    caCert: string,
+    username: string,
+  ): Promise<void> {
     assert(localPort, 'LdapRepository: Local port is required');
     assert(org, 'LdapRepository: Organization is required');
     assert(bearerToken, 'LdapRepository: Bearer token is required');
@@ -342,26 +315,55 @@ export class LdapRepository implements ILdapRepository {
 
     try {
       // Delete user
-      await axios.delete(`https://localhost:${localPort}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(username)}`, {
-        headers: {
-          'Authorization': `Bearer ${bearerToken}`,
+      await axios.delete(
+        `https://localhost:${localPort}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${bearerToken}`,
+          },
+          httpsAgent,
+          timeout: 10000,
         },
-        httpsAgent,
-        timeout: 10000,
-      });
+      );
 
       // Delete associated group
-      await axios.delete(`https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(username)}`, {
-        headers: {
-          'Authorization': `Bearer ${bearerToken}`,
+      await axios.delete(
+        `https://localhost:${localPort}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(username)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${bearerToken}`,
+          },
+          httpsAgent,
+          timeout: 10000,
         },
-        httpsAgent,
-        timeout: 10000,
-      });
+      );
     } catch (error) {
       const sanitizedError = this._sanitizeError(error, 'deleteUser');
       this._options.logger.error({ error: sanitizedError, localPort, org, username }, 'Error deleting LDAP user');
       throw new Error('Failed to delete user from LDAP server');
+    }
+  }
+
+  async checkHealth(localPort: number): Promise<{ status: 'healthy' | 'unhealthy' }> {
+    assert(localPort, 'LdapRepository: Local port is required');
+
+    this._options.logger.info({ localPort }, 'Checking LDAP server health');
+
+    const httpsAgent = new https.Agent({
+      rejectUnauthorized: false, // Allow insecure requests to fetch the CA cert
+    });
+
+    try {
+      const response = await axios.get(`https://localhost:${localPort}/health`, {
+        httpsAgent,
+        timeout: 10000,
+      });
+
+      return response.data.data;
+    } catch (error) {
+      const sanitizedError = this._sanitizeError(error, 'checkHealth');
+      this._options.logger.error({ error: sanitizedError, localPort }, 'Error checking LDAP server health');
+      throw new Error('Failed to check health of LDAP server');
     }
   }
 }

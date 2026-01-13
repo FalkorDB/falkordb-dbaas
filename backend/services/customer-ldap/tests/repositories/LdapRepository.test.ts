@@ -57,43 +57,4 @@ describe('LdapRepository', () => {
 
     // Add integration tests with real LDAP server
   });
-
-  describe('getPodName', () => {
-    it('should throw error when no LDAP pod is found', async () => {
-      const mockConfig = {
-        makeApiClient: jest.fn().mockReturnValue({
-          listNamespacedPod: jest.fn().mockResolvedValue({
-            body: {
-              items: [],
-            },
-          }),
-        }),
-      };
-
-      await expect(repository.getPodName(mockConfig as any, 'ldap-auth')).rejects.toThrow(
-        'LDAP pod not found',
-      );
-    });
-
-    it('should return pod name when LDAP pod is found', async () => {
-      const mockConfig = {
-        makeApiClient: jest.fn().mockReturnValue({
-          listNamespacedPod: jest.fn().mockResolvedValue({
-            body: {
-              items: [
-                {
-                  metadata: {
-                    name: 'ldap-auth-rs-12345',
-                  },
-                },
-              ],
-            },
-          }),
-        }),
-      };
-
-      const podName = await repository.getPodName(mockConfig as any, 'ldap-auth');
-      expect(podName).toBe('ldap-auth-rs-12345');
-    });
-  });
 });
