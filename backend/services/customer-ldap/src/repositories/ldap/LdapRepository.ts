@@ -9,7 +9,7 @@ export class LdapRepository implements ILdapRepository {
   constructor(private _options: { logger: FastifyBaseLogger }) {}
 
   private _getPortForwardBaseUrl(localPort: number): string {
-    return `https://${LDAP_SERVICE_NAME}:${localPort}`;
+    return `https://localhost:${localPort}`;
   }
 
   private _createPortForwardHttpsAgent(options: { ca?: string; rejectUnauthorized?: boolean }): https.Agent {
@@ -21,12 +21,6 @@ export class LdapRepository implements ILdapRepository {
       ca: options.ca,
       rejectUnauthorized: options.rejectUnauthorized,
       servername: LDAP_SERVICE_NAME,
-      lookup: (hostname: string, lookupOptions: any, callback: any) => {
-        if (typeof lookupOptions === 'function') {
-          callback = lookupOptions;
-        }
-        callback(null, '127.0.0.1', 4);
-      },
     });
   }
 
