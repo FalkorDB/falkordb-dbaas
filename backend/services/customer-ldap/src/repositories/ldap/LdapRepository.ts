@@ -12,15 +12,11 @@ export class LdapRepository implements ILdapRepository {
     return `https://localhost:${localPort}`;
   }
 
-  private _createPortForwardHttpsAgent(options: { ca?: string; rejectUnauthorized?: boolean }): https.Agent {
-    // We port-forward to localhost, but we must use a hostname that matches the
-    // service certificate SANs (ldap-auth-service...). We achieve this by:
-    // - Using LDAP_SERVICE_NAME in the URL (so SNI/hostname verification matches)
-    // - Overriding DNS lookup to always return 127.0.0.1 (so traffic still goes via the port-forward)
+  private _createPortForwardHttpsAgent(options: { ca?: string }): https.Agent {
     return new https.Agent({
       ca: options.ca,
-      rejectUnauthorized: options.rejectUnauthorized,
-      servername: LDAP_SERVICE_NAME,
+      rejectUnauthorized: false,
+      checkServerIdentity: (_hostname: string, _cert: any) => undefined,
     });
   }
 
@@ -84,7 +80,7 @@ export class LdapRepository implements ILdapRepository {
 
     this._options.logger.info({ localPort }, 'Getting LDAP CA certificate');
 
-    const httpsAgent = this._createPortForwardHttpsAgent({ rejectUnauthorized: false });
+    const httpsAgent = this._createPortForwardHttpsAgent({});
 
     try {
       const response = await axios.get(`${this._getPortForwardBaseUrl(localPort)}/api/v1/ca-certificate`, {
@@ -116,24 +112,30 @@ export class LdapRepository implements ILdapRepository {
 
     try {
       // Get users
-      const usersResponse = await axios.get(`${this._getPortForwardBaseUrl(localPort)}/api/users/${encodeURIComponent(org)}`, {
-        headers: {
-          Authorization: `Bearer ${bearerToken}`,
+      const usersResponse = await axios.get(
+        `${this._getPortForwardBaseUrl(localPort)}/api/users/${encodeURIComponent(org)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${bearerToken}`,
+          },
+          httpsAgent,
+          timeout: 10000,
         },
-        httpsAgent,
-        timeout: 10000,
-      });
+      );
 
       const users = usersResponse.data.data.users || [];
 
       // Get all groups to retrieve ACL from descriptions
-      const groupsResponse = await axios.get(`${this._getPortForwardBaseUrl(localPort)}/api/groups/${encodeURIComponent(org)}`, {
-        headers: {
-          Authorization: `Bearer ${bearerToken}`,
+      const groupsResponse = await axios.get(
+        `${this._getPortForwardBaseUrl(localPort)}/api/groups/${encodeURIComponent(org)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${bearerToken}`,
+          },
+          httpsAgent,
+          timeout: 10000,
         },
-        httpsAgent,
-        timeout: 10000,
-      });
+      );
 
       const groups = groupsResponse.data.data.groups || [];
 
@@ -184,7 +186,7 @@ export class LdapRepository implements ILdapRepository {
       await axios.post(
         `${this._getPortForwardBaseUrl(localPort)}/api/users`,
         {
-          org,
+          organization: org,
           username: user.username,
           password: user.password,
         },
@@ -202,7 +204,7 @@ export class LdapRepository implements ILdapRepository {
       await axios.post(
         `${this._getPortForwardBaseUrl(localPort)}/api/groups`,
         {
-          org,
+          organization: org,
           name: user.username,
           description: user.acl,
         },
@@ -234,54 +236,8 @@ export class LdapRepository implements ILdapRepository {
       const sanitizedError = this._sanitizeError(error, 'createUser');
       this._options.logger.error(
         { error: sanitizedError, localPort, org, username: user.username, userCreated, groupCreated },
-        'Error creating LDAP user, attempting rollback',
+        'Error creating LDAP user',
       );
-
-      // Rollback: delete group if created
-      if (groupCreated) {
-        try {
-          await axios.delete(
-            `${this._getPortForwardBaseUrl(localPort)}/api/groups/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}`,
-            {
-              headers: {
-                Authorization: `Bearer ${bearerToken}`,
-              },
-              httpsAgent,
-              timeout: 10000,
-            },
-          );
-          this._options.logger.info({ username: user.username }, 'Rolled back: deleted group');
-        } catch (rollbackError) {
-          const sanitizedRollbackError = this._sanitizeError(rollbackError, 'rollbackGroupCreation');
-          this._options.logger.error(
-            { error: sanitizedRollbackError, username: user.username },
-            'Failed to rollback group creation',
-          );
-        }
-      }
-
-      // Rollback: delete user if created
-      if (userCreated) {
-        try {
-          await axios.delete(
-            `${this._getPortForwardBaseUrl(localPort)}/api/users/${encodeURIComponent(org)}/${encodeURIComponent(user.username)}`,
-            {
-              headers: {
-                Authorization: `Bearer ${bearerToken}`,
-              },
-              httpsAgent,
-              timeout: 10000,
-            },
-          );
-          this._options.logger.info({ username: user.username }, 'Rolled back: deleted user');
-        } catch (rollbackError) {
-          const sanitizedRollbackError = this._sanitizeError(rollbackError, 'rollbackUserCreation');
-          this._options.logger.error(
-            { error: sanitizedRollbackError, username: user.username },
-            'Failed to rollback user creation',
-          );
-        }
-      }
 
       throw new Error('Failed to create user in LDAP server');
     }
@@ -399,7 +355,7 @@ export class LdapRepository implements ILdapRepository {
 
     this._options.logger.info({ localPort }, 'Checking LDAP server health');
 
-    const httpsAgent = this._createPortForwardHttpsAgent({ rejectUnauthorized: false });
+    const httpsAgent = this._createPortForwardHttpsAgent({});
 
     try {
       const response = await axios.get(`${this._getPortForwardBaseUrl(localPort)}/health`, {

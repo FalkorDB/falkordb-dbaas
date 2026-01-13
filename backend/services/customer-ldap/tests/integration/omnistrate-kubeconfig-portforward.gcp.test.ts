@@ -4,6 +4,7 @@ import { K8sCredentialsOmnistrateRepository } from '../../src/repositories/k8s-c
 import { K8sRepository } from '../../src/repositories/k8s/K8sRepository';
 import { LdapRepository } from '../../src/repositories/ldap/LdapRepository';
 import {
+  ALLOWED_ACL,
   LDAP_NAMESPACE,
   LDAP_POD_PREFIX,
   LDAP_SECRET_NAME,
@@ -60,6 +61,18 @@ describeIntegration('Integration: Omnistrate kubeconfig + port-forward (GCP)', (
       const health = await ldapRepo.checkHealth(portForward.localPort);
       logger.info({ health }, 'LDAP server health check result');
       expect(health.status).toBe('healthy');
+
+      await ldapRepo.createUser(
+        portForward.localPort,
+        process.env.TEST_LDAP_ORG ?? 'test-org',
+        bearerToken,
+        caCertificate,
+        {
+          username: 'test-user-' + Date.now(),
+          password: 'TestPassword123!',
+          acl: ALLOWED_ACL,
+        },
+      );
     } finally {
       portForward.close();
     }
