@@ -2,7 +2,10 @@ import { FastifyBaseLogger } from 'fastify';
 import { IK8sRepository } from '../repositories/k8s/IK8sRepository';
 import { IK8sCredentialsRepository } from '../repositories/k8s-credentials/IK8sCredentialsRepository';
 import { ILdapRepository, LdapUser, CreateUserRequest, ModifyUserRequest } from '../repositories/ldap/ILdapRepository';
-import { IConnectionCacheRepository, CachedConnection } from '../repositories/connection-cache/IConnectionCacheRepository';
+import {
+  IConnectionCacheRepository,
+  CachedConnection,
+} from '../repositories/connection-cache/IConnectionCacheRepository';
 import { LdapService } from './LdapService';
 import * as assert from 'assert';
 import {
@@ -60,7 +63,10 @@ export class UserService {
     assert.ok(region, 'UserService: Region is required');
     assert.ok(user, 'UserService: User data is required');
 
-    this._options.logger.info({ instanceId, cloudProvider, k8sClusterName, region, username: user.username }, 'Creating user');
+    this._options.logger.info(
+      { instanceId, cloudProvider, k8sClusterName, region, username: user.username },
+      'Creating user',
+    );
 
     const connection = await this._getOrCreateConnection(instanceId, cloudProvider, k8sClusterName, region);
     await connection.ldapService.createUser(user);
@@ -164,7 +170,7 @@ export class UserService {
         LDAP_SECRET_NAME,
         LDAP_SECRET_TOKEN_KEY,
       );
-      const caCert = await this._ldapRepository.getCaCertificate(portForward.localPort);
+      const caCert = await this._ldapRepository.getCaCertificate(portForward.localPort, bearerToken);
 
       // Create LdapService
       const ldapService = new LdapService(
@@ -201,10 +207,7 @@ export class UserService {
           portForward.close();
           this._options.logger.info({ instanceId }, 'Cleaned up port forward after connection failure');
         } catch (closeError) {
-          this._options.logger.error(
-            { err: closeError, instanceId },
-            'Failed to close port forward during cleanup',
-          );
+          this._options.logger.error({ err: closeError, instanceId }, 'Failed to close port forward during cleanup');
         }
       }
 

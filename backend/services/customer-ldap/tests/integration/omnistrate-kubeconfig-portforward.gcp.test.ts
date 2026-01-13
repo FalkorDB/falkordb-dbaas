@@ -3,7 +3,13 @@ import { OmnistrateClient } from '../../src/repositories/omnistrate/OmnistrateCl
 import { K8sCredentialsOmnistrateRepository } from '../../src/repositories/k8s-credentials/K8sCredentialsOmnistrateRepository';
 import { K8sRepository } from '../../src/repositories/k8s/K8sRepository';
 import { LdapRepository } from '../../src/repositories/ldap/LdapRepository';
-import { LDAP_NAMESPACE, LDAP_POD_PREFIX, LDAP_SERVICE_PORT } from '../../src/constants';
+import {
+  LDAP_NAMESPACE,
+  LDAP_POD_PREFIX,
+  LDAP_SECRET_NAME,
+  LDAP_SECRET_TOKEN_KEY,
+  LDAP_SERVICE_PORT,
+} from '../../src/constants';
 
 const enabled = process.env.RUN_K8S_INTEGRATION_TESTS === '1';
 const describeIntegration = enabled ? describe : describe.skip;
@@ -35,6 +41,12 @@ describeIntegration('Integration: Omnistrate kubeconfig + port-forward (GCP)', (
       },
       'Retrieved kubeconfig from Omnistrate',
     );
+    const bearerToken = await k8sRepo.getSecretValueUtf8(
+      kubeConfig,
+      LDAP_NAMESPACE,
+      LDAP_SECRET_NAME,
+      LDAP_SECRET_TOKEN_KEY,
+    );
     const podName = await k8sRepo.getPodNameByPrefix(kubeConfig, LDAP_NAMESPACE, LDAP_POD_PREFIX).catch((err) => {
       logger.error({ err }, 'Failed to get LDAP pod name');
       throw err;
@@ -43,6 +55,8 @@ describeIntegration('Integration: Omnistrate kubeconfig + port-forward (GCP)', (
     const portForward = await k8sRepo.createPortForward(kubeConfig, LDAP_NAMESPACE, podName, LDAP_SERVICE_PORT);
 
     try {
+      const caCertificate = await ldapRepo.getCaCertificate(portForward.localPort, bearerToken);
+      logger.info({ caCertificate }, 'Retrieved CA certificate from LDAP service');
       const health = await ldapRepo.checkHealth(portForward.localPort);
       logger.info({ health }, 'LDAP server health check result');
       expect(health.status).toBe('healthy');

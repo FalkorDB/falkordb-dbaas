@@ -16,7 +16,7 @@ export interface ILdapRepository {
     user: ModifyUserRequest,
   ): Promise<void>;
   deleteUser(localPort: number, org: string, bearerToken: string, caCert: string, username: string): Promise<void>;
-  getCaCertificate(localPort: number): Promise<string>;
+  getCaCertificate(localPort: number, bearerToken: string): Promise<string>;
   checkHealth(localPort: number): Promise<{ status: 'healthy' | 'unhealthy' }>;
 }
 

@@ -23,7 +23,7 @@ export class LdapRepository implements ILdapRepository {
     return sanitized;
   }
 
-  async getCaCertificate(localPort: number): Promise<string> {
+  async getCaCertificate(localPort: number, bearerToken: string): Promise<string> {
     assert(localPort, 'LdapRepository: Local port is required');
 
     this._options.logger.info({ localPort }, 'Getting LDAP CA certificate');
@@ -36,9 +36,12 @@ export class LdapRepository implements ILdapRepository {
       const response = await axios.get(`https://localhost:${localPort}/api/v1/ca-certificate`, {
         httpsAgent,
         timeout: 10000,
+        headers: {
+          Authorization: `Bearer ${bearerToken}`,
+        },
       });
 
-      return response.data.data;
+      return response.data;
     } catch (error) {
       const sanitizedError = this._sanitizeError(error, 'getCaCertificate');
       this._options.logger.error({ error: sanitizedError, localPort }, 'Error getting LDAP CA certificate');
