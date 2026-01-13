@@ -48,7 +48,6 @@ module "application_plane" {
 
   db_exporter_sa_email = module.control_plane.db_exporter_sa_email
   argocd_sa_email      = module.control_plane.argocd_sa_email
-  customer_ldap_api_sa_email = module.control_plane.customer_ldap_api_sa_email
 
   metering_bucket_name = var.application_plane_metering_bucket_name
 }

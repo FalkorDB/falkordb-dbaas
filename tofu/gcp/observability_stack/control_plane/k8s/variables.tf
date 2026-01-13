@@ -69,6 +69,3 @@ variable "db_exporter_sa_id" {
 variable "argocd_sa_id" {
   type = string
 }
-variable "customer_ldap_api_sa_id" {
-  type = string
-}
