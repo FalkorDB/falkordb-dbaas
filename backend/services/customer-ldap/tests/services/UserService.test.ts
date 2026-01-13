@@ -91,7 +91,7 @@ describe('UserService', () => {
         'ldap-auth-secrets',
         'API_BEARER_TOKEN',
       );
-      expect(mockLdapRepo.getCaCertificate).toHaveBeenCalledWith(12345);
+      expect(mockLdapRepo.getCaCertificate).toHaveBeenCalledWith(12345, 'bearer-token-123');
       expect(mockLdapRepo.listUsers).toHaveBeenCalled();
       expect(mockConnectionCache.setConnection).toHaveBeenCalled();
       expect(mockCloseFn).not.toHaveBeenCalled();
