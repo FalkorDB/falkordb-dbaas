@@ -1,15 +1,21 @@
 import { OmnistrateRepository } from '../../src/repositories/omnistrate/OmnistrateRepository';
+import { OmnistrateClient } from '../../src/repositories/omnistrate/OmnistrateClient';
 import pino from 'pino';
 
 describe('OmnistrateRepository', () => {
   let repository: OmnistrateRepository;
+  let omnistrateClient: OmnistrateClient;
   let logger: pino.Logger;
 
   beforeEach(() => {
     logger = pino({ level: 'silent' });
-    repository = new OmnistrateRepository(
+    omnistrateClient = new OmnistrateClient(
       process.env.OMNISTRATE_EMAIL || 'test@example.com',
       process.env.OMNISTRATE_PASSWORD || 'password',
+      { logger },
+    );
+    repository = new OmnistrateRepository(
+      omnistrateClient,
       process.env.OMNISTRATE_SERVICE_ID || 'service-id',
       process.env.OMNISTRATE_ENVIRONMENT_ID || 'environment-id',
       { logger },

@@ -1,67 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import axios, { AxiosInstance, InternalAxiosRequestConfig, isAxiosError } from 'axios';
-import { createDecoder } from 'fast-jwt';
+import axios, { isAxiosError } from 'axios';
 import assert from 'assert';
 import { FastifyBaseLogger } from 'fastify';
 import { IOmnistrateRepository, OmnistrateInstance, SubscriptionUser } from './IOmnistrateRepository';
+import { OmnistrateClient } from './OmnistrateClient';
 
 export class OmnistrateRepository implements IOmnistrateRepository {
-  private static _client: AxiosInstance;
-  private static _token: string | null = null;
-
   constructor(
-    private _omnistrateUser: string,
-    private _omnistratePassword: string,
+    private _omnistrateClient: OmnistrateClient,
     private _serviceId: string,
     private _environmentId: string,
     private _options: { logger: FastifyBaseLogger },
   ) {
-    assert(_omnistrateUser, 'OmnistrateRepository: Omnistrate user is required');
-    assert(_omnistratePassword, 'OmnistrateRepository: Omnistrate password is required');
     assert(_serviceId, 'OmnistrateRepository: Service ID is required');
     assert(_environmentId, 'OmnistrateRepository: Environment ID is required');
-
-    if (!OmnistrateRepository._client) {
-      OmnistrateRepository._client = axios.create({
-        baseURL: 'https://api.omnistrate.cloud',
-      });
-
-      OmnistrateRepository._client.interceptors.request.use(this._getBearer(_omnistrateUser, _omnistratePassword));
-    }
-  }
-
-  private _getBearer(
-    user: string,
-    password: string,
-  ): (config: InternalAxiosRequestConfig) => Promise<InternalAxiosRequestConfig> {
-    const decoder = createDecoder();
-    return async (config: InternalAxiosRequestConfig) => {
-      try {
-        if (OmnistrateRepository._token) {
-          const decoded = decoder(OmnistrateRepository._token) as any;
-          if (decoded.exp && decoded.exp * 1000 > Date.now()) {
-            config.headers.Authorization = `Bearer ${OmnistrateRepository._token}`;
-            return config;
-          }
-        }
-      } catch (_) {
-        // Token decode failed, get a new one
-      }
-
-      let response;
-      try {
-        response = await axios.post('https://api.omnistrate.cloud/2022-09-01-00/signin', {
-          email: user,
-          password,
-        });
-      } catch (error) {
-        throw new Error('Failed to authenticate with Omnistrate API');
-      }
-
-      OmnistrateRepository._token = response.data.jwtToken;
-      config.headers.Authorization = `Bearer ${response.data.jwtToken}`;
-      return config;
-    };
   }
 
   async validate(token: string): Promise<boolean> {
@@ -104,7 +56,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
 
     let instance = null;
     try {
-      instance = await OmnistrateRepository._client
+      instance = await this._omnistrateClient.client
         .get(
           `/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/instance/${instanceId}`,
         )
@@ -159,7 +111,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     assert(subscriptionId, 'OmnistrateRepository: Subscription ID is required');
     this._options.logger.info({ subscriptionId }, 'Getting subscription users');
 
-    const response = await OmnistrateRepository._client.get(
+    const response = await this._omnistrateClient.client.get(
       `/2022-09-01-00/fleet/service/${this._serviceId}/environment/${this._environmentId}/users?subscriptionId=${subscriptionId}`,
     );
 

@@ -3,8 +3,11 @@ import { asFunction } from 'awilix';
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { IOmnistrateRepository } from './repositories/omnistrate/IOmnistrateRepository';
 import { OmnistrateRepository } from './repositories/omnistrate/OmnistrateRepository';
+import { OmnistrateClient, IOmnistrateClient } from './repositories/omnistrate/OmnistrateClient';
 import { IK8sRepository } from './repositories/k8s/IK8sRepository';
 import { K8sRepository } from './repositories/k8s/K8sRepository';
+import { IK8sCredentialsRepository } from './repositories/k8s-credentials/IK8sCredentialsRepository';
+import { K8sCredentialsOmnistrateRepository } from './repositories/k8s-credentials/K8sCredentialsOmnistrateRepository';
 import { ILdapRepository } from './repositories/ldap/ILdapRepository';
 import { LdapRepository } from './repositories/ldap/LdapRepository';
 import { ISessionRepository } from './repositories/session/ISessionRepository';
@@ -14,10 +17,18 @@ import { ConnectionCacheRepository } from './repositories/connection-cache/Conne
 
 export const setupGlobalContainer = (fastify: FastifyInstance) => {
   diContainer.register({
-    [IOmnistrateRepository.repositoryName]: asFunction(() => {
-      return new OmnistrateRepository(
+    [IOmnistrateClient.repositoryName]: asFunction(() => {
+      return new OmnistrateClient(
         fastify.config.OMNISTRATE_EMAIL,
         fastify.config.OMNISTRATE_PASSWORD,
+        { logger: fastify.log },
+      );
+    }).singleton(),
+
+    [IOmnistrateRepository.repositoryName]: asFunction(() => {
+      const omnistrateClient = fastify.diContainer.resolve<OmnistrateClient>(IOmnistrateClient.repositoryName);
+      return new OmnistrateRepository(
+        omnistrateClient,
         fastify.config.OMNISTRATE_SERVICE_ID,
         fastify.config.OMNISTRATE_ENVIRONMENT_ID,
         { logger: fastify.log },
@@ -38,6 +49,11 @@ export const setupContainer = (req: FastifyRequest) => {
   req.diScope.register({
     [IK8sRepository.repositoryName]: asFunction(() => {
       return new K8sRepository({ logger: req.log });
+    }).scoped(),
+
+    [IK8sCredentialsRepository.repositoryName]: asFunction(() => {
+      const omnistrateClient = req.server.diContainer.resolve<OmnistrateClient>(IOmnistrateClient.repositoryName);
+      return new K8sCredentialsOmnistrateRepository(omnistrateClient, { logger: req.log });
     }).scoped(),
 
     [ILdapRepository.repositoryName]: asFunction(() => {

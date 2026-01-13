@@ -6,6 +6,7 @@ import {
   SubscriptionIdQuerySchemaType,
 } from '../../../../schemas/users';
 import { IK8sRepository } from '../../../../repositories/k8s/IK8sRepository';
+import { IK8sCredentialsRepository } from '../../../../repositories/k8s-credentials/IK8sCredentialsRepository';
 import { ILdapRepository } from '../../../../repositories/ldap/ILdapRepository';
 import { IConnectionCacheRepository } from '../../../../repositories/connection-cache/IConnectionCacheRepository';
 import { UserService } from '../../../../services/UserService';
@@ -26,6 +27,9 @@ export const listUsersHandler: RouteHandlerMethod<
   try {
     // Execute the user operation
     const k8sRepository = request.diScope.resolve<IK8sRepository>(IK8sRepository.repositoryName);
+    const k8sCredentialsRepository = request.diScope.resolve<IK8sCredentialsRepository>(
+      IK8sCredentialsRepository.repositoryName,
+    );
     const ldapRepository = request.diScope.resolve<ILdapRepository>(
       ILdapRepository.repositoryName,
     );
@@ -33,7 +37,7 @@ export const listUsersHandler: RouteHandlerMethod<
       IConnectionCacheRepository.repositoryName,
     );
 
-    const userService = new UserService(opts, k8sRepository, ldapRepository, connectionCache);
+    const userService = new UserService(opts, k8sRepository, k8sCredentialsRepository, ldapRepository, connectionCache);
 
     const users = await userService.listUsers(
       sessionData.instanceId,

@@ -1,5 +1,6 @@
 import { UserService } from '../../src/services/UserService';
 import { IK8sRepository } from '../../src/repositories/k8s/IK8sRepository';
+import { IK8sCredentialsRepository } from '../../src/repositories/k8s-credentials/IK8sCredentialsRepository';
 import { ILdapRepository } from '../../src/repositories/ldap/ILdapRepository';
 import { IConnectionCacheRepository } from '../../src/repositories/connection-cache/IConnectionCacheRepository';
 import pino from 'pino';
@@ -8,6 +9,7 @@ describe('UserService', () => {
   let service: UserService;
   let logger: pino.Logger;
   let mockK8sRepo: jest.Mocked<IK8sRepository>;
+  let mockK8sCredentialsRepo: jest.Mocked<IK8sCredentialsRepository>;
   let mockLdapRepo: jest.Mocked<ILdapRepository>;
   let mockConnectionCache: jest.Mocked<IConnectionCacheRepository>;
 
@@ -15,8 +17,11 @@ describe('UserService', () => {
     logger = pino({ level: 'silent' });
 
     mockK8sRepo = {
-      getK8sConfig: jest.fn(),
       createPortForward: jest.fn(),
+    };
+
+    mockK8sCredentialsRepo = {
+      getKubeConfig: jest.fn(),
     };
 
     mockLdapRepo = {
@@ -37,7 +42,7 @@ describe('UserService', () => {
       validateConnection: jest.fn(),
     };
 
-    service = new UserService({ logger }, mockK8sRepo, mockLdapRepo, mockConnectionCache);
+    service = new UserService({ logger }, mockK8sRepo, mockK8sCredentialsRepo, mockLdapRepo, mockConnectionCache);
   });
 
   describe('listUsers', () => {
@@ -57,7 +62,7 @@ describe('UserService', () => {
       ];
 
       mockConnectionCache.getConnection.mockReturnValue(null);
-      mockK8sRepo.getK8sConfig.mockResolvedValue(mockConfig);
+      mockK8sCredentialsRepo.getKubeConfig.mockResolvedValue(mockConfig);
       mockLdapRepo.getPodName.mockResolvedValue('ldap-auth-rs-12345');
       mockK8sRepo.createPortForward.mockResolvedValue({
         localPort: 12345,
@@ -71,7 +76,7 @@ describe('UserService', () => {
 
       expect(result).toEqual(mockUsers);
       expect(mockConnectionCache.getConnection).toHaveBeenCalledWith('inst-1');
-      expect(mockK8sRepo.getK8sConfig).toHaveBeenCalledWith('gcp', 'c-test', 'us-central1');
+      expect(mockK8sCredentialsRepo.getKubeConfig).toHaveBeenCalledWith('gcp', 'c-test', 'us-central1');
       expect(mockLdapRepo.getPodName).toHaveBeenCalledWith(mockConfig, 'ldap-auth');
       expect(mockK8sRepo.createPortForward).toHaveBeenCalledWith(
         mockConfig,
@@ -109,7 +114,7 @@ describe('UserService', () => {
 
       expect(result).toEqual(mockUsers);
       expect(mockConnectionCache.getConnection).toHaveBeenCalledWith('inst-1');
-      expect(mockK8sRepo.getK8sConfig).not.toHaveBeenCalled();
+      expect(mockK8sCredentialsRepo.getKubeConfig).not.toHaveBeenCalled();
       expect(mockLdapService.listUsers).toHaveBeenCalled();
     });
   });
@@ -148,7 +153,7 @@ describe('UserService', () => {
 
       expect(mockConnectionCache.getConnection).toHaveBeenCalledWith('inst-1');
       expect(mockLdapService.createUser).toHaveBeenCalledWith(userData);
-      expect(mockK8sRepo.getK8sConfig).not.toHaveBeenCalled();
+      expect(mockK8sCredentialsRepo.getKubeConfig).not.toHaveBeenCalled();
     });
   });
 
@@ -193,7 +198,7 @@ describe('UserService', () => {
 
       expect(mockConnectionCache.getConnection).toHaveBeenCalledWith('inst-1');
       expect(mockLdapService.modifyUser).toHaveBeenCalledWith('testuser', userData);
-      expect(mockK8sRepo.getK8sConfig).not.toHaveBeenCalled();
+      expect(mockK8sCredentialsRepo.getKubeConfig).not.toHaveBeenCalled();
     });
   });
 
@@ -228,7 +233,7 @@ describe('UserService', () => {
 
       expect(mockConnectionCache.getConnection).toHaveBeenCalledWith('inst-1');
       expect(mockLdapService.deleteUser).toHaveBeenCalledWith('testuser');
-      expect(mockK8sRepo.getK8sConfig).not.toHaveBeenCalled();
+      expect(mockK8sCredentialsRepo.getKubeConfig).not.toHaveBeenCalled();
     });
   });
 });

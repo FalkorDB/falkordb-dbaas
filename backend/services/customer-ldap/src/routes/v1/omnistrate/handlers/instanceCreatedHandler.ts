@@ -1,6 +1,7 @@
 import { type FastifyReply, type FastifyRequest } from 'fastify';
 import { IOmnistrateRepository } from '../../../../repositories/omnistrate/IOmnistrateRepository';
 import { IK8sRepository } from '../../../../repositories/k8s/IK8sRepository';
+import { IK8sCredentialsRepository } from '../../../../repositories/k8s-credentials/IK8sCredentialsRepository';
 import { ILdapRepository } from '../../../../repositories/ldap/ILdapRepository';
 import { IConnectionCacheRepository } from '../../../../repositories/connection-cache/IConnectionCacheRepository';
 import { UserService } from '../../../../services/UserService';
@@ -69,9 +70,12 @@ export async function instanceCreatedHandler(
 
     // Create user in LDAP with ALLOWED_ACL permissions
     const k8sRepository = request.diScope.resolve<IK8sRepository>(IK8sRepository.repositoryName);
+    const k8sCredentialsRepository = request.diScope.resolve<IK8sCredentialsRepository>(
+      IK8sCredentialsRepository.repositoryName,
+    );
     const ldapRepository = request.diScope.resolve<ILdapRepository>(ILdapRepository.repositoryName);
     const connectionCache = request.diScope.resolve<IConnectionCacheRepository>(IConnectionCacheRepository.repositoryName);
-    const userService = new UserService({ logger: request.log }, k8sRepository, ldapRepository, connectionCache);
+    const userService = new UserService({ logger: request.log }, k8sRepository, k8sCredentialsRepository, ldapRepository, connectionCache);
 
     try {
       await userService.createUser(instanceId, cloudProvider, k8sClusterName, region, {

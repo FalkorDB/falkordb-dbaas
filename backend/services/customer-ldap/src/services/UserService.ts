@@ -1,5 +1,6 @@
 import { FastifyBaseLogger } from 'fastify';
 import { IK8sRepository } from '../repositories/k8s/IK8sRepository';
+import { IK8sCredentialsRepository } from '../repositories/k8s-credentials/IK8sCredentialsRepository';
 import { ILdapRepository, LdapUser, CreateUserRequest, ModifyUserRequest } from '../repositories/ldap/ILdapRepository';
 import { IConnectionCacheRepository, CachedConnection } from '../repositories/connection-cache/IConnectionCacheRepository';
 import { LdapService } from './LdapService';
@@ -17,6 +18,7 @@ export class UserService {
   constructor(
     private _options: UserServiceOptions,
     private _k8sRepository: IK8sRepository,
+    private _k8sCredentialsRepository: IK8sCredentialsRepository,
     private _ldapRepository: ILdapRepository,
     private _connectionCache: IConnectionCacheRepository,
   ) {}
@@ -147,7 +149,7 @@ export class UserService {
     let portForward: { localPort: number; close: () => void } | null = null;
 
     try {
-      const kubeConfig = await this._k8sRepository.getK8sConfig(cloudProvider, k8sClusterName, region);
+      const kubeConfig = await this._k8sCredentialsRepository.getKubeConfig(cloudProvider, k8sClusterName, region);
       const podName = await this._ldapRepository.getPodName(kubeConfig, LDAP_NAMESPACE);
       portForward = await this._k8sRepository.createPortForward(kubeConfig, LDAP_NAMESPACE, podName, LDAP_SERVICE_PORT);
       const bearerToken = await this._ldapRepository.getBearerToken(kubeConfig, LDAP_NAMESPACE);
