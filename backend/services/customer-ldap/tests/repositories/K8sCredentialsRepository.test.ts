@@ -51,7 +51,7 @@ describe('K8sCredentialsRepository', () => {
       // Verify kubeconfig structure
       const clusters = kubeConfig.getClusters();
       expect(clusters).toHaveLength(1);
-      expect(clusters[0].server).toBe('https://api.test-cluster.com');
+      expect(clusters[0].server).toBe('https://api.test-cluster.com/');
 
       const users = kubeConfig.getUsers();
       expect(users).toHaveLength(1);

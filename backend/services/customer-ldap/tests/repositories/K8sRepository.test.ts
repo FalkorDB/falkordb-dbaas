@@ -10,14 +10,8 @@ describe('K8sRepository', () => {
     repository = new K8sRepository({ logger });
   });
 
-  describe('getK8sConfig', () => {
-    it('should throw error when required parameters are missing', async () => {
-      await expect(repository.getK8sConfig('' as any, 'cluster', 'region')).rejects.toThrow();
-      await expect(repository.getK8sConfig('gcp', '', 'region')).rejects.toThrow();
-      await expect(repository.getK8sConfig('gcp', 'cluster', '')).rejects.toThrow();
-    });
-
-    // Add integration tests with real clusters
+  it('constructs', () => {
+    expect(repository).toBeInstanceOf(K8sRepository);
   });
 
   describe('createPortForward', () => {

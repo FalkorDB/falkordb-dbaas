@@ -3,6 +3,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { IK8sCredentialsRepository } from './IK8sCredentialsRepository';
 import { OmnistrateClient } from '../omnistrate/OmnistrateClient';
 import assert from 'assert';
+import { isAxiosError } from 'axios';
 
 interface OmnistrateKubeConfigResponse {
   apiServerEndpoint: string;
@@ -42,10 +43,12 @@ export class K8sCredentialsOmnistrateRepository implements IK8sCredentialsReposi
       );
       response = apiResponse.data;
     } catch (error) {
-      this._options.logger.error(
-        { error: error instanceof Error ? error.message : 'Unknown error', hostClusterId },
-        'Error getting kubeconfig from Omnistrate',
-      );
+      const sanitizedError = {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        status: isAxiosError(error) ? error.response?.status : undefined,
+        code: isAxiosError(error) ? error.code : undefined,
+      };
+      this._options.logger.error({ error: sanitizedError, hostClusterId }, 'Error getting kubeconfig from Omnistrate');
       throw new Error('Failed to retrieve kubeconfig from Omnistrate');
     }
 
@@ -54,22 +57,24 @@ export class K8sCredentialsOmnistrateRepository implements IK8sCredentialsReposi
     assert(response.userName, 'Missing userName in kubeconfig response');
 
     const kubeConfig = new k8s.KubeConfig();
+    const server = this._normalizeApiServerEndpoint(response.apiServerEndpoint);
 
     // Build kubeconfig based on available authentication method
     if (response.serviceAccountToken) {
       // Service account token authentication
+      const token = this._decodeBase64ToUtf8(response.serviceAccountToken);
       kubeConfig.loadFromOptions({
         clusters: [
           {
             name: hostClusterId,
             caData: response.caDataBase64,
-            server: response.apiServerEndpoint,
+            server,
           },
         ],
         users: [
           {
             name: response.userName,
-            token: response.serviceAccountToken,
+            token,
           },
         ],
         contexts: [
@@ -88,7 +93,7 @@ export class K8sCredentialsOmnistrateRepository implements IK8sCredentialsReposi
           {
             name: hostClusterId,
             caData: response.caDataBase64,
-            server: response.apiServerEndpoint,
+            server,
           },
         ],
         users: [
@@ -124,5 +129,25 @@ export class K8sCredentialsOmnistrateRepository implements IK8sCredentialsReposi
         return `hc-${clusterId.substring(4)}`
     }
     return clusterId;
+  }
+
+  private _normalizeApiServerEndpoint(apiServerEndpoint: string): string {
+    const trimmed = apiServerEndpoint.trim().replace(/\s+/g, '');
+    const withoutDanglingColon = trimmed.endsWith(':') ? trimmed.slice(0, -1) : trimmed;
+    const withScheme = /^https?:\/\//i.test(withoutDanglingColon)
+      ? withoutDanglingColon
+      : `https://${withoutDanglingColon}`;
+
+    try {
+      // Ensures it's a valid absolute URL for the k8s client.
+      return new URL(withScheme).toString();
+    } catch {
+      throw new Error(`Invalid apiServerEndpoint in kubeconfig response: ${apiServerEndpoint}`);
+    }
+  }
+
+  private _decodeBase64ToUtf8(value: string): string {
+    // Omnistrate returns the serviceAccountToken base64-encoded.
+    return Buffer.from(value, 'base64').toString('utf8').trim();
   }
 }

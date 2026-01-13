@@ -180,7 +180,7 @@ export class UserService {
       return cachedConnection;
     } catch (error) {
       this._options.logger.error(
-        { error, instanceId, cloudProvider, k8sClusterName, region },
+        { err: error, instanceId, cloudProvider, k8sClusterName, region },
         'Failed to create connection, cleaning up resources',
       );
 
@@ -191,7 +191,7 @@ export class UserService {
           this._options.logger.info({ instanceId }, 'Cleaned up port forward after connection failure');
         } catch (closeError) {
           this._options.logger.error(
-            { error: closeError, instanceId },
+            { err: closeError, instanceId },
             'Failed to close port forward during cleanup',
           );
         }
