@@ -46,7 +46,7 @@ describe('K8sCredentialsRepository', () => {
       const kubeConfig = await repository.getKubeConfig('gcp', 'c-hcabc123def456', 'us-central1');
 
       expect(kubeConfig).toBeDefined();
-      expect(mockGet).toHaveBeenCalledWith('/2022-09-01-00/fleet/host-cluster/hc-abc123def456/kubeconfig');
+      expect(mockGet).toHaveBeenCalledWith('/2022-09-01-00/fleet/host-cluster/hc-abc123def456/kubeconfig?role=cluster-admin');
 
       // Verify kubeconfig structure
       const clusters = kubeConfig.getClusters();
@@ -75,7 +75,7 @@ describe('K8sCredentialsRepository', () => {
       const kubeConfig = await repository.getKubeConfig('aws', 'hc-123456', 'us-west-2');
 
       expect(kubeConfig).toBeDefined();
-      expect(mockGet).toHaveBeenCalledWith('/2022-09-01-00/fleet/host-cluster/hc-123456/kubeconfig');
+      expect(mockGet).toHaveBeenCalledWith('/2022-09-01-00/fleet/host-cluster/hc-123456/kubeconfig?role=cluster-admin');
 
       const users = kubeConfig.getUsers();
       expect(users).toHaveLength(1);
@@ -140,7 +140,7 @@ describe('K8sCredentialsRepository', () => {
 
       await repository.getKubeConfig('aws', 'my-eks-cluster', 'us-west-2');
 
-      expect(mockGet).toHaveBeenCalledWith('/2022-09-01-00/fleet/host-cluster/my-eks-cluster/kubeconfig');
+      expect(mockGet).toHaveBeenCalledWith('/2022-09-01-00/fleet/host-cluster/my-eks-cluster/kubeconfig?role=cluster-admin');
     });
   });
 });

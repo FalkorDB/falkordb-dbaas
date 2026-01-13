@@ -38,7 +38,7 @@ export class K8sCredentialsOmnistrateRepository implements IK8sCredentialsReposi
     let response: OmnistrateKubeConfigResponse;
     try {
       const apiResponse = await this._omnistrateClient.client.get(
-        `/2022-09-01-00/fleet/host-cluster/${hostClusterId}/kubeconfig`,
+        `/2022-09-01-00/fleet/host-cluster/${hostClusterId}/kubeconfig?role=cluster-admin`,
       );
       response = apiResponse.data;
     } catch (error) {
