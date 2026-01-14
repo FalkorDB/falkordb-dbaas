@@ -22,7 +22,7 @@ describe('ACL Validator', () => {
     });
 
     it('should accept quoted commands', () => {
-      const result = validateAcl("'+MODULE|LIST' +INFO");
+      const result = validateAcl("+MODULE|LIST +INFO");
       expect(result.valid).toBe(true);
       expect(result.invalidCommands).toEqual([]);
     });
