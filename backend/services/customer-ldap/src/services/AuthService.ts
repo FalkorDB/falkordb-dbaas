@@ -2,6 +2,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { IOmnistrateRepository } from '../repositories/omnistrate/IOmnistrateRepository';
 import { ISessionRepository, SessionData } from '../repositories/session/ISessionRepository';
 import * as assert from 'assert';
+import { ApiError } from '@falkordb/errors';
 
 export interface AuthServiceOptions {
   logger: FastifyBaseLogger;
@@ -29,15 +30,15 @@ export class AuthService {
     // Step 1: Validate the Omnistrate token
     const isValidToken = await this._omnistrateRepository.validate(token);
     if (!isValidToken) {
-      throw new Error('Invalid authentication token');
+      throw ApiError.unauthorized('Invalid Omnistrate token', 'INVALID_OMNISTRATE_TOKEN');
     }
 
     // Step 2: Get user ID from token (decode without verification since we already validated)
     const tokenPayload = this._decodeToken(token);
-    const userId = (tokenPayload.userId || tokenPayload.user_id || tokenPayload.sub) as string;
+    const userId = (tokenPayload.userID || tokenPayload.user_id || tokenPayload.sub) as string;
 
     if (!userId) {
-      throw new Error('User ID not found in token');
+      throw ApiError.unauthorized('User ID not found in token', 'USER_ID_NOT_FOUND_IN_TOKEN');
     }
 
     // Step 3: Check if user has access to the instance
@@ -48,11 +49,11 @@ export class AuthService {
     );
 
     if (!hasAccess) {
-      throw new Error('User does not have access to this instance');
+      throw ApiError.forbidden('User does not have access to this instance', 'NO_INSTANCE_ACCESS');
     }
 
     if (!role) {
-      throw new Error('User role not found for instance access');
+      throw ApiError.forbidden('User role not found for instance access', 'USER_ROLE_NOT_FOUND');
     }
 
     // Step 4: Get instance details
@@ -60,7 +61,7 @@ export class AuthService {
 
     // Step 5: Validate subscription ID matches
     if (instance.subscriptionId !== subscriptionId) {
-      throw new Error('Subscription ID does not match instance');
+      throw ApiError.badRequest('Subscription ID does not match instance', 'SUBSCRIPTION_MISMATCH');
     }
 
     // Step 6: Create session cookie
@@ -108,7 +109,7 @@ export class AuthService {
       return JSON.parse(jsonPayload) as Record<string, unknown>;
     } catch (error) {
       this._options.logger.error({ error }, 'Error decoding token');
-      throw new Error('Invalid token format');
+      throw ApiError.unauthorized('Invalid token format', 'INVALID_TOKEN_FORMAT');
     }
   }
 }

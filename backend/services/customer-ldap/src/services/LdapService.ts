@@ -1,6 +1,7 @@
 import { FastifyBaseLogger } from 'fastify';
 import { ILdapRepository, LdapUser, CreateUserRequest, ModifyUserRequest } from '../repositories/ldap/ILdapRepository';
 import { validateAcl } from '../utils/acl-validator';
+import { ApiError } from '@falkordb/errors';
 
 export interface LdapServiceOptions {
   logger: FastifyBaseLogger;
@@ -39,8 +40,9 @@ export class LdapService {
     // Validate ACL
     const validation = validateAcl(user.acl);
     if (!validation.valid) {
-      throw new Error(
+      throw ApiError.badRequest(
         `Invalid ACL: The following commands are not allowed: ${validation.invalidCommands.join(', ')}`,
+        'INVALID_ACL',
       );
     }
 
@@ -58,8 +60,9 @@ export class LdapService {
     if (user.acl) {
       const validation = validateAcl(user.acl);
       if (!validation.valid) {
-        throw new Error(
+        throw ApiError.badRequest(
           `Invalid ACL: The following commands are not allowed: ${validation.invalidCommands.join(', ')}`,
+          'INVALID_ACL',
         );
       }
     }

@@ -2,6 +2,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 import { createDecoder } from 'fast-jwt';
 import assert from 'assert';
 import { FastifyBaseLogger } from 'fastify';
+import { ApiError } from '@falkordb/errors';
 
 export class OmnistrateClient {
   private _client: AxiosInstance;
@@ -44,7 +45,7 @@ export class OmnistrateClient {
           password: this._omnistratePassword,
         });
       } catch (error) {
-        throw new Error('Failed to authenticate with Omnistrate API');
+        throw ApiError.unauthorized('Failed to authenticate with Omnistrate API', 'OMNISTRATE_AUTH_FAILED');
       }
 
       this._token = response.data.jwtToken;
