@@ -3,6 +3,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { IK8sRepository } from './IK8sRepository';
 import net from 'net';
 import assert from 'assert';
+import { ApiError } from '@falkordb/errors';
 
 export class K8sRepository implements IK8sRepository {
   constructor(private _options: { logger: FastifyBaseLogger }) {}
@@ -22,7 +23,7 @@ export class K8sRepository implements IK8sRepository {
     const pod = podsResponse.body.items.find((p) => p.metadata?.name?.startsWith(podNamePrefix));
 
     if (!pod?.metadata?.name) {
-      throw new Error(`Pod not found in namespace ${namespace} with prefix: ${podNamePrefix}`);
+      throw ApiError.notFound(`Pod not found in namespace ${namespace} with prefix: ${podNamePrefix}`, 'POD_NOT_FOUND');
     }
 
     this._options.logger.info({ namespace, podName: pod.metadata.name }, 'Found pod');
@@ -46,7 +47,7 @@ export class K8sRepository implements IK8sRepository {
     const valueBase64 = secretResponse.body.data?.[key];
 
     if (!valueBase64) {
-      throw new Error(`${key} not found in secret ${secretName}`);
+      throw ApiError.notFound(`${key} not found in secret ${secretName}`, 'SECRET_KEY_NOT_FOUND');
     }
 
     return Buffer.from(valueBase64, 'base64').toString('utf-8');

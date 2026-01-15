@@ -22,8 +22,8 @@ export function createAuthenticateHook(
       throw request.server.httpErrors.badRequest('Missing required instanceId or subscriptionId');
     }
 
-    // Check for session cookie first
-    const sessionCookie = request.cookies[SESSION_COOKIE_NAME];
+    // Check for session cookie first (using signed cookies for security)
+    const sessionCookie = request.cookies[SESSION_COOKIE_NAME] as string | undefined;
     let sessionData: SessionData | null = null;
 
     const sessionRepository = request.diScope.resolve<ISessionRepository>(
@@ -76,10 +76,11 @@ export function createAuthenticateHook(
       // Set session cookie (15 minutes)
       reply.setCookie(SESSION_COOKIE_NAME, session, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true, // Always use secure flag for sensitive session cookies
         sameSite: 'strict',
         maxAge: SESSION_EXPIRY_SECONDS,
         path: '/',
+        signed: true, // Sign the cookie to prevent tampering
       });
     }
 

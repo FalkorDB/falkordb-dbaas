@@ -12,6 +12,7 @@ export default fp(
       {
         onRequest: [authenticateWebhook],
         schema: {
+          security: [{ bearerAuth: [] }],
           tags: ['Omnistrate Webhooks'],
           description: 'Webhook handler for instance creation events from Omnistrate',
           body: Type.Object(
@@ -61,6 +62,7 @@ export default fp(
       {
         onRequest: [authenticateWebhook],
         schema: {
+          security: [{ bearerAuth: [] }],
           tags: ['Omnistrate Webhooks'],
           description: 'Webhook handler for instance deletion events from Omnistrate',
           body: Type.Object(

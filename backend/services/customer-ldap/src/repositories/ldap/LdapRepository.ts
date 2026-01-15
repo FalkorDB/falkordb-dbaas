@@ -4,6 +4,7 @@ import { FastifyBaseLogger } from 'fastify';
 import * as https from 'https';
 import { ILdapRepository, LdapUser, CreateUserRequest, ModifyUserRequest } from './ILdapRepository';
 import { LDAP_SERVICE_NAME } from '../../constants';
+import { ApiError } from '@falkordb/errors';
 
 export class LdapRepository implements ILdapRepository {
   constructor(private _options: { logger: FastifyBaseLogger }) {}
@@ -56,7 +57,7 @@ export class LdapRepository implements ILdapRepository {
       }
     }
 
-    throw new Error('Unexpected CA certificate response format');
+    throw ApiError.internalServerError('Unexpected CA certificate response format', 'INVALID_CERT_FORMAT');
   }
 
   private _sanitizeError(error: unknown, operation: string): Record<string, unknown> {
@@ -96,7 +97,7 @@ export class LdapRepository implements ILdapRepository {
     } catch (error) {
       const sanitizedError = this._sanitizeError(error, 'getCaCertificate');
       this._options.logger.error({ error: sanitizedError, localPort }, 'Error getting LDAP CA certificate');
-      throw new Error('Failed to get CA certificate from LDAP server');
+      throw ApiError.internalServerError('Failed to get CA certificate from LDAP server', 'LDAP_CERT_UNAVAILABLE');
     }
   }
 
@@ -122,8 +123,9 @@ export class LdapRepository implements ILdapRepository {
           timeout: 10000,
         },
       );
+      this._options.logger.debug({ data: usersResponse.data }, 'LDAP users response data');
 
-      const users = usersResponse.data.data.users || [];
+      const users = usersResponse.data.data || [];
 
       // Get all groups to retrieve ACL from descriptions
       const groupsResponse = await axios.get(
@@ -136,8 +138,9 @@ export class LdapRepository implements ILdapRepository {
           timeout: 10000,
         },
       );
+      this._options.logger.debug({ data: groupsResponse.data }, 'LDAP groups response data');
 
-      const groups = groupsResponse.data.data.groups || [];
+      const groups = groupsResponse.data.data || [];
 
       // Create a map of username -> ACL from groups
       const aclMap = new Map<string, string>();
@@ -155,7 +158,7 @@ export class LdapRepository implements ILdapRepository {
     } catch (error) {
       const sanitizedError = this._sanitizeError(error, 'listUsers');
       this._options.logger.error({ error: sanitizedError, localPort, org }, 'Error listing LDAP users');
-      throw new Error('Failed to list users from LDAP server');
+      throw ApiError.internalServerError('Failed to list users from LDAP server', 'LDAP_LIST_UNAVAILABLE');
     }
   }
 
@@ -239,7 +242,7 @@ export class LdapRepository implements ILdapRepository {
         'Error creating LDAP user',
       );
 
-      throw new Error('Failed to create user in LDAP server');
+      throw ApiError.internalServerError('Failed to create user in LDAP server', 'LDAP_CREATE_UNAVAILABLE');
     }
   }
 
@@ -298,7 +301,7 @@ export class LdapRepository implements ILdapRepository {
     } catch (error) {
       const sanitizedError = this._sanitizeError(error, 'modifyUser');
       this._options.logger.error({ error: sanitizedError, localPort, org, username }, 'Error modifying LDAP user');
-      throw new Error('Failed to modify user in LDAP server');
+      throw ApiError.internalServerError('Failed to modify user in LDAP server', 'LDAP_MODIFY_UNAVAILABLE');
     }
   }
 
@@ -346,7 +349,7 @@ export class LdapRepository implements ILdapRepository {
     } catch (error) {
       const sanitizedError = this._sanitizeError(error, 'deleteUser');
       this._options.logger.error({ error: sanitizedError, localPort, org, username }, 'Error deleting LDAP user');
-      throw new Error('Failed to delete user from LDAP server');
+      throw ApiError.internalServerError('Failed to delete user from LDAP server', 'LDAP_DELETE_UNAVAILABLE');
     }
   }
 
@@ -367,7 +370,7 @@ export class LdapRepository implements ILdapRepository {
     } catch (error) {
       const sanitizedError = this._sanitizeError(error, 'checkHealth');
       this._options.logger.error({ error: sanitizedError, localPort }, 'Error checking LDAP server health');
-      throw new Error('Failed to check health of LDAP server');
+      throw ApiError.internalServerError('Failed to check health of LDAP server', 'LDAP_HEALTH_UNAVAILABLE');
     }
   }
 }

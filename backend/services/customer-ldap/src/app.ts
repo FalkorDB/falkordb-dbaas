@@ -101,7 +101,6 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     options: Object.assign({}, opts),
   });
 
-
   if (fastify.config.NODE_ENV === 'development') {
     console.log('CURRENT ROUTES:');
     console.log(fastify.printRoutes());

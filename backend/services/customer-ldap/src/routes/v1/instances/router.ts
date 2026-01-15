@@ -24,6 +24,7 @@ export default fp(
       {
         preHandler: createAuthenticateHook('reader'),
         schema: {
+          security: [{ bearerAuth: [] }],
           tags: ['users'],
           params: InstanceIdParamSchema,
           querystring: SubscriptionIdQuerySchema,
@@ -41,6 +42,7 @@ export default fp(
       {
         preHandler: createAuthenticateHook('writer'),
         schema: {
+          security: [{ bearerAuth: [] }],
           tags: ['users'],
           params: InstanceIdParamSchema,
           querystring: SubscriptionIdQuerySchema,
@@ -59,6 +61,7 @@ export default fp(
       {
         preHandler: createAuthenticateHook('writer'),
         schema: {
+          security: [{ bearerAuth: [] }],
           tags: ['users'],
           params: UsernameParamSchema,
           querystring: SubscriptionIdQuerySchema,
@@ -77,6 +80,7 @@ export default fp(
       {
         preHandler: createAuthenticateHook('writer'),
         schema: {
+          security: [{ bearerAuth: [] }],
           tags: ['users'],
           params: UsernameParamSchema,
           querystring: SubscriptionIdQuerySchema,

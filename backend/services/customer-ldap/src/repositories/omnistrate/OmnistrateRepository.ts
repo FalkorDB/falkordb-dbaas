@@ -4,6 +4,7 @@ import assert from 'assert';
 import { FastifyBaseLogger } from 'fastify';
 import { IOmnistrateRepository, OmnistrateInstance, SubscriptionUser } from './IOmnistrateRepository';
 import { OmnistrateClient } from './OmnistrateClient';
+import { ApiError } from '@falkordb/errors';
 
 export class OmnistrateRepository implements IOmnistrateRepository {
   constructor(
@@ -68,12 +69,12 @@ export class OmnistrateRepository implements IOmnistrateRepository {
         code: isAxiosError(error) ? error.code : undefined,
       };
       this._options.logger.error({ error: sanitizedError }, 'Error getting instance');
-      throw new Error('Error getting instance');
+      throw ApiError.internalServerError('Error getting instance', 'INSTANCE_RETRIEVAL_FAILED');
     }
 
     const deploymentCellID = instance?.['deploymentCellID'];
     if (!deploymentCellID) {
-      throw new Error('Missing deploymentCellID in instance data');
+      throw ApiError.internalServerError('Missing deploymentCellID in instance data', 'MISSING_DEPLOYMENT_CELL_ID');
     }
 
     return {
