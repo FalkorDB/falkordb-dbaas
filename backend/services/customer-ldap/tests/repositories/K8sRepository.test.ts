@@ -1,4 +1,5 @@
 import { K8sRepository } from '../../src/repositories/k8s/K8sRepository';
+import { ApiError } from '@falkordb/errors';
 import pino from 'pino';
 
 describe('K8sRepository', () => {
@@ -24,9 +25,14 @@ describe('K8sRepository', () => {
         }),
       };
 
-      await expect(
-        repository.getPodNameByPrefix(mockConfig as any, 'ldap-auth', 'ldap-auth-rs'),
-      ).rejects.toThrow('Pod not found');
+      try {
+        await repository.getPodNameByPrefix(mockConfig as any, 'ldap-auth', 'ldap-auth-rs');
+        fail('Should have thrown ApiError');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ApiError);
+        expect((error as ApiError).statusCode).toBe(404);
+        expect((error as ApiError).errorCode).toBe('POD_NOT_FOUND');
+      }
     });
 
     it('returns the first matching pod name', async () => {
@@ -77,9 +83,14 @@ describe('K8sRepository', () => {
         }),
       };
 
-      await expect(
-        repository.getSecretValueUtf8(mockConfig as any, 'ldap-auth', 'ldap-auth-secrets', 'API_BEARER_TOKEN'),
-      ).rejects.toThrow('not found in secret');
+      try {
+        await repository.getSecretValueUtf8(mockConfig as any, 'ldap-auth', 'ldap-auth-secrets', 'API_BEARER_TOKEN');
+        fail('Should have thrown ApiError');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ApiError);
+        expect((error as ApiError).statusCode).toBe(404);
+        expect((error as ApiError).errorCode).toBe('SECRET_KEY_NOT_FOUND');
+      }
     });
   });
 
