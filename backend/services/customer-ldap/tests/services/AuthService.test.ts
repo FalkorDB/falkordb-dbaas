@@ -1,6 +1,7 @@
 import { AuthService } from '../../src/services/AuthService';
 import { IOmnistrateRepository } from '../../src/repositories/omnistrate/IOmnistrateRepository';
 import { ISessionRepository } from '../../src/repositories/session/ISessionRepository';
+import { ApiError } from '@falkordb/errors';
 import pino from 'pino';
 
 describe('AuthService', () => {
@@ -46,13 +47,20 @@ describe('AuthService', () => {
     it('should throw error for invalid token', async () => {
       mockOmnistrateRepo.validate.mockResolvedValue(false);
 
-      await expect(
-        service.authenticateAndAuthorize('invalid-token', 'instance-id', 'sub-id'),
-      ).rejects.toThrow('Invalid authentication token');
+      try {
+        await service.authenticateAndAuthorize('invalid-token', 'instance-id', 'sub-id');
+        fail('Should have thrown ApiError');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ApiError);
+        expect((error as ApiError).statusCode).toBe(401);
+        expect((error as ApiError).errorCode).toBe('INVALID_OMNISTRATE_TOKEN');
+      }
     });
 
     it('should successfully authenticate and create session', async () => {
-      const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLTEyMyJ9.test';
+      // Create a proper JWT token with userID field
+      // Payload: {"userID":"user-123"}
+      const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJ1c2VyLTEyMyJ9.test';
       
       mockOmnistrateRepo.validate.mockResolvedValue(true);
       mockOmnistrateRepo.checkIfUserHasAccessToInstance.mockResolvedValue({
@@ -87,16 +95,23 @@ describe('AuthService', () => {
     });
 
     it('should throw error when user does not have access', async () => {
-      const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ1c2VyLTEyMyJ9.test';
+      // Create a proper JWT token with userID field
+      // Payload: {"userID":"user-123"}
+      const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJ1c2VyLTEyMyJ9.test';
       
       mockOmnistrateRepo.validate.mockResolvedValue(true);
       mockOmnistrateRepo.checkIfUserHasAccessToInstance.mockResolvedValue({
         hasAccess: false,
       });
 
-      await expect(
-        service.authenticateAndAuthorize(mockToken, 'instance-789', 'sub-456'),
-      ).rejects.toThrow('User does not have access to this instance');
+      try {
+        await service.authenticateAndAuthorize(mockToken, 'instance-789', 'sub-456');
+        fail('Should have thrown ApiError');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ApiError);
+        expect((error as ApiError).statusCode).toBe(403);
+        expect((error as ApiError).errorCode).toBe('NO_INSTANCE_ACCESS');
+      }
     });
   });
 
