@@ -21,9 +21,6 @@ export interface UserServiceOptions {
 }
 
 export class UserService {
-  // Track in-flight connection creation promises to prevent race conditions
-  private _inFlightConnections: Map<string, Promise<CachedConnection>> = new Map();
-
   constructor(
     private _options: UserServiceOptions,
     private _k8sRepository: IK8sRepository,
@@ -119,7 +116,7 @@ export class UserService {
     region: string,
   ): Promise<CachedConnection> {
     // Check if there's an in-flight connection creation for this instance
-    const inFlightPromise = this._inFlightConnections.get(instanceId);
+    const inFlightPromise = this._connectionCache.getOrAwaitInFlight(instanceId);
     if (inFlightPromise) {
       this._options.logger.info({ instanceId }, 'Awaiting in-flight connection creation');
       return await inFlightPromise;
@@ -137,7 +134,7 @@ export class UserService {
       this._options.logger.info({ instanceId }, 'Cached connection unhealthy, creating new connection');
       
       // Re-check in-flight connections after validation to prevent TOCTOU race
-      const inFlightAfterValidation = this._inFlightConnections.get(instanceId);
+      const inFlightAfterValidation = this._connectionCache.getOrAwaitInFlight(instanceId);
       if (inFlightAfterValidation) {
         this._options.logger.info({ instanceId }, 'Another request started connection creation, awaiting');
         return await inFlightAfterValidation;
@@ -146,14 +143,14 @@ export class UserService {
 
     // Create a promise for the new connection and store it to prevent concurrent creation
     const connectionPromise = this._createConnection(instanceId, cloudProvider, k8sClusterName, region);
-    this._inFlightConnections.set(instanceId, connectionPromise);
+    this._connectionCache.setInFlight(instanceId, connectionPromise);
 
     try {
       const connection = await connectionPromise;
       return connection;
     } finally {
       // Always remove the in-flight promise, whether successful or not
-      this._inFlightConnections.delete(instanceId);
+      this._connectionCache.removeInFlight(instanceId);
     }
   }
 

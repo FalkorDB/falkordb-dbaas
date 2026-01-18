@@ -6,6 +6,9 @@ export interface IConnectionCacheRepository {
   removeConnection(instanceId: string): void;
   clearExpired(): void;
   validateConnection(instanceId: string): Promise<boolean>;
+  getOrAwaitInFlight(instanceId: string): Promise<CachedConnection> | null;
+  setInFlight(instanceId: string, promise: Promise<CachedConnection>): void;
+  removeInFlight(instanceId: string): void;
 }
 
 export interface CachedConnection {

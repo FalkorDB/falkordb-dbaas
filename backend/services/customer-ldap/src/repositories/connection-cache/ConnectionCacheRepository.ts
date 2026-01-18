@@ -6,6 +6,7 @@ import * as https from 'https';
 
 export class ConnectionCacheRepository implements IConnectionCacheRepository {
   private _cache: Map<string, CachedConnection> = new Map();
+  private _inFlightConnections: Map<string, Promise<CachedConnection>> = new Map();
   private readonly CACHE_TTL = SESSION_EXPIRY_MS;
   private _cleanupInterval: NodeJS.Timeout | null = null;
 
@@ -112,6 +113,20 @@ export class ConnectionCacheRepository implements IConnectionCacheRepository {
     }
   }
 
+  getOrAwaitInFlight(instanceId: string): Promise<CachedConnection> | null {
+    return this._inFlightConnections.get(instanceId) || null;
+  }
+
+  setInFlight(instanceId: string, promise: Promise<CachedConnection>): void {
+    this._options.logger.debug({ instanceId }, 'Registering in-flight connection creation');
+    this._inFlightConnections.set(instanceId, promise);
+  }
+
+  removeInFlight(instanceId: string): void {
+    this._options.logger.debug({ instanceId }, 'Removing in-flight connection creation');
+    this._inFlightConnections.delete(instanceId);
+  }
+
   destroy(): void {
     if (this._cleanupInterval) {
       clearInterval(this._cleanupInterval);
@@ -122,5 +137,8 @@ export class ConnectionCacheRepository implements IConnectionCacheRepository {
     for (const instanceId of this._cache.keys()) {
       this.removeConnection(instanceId);
     }
+    
+    // Clear in-flight tracking
+    this._inFlightConnections.clear();
   }
 }
