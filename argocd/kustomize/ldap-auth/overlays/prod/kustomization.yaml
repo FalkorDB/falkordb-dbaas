@@ -1,0 +1,61 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: ldap-auth
+
+resources:
+  - ../../base/
+  - https://github.com/FalkorDB/ldap-auth-rs.git//k8s/overlays/production
+
+patches:
+  - target:
+      kind: Deployment
+      name: ldap-auth-rs
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: "docker.io/falkordb/ldap-auth-rs:0.2.4"
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: ldap-auth-hpa
+    patch: |-
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 2
+  - target:
+      kind: ConfigMap
+      name: ldap-auth-config
+    patch: |-
+      - op: replace
+        path: /data/LDAP_BASE_DN
+        value: "dc=falkordb,dc=cloud"
+      - op: replace
+        path: /data/LDAP_SEARCH_BIND_ORG
+        value: "admin"
+  - target:
+      kind: StringSecret
+      name: ldap-auth-secrets
+    patch: |-
+      - op: replace
+        path: /spec/fields/1/encoding
+        value: base64url
+  - target:
+      kind: Certificate
+      name: ldap-auth-tls-cert
+    patch: |-
+      - op: add
+        path: /spec/dnsNames/-  
+        value: "localhost"
+
+patchesStrategicMerge:
+  - |-
+    apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: ldap-auth-metrics
+    $patch: delete
