@@ -36,7 +36,7 @@ patches:
       name: ldap-auth-tls-cert
     patch: |-
       - op: add
-        path: /spec/dnsNames/-  
+        path: /spec/dnsNames/-
         value: "localhost"
 
 patchesStrategicMerge:

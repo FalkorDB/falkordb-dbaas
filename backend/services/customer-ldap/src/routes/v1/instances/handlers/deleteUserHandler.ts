@@ -56,8 +56,6 @@ export const deleteUserHandler: RouteHandlerMethod<
 
     request.log.error({ error }, 'Error deleting user');
     const message = error instanceof Error ? error.message : 'Internal Server Error';
-    throw request.server.httpErrors.createError(500, message, {
-      error,
-    });
+    throw request.server.httpErrors.createError(500, message);
   }
 };

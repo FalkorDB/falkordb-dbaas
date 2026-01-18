@@ -117,7 +117,7 @@ export class UserService {
     cloudProvider: 'gcp' | 'aws' | 'azure',
     k8sClusterName: string,
     region: string,
-  ) {
+  ): Promise<CachedConnection> {
     // Check if there's an in-flight connection creation for this instance
     const inFlightPromise = this._inFlightConnections.get(instanceId);
     if (inFlightPromise) {
@@ -135,6 +135,13 @@ export class UserService {
       }
       // If not healthy, create new connection (cache entry was removed by validateConnection)
       this._options.logger.info({ instanceId }, 'Cached connection unhealthy, creating new connection');
+      
+      // Re-check in-flight connections after validation to prevent TOCTOU race
+      const inFlightAfterValidation = this._inFlightConnections.get(instanceId);
+      if (inFlightAfterValidation) {
+        this._options.logger.info({ instanceId }, 'Another request started connection creation, awaiting');
+        return await inFlightAfterValidation;
+      }
     }
 
     // Create a promise for the new connection and store it to prevent concurrent creation

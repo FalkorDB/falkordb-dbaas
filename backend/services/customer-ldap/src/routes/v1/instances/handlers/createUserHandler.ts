@@ -57,6 +57,6 @@ export const createUserHandler: RouteHandlerMethod<
     }
 
     request.log.error({ error }, 'Error creating user');
-    throw request.server.httpErrors.createError(500, 'Internal Server Error', { error });
+    throw request.server.httpErrors.createError(500, 'Internal Server Error');
   }
 };
