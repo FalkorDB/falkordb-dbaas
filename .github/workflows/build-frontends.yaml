@@ -2,7 +2,14 @@ name: Build frontends
 
 on:
   push:
+    paths:
+      - frontend/**
+      - .github/workflows/build-frontends.yaml
   pull_request:
+    paths:
+      - frontend/**
+      - .github/workflows/build-frontends.yaml
+  workflow_dispatch:
 
 permissions:
   contents: "read"

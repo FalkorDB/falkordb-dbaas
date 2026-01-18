@@ -7,7 +7,6 @@ import {
   type FastifyRequest,
 } from 'fastify';
 import { ApiError } from '@falkordb/errors';
-import { decode, JwtPayload } from 'jsonwebtoken';
 
 interface IOmnistratePluginOptions {
   omnistrateRepository: {
