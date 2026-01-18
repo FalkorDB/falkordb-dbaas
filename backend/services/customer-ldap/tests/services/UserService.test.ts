@@ -41,6 +41,9 @@ describe('UserService', () => {
       removeConnection: jest.fn(),
       clearExpired: jest.fn(),
       validateConnection: jest.fn(),
+      getOrAwaitInFlight: jest.fn(),
+      setInFlight: jest.fn(),
+      removeInFlight: jest.fn(),
     };
 
     service = new UserService({ logger }, mockK8sRepo, mockK8sCredentialsRepo, mockLdapRepo, mockConnectionCache);
