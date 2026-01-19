@@ -88,7 +88,7 @@ applicationSet:
       cpu: "2"
 
 controller:
-  replicas: 2
+  replicas: 3
   metrics:
     enabled: true
   template:
@@ -97,7 +97,7 @@ controller:
         - name: argocd-application-controller
           env:
             - name: ARGOCD_CONTROLLER_REPLICAS
-              value: "2"
+              value: "3"
   serviceAccount:
     annotations:
       iam.gke.io/gcp-service-account: "argocd-sa@ctrl-plane-prod-b1b92df2.iam.gserviceaccount.com"
