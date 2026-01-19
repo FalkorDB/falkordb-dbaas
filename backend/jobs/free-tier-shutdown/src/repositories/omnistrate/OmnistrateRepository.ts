@@ -78,7 +78,7 @@ export class OmnistrateRepository {
     this._options.logger.info({ serviceId, environmentId, tierId }, 'Getting instances from tier');
 
     const response = await OmnistrateRepository._client.get(
-      `/2022-09-01-00/fleet/service/${serviceId}/environment/${environmentId}/instances`,
+      `/2022-09-01-00/fleet/service/${serviceId}/environment/${environmentId}/instances?ProductTierId=${tierId}&Filter=excludeCloudAccounts`,
     );
 
     return response.data['resourceInstances']
@@ -93,9 +93,9 @@ export class OmnistrateRepository {
         productTierId: d?.['productTierId'],
         tls: d?.['consumptionResourceInstanceResult']?.['result_params']?.['enableTLS'] === 'true',
         status: d?.['consumptionResourceInstanceResult']?.['status'],
-        resourceId: Object.entries(d?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology']).filter(
+        resourceId: Object.entries(d?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology'] ?? {}).filter(
           (ob) => (ob[1] as unknown)?.['main'],
-        )[0][0],
+        )?.[0]?.[0],
         cloudProvider: d?.['consumptionResourceInstanceResult']?.['cloud_provider'],
       }))
       .filter(

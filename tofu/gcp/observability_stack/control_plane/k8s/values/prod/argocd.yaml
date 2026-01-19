@@ -46,15 +46,25 @@ configs:
           clientSecret: $dex.google.clientSecret
           serviceAccountFilePath: /tmp/oidc/googleAuth.json
           adminEmail: $dex.google.adminEmail
+          domainToAdminEmail: 
+            falkordb.com: $dex.google.adminEmail
+          groups:
+            - devops@falkordb.com
           fetchTransitiveGroupMembership: True
-        type: oidc
+          scopes:
+            - openid
+            - email
+            - profile
+            - https://www.googleapis.com/auth/admin.directory.group.readonly
+            - https://www.googleapis.com/auth/admin.directory.user.readonly
+        type: google
         id: google
         name: Google
   rbac:
     create: true
     policy.default: role:readonly
     policy.csv: |
-      g, devops@falkordb.com, role:org-admin
+      g, devops@falkordb.com, role:admin
     scopes: "[groups, email]"
 
 dex:
@@ -78,7 +88,7 @@ applicationSet:
       cpu: "2"
 
 controller:
-  replicas: 2
+  replicas: 3
   metrics:
     enabled: true
   template:
@@ -87,7 +97,7 @@ controller:
         - name: argocd-application-controller
           env:
             - name: ARGOCD_CONTROLLER_REPLICAS
-              value: "2"
+              value: "3"
   serviceAccount:
     annotations:
       iam.gke.io/gcp-service-account: "argocd-sa@ctrl-plane-prod-b1b92df2.iam.gserviceaccount.com"

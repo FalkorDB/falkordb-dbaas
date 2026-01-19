@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: customer-ldap-api
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+    targetRevision: main
+    path: argocd/kustomize/customer-ldap-api/overlays/prod
+    kustomize:
+      patches:
+        - target:
+            kind: Deployment
+            name: customer-ldap-api
+          patch: |-
+            - op: add
+              path: /spec/template/spec/nodeSelector
+              value:
+                node_pool: backend
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: api
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+  ignoreDifferences:
+    - group: secretgenerator.mittwald.de
+      kind: StringSecret
+      jsonPointers:
+        - /spec/fields

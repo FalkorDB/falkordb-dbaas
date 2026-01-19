@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: ldap-auth
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: app-plane
+  template:
+    metadata:
+      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-ldap-auth'
+    spec:
+      project: default
+      sources:
+        - repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+          targetRevision: main
+          path: argocd/kustomize/ldap-auth/overlays/prod
+          kustomize: {}
+      destination:
+        server: "{{.server}}"
+        namespace: ldap-auth
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

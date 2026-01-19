@@ -1,4 +1,4 @@
-ARG NODE_VERSION=22.6.0
+ARG NODE_VERSION=24.12.0
 
 # Alpine image
 FROM node:$NODE_VERSION-alpine AS alpine
@@ -6,7 +6,7 @@ RUN apk update
 RUN apk add --no-cache libc6-compat
 
 # Setup pnpm and turbo on the alpine base
-FROM alpine as base
+FROM alpine AS base
 RUN npm install pnpm turbo --global
 RUN pnpm config set store-dir ~/.pnpm-store
 

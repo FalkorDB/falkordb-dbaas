@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kyverno
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: app-plane
+  template:
+    metadata:
+      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-kyverno'
+    spec:
+      project: default
+      source:
+        chart: kyverno
+        repoURL: https://kyverno.github.io/kyverno
+        targetRevision: 3.6.1
+        helm:
+          valuesObject:
+            global:
+              nodeSelector:
+                node_pool: observability
+            config:
+              webhookLabels:
+                app.kubernetes.io/managed-by: argocd
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+      destination:
+        server: "{{.server}}"
+        namespace: kyverno

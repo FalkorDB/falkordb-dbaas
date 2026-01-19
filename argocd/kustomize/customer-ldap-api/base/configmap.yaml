@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: customer-ldap-api-config
+  labels:
+    app: customer-ldap-api
+    app.kubernetes.io/name: customer-ldap-api
+data:
+  LOG_LEVEL: "info"
+  CORS_ORIGIN: "*"
+  REQUEST_TIMEOUT: "30000"

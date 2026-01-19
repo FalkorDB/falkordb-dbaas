@@ -1,0 +1,35 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: bind-managed-sa-to-ldap-auth
+spec:
+  generateExisting: true
+  rules:
+    - name: bind-managed-sa-to-ldap-auth-secrets
+      # Match ServiceAccounts with our managed label
+      match:
+        resources:
+          kinds:
+            - ServiceAccount
+          selector:
+            matchLabels:
+              omnistrate.com/managed-by: omnistrate
+          namespaceSelector:
+            matchLabels:
+              omnistrate.com/managed-by: omnistrate
+      # Generate a RoleBinding in the ldap-auth namespace
+      generate:
+        apiVersion: rbac.authorization.k8s.io/v1
+        kind: RoleBinding
+        name: "ldap-auth-access-{{request.object.metadata.namespace}}-{{request.object.metadata.name}}"
+        namespace: ldap-auth
+        synchronize: true
+        data:
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: ldap-auth-secrets-access
+          subjects:
+            - kind: ServiceAccount
+              name: "{{request.object.metadata.name}}"
+              namespace: "{{request.object.metadata.namespace}}"

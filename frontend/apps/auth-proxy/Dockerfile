@@ -1,4 +1,4 @@
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 
 FROM base AS builder
 RUN apk add --no-cache libc6-compat
@@ -17,10 +17,11 @@ WORKDIR /app
 
 # First install the dependencies (as they change less often)
 COPY .gitignore .gitignore
-COPY --from=builder /app/out/full/ .
-COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/pnpm-lock.yaml ./pnpm-lock.yaml
 RUN corepack enable
-RUN pnpm i --frozen-lockfile
+RUN pnpm install --frozen-lockfile
+COPY --from=builder /app/out/full/ .
 
 # Build the project
 RUN pnpm run build --filter=auth-proxy...
@@ -42,8 +43,8 @@ COPY --from=installer --chown=nextjs:nodejs /app/apps/auth-proxy/public ./next/s
 USER nextjs
 
 EXPOSE 3000
-ENV PORT 3000
+ENV PORT=3000
 
-ENV HOSTNAME "0.0.0.0"
-CMD node next/standalone/apps/auth-proxy/server.js
+ENV HOSTNAME="0.0.0.0"
+CMD ["node", "next/standalone/apps/auth-proxy/server.js"]
 
