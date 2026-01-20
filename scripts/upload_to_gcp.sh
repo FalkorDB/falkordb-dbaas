@@ -71,7 +71,7 @@ upload_to_gcp(){
       exit 1
     fi
     echo "RDB file uploaded successfully to GCP."
-    if [ "$aof_enabled" = true ]; then
+    if [ "$aof_enabled" = "true" ]; then
       kubectl exec -it -n "$namespace" --context "$kubernetes_context" "$pod_name" -- \
       tar -czvf /data/appendonlydir.tar.gz -C /data/appendonlydir .
       
