@@ -81,7 +81,7 @@ export async function instanceCreatedHandler(
       await userService.createUser(instanceId, cloudProvider, k8sClusterName, region, {
         username: falkordbUsername,
         password: falkordbPassword,
-        acl: ALLOWED_ACL,
+        acl: `~* ${ALLOWED_ACL}`,
       });
 
       request.log.info({ instanceId, username: '***' }, 'User created successfully');

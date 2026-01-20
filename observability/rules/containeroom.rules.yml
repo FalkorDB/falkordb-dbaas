@@ -22,5 +22,4 @@ spec:
             summary: "Container OOMKilled"
             description: "Container {{ $labels.container }} in pod {{ $labels.pod }} in namespace {{ $labels.namespace }} was terminated due to OOMKilled."
             runbook_url: "https://github.com/FalkorDB/runbooks/blob/main/alerts/ContainerOOMKilledRunbook.md"
-            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}]}}
-            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}]}}
+            view_logs: '{{ if eq $labels.environment "prod" }}https://grafana.observability.internal.falkordb.cloud{{ else }}https://grafana.observability.dev.internal.falkordb.cloud{{ end }}/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
