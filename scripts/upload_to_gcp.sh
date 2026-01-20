@@ -62,7 +62,7 @@ upload_to_gcp(){
     local rdb_put_url=$3
     local aof_put_url=$4
     kubectl exec -it -n "$namespace" --context "$kubernetes_context" "$pod_name" -- \
-    curl -X PUT \
+    curl -X PUT --fail \
     -H "Content-Type: application/octet-stream" \
     --upload-file "$rdb" \
     "$rdb_put_url" > /dev/null 2>&1
@@ -76,7 +76,7 @@ upload_to_gcp(){
       tar -czvf /data/appendonlydir.tar.gz -C /data/appendonlydir .
       
       kubectl exec -it -n "$namespace" --context "$kubernetes_context" "$pod_name" -- \
-      curl -X PUT \
+      curl -X PUT --fail \
       -H "Content-Type: application/octet-stream" \
       --upload-file "$aof" \
       "$aof_put_url" > /dev/null 2>&1
