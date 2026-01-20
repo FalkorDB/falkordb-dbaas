@@ -82,7 +82,7 @@ spec:
             description: "[cluster={{ $labels.cluster }}] FalkorDB has too many nodes marked as master.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
         - alert: FalkorDBMissingBackup
-          expr: time() - redis_rdb_last_save_timestamp_seconds > 60 * 60 * 24 and rate(redis_commands_processed_total[5m]) < (rate(redis_commands_processed_total[15m]) * 0.2)
+          expr: time() - redis_rdb_last_save_timestamp_seconds{container="service"} > 60 * 60 * 24 and rate(redis_commands_processed_total{container="service"}[5m]) < (rate(redis_commands_processed_total{container="service"}[15m]) * 0.2)
           for: 1h
           labels:
             severity: critical
@@ -92,7 +92,7 @@ spec:
             description: "[cluster={{ $labels.cluster }}] FalkorDB has not been backuped for 24 hours\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
         - alert: FalkorDBOutOfSystemMemory
-          expr: redis_memory_used_bytes / redis_total_system_memory_bytes * 100 > 90
+          expr: redis_memory_used_bytes{container="service"} / redis_total_system_memory_bytes{container="service"} * 100 > 90
           for: 2m
           labels:
             severity: warning
@@ -102,7 +102,7 @@ spec:
             description: "[cluster={{ $labels.cluster }}] FalkorDB is running out of system memory (> 90%)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
         - alert: FalkorDBOutOfConfiguredMaxmemory
-          expr: ceil(redis_memory_used_bytes / redis_memory_max_bytes * 100) >= 90 and ceil(redis_memory_used_bytes / redis_memory_max_bytes * 100) < 100 and on(instance) redis_memory_max_bytes > 0
+          expr: ceil(redis_memory_used_bytes{container="service"} / redis_memory_max_bytes{container="service"} * 100) >= 90 and ceil(redis_memory_used_bytes{container="service"} / redis_memory_max_bytes{container="service"} * 100) < 100 and on(instance) redis_memory_max_bytes{container="service"} > 0
           for: 2m
           labels:
             severity: warning
@@ -114,7 +114,7 @@ spec:
             threshold: "{{ $value }}"
 
         - alert: FalkorDBOutOfConfiguredMaxmemoryCritical
-          expr: ceil(redis_memory_used_bytes / redis_memory_max_bytes * 100) >= 100 and on(instance) redis_memory_max_bytes > 0
+          expr: ceil(redis_memory_used_bytes{container="service"} / redis_memory_max_bytes{container="service"} * 100) >= 100 and on(instance) redis_memory_max_bytes{container="service"} > 0
           for: 2m
           labels:
             severity: warning
@@ -126,7 +126,7 @@ spec:
             threshold: "{{ $value }}"
 
         - alert: FalkorDBTooManyConnections
-          expr: redis_connected_clients / redis_config_maxclients * 100 > 90
+          expr: redis_connected_clients{container="service"} / redis_config_maxclients{container="service"} * 100 > 90
           for: 2m
           labels:
             severity: warning
@@ -136,7 +136,7 @@ spec:
             description: "[cluster={{ $labels.cluster }}] FalkorDB is running out of connections (> 90% used)\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
         - alert: FalkorDBRejectedConnections
-          expr: increase(redis_rejected_connections_total[1m]) > 0
+          expr: increase(redis_rejected_connections_total{container="service"}[1m]) > 0
           for: 0m
           labels:
             severity: critical
@@ -146,7 +146,7 @@ spec:
             description: "[cluster={{ $labels.cluster }}] Some connections to FalkorDB has been rejected\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
         - alert: FalkorDBAOFFileSizeExceededWarning
-          expr: redis_aof_file_size_bytes > 64 * 1024 * 1024
+          expr: redis_aof_file_size_bytes{container="service"} > 64 * 1024 * 1024
           for: 15m
           labels:
             severity: warning
@@ -156,7 +156,7 @@ spec:
             description: "[cluster={{ $labels.cluster }}] The AOF file size for FalkorDB in namespace {{ $labels.namespace }} has exceeded 64MB. Current size: {{ $value | humanize1024 }}."
 
         - alert: FalkorDBAOFFileSizeExceededCritical
-          expr: redis_aof_file_size_bytes >= 512 * 1024 * 1024
+          expr: redis_aof_file_size_bytes{container="service"} >= 512 * 1024 * 1024
           for: 15m
           labels:
             severity: critical
@@ -169,9 +169,9 @@ spec:
 
         - alert: FalkorDBAOFPendingRewriteWarning
           expr: |
-            avg_over_time(redis_aof_pending_rewrite[10m]) == 1
+            avg_over_time(redis_aof_pending_rewrite{container="service"}[10m]) == 1
             unless
-            avg_over_time(redis_aof_pending_rewrite[20m]) == 1
+            avg_over_time(redis_aof_pending_rewrite{container="service"}[20m]) == 1
           for: 0m
           labels:
             severity: warning
@@ -181,7 +181,7 @@ spec:
             description: "[cluster={{ $labels.cluster }}] AOF pending rewrite has been pending for more than 10 minutes on namespace {{ $labels.namespace }}. This might indicate an issue with AOF persistence."
 
         - alert: FalkorDBAOFPendingRewriteCritical
-          expr: avg_over_time(redis_aof_pending_rewrite[20m]) == 1
+          expr: avg_over_time(redis_aof_pending_rewrite{container="service"}[20m]) == 1
           for: 0m
           labels:
             severity: critical
