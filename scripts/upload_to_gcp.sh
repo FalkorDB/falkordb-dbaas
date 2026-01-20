@@ -27,6 +27,9 @@ if [[ ! ${aof_enabled} =~ ^(true|True|TRUE|false|False|FALSE)$ ]]; then
   exit 1
 fi
 
+# Normalize to lowercase for consistent comparisons
+aof_enabled=$(echo "$aof_enabled" | tr '[:upper:]' '[:lower:]')
+
 echo "Using namespace: $namespace"
 echo "AOF Enabled: $aof_enabled"
 echo "Kubernetes Context: $kubernetes_context"
@@ -40,15 +43,15 @@ put_urls() {
         --impersonate-service-account falkordb-rdb-storage-reader@pipelines-development-f7a2434f.iam.gserviceaccount.com \
         --region eu \
         --http-verb=PUT)
-    if [[ ${aof_enabled} =~ ^(true|True|TRUE)$ ]]; then
-        local aof_put_url=$(gcloud storage sign-url gs://falkordb_aofs_test_eu/${namespace}/appendonlydir.tar.gz \
+    if [ "$aof_enabled" = "true" ]; then
+        local aof_put_url=$(gcloud storage sign-url gs://falkordb_rdbs_test_eu/${namespace}/appendonlydir.tar.gz \
         --duration 1h \
         --impersonate-service-account falkordb-rdb-storage-reader@pipelines-development-f7a2434f.iam.gserviceaccount.com \
         --region eu \
         --http-verb=PUT)
     fi
     echo "$rdb_put_url" | grep signed_url | awk '{print $2}'
-    if [[ ${aof_enabled} =~ ^(true|True|TRUE)$ ]]; then
+    if [ "$aof_enabled" = "true" ]; then
         echo "$aof_put_url" | grep signed_url | awk '{print $2}'
     fi
 }
@@ -93,7 +96,7 @@ return_download_url(){
         --region eu)
     echo "RDB Download URL: $(echo "$rdb_download_url" | grep signed_url | awk '{print $2}')"
     
-    if [ "$aof_enabled" = true ]; then
+    if [ "$aof_enabled" = "true" ]; then
       local aof_download_url=$(gcloud storage sign-url gs://falkordb_rdbs_test_eu/${namespace}/appendonlydir.tar.gz \
         --duration 12h \
         --impersonate-service-account falkordb-rdb-storage-reader@pipelines-development-f7a2434f.iam.gserviceaccount.com \
@@ -102,7 +105,7 @@ return_download_url(){
     fi
 }
 
-if [ "$aof_enabled" = true ]; then
+if [ "$aof_enabled" = "true" ]; then
   urls=$(put_urls "$namespace")
   rdb_put_url=$(echo "$urls" | awk 'NR==1{print $0}')
   aof_put_url=$(echo "$urls" | awk 'NR==2{print $0}')
