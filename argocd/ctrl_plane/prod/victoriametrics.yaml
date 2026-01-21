@@ -95,8 +95,6 @@ spec:
           spec:
             nodeSelector:
               node_pool: observability-resources
-            externalLabels:
-              environment: prod
             ruleSelector:
               matchLabels:
                 is_logs: "false"
