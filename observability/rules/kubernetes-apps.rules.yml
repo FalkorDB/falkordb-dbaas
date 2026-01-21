@@ -17,8 +17,8 @@ spec:
             description: '[cluster={{ $labels.cluster }}] Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is in waiting state (reason: "CrashLoopBackOff").'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodcrashlooping
             summary: Pod is crash looping.
-            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}]}}
-            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}]}}
+            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22:%22VictoriaLogs%22,%22queries%22%3A%5B%7B%22expr%22:%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D
+            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22:%22VictoriaLogs%22,%22queries%22%3A%5B%7B%22expr%22:%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D
           expr: max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff", job="kube-state-metrics", namespace=~".*"}[5m]) >= 1
           for: 15m
           labels:
@@ -29,8 +29,8 @@ spec:
             description: '[cluster={{ $labels.cluster }}] Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state for longer than 15 minutes.'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodnotready
             summary: Pod has been in a non-ready state for more than 15 minutes.
-            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}]}}
-            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}]}}
+            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22:%22VictoriaLogs%22,%22queries%22%3A%5B%7B%22expr%22:%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D
+            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22:%22VictoriaLogs%22,%22queries%22%3A%5B%7B%22expr%22:%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D
           expr: |-
             sum by (namespace,pod,cluster) (
               max by (namespace,pod,cluster) (
@@ -184,8 +184,8 @@ spec:
             description: '[cluster={{ $labels.cluster }}] pod/{{ $labels.pod }} in namespace {{ $labels.namespace }} on container {{ $labels.container}} has been in waiting state for longer than 1 hour. (reason: "{{ $labels.reason }}").'
             runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubecontainerwaiting
             summary: Pod container waiting longer than 1 hour
-            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}]}}
-            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left={%22datasource%22:%22VictoriaLogs%22,%22queries%22:[{%22expr%22:%22pod:%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace:%5C%22{{ $labels.namespace }}%5C%22%22}]}}
+            view_logs_prod: https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22:%22VictoriaLogs%22,%22queries%22%3A%5B%7B%22expr%22:%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D
+            view_logs_dev: https://grafana.observability.dev.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22:%22VictoriaLogs%22,%22queries%22%3A%5B%7B%22expr%22:%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D
           expr: kube_pod_container_status_waiting_reason{reason!="CrashLoopBackOff", job="kube-state-metrics", namespace=~".*"} > 0
           for: 1h
           labels:
