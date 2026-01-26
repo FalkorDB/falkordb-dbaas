@@ -123,7 +123,7 @@ jobs:
           path: ${{ matrix.stack.path }}/tfplan
 
       - name: Comment Plan Changes
-        uses: liatrio/terraform-change-pr-commenter@v1.10.0
+        uses: liatrio/terraform-change-pr-commenter@v1.14.0
         with:
           json-file: ${{ matrix.stack.path }}/tfplan.json
           comment-header: "Tofu Plan for ${{ matrix.stack.name }} in ${{ env.ENVIRONMENT }} environment"
