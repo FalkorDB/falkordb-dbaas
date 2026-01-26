@@ -27,3 +27,95 @@ spec:
       valueFrom:
         alertRef:
           fieldPath: "."
+  - name: create-issue-with-logs
+    image: ghcr.io/cli/cli:latest
+    serviceAccount: alert-reaction-actions-sa
+    command: ["sh", "-c"]
+    args:
+      - |
+        # Collect logs and create GitHub issue with attachment
+        POD_NAME="${POD_NAME}"
+        NAMESPACE="${NAMESPACE}"
+        CLUSTER="${CLUSTER}"
+        VLOGS_URL="http://victorialogs-server.observability.svc.cluster.local:9428"
+        export GH_TOKEN="${GITHUB_TOKEN}"
+        
+        # Create log file
+        LOG_FILE="/tmp/redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
+        
+        echo "Redis Crash Diagnostics" > "${LOG_FILE}"
+        echo "========================" >> "${LOG_FILE}"
+        echo "Pod: ${POD_NAME}" >> "${LOG_FILE}"
+        echo "Namespace: ${NAMESPACE}" >> "${LOG_FILE}"
+        echo "Cluster: ${CLUSTER}" >> "${LOG_FILE}"
+        echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "${LOG_FILE}"
+        echo "" >> "${LOG_FILE}"
+        echo "Logs (5 minutes around alert):" >> "${LOG_FILE}"
+        echo "" >> "${LOG_FILE}"
+        
+        # Collect 5 minutes of logs
+        curl -s -G "${VLOGS_URL}/select/logsql/query" \
+          --data-urlencode "query=pod:\"${POD_NAME}\" AND namespace:\"${NAMESPACE}\" AND container:\"service\" | fields _time, container, level, _msg | sort by (_time) asc" \
+          --data-urlencode "limit=99999" \
+          --data-urlencode "time=5m" >> "${LOG_FILE}" || echo "Failed to fetch logs" >> "${LOG_FILE}"
+        
+        echo "✅ Logs collected: ${LOG_FILE}"
+        
+        # Create issue
+        TITLE="[CRITICAL] Redis Crash: ${POD_NAME} in ${NAMESPACE} (${CLUSTER})"
+        
+        # Create issue body file
+        BODY_FILE="/tmp/issue-body.md"
+        cat > "${BODY_FILE}" << EOF
+## Critical: Redis Crash Detected
+
+**Pod**: \`${POD_NAME}\`
+**Namespace**: \`${NAMESPACE}\`
+**Cluster**: \`${CLUSTER}\`
+
+Redis has crashed.
+
+### Links
+
+- [View in Grafana](https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22${POD_NAME}%5C%22%22%7D%5D%7D)
+- [PagerDuty Incidents](https://falkordb.pagerduty.com/incidents)
+EOF
+        
+        # Create issue
+        ISSUE_URL=$(gh issue create \
+          --repo FalkorDB/private \
+          --title "${TITLE}" \
+          --body-file "${BODY_FILE}" \
+          --label "critical,redis,crash,automated" | tail -n 1)
+        
+        echo "Issue created: ${ISSUE_URL}"
+        
+        # Attach log file to issue as comment
+        gh issue comment "${ISSUE_URL}" \
+          --body-file "${LOG_FILE}" \
+          --repo FalkorDB/private
+        
+        echo "✅ Logs attached to issue"
+        
+        # Add to project board
+        gh project item-add 32 --owner FalkorDB --url "${ISSUE_URL}" || echo "Note: Manual addition to project board may be needed"
+        
+        echo "✅ Done"
+    env:
+    - name: POD_NAME
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.pod"
+    - name: NAMESPACE
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.namespace"
+    - name: CLUSTER
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.cluster"
+    - name: GITHUB_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: redis-crash-token
+          key: token
