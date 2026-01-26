@@ -213,7 +213,7 @@ export class OmnistrateClient {
   > {
     const params = {
       ProductTierId: this.omnistrateByocProductTierId,
-      Filter: 'onlyCloudAccounts=true',
+      Filter: 'onlyCloudAccounts',
       ExcludeDetail: 'true',
     };
     const response = await OmnistrateClient._client.get(
