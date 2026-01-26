@@ -222,7 +222,7 @@ export class OmnistrateClient {
         params,
       },
     );
-    const data = response.data;
+    const data = response.data.resourceInstances;
     return data.map((d) => ({
       cloudProvider: d.cloudProvider,
       id: d.input_params.cloud_provider_account_config_id,
