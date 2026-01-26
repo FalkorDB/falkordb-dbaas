@@ -92,13 +92,13 @@ spec:
             view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
         - alert: RedisCrashLoop
-          # LogsQL: Detect Redis crash loop (2+ crashes in 5-10 minutes)
-          # Triggers critical alert when Redis is repeatedly crashing
+          # LogsQL: Detect Redis crash loop (2+ crashes in last 8 minutes)
+          # Triggers critical alert immediately when Redis is repeatedly crashing
           expr: |
-            ~"Redis .+ crashed by signal" and -pod:~"vmalert*" | 
+            ~"Redis .+ crashed by signal" and -pod:~"vmalert*" and _time:8m | 
             stats by (pod, namespace, cluster) count() as crash_count |
             filter crash_count :>= 2
-          for: 5m
+          for: 1m
           labels:
             severity: critical
             cluster: "{{ $labels.cluster }}"
@@ -106,6 +106,6 @@ spec:
             summary: "CRITICAL: Redis crash loop detected in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
               [cluster={{ $labels.cluster }}] CRITICAL: Redis in pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
-              is in a crash loop. It has crashed {{ $value }} times in the last 5-10 minutes.
+              is in a crash loop. It has crashed {{ $value }} times in the last 8 minutes.
               This requires immediate attention to prevent service disruption.
             view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
