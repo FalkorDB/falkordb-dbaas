@@ -61,32 +61,21 @@ spec:
         
         echo "✅ Logs collected: ${LOG_FILE}"
         
+        # Get Israeli datetime
+        ISRAEL_TIME=$(TZ=Asia/Jerusalem date '+%Y-%m-%d %H:%M:%S %Z')
+        
         # Create issue
-        TITLE="[CRITICAL] Redis Crash: ${POD_NAME} in ${NAMESPACE} (${CLUSTER})"
+        TITLE="[CRITICAL] Redis Crash: ${POD_NAME} in ${NAMESPACE} (${CLUSTER}) - ${ISRAEL_TIME}"
         
         # Create issue body file
         BODY_FILE="/tmp/issue-body.md"
-        cat > "${BODY_FILE}" << EOF
-## Critical: Redis Crash Detected
-
-**Pod**: \`${POD_NAME}\`
-**Namespace**: \`${NAMESPACE}\`
-**Cluster**: \`${CLUSTER}\`
-
-Redis has crashed.
-
-### Links
-
-- [View in Grafana](https://grafana.observability.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22${POD_NAME}%5C%22%22%7D%5D%7D)
-- [PagerDuty Incidents](https://falkordb.pagerduty.com/incidents)
-EOF
+        
         
         # Create issue
         ISSUE_URL=$(gh issue create \
           --repo FalkorDB/private \
           --title "${TITLE}" \
-          --body-file "${BODY_FILE}" \
-          --label "critical,redis,crash,automated" | tail -n 1)
+          --body-file "${BODY_FILE}" | tail -n 1)
         
         echo "Issue created: ${ISSUE_URL}"
         
