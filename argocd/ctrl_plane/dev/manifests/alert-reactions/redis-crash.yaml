@@ -67,14 +67,11 @@ spec:
         # Create issue
         TITLE="[CRITICAL] Redis Crash: ${POD_NAME} in ${NAMESPACE} (${CLUSTER}) - ${ISRAEL_TIME}"
         
-        # Create issue body file
-        BODY_FILE="/tmp/issue-body.md"
-        
         # Create issue
         ISSUE_URL=$(gh issue create \
           --repo FalkorDB/private \
           --title "${TITLE}" \
-          --body-file "${BODY_FILE}" | tail -n 1)
+          --body-file "${LOG_FILE}" | tail -n 1)
         
         echo "Issue created: ${ISSUE_URL}"
         
