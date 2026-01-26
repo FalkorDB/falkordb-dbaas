@@ -29,7 +29,7 @@ spec:
               [cluster={{ $labels.cluster }}] The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
               has exceeded 10 errors per minute for the last 5 minutes.
               Latest 1-minute count: {{ $value }}.
-            view_logs: '{{ if eq $labels.environment "prod" }}https://grafana.observability.internal.falkordb.cloud{{ else }}https://grafana.observability.dev.internal.falkordb.cloud{{ end }}/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
 
         - alert: CriticalErrorLogSpikeInK8s
           # LogsQL: Similar to the warning, but triggers on an unacceptably high absolute count.
@@ -49,7 +49,7 @@ spec:
               [cluster={{ $labels.cluster }}] CRITICAL FAILURE: The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
               is generating error logs at an extremely high rate (over 150 per minute).
               Latest 1-minute count: {{ $value }}.
-            view_logs: '{{ if eq $labels.environment "prod" }}https://grafana.observability.internal.falkordb.cloud{{ else }}https://grafana.observability.dev.internal.falkordb.cloud{{ end }}/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
 
         - alert: SentinelHostnameResolutionFailure
           # LogsQL: Detect failed hostname resolution for sentinel nodes
@@ -69,7 +69,7 @@ spec:
               is experiencing hostname resolution failures, indicating a wrong sentinel address configuration.
               This can prevent proper sentinel communication. 
               Failure count in last 2 minutes: {{ $value }}.
-            view_logs: '{{ if eq $labels.environment "prod" }}https://grafana.observability.internal.falkordb.cloud{{ else }}https://grafana.observability.dev.internal.falkordb.cloud{{ end }}/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
         - alert: RedisCrashed
           # LogsQL: Detect Redis crash by signal
@@ -89,7 +89,7 @@ spec:
               has crashed due to a signal. Logs will be collected and a warning has been sent.
               This will escalate to critical if it crashes again within 5-10 minutes.
               Crash count: {{ $value }}.
-            view_logs: '{{ if eq $labels.environment "prod" }}https://grafana.observability.internal.falkordb.cloud{{ else }}https://grafana.observability.dev.internal.falkordb.cloud{{ end }}/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
         - alert: RedisCrashLoop
           # LogsQL: Detect Redis crash loop (2+ crashes in 5-10 minutes)
@@ -108,4 +108,4 @@ spec:
               [cluster={{ $labels.cluster }}] CRITICAL: Redis in pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
               is in a crash loop. It has crashed {{ $value }} times in the last 5-10 minutes.
               This requires immediate attention to prevent service disruption.
-            view_logs: '{{ if eq $labels.environment "prod" }}https://grafana.observability.internal.falkordb.cloud{{ else }}https://grafana.observability.dev.internal.falkordb.cloud{{ end }}/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
