@@ -30,7 +30,7 @@ export const createOrUpdateTargetClusterVMUserSecretJob = async (cluster: Cluste
   }
 
   // Target cluster: where the secret is created/updated
-  const targetKc = await getK8sConfig(cluster.cloud, cluster.name, cluster.region);
+  const targetKc = await getK8sConfig(cluster);
   const targetApi = targetKc.makeApiClient(k8s.CoreV1Api);
 
   try {

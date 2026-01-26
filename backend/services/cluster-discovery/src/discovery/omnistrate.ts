@@ -15,13 +15,26 @@ export const discoverBYOAClusters = async (): Promise<{ clusters: Cluster[] }> =
 async function getClusters(): Promise<Cluster[]> {
   const omnistrateUser = process.env.OMNISTRATE_USER;
   const omnistratePassword = process.env.OMNISTRATE_PASSWORD;
+  const omnistrateServiceId = process.env.OMNISTRATE_SERVICE_ID;
+  const omnistrateEnvironmentId = process.env.OMNISTRATE_ENVIRONMENT_ID;
+  const omnistrateByocProductTierId = process.env.OMNISTRATE_BYOC_PRODUCT_TIER_ID;
 
   if (!omnistrateUser || !omnistratePassword) {
     logger.warn('Omnistrate credentials are not set. Skipping BYOA cluster discovery.');
     return [];
   }
+  if (!omnistrateServiceId || !omnistrateEnvironmentId || !omnistrateByocProductTierId) {
+    logger.warn('Omnistrate service/environment/BYOC product tier ID are not set. Skipping BYOA cluster discovery.');
+    return [];
+  }
 
-  const omnistrateClient = new OmnistrateClient(omnistrateUser, omnistratePassword);
+  const omnistrateClient = new OmnistrateClient(
+    omnistrateUser,
+    omnistratePassword,
+    omnistrateServiceId,
+    omnistrateEnvironmentId,
+    omnistrateByocProductTierId,
+  );
 
   const deploymentCells = await omnistrateClient.getDeploymentCells(
     'BYOA',
@@ -29,17 +42,24 @@ async function getClusters(): Promise<Cluster[]> {
     process.env.OMNISTRATE_AWS_INTERMEDIARY_ACCOUNT_ID,
   );
 
+  const byocCloudAccounts = await omnistrateClient.getBYOCCloudAccounts();
+
   const clusters: Cluster[] = [];
 
   for await (const cell of deploymentCells) {
     try {
       const credentials = await omnistrateClient.getDeploymentCellCredentials(cell.id);
       const clusterName = cell.cloudProvider === 'gcp' ? `c-${cell.id.replace(/-/g, '')}` : cell.id;
+      const account = byocCloudAccounts.find(
+        (account) =>
+          account.cloudProvider === cell.cloudProvider && account.cloudAccountId === cell.destinationAccountID,
+      );
       clusters.push({
         name: clusterName,
         cloud: cell.cloudProvider,
         region: cell.region,
         endpoint: credentials.apiServerEndpoint,
+        destinationAccountID: cell.destinationAccountID,
         secretConfig: {
           tlsClientConfig: {
             insecure: false,
@@ -50,6 +70,8 @@ async function getClusters(): Promise<Cluster[]> {
           serviceAccountToken: credentials.serviceAccountToken,
         },
         hostMode: 'byoa',
+        destinationAccountNumber: account?.cloudAccountNumber,
+        organizationId: account?.organizationId,
       });
       logger.info(`Discovered BYOA cluster ${cell.id} in region ${cell.region}`);
     } catch (error) {
@@ -72,6 +94,7 @@ export class OmnistrateClient {
     _omnistratePassword: string,
     private omnistrateServiceId?: string,
     private omnistrateEnvironmentId?: string,
+    private omnistrateByocProductTierId?: string,
   ) {
     OmnistrateClient._client = axios.create({
       baseURL: OmnistrateClient._baseUrl,
@@ -80,6 +103,7 @@ export class OmnistrateClient {
     assert(_omnistratePassword, 'OmnistrateClient: Omnistrate password is required');
     assert(omnistrateServiceId, 'OmnistrateClient: Omnistrate service ID is required');
     assert(omnistrateEnvironmentId, 'OmnistrateClient: Omnistrate environment ID is required');
+    assert(omnistrateByocProductTierId, 'OmnistrateClient: Omnistrate BYOC product tier ID is required');
     OmnistrateClient._client.interceptors.request.use(
       OmnistrateClient._getBearerInterceptor(_omnistrateUser, _omnistratePassword),
     );
@@ -124,6 +148,8 @@ export class OmnistrateClient {
       status: string;
       modelType: string;
       customer_email?: string;
+      intermediaryAccountID?: string;
+      destinationAccountID: string;
     }[]
   > {
     const response = await OmnistrateClient._client.get(`/2022-09-01-00/fleet/host-clusters`);
@@ -136,6 +162,7 @@ export class OmnistrateClient {
         modelType: hc.modelType,
         customer_email: hc.customer_email,
         intermediaryAccountID: hc.intermediaryAccountDetail?.intermediaryAccountID,
+        destinationAccountID: hc.accountID,
       })) || []
     ).filter(
       (hc: any) =>
@@ -173,5 +200,35 @@ export class OmnistrateClient {
       serviceAccountToken: data.serviceAccountToken,
       userName: data.userName,
     };
+  }
+
+  async getBYOCCloudAccounts(): Promise<
+    {
+      cloudProvider: 'gcp' | 'aws';
+      id: string;
+      cloudAccountId: string;
+      cloudAccountNumber: string;
+      organizationId: string;
+    }[]
+  > {
+    const params = {
+      ProductTierId: this.omnistrateByocProductTierId,
+      Filter: 'onlyCloudAccounts=true',
+      ExcludeDetail: 'true',
+    };
+    const response = await OmnistrateClient._client.get(
+      `/2022-09-01-00/fleet/service/${this.omnistrateServiceId}/environment/${this.omnistrateEnvironmentId}/instances`,
+      {
+        params,
+      },
+    );
+    const data = response.data;
+    return data.map((d) => ({
+      cloudProvider: d.cloudProvider,
+      id: d.input_params.cloud_provider_account_config_id,
+      cloudAccountId: d.input_params.gcp_project_id ?? d.input_params.aws_account_id,
+      cloudAccountNumber: d.input_params.gcp_project_number ?? d.input_params.aws_account_id,
+      organizationId: d.organizationId,
+    }));
   }
 }
