@@ -1,21 +1,20 @@
 import { DescribeClusterCommand, EKSClient } from '@aws-sdk/client-eks';
 import { STSClient, AssumeRoleWithWebIdentityCommand } from '@aws-sdk/client-sts';
 import axios from 'axios';
-
+import { Cluster } from '../types';
 
 export type AWSCredentials = {
   accessKeyId: string;
   secretAccessKey: string;
   sessionToken: string;
-}
-
+};
 
 export async function getAWSCredentials(): Promise<AWSCredentials> {
   const targetAudience = process.env.AWS_TARGET_AUDIENCE;
 
   const res = await axios.get(
     'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=' +
-    targetAudience,
+      targetAudience,
     {
       headers: {
         'Metadata-Flavor': 'Google',
@@ -42,13 +41,8 @@ export async function getAWSCredentials(): Promise<AWSCredentials> {
   };
 }
 
-export async function getEKSCredentials(clusterId: string, region: string) {
-
-  const {
-    accessKeyId,
-    secretAccessKey,
-    sessionToken,
-  } = await getAWSCredentials();
+export async function getEKSCredentials(cluster: Cluster) {
+  const { accessKeyId, secretAccessKey, sessionToken } = await getAWSCredentials();
 
   const eks = new EKSClient({
     credentials: {
@@ -56,10 +50,10 @@ export async function getEKSCredentials(clusterId: string, region: string) {
       secretAccessKey,
       sessionToken,
     },
-    region,
+    region: cluster.region,
   });
 
-  const { cluster } = await eks.send(new DescribeClusterCommand({ name: clusterId }));
+  const { cluster: eksCluster } = await eks.send(new DescribeClusterCommand({ name: cluster.name }));
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const EKSToken = require('aws-eks-token');
@@ -67,14 +61,14 @@ export async function getEKSCredentials(clusterId: string, region: string) {
     accessKeyId,
     secretAccessKey,
     sessionToken,
-    region,
+    region: cluster.region,
   };
 
-  const token = await EKSToken.renew(clusterId);
+  const token = await EKSToken.renew(cluster.name);
 
   return {
-    endpoint: cluster.endpoint,
-    certificateAuthority: cluster.certificateAuthority.data,
+    endpoint: eksCluster.endpoint,
+    certificateAuthority: eksCluster.certificateAuthority.data,
     accessToken: token,
   };
 }
