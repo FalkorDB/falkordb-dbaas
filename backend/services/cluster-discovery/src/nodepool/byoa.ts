@@ -111,10 +111,25 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
   const gcpProjectNumber = cluster.destinationAccountNumber; // GCP project number
 
   // Exchange AWS EKS service account token for GCP access token using Workload Identity Federation
+  const audience = `//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov`;
+  
   const command = [
     'sh',
     '-c',
-    `TOKEN=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE) && curl -X POST https://sts.googleapis.com/v1/token -H "Content-Type: application/json" -d "{\"audience\": \"//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov\",\"grantType\": \"urn:ietf:params:oauth:grant-type:token-exchange\",\"requestedTokenType\": \"urn:ietf:params:oauth:token-type:access_token\",\"subjectTokenType\": \"urn:ietf:params:oauth:token-type:jwt\",\"scope\": \"https://www.googleapis.com/auth/cloud-platform\",\"subjectToken\": \"$TOKEN\"}" || echo "CURL_FAILED_$?"`,
+    `set -e
+TOKEN=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE)
+curl -X POST https://sts.googleapis.com/v1/token \\
+  -H "Content-Type: application/json" \\
+  -d @- << 'EOF'
+{
+  "audience": "${audience}",
+  "grantType": "urn:ietf:params:oauth:grant-type:token-exchange",
+  "requestedTokenType": "urn:ietf:params:oauth:token-type:access_token",
+  "subjectTokenType": "urn:ietf:params:oauth:token-type:jwt",
+  "scope": "https://www.googleapis.com/auth/cloud-platform",
+  "subjectToken": "$TOKEN"
+}
+EOF`,
   ];
 
   const output = await executePodCommandInBastion(command).catch((error) => {
