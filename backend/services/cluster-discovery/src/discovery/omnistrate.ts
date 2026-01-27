@@ -42,7 +42,11 @@ async function getClusters(): Promise<Cluster[]> {
     process.env.OMNISTRATE_AWS_INTERMEDIARY_ACCOUNT_ID,
   );
 
+  logger.info({ cellCount: deploymentCells.length }, `Found ${deploymentCells.length} BYOA deployment cells.`);
+
   const byocCloudAccounts = await omnistrateClient.getBYOCCloudAccounts();
+
+  logger.info({ accountCount: byocCloudAccounts.length }, `Found ${byocCloudAccounts.length} BYOC cloud accounts.`);
 
   const clusters: Cluster[] = [];
 
@@ -98,6 +102,7 @@ export class OmnistrateClient {
   ) {
     OmnistrateClient._client = axios.create({
       baseURL: OmnistrateClient._baseUrl,
+      timeout: 20000, // 10 seconds
     });
     assert(_omnistrateUser, 'OmnistrateClient: Omnistrate user is required');
     assert(_omnistratePassword, 'OmnistrateClient: Omnistrate password is required');
@@ -192,7 +197,7 @@ export class OmnistrateClient {
     );
     const data = response.data;
     return {
-      apiServerEndpoint: data.apiServerEndpoint.startsWith('http') ? data.apiServerEndpoint : `https://${data.apiServerEndpoint}`,
+      apiServerEndpoint: `https://${data.apiServerEndpoint}`,
       caDataBase64: data.caDataBase64,
       clientCertificateDataBase64: data.clientCertificateDataBase64,
       clientKeyDataBase64: data.clientKeyDataBase64,
