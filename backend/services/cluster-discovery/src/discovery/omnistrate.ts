@@ -68,10 +68,10 @@ async function getClusters(): Promise<Cluster[]> {
           tlsClientConfig: {
             insecure: false,
             caData: credentials.caDataBase64,
+            certData: credentials.clientCertificateDataBase64,
+            keyData: credentials.clientKeyDataBase64,
           },
-          clientCertificateData: credentials.clientCertificateDataBase64,
-          clientKeyData: credentials.clientKeyDataBase64,
-          serviceAccountToken: credentials.serviceAccountToken,
+          bearerToken: credentials.serviceAccountToken,
         },
         hostMode: 'byoa',
         destinationAccountNumber: account?.cloudAccountNumber,
