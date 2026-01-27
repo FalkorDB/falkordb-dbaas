@@ -28,7 +28,7 @@ spec:
         alertRef:
           fieldPath: "."
   - name: create-issue-with-logs
-    image: ghcr.io/cli/cli:latest
+    image: muhammadqadora/github-cli:latest
     serviceAccount: alert-reaction-actions-sa
     command: ["sh", "-c"]
     args:
