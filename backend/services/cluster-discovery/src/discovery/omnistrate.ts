@@ -192,7 +192,7 @@ export class OmnistrateClient {
     );
     const data = response.data;
     return {
-      apiServerEndpoint: data.apiServerEndpoint,
+      apiServerEndpoint: data.apiServerEndpoint.startsWith('http') ? data.apiServerEndpoint : `https://${data.apiServerEndpoint}`,
       caDataBase64: data.caDataBase64,
       clientCertificateDataBase64: data.clientCertificateDataBase64,
       clientKeyDataBase64: data.clientKeyDataBase64,
