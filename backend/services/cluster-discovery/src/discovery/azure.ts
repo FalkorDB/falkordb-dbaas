@@ -13,7 +13,11 @@ export async function discoverAzureClusters(): Promise<{ clusters: Cluster[] }> 
     return { clusters: [] };
   }
 
-  const credential = new ClientSecretCredential(process.env.AZURE_TENANT_ID, process.env.AZURE_CLIENT_ID, process.env.AZURE_CLIENT_SECRET);
+  const credential = new ClientSecretCredential(
+    process.env.AZURE_TENANT_ID,
+    process.env.AZURE_CLIENT_ID,
+    process.env.AZURE_CLIENT_SECRET,
+  );
   const client = new ContainerServiceClient(credential, subscriptionId);
 
   const clusters: Cluster[] = [];
@@ -22,7 +26,13 @@ export async function discoverAzureClusters(): Promise<{ clusters: Cluster[] }> 
     logger.debug(`Discovered Azure Azure cluster: ${cluster.name}`);
 
     // Check if critical properties exist before proceeding
-    if (!cluster.name || !cluster.fqdn || !cluster.kubernetesVersion || !cluster.location || !cluster.agentPoolProfiles) {
+    if (
+      !cluster.name ||
+      !cluster.fqdn ||
+      !cluster.kubernetesVersion ||
+      !cluster.location ||
+      !cluster.agentPoolProfiles
+    ) {
       logger.warn(`Skipping cluster due to missing properties: ${cluster.name || 'Unknown'}`);
       continue;
     }
@@ -32,11 +42,8 @@ export async function discoverAzureClusters(): Promise<{ clusters: Cluster[] }> 
     await verifyOIDCEnabled(client, cluster, resourceGroup);
 
     // Extract CA from kubeconfig value
-    const kubeconfigValue = (
-      (
-        await client.managedClusters.listClusterAdminCredentials(resourceGroup, cluster.name)
-      )?.kubeconfigs?.[0]?.value
-    );
+    const kubeconfigValue = (await client.managedClusters.listClusterAdminCredentials(resourceGroup, cluster.name))
+      ?.kubeconfigs?.[0]?.value;
     let caData = '';
     try {
       const kubeconfig: any = load(Buffer.from(kubeconfigValue).toString('utf-8'));
@@ -53,9 +60,9 @@ export async function discoverAzureClusters(): Promise<{ clusters: Cluster[] }> 
       region: cluster.location,
       secretConfig: {
         execProviderConfig: {
-          command: "argocd-k8s-auth",
+          command: 'argocd-k8s-auth',
           env: {
-            AAD_LOGIN_METHOD: "spn",
+            AAD_LOGIN_METHOD: 'spn',
             AZURE_TENANT_ID: process.env.AZURE_TENANT_ID,
             AAD_SERVER_APPLICATION_ID: process.env.AAD_SERVER_APPLICATION_ID,
             AZURE_CLIENT_ID: process.env.AZURE_CLIENT_ID,
@@ -63,14 +70,15 @@ export async function discoverAzureClusters(): Promise<{ clusters: Cluster[] }> 
             AAD_SERVICE_PRINCIPAL_CLIENT_ID: process.env.AZURE_CLIENT_ID,
             AAD_SERVICE_PRINCIPAL_CLIENT_SECRET: process.env.AZURE_CLIENT_SECRET,
           },
-          args: ["azure"],
-          apiVersion: "client.authentication.k8s.io/v1beta1"
+          args: ['azure'],
+          apiVersion: 'client.authentication.k8s.io/v1beta1',
         },
         tlsClientConfig: {
           insecure: false,
-          caData
-        }
-      }
+          caData,
+        },
+      },
+      hostMode: 'managed',
     });
   }
 
@@ -91,14 +99,13 @@ async function verifyOIDCEnabled(client: ContainerServiceClient, cluster: Manage
         location: cluster.location,
         oidcIssuerProfile: {
           enabled: true,
-        }
+        },
       });
-      logger.info(`OIDC issuer enabled for cluster: ${cluster.name}`)
+      logger.info(`OIDC issuer enabled for cluster: ${cluster.name}`);
     } catch (error) {
-      logger.error(error, `Failed to enable OIDC issuer for cluster ${cluster.name}`)
+      logger.error(error, `Failed to enable OIDC issuer for cluster ${cluster.name}`);
     }
   } else {
     logger.debug(`OIDC issuer profile is enabled for cluster: ${cluster.name}`);
   }
-
 }

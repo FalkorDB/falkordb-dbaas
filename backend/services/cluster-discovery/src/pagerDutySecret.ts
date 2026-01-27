@@ -15,9 +15,7 @@ export const createTargetClusterPagerDutySecret = async (cluster: Cluster) => {
   };
 
   const kc = await getK8sConfig(
-    cluster.cloud,
-    cluster.name,
-    cluster.region
+    cluster,
   )
 
   const k8sApi = kc.makeApiClient(k8s.CoreV1Api);

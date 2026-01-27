@@ -1,20 +1,24 @@
-import * as k8s from '@kubernetes/client-node'; import { DescribeClusterCommand, EKSClient } from '@aws-sdk/client-eks';
+import * as k8s from '@kubernetes/client-node';
+import { DescribeClusterCommand, EKSClient } from '@aws-sdk/client-eks';
 import { getEKSCredentials } from './aws';
 import { getGKECredentials } from './gcp';
-
+import { Cluster } from '../types';
 
 export async function getK8sConfig(
-  cloudProvider: 'gcp' | 'aws' | 'azure',
-  clusterId: string,
-  region: string,
+  cluster: Cluster,
   opts?: {
-    projectId?: string,
-  }
+    projectId?: string;
+  },
 ): Promise<k8s.KubeConfig> {
+  const cloudProvider = cluster.cloud;
+  const clusterId = cluster.name;
+
   const k8sCredentials =
-    cloudProvider === 'gcp'
-      ? await getGKECredentials(clusterId, region, opts)
-      : await getEKSCredentials(clusterId, region);
+    cluster.hostMode === 'byoa'
+      ? getBYOACredentials(cluster)
+      : cloudProvider === 'gcp'
+        ? await getGKECredentials(cluster, opts)
+        : await getEKSCredentials(cluster);
 
   const kubeConfig = new k8s.KubeConfig();
   kubeConfig.loadFromOptions({
@@ -48,4 +52,16 @@ export async function getK8sConfig(
   };
 
   return kubeConfig;
+}
+
+function getBYOACredentials(cluster: Cluster): {
+  endpoint: string;
+  certificateAuthority: string;
+  accessToken: string;
+} {
+  return {
+    accessToken: (cluster.secretConfig as any)?.bearerToken || '',
+    certificateAuthority: (cluster.secretConfig as any)?.tlsClientConfig?.caData || '',
+    endpoint: cluster.endpoint,
+  };
 }
