@@ -25,6 +25,7 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
   const kc = await getK8sConfig(bastionCluster);
   const namespace = process.env.BASTION_NAMESPACE || 'bootstrap';
   const podLabelSelector = process.env.BASTION_POD_LABEL || 'app.kubernetes.io/instance=bootstrap-dataplane-worker';
+  const containerName = process.env.BASTION_CONTAINER_NAME || 'bootstrap-dataplane-worker';
 
   const coreApi = kc.makeApiClient(k8s.CoreV1Api);
   const exec = new k8s.Exec(kc);
@@ -56,7 +57,7 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
     await exec.exec(
       namespace,
       podName,
-      pod.spec.containers[0].name,
+      containerName,
       command,
       null, // Don't pipe to process.stdout
       null, // Don't pipe to process.stderr
@@ -76,6 +77,7 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
       {
         podName,
         namespace,
+        containerName,
         command,
         stdout,
         stderr,
