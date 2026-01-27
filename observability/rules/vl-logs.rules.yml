@@ -75,10 +75,11 @@ spec:
           # LogsQL: Detect Redis crash by signal
           # Triggers when Redis crashes with a signal (single occurrence)
           # This triggers log collection and a warning alert
+          # Note: 2m delay allows RedisCrashLoop to suppress this if it's a crash loop scenario
           expr: |
             ~"Redis .+ crashed by signal" and -pod:~"vmalert*" | 
             stats by (pod, namespace, cluster) count() as crash_count    
-          for: 0m
+          for: 2m
           labels:
             severity: warning
             cluster: "{{ $labels.cluster }}"

@@ -53,14 +53,14 @@ spec:
         echo "Cluster: ${CLUSTER}" >> "${LOG_FILE}"
         echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "${LOG_FILE}"
         echo "" >> "${LOG_FILE}"
-        echo "Logs (5 minutes around alert):" >> "${LOG_FILE}"
+        echo "Logs (7 minutes around alert):" >> "${LOG_FILE}"
         echo "" >> "${LOG_FILE}"
         
-        # Collect 5 minutes of logs
+        # Collect 7 minutes of logs (5m base + 2m alert delay)
         curl -s -G "${VLOGS_URL}/select/logsql/query" \
           --data-urlencode "query=pod:\"${POD_NAME}\" AND namespace:\"${NAMESPACE}\" AND container:\"service\" | fields _time, container, level, _msg | sort by (_time) asc" \
           --data-urlencode "limit=99999" \
-          --data-urlencode "time=5m" >> "${LOG_FILE}" || echo "Failed to fetch logs" >> "${LOG_FILE}"
+          --data-urlencode "time=7m" >> "${LOG_FILE}" || echo "Failed to fetch logs" >> "${LOG_FILE}"
         
         echo "✅ Logs collected: ${LOG_FILE}"
         
