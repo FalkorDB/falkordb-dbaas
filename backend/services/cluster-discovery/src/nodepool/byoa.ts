@@ -75,6 +75,8 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
     throw new Error(`Command execution failed: ${stderr}`);
   }
 
+  logger.info({ stdout, podName }, 'Command executed successfully');
+
   return stdout;
 }
 
@@ -113,7 +115,7 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
   const command = [
     'sh',
     '-c',
-    `TOKEN=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE) && curl -X POST https://sts.googleapis.com/v1/token \\
+    `TOKEN=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE) && curl -s -X POST https://sts.googleapis.com/v1/token \\
       -H "Content-Type: application/json" \\
       -d '{
         "audience": "//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov",
@@ -133,7 +135,16 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
     throw error;
   });
 
-  const result = JSON.parse(output);
+  let result: { access_token: string; token_type: string; expires_in: number };
+  try {
+    result = JSON.parse(output);
+  } catch (error) {
+    logger.error(
+        { cluster: cluster.name, output, error, errorName: error.name, errorMessage: error.message },
+        'Failed to parse GCP STS token exchange response',
+        );
+        throw error;
+  }
 
   const stsCredentials = {
     accessToken: result.access_token,
