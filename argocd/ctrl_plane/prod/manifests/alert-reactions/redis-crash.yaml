@@ -102,6 +102,8 @@ spec:
           ISSUE_BODY="## Redis Crash Detected\n\n**Pod:** ${POD_NAME}\n**Namespace:** ${NAMESPACE}\n**Cluster:** ${CLUSTER}\n**Time (IST):** ${ISRAEL_TIME}\n\n**Crash Logs:** [View logs on GitHub Gist](${GIST_URL})"
         else
           echo "Warning: Failed to create gist, creating issue without logs"
+          echo "Gist Response: ${GIST_RESPONSE}"
+          echo "Gist Payload (first 500 chars): $(head -c 500 ${GIST_PAYLOAD})"
           ISSUE_BODY="## Redis Crash Detected\n\n**Pod:** ${POD_NAME}\n**Namespace:** ${NAMESPACE}\n**Cluster:** ${CLUSTER}\n**Time (IST):** ${ISRAEL_TIME}\n\n**Note:** Check VictoriaLogs for logs using: \`pod:\\\"${POD_NAME}\\\" AND namespace:\\\"${NAMESPACE}\\\"\`"
         fi
         
