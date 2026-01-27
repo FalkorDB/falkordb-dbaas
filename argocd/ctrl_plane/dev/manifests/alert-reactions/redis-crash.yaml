@@ -157,3 +157,11 @@ spec:
         secretKeyRef:
           name: redis-crash-token
           key: token
+    - name: GITHUB_API
+      value: "https://api.github.com"
+    - name: REPO_OWNER
+      value: "FalkorDB"
+    - name: REPO_NAME
+      value: "private"
+    - name: PROJECT_ID
+      value: "PVT_kwDOCFj3QM4BM1wV"
