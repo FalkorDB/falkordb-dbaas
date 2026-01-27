@@ -6,6 +6,7 @@ import * as k8s from '@kubernetes/client-node';
 import { getK8sConfig } from '../common/k8s';
 import { getBastionCluster } from '../common/bastion';
 import { GoogleAuth, Impersonated, OAuth2Client } from 'google-auth-library';
+import { Writable } from 'stream';
 
 interface AWSCredentials {
   accessKeyId: string;
@@ -49,9 +50,23 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
 
   logger.info({ podName, namespace, command }, 'Executing command in pod');
 
-  // Execute command in pod
+  // Execute command in pod - create writable streams to capture output
   let stdout = '';
   let stderr = '';
+
+  const stdoutStream = new Writable({
+    write(chunk, encoding, callback) {
+      stdout += chunk.toString();
+      callback();
+    },
+  });
+
+  const stderrStream = new Writable({
+    write(chunk, encoding, callback) {
+      stderr += chunk.toString();
+      callback();
+    },
+  });
 
   try {
     await exec.exec(
@@ -59,18 +74,10 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
       podName,
       containerName,
       command,
-      null, // Don't pipe to process.stdout
-      null, // Don't pipe to process.stderr
-      null, // Don't pipe stdin
-      false,
-      async ({ status, data }: { status: string; data: string }) => {
-        if (status === 'stdout') {
-          stdout += data;
-        } else if (status === 'stderr') {
-          logger.info({ podName, command, stderr: data }, 'Stderr output from command in pod');
-          stderr += data;
-        }
-      },
+      stdoutStream,
+      stderrStream,
+      null, // stdin
+      false, // tty
     );
   } catch (error) {
     logger.error(
@@ -100,7 +107,7 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
     logger.warn({ stderr, podName, command }, 'Command produced stderr output');
   }
 
-  logger.info({ stdout, stderr, podName }, 'Command executed successfully');
+  logger.info({ stdout: stdout.substring(0, 100), stderr, podName }, 'Command executed successfully');
 
   return stdout;
 }
