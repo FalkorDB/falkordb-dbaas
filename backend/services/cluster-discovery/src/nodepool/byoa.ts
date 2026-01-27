@@ -140,7 +140,12 @@ echo "$PAYLOAD" | curl -sS -X POST \
 
   const output = await executePodCommandInBastion(command).catch((error) => {
     logger.error(
-      { cluster: cluster.name, error, errorName: error.name, errorMessage: error.message },
+      {
+        cluster: cluster.name,
+        error: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+        errorName: error.name,
+        errorMessage: error.message,
+      },
       'Failed to exchange AWS token for GCP access token',
     );
     throw error;
