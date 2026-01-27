@@ -57,9 +57,9 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
     podName,
     pod.spec.containers[0].name,
     command,
-    process.stdout,
-    process.stderr,
-    process.stdin,
+    null, // Don't pipe to process.stdout
+    null, // Don't pipe to process.stderr
+    null, // Don't pipe stdin
     false,
     async ({ status, data }: { status: string; data: string }) => {
       if (status === 'stdout') {
@@ -71,11 +71,10 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
   );
 
   if (stderr) {
-    logger.error({ stderr, podName, command }, 'Error executing command in pod');
-    throw new Error(`Command execution failed: ${stderr}`);
+    logger.warn({ stderr, podName, command }, 'Command produced stderr output');
   }
 
-  logger.info({ stdout, podName }, 'Command executed successfully');
+  logger.info({ stdout, stderr, podName }, 'Command executed successfully');
 
   return stdout;
 }
@@ -115,7 +114,7 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
   const command = [
     'sh',
     '-c',
-    `TOKEN=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE) && curl -s -X POST https://sts.googleapis.com/v1/token \\
+    `TOKEN=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE) && curl -X POST https://sts.googleapis.com/v1/token \\
       -H "Content-Type: application/json" \\
       -d '{
         "audience": "//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov",
@@ -124,7 +123,7 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
         "subjectTokenType": "urn:ietf:params:oauth:token-type:jwt",
         "scope": "https://www.googleapis.com/auth/cloud-platform",
         "subjectToken": "'$TOKEN'"
-      }'`,
+      }' || echo "CURL_FAILED_$?"`,
   ];
 
   const output = await executePodCommandInBastion(command).catch((error) => {
@@ -134,6 +133,16 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
     );
     throw error;
   });
+
+  if (!output || output.trim() === '') {
+    logger.error({ cluster: cluster.name, output }, 'Empty response from GCP STS token exchange');
+    throw new Error('Empty response from GCP STS token exchange');
+  }
+
+  if (output.startsWith('CURL_FAILED_')) {
+    logger.error({ cluster: cluster.name, output }, 'Curl command failed in pod');
+    throw new Error(`Curl command failed: ${output}`);
+  }
 
   let result: { access_token: string; token_type: string; expires_in: number };
   try {
