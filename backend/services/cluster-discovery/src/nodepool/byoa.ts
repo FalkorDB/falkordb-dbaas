@@ -115,19 +115,27 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
   const command = [
     'sh',
     '-c',
-    `TOKEN=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE)
-PAYLOAD=$(cat <<-END
-{
-  "audience": "${audience}",
-  "grantType": "urn:ietf:params:oauth:grant-type:token-exchange",
-  "requestedTokenType": "urn:ietf:params:oauth:token-type:access_token",
-  "subjectTokenType": "urn:ietf:params:oauth:token-type:jwt",
-  "scope": "https://www.googleapis.com/auth/cloud-platform",
-  "subjectToken": "$TOKEN"
-}
-END
-)
-echo "$PAYLOAD" | curl -X POST https://sts.googleapis.com/v1/token -H "Content-Type: application/json" -d @-`,
+    `
+TOKEN="$(cat "$AWS_WEB_IDENTITY_TOKEN_FILE")"
+
+PAYLOAD="$(jq -n \
+  --arg audience "${audience}" \
+  --arg token "$TOKEN" \
+  '{
+    audience: $audience,
+    grantType: "urn:ietf:params:oauth:grant-type:token-exchange",
+    requestedTokenType: "urn:ietf:params:oauth:token-type:access_token",
+    subjectTokenType: "urn:ietf:params:oauth:token-type:jwt",
+    scope: "https://www.googleapis.com/auth/cloud-platform",
+    subjectToken: $token
+  }'
+)"
+
+echo "$PAYLOAD" | curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -d @- \
+  https://sts.googleapis.com/v1/token
+`,
   ];
 
   const output = await executePodCommandInBastion(command).catch((error) => {
