@@ -113,19 +113,26 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
   const command = [
     'sh',
     '-c',
-    `curl -X POST https://sts.googleapis.com/v1/token \\
+    `TOKEN=$(cat $AWS_WEB_IDENTITY_TOKEN_FILE) && curl -X POST https://sts.googleapis.com/v1/token \\
       -H "Content-Type: application/json" \\
-      -d "{
-        \"audience\": \"//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov\",
-        \"grantType\": \"urn:ietf:params:oauth:grant-type:token-exchange\",
-        \"requestedTokenType\": \"urn:ietf:params:oauth:token-type:access_token\",
-        \"subjectTokenType\": \"urn:ietf:params:oauth:token-type:jwt\",
-        \"scope\": \"https://www.googleapis.com/auth/cloud-platform\",
-        \"subjectToken\": \"$(cat $AWS_WEB_IDENTITY_TOKEN_FILE)\"
-      }"`,
+      -d '{
+        "audience": "//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov",
+        "grantType": "urn:ietf:params:oauth:grant-type:token-exchange",
+        "requestedTokenType": "urn:ietf:params:oauth:token-type:access_token",
+        "subjectTokenType": "urn:ietf:params:oauth:token-type:jwt",
+        "scope": "https://www.googleapis.com/auth/cloud-platform",
+        "subjectToken": "'$TOKEN'"
+      }'`,
   ];
 
-  const output = await executePodCommandInBastion(command);
+  const output = await executePodCommandInBastion(command).catch((error) => {
+    logger.error(
+      { cluster: cluster.name, error, errorName: error.name, errorMessage: error.message },
+      'Failed to exchange AWS token for GCP access token',
+    );
+    throw error;
+  });
+
   const result = JSON.parse(output);
 
   const stsCredentials = {
@@ -164,7 +171,13 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
       return;
     }
 
-    const { token } = await getGCPBYOACredentials(cluster);
+    const { token } = await getGCPBYOACredentials(cluster).catch((error) => {
+      logger.error(
+        { cluster: cluster.name, error, errorName: error.name, errorMessage: error.message },
+        'Failed to get GCP BYOA credentials',
+      );
+      throw error;
+    });
 
     const oauthClient = new OAuth2Client();
     oauthClient.setCredentials({ access_token: token });
@@ -174,9 +187,17 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
       authClient: oauthClient as any,
     });
 
-    const [nodePools] = await client.listNodePools({
-      parent: `projects/${cluster.destinationAccountID}/locations/${cluster.region}/clusters/${cluster.name}`,
-    });
+    const [nodePools] = await client
+      .listNodePools({
+        parent: `projects/${cluster.destinationAccountID}/locations/${cluster.region}/clusters/${cluster.name}`,
+      })
+      .catch((error) => {
+        logger.error(
+          { cluster: cluster.name, error, errorName: error.name, errorMessage: error.message },
+          'Failed to list node pools for BYOA GCP cluster',
+        );
+        throw error;
+      });
 
     const exists = nodePools.nodePools?.some((np) => np.name === 'observability');
 
