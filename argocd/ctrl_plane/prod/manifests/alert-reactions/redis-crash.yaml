@@ -28,11 +28,14 @@ spec:
         alertRef:
           fieldPath: "."
   - name: create-issue-with-logs
-    image: muhammadqadora/github-cli:v1.0
+    image: python:3-alpine
     serviceAccount: alert-reaction-actions-sa
     command: ["sh", "-c"]
     args:
       - |
+        # Install curl
+        apk add --no-cache curl tzdata
+        
         # Collect logs and create GitHub issue with attachment
         POD_NAME="${POD_NAME}"
         NAMESPACE="${NAMESPACE}"
