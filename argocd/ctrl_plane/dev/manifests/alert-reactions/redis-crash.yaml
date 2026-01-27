@@ -70,16 +70,17 @@ spec:
         # Upload logs to gist
         GIST_FILE="redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
         
-        # Create gist JSON - escape log content properly
-        LOG_CONTENT=$(cat "${LOG_FILE}" | jq -Rs .)
+        # Create gist JSON - escape log content properly without jq
+        # Escape backslashes, quotes, newlines, tabs, and carriage returns
+        LOG_CONTENT=$(sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/g' "${LOG_FILE}" | tr -d '\n' | sed 's/\\n$//')
         
         GIST_RESPONSE=$(curl -s -X POST \
           -H "Authorization: token ${GITHUB_TOKEN}" \
           -H "Accept: application/vnd.github.v3+json" \
           "${GITHUB_API}/gists" \
-          -d "{\"files\":{\"${GIST_FILE}\":{\"content\":${LOG_CONTENT}}},\"public\":false}")
+          -d "{\"files\":{\"${GIST_FILE}\":{\"content\":\"${LOG_CONTENT}\"}},\"public\":false}")
         
-        GIST_URL=$(echo "${GIST_RESPONSE}" | grep -o '"html_url":"[^"]*' | head -1 | cut -d'"' -f4)
+        GIST_URL=$(echo "${GIST_RESPONSE}" | sed -n 's/.*"html_url":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
         
         # Create issue body
         if [ -n "${GIST_URL}" ]; then
@@ -97,7 +98,7 @@ spec:
           -d "{\"title\":\"${TITLE}\",\"body\":\"${ISSUE_BODY}\"}")
         
         ISSUE_NUMBER=$(echo "${ISSUE_RESPONSE}" | sed -n 's/.*"number":[[:space:]]*\([0-9]*\).*/\1/p')
-        NODE_ID=$(echo "${ISSUE_RESPONSE}" | sed -n 's/.*"node_id":[[:space:]]*"\([^"]*\)".*/\1/p')
+        NODE_ID=$(echo "${ISSUE_RESPONSE}" | grep -m1 '"node_id"' | sed -n 's/.*"node_id":[[:space:]]*"\([^"]*\)".*/\1/p')
         
         echo "✅ Issue #${ISSUE_NUMBER} created with gist logs"
         
