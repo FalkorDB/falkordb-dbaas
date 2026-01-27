@@ -88,23 +88,13 @@ spec:
         echo '  "public": false' >> "${GIST_PAYLOAD}"
         echo '}' >> "${GIST_PAYLOAD}"
         
-        # Test GitHub API connectivity first
-        echo "Testing GitHub API connectivity..."
-        GITHUB_TEST=$(curl -s -w "\nHTTP_CODE:%{http_code}" -H "Authorization: token ${GITHUB_TOKEN}" "${GITHUB_API}/user" 2>&1)
-        echo "GitHub API test result: ${GITHUB_TEST}"
-        
-        # Create gist with error handling
-        echo "Creating gist..."
-        GIST_RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" -X POST \
+        # Create gist
+        GIST_RESPONSE=$(curl -s -X POST \
           -H "Authorization: token ${GITHUB_TOKEN}" \
           -H "Accept: application/vnd.github.v3+json" \
           -H "Content-Type: application/json" \
           "${GITHUB_API}/gists" \
-          -d @"${GIST_PAYLOAD}" 2>&1)
-        CURL_EXIT=$?
-        
-        echo "Curl exit code: ${CURL_EXIT}"
-        echo "Gist Response (first 1000 chars): $(echo "${GIST_RESPONSE}" | head -c 1000)"
+          -d @"${GIST_PAYLOAD}")
         
         GIST_URL=$(echo "${GIST_RESPONSE}" | sed -n 's/.*"html_url":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
         
@@ -113,9 +103,6 @@ spec:
           ISSUE_BODY="## Redis Crash Detected\n\n**Pod:** ${POD_NAME}\n**Namespace:** ${NAMESPACE}\n**Cluster:** ${CLUSTER}\n**Time (IST):** ${ISRAEL_TIME}\n\n**Crash Logs:** [View logs on GitHub Gist](${GIST_URL})"
         else
           echo "Warning: Failed to create gist, creating issue without logs"
-          echo "Full Gist Response: ${GIST_RESPONSE}"
-          echo "Payload size: $(wc -c < ${GIST_PAYLOAD}) bytes"
-          echo "Payload first 500 chars: $(head -c 500 ${GIST_PAYLOAD})"
           ISSUE_BODY="## Redis Crash Detected\n\n**Pod:** ${POD_NAME}\n**Namespace:** ${NAMESPACE}\n**Cluster:** ${CLUSTER}\n**Time (IST):** ${ISRAEL_TIME}\n\n**Note:** Check VictoriaLogs for logs using: \`pod:\\\"${POD_NAME}\\\" AND namespace:\\\"${NAMESPACE}\\\"\`"
         fi
         
