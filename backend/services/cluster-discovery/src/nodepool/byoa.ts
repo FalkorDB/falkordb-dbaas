@@ -140,28 +140,22 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
     'sh',
     '-c',
     `
-set -euo pipefail
+TMP_CRED="/tmp/cred_$(head -c 8 /dev/urandom | base64 | tr -dc a-z0-9).json"
+cat > "$TMP_CRED" <<EOF
+{
+  "type": "external_account",
+  "audience": "${audience}",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+  "token_url": "https://sts.googleapis.com/v1/token",
+  "credential_source": {
+    "file": "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"
+  }
+}
+EOF
 
-AUD="${audience}"
-TOKEN="$(cat "$AWS_WEB_IDENTITY_TOKEN_FILE")"
+export GOOGLE_APPLICATION_CREDENTIALS="$TMP_CRED"
 
-PAYLOAD="$(jq -n \
-  --arg audience "$AUD" \
-  --arg token "$TOKEN" \
-  '{
-    audience: $audience,
-    grantType: "urn:ietf:params:oauth:grant-type:token-exchange",
-    requestedTokenType: "urn:ietf:params:oauth:token-type:access_token",
-    subjectTokenType: "urn:ietf:params:oauth:token-type:jwt",
-    scope: "https://www.googleapis.com/auth/cloud-platform",
-    subjectToken: $token
-  }'
-)"
-
-echo "$PAYLOAD" | curl -f -sS -X POST \
-  -H "Content-Type: application/json" \
-  -d @- \
-  https://sts.googleapis.com/v1/token
+gcloud auth application-default print-access-token
 `,
   ];
 
@@ -191,33 +185,14 @@ echo "$PAYLOAD" | curl -f -sS -X POST \
     throw new Error(`Curl command failed: ${output}`);
   }
 
-  let result: { access_token: string; token_type: string; expires_in: number };
-  try {
-    result = JSON.parse(output);
-  } catch (error) {
-    logger.error(
-      {
-        cluster: cluster.name,
-        output,
-        errorName: error?.name,
-        errorMessage: error?.message,
-        errorStack: error?.stack,
-        errorDetails: error,
-      },
-      'Failed to parse GCP STS token exchange response',
-    );
-    throw error;
+  if (!output.startsWith('ya29.')) {
+    logger.error({ cluster: cluster.name, output }, 'Invalid GCP access token format received');
+    throw new Error('Invalid GCP access token format received');
   }
-
-  const stsCredentials = {
-    accessToken: result.access_token,
-    tokenType: result.token_type,
-    expiresIn: result.expires_in,
-  };
 
   const baseAuth = new GoogleAuth({
     credentials: {
-      access_token: stsCredentials.accessToken,
+      access_token: output,
     } as any,
   });
 
