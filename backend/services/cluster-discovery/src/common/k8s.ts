@@ -60,7 +60,7 @@ function getBYOACredentials(cluster: Cluster): {
   accessToken: string;
 } {
   return {
-    accessToken: (cluster.secretConfig as any)?.serviceAccountToken || '',
+    accessToken: (cluster.secretConfig as any)?.bearerToken || '',
     certificateAuthority: (cluster.secretConfig as any)?.tlsClientConfig?.caData || '',
     endpoint: cluster.endpoint,
   };
