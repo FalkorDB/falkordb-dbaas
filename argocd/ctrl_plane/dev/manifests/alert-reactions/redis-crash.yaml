@@ -67,18 +67,30 @@ spec:
         # Create issue title
         TITLE="[CRITICAL] Redis Crash: ${POD_NAME} in ${NAMESPACE} (${CLUSTER}) - ${ISRAEL_TIME}"
         
-        # Upload logs to gist
+        # Upload logs to gist using file to avoid argument list too long
         GIST_FILE="redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
+        GIST_PAYLOAD="/tmp/gist-payload.json"
         
-        # Create gist JSON - escape log content properly without jq
-        # Escape backslashes, quotes, newlines, tabs, and carriage returns
-        LOG_CONTENT=$(sed 's/\\/\\\\/g; s/"/\\"/g; s/$/\\n/g' "${LOG_FILE}" | tr -d '\n' | sed 's/\\n$//')
+        # Create gist JSON payload in a file
+        echo '{' > "${GIST_PAYLOAD}"
+        echo '  "files": {' >> "${GIST_PAYLOAD}"
+        echo '    "'${GIST_FILE}'": {' >> "${GIST_PAYLOAD}"
+        echo '      "content": ' >> "${GIST_PAYLOAD}"
+        
+        # Use Python to properly escape and format log content as JSON
+        python3 -c 'import json, sys; print(json.dumps(sys.stdin.read()))' < "${LOG_FILE}" >> "${GIST_PAYLOAD}"
+        
+        echo '    }' >> "${GIST_PAYLOAD}"
+        echo '  },' >> "${GIST_PAYLOAD}"
+        echo '  "public": false' >> "${GIST_PAYLOAD}"
+        echo '}' >> "${GIST_PAYLOAD}"
         
         GIST_RESPONSE=$(curl -s -X POST \
           -H "Authorization: token ${GITHUB_TOKEN}" \
           -H "Accept: application/vnd.github.v3+json" \
+          -H "Content-Type: application/json" \
           "${GITHUB_API}/gists" \
-          -d "{\"files\":{\"${GIST_FILE}\":{\"content\":\"${LOG_CONTENT}\"}},\"public\":false}")
+          -d @"${GIST_PAYLOAD}")
         
         GIST_URL=$(echo "${GIST_RESPONSE}" | sed -n 's/.*"html_url":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
         
