@@ -136,28 +136,23 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
   const audience = `//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov`;
 
   // Exchange AWS EKS service account token for GCP access token using Workload Identity Federation
-  const command = [
-    'sh',
-    '-c',
-    `
+const command = [
+  'sh',
+  '-c',
+  `
 TMP_CRED="/tmp/cred_$(head -c 8 /dev/urandom | base64 | tr -dc a-z0-9).json"
-cat > "$TMP_CRED" <<EOF
-{
+printf '{
   "type": "external_account",
   "audience": "${audience}",
   "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
   "token_url": "https://sts.googleapis.com/v1/token",
-  "credential_source": {
-    "file": "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"
-  }
-}
-EOF
+  "credential_source": {"file": "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"}
+}' > "$TMP_CRED"
 
 export GOOGLE_APPLICATION_CREDENTIALS="$TMP_CRED"
-
 gcloud auth application-default print-access-token
 `,
-  ];
+];
 
   const output = await executePodCommandInBastion(command).catch((error) => {
     logger.error(
