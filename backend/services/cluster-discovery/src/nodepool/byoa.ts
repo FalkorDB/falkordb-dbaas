@@ -66,6 +66,7 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
         if (status === 'stdout') {
           stdout += data;
         } else if (status === 'stderr') {
+          logger.info({ podName, command, stderr: data }, 'Stderr output from command in pod');
           stderr += data;
         }
       },
@@ -141,10 +142,11 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
     `
 set -euo pipefail
 
+AUD="${audience}"
 TOKEN="$(cat "$AWS_WEB_IDENTITY_TOKEN_FILE")"
 
 PAYLOAD="$(jq -n \
-  --arg audience '${audience}' \
+  --arg audience "$AUD" \
   --arg token "$TOKEN" \
   '{
     audience: $audience,
@@ -194,8 +196,8 @@ echo "$PAYLOAD" | curl -f -sS -X POST \
     result = JSON.parse(output);
   } catch (error) {
     logger.error(
-      { 
-        cluster: cluster.name, 
+      {
+        cluster: cluster.name,
         output,
         errorName: error?.name,
         errorMessage: error?.message,
@@ -245,7 +247,7 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
 
     const { token } = await getGCPBYOACredentials(cluster).catch((error) => {
       logger.error(
-        { 
+        {
           cluster: cluster.name,
           errorName: error?.name,
           errorMessage: error?.message,
@@ -271,7 +273,7 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
       })
       .catch((error) => {
         logger.error(
-          { 
+          {
             cluster: cluster.name,
             errorName: error?.name,
             errorMessage: error?.message,
@@ -314,7 +316,7 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
     logger.info({ cluster: cluster.name }, 'Observability node pool created for BYOA GCP cluster.');
   } catch (error) {
     logger.error(
-      { 
+      {
         cluster: cluster.name,
         errorName: error?.name,
         errorMessage: error?.message,
@@ -384,7 +386,7 @@ export async function createObservabilityNodePoolAWSBYOA(cluster: Cluster): Prom
     logger.info({ cluster: cluster.name }, 'Observability node pool created for BYOA AWS cluster.');
   } catch (error) {
     logger.error(
-      { 
+      {
         cluster: cluster.name,
         errorName: error?.name,
         errorMessage: error?.message,
