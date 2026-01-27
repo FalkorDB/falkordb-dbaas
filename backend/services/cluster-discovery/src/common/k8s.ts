@@ -34,6 +34,8 @@ export async function getK8sConfig(
         name: clusterId,
         authProvider: cloudProvider === 'gcp' ? cloudProvider : undefined,
         token: k8sCredentials.accessToken,
+        certData: (cluster.secretConfig as any)?.tlsClientConfig?.certData,
+        keyData: (cluster.secretConfig as any)?.tlsClientConfig?.keyData,
       },
     ],
     contexts: [
