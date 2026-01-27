@@ -64,26 +64,49 @@ spec:
         # Get Israeli datetime
         ISRAEL_TIME=$(TZ=Asia/Jerusalem date '+%Y-%m-%d %H:%M:%S %Z')
         
-        # Create issue
+        # Create issue title
         TITLE="[CRITICAL] Redis Crash: ${POD_NAME} in ${NAMESPACE} (${CLUSTER}) - ${ISRAEL_TIME}"
         
-        # Create issue
-        ISSUE_URL=$(gh issue create \
-          --repo FalkorDB/private \
-          --title "${TITLE}" \
-          --body-file "${LOG_FILE}" | tail -n 1)
+        # Upload logs to gist
+        GIST_FILE="redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
         
-        echo "Issue created: ${ISSUE_URL}"
+        # Create gist JSON - escape log content properly
+        LOG_CONTENT=$(cat "${LOG_FILE}" | jq -Rs .)
         
-        # Attach log file to issue as comment
-        gh issue comment "${ISSUE_URL}" \
-          --body-file "${LOG_FILE}" \
-          --repo FalkorDB/private
+        GIST_RESPONSE=$(curl -s -X POST \
+          -H "Authorization: token ${GITHUB_TOKEN}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "${GITHUB_API}/gists" \
+          -d "{\"files\":{\"${GIST_FILE}\":{\"content\":${LOG_CONTENT}}},\"public\":false}")
         
-        echo "✅ Logs attached to issue"
+        GIST_URL=$(echo "${GIST_RESPONSE}" | grep -o '"html_url":"[^"]*' | head -1 | cut -d'"' -f4)
+        
+        # Create issue body
+        if [ -n "${GIST_URL}" ]; then
+          ISSUE_BODY="## Redis Crash Detected\n\n**Pod:** ${POD_NAME}\n**Namespace:** ${NAMESPACE}\n**Cluster:** ${CLUSTER}\n**Time (IST):** ${ISRAEL_TIME}\n\n**Crash Logs:** [View logs on GitHub Gist](${GIST_URL})"
+        else
+          echo "Warning: Failed to create gist, creating issue without logs"
+          ISSUE_BODY="## Redis Crash Detected\n\n**Pod:** ${POD_NAME}\n**Namespace:** ${NAMESPACE}\n**Cluster:** ${CLUSTER}\n**Time (IST):** ${ISRAEL_TIME}\n\n**Note:** Check VictoriaLogs for logs using: \`pod:\\\"${POD_NAME}\\\" AND namespace:\\\"${NAMESPACE}\\\"\`"
+        fi
+        
+        # Create issue via GitHub API
+        ISSUE_RESPONSE=$(curl -s -X POST \
+          -H "Authorization: token ${GITHUB_TOKEN}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues" \
+          -d "{\"title\":\"${TITLE}\",\"body\":\"${ISSUE_BODY}\"}")
+        
+        ISSUE_NUMBER=$(echo "${ISSUE_RESPONSE}" | sed -n 's/.*"number":[[:space:]]*\([0-9]*\).*/\1/p')
+        NODE_ID=$(echo "${ISSUE_RESPONSE}" | sed -n 's/.*"node_id":[[:space:]]*"\([^"]*\)".*/\1/p')
+        
+        echo "✅ Issue #${ISSUE_NUMBER} created with gist logs"
         
         # Add to project board
-        gh project item-add 32 --owner FalkorDB --url "${ISSUE_URL}" || echo "Note: Manual addition to project board may be needed"
+        curl -s -X POST \
+          -H "Authorization: bearer ${GITHUB_TOKEN}" \
+          -H "Content-Type: application/json" \
+          "${GITHUB_API}/graphql" \
+          -d "{\"query\":\"mutation {addProjectV2ItemById(input: {projectId: \\\"${PROJECT_ID}\\\", contentId: \\\"${NODE_ID}\\\"}) {item {id}}}\"}"
         
         echo "✅ Done"
     env:
