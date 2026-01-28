@@ -53,24 +53,101 @@ spec:
         echo "Cluster: ${CLUSTER}" >> "${LOG_FILE}"
         echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "${LOG_FILE}"
         echo "" >> "${LOG_FILE}"
-        echo "Logs (7 minutes around alert):" >> "${LOG_FILE}"
+        echo "Logs (5 minutes around alert):" >> "${LOG_FILE}"
         echo "" >> "${LOG_FILE}"
         
-        # Collect 7 minutes of logs (5m base + 2m alert delay)
+        # Collect 5 minutes of logs
         curl -s -G "${VLOGS_URL}/select/logsql/query" \
           --data-urlencode "query=pod:\"${POD_NAME}\" AND namespace:\"${NAMESPACE}\" AND container:\"service\" | fields _time, container, level, _msg | sort by (_time) asc" \
           --data-urlencode "limit=99999" \
-          --data-urlencode "time=7m" >> "${LOG_FILE}" || echo "Failed to fetch logs" >> "${LOG_FILE}"
+          --data-urlencode "time=5m" >> "${LOG_FILE}" || echo "Failed to fetch logs" >> "${LOG_FILE}"
         
         echo "✅ Logs collected: ${LOG_FILE}"
         
         # Get Israeli datetime
         ISRAEL_TIME=$(TZ=Asia/Jerusalem date '+%Y-%m-%d %H:%M:%S %Z')
         
+        echo "=========================================="
+        echo "Starting duplicate issue detection"
+        echo "Pod: ${POD_NAME}"
+        echo "Namespace: ${NAMESPACE}"
+        echo "Cluster: ${CLUSTER}"
+        echo "=========================================="
+        
+        # Check if an open issue already exists for this pod/namespace/cluster
+        SEARCH_QUERY="repo:${REPO_OWNER}/${REPO_NAME} is:open is:issue in:title ${POD_NAME} ${NAMESPACE} ${CLUSTER}"
+        echo "Search query: ${SEARCH_QUERY}"
+        echo "Calling GitHub API to search for existing issues..."
+        
+        EXISTING_ISSUES=$(curl -s -G \
+          -H "Authorization: token ${GITHUB_TOKEN}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "${GITHUB_API}/search/issues" \
+          --data-urlencode "q=${SEARCH_QUERY}")
+        
+        echo "API Response received. Parsing results..."
+        echo "Raw response (first 500 chars): ${EXISTING_ISSUES:0:500}"
+        
+        ISSUE_COUNT=$(echo "${EXISTING_ISSUES}" | grep -o '"total_count":[0-9]*' | cut -d: -f2)
+        echo "Total count of matching issues: ${ISSUE_COUNT:-0}"
+        
+        if [ "${ISSUE_COUNT:-0}" -gt 0 ]; then
+          EXISTING_ISSUE_NUMBER=$(echo "${EXISTING_ISSUES}" | grep -o '"number":[0-9]*' | head -1 | cut -d: -f2)
+          echo "⚠️  DUPLICATE DETECTED: Open issue #${EXISTING_ISSUE_NUMBER} already exists"
+          echo "Strategy: Adding logs as comment to existing issue instead of creating new one"
+          
+          # Still collect and upload logs to gist for reference
+          echo "Creating gist with crash logs..."
+          GIST_FILE="redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
+          GIST_PAYLOAD="/tmp/gist-payload.json"
+          
+          echo '{' > "${GIST_PAYLOAD}"
+          echo '  "files": {' >> "${GIST_PAYLOAD}"
+          echo '    "'${GIST_FILE}'": {' >> "${GIST_PAYLOAD}"
+          echo '      "content": ' >> "${GIST_PAYLOAD}"
+          python3 -c 'import json, sys; print(json.dumps(sys.stdin.read()))' < "${LOG_FILE}" >> "${GIST_PAYLOAD}"
+          echo '    }' >> "${GIST_PAYLOAD}"
+          echo '  },' >> "${GIST_PAYLOAD}"
+          echo '  "public": false' >> "${GIST_PAYLOAD}"
+          echo '}' >> "${GIST_PAYLOAD}"
+          
+          echo "Uploading gist to GitHub..."
+          GIST_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: token ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Content-Type: application/json" \
+            "${GITHUB_API}/gists" \
+            -d @"${GIST_PAYLOAD}")
+          
+          GIST_URL=$(echo "${GIST_RESPONSE}" | sed -n 's/.*"html_url":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+          echo "Gist created: ${GIST_URL}"
+          
+          # Add comment to existing issue
+          COMMENT_BODY="### Another crash detected at ${ISRAEL_TIME}\n\n**Crash Logs:** [View logs on GitHub Gist](${GIST_URL})"
+          echo "Adding comment to issue #${EXISTING_ISSUE_NUMBER}..."
+          
+          COMMENT_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: token ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues/${EXISTING_ISSUE_NUMBER}/comments" \
+            -d "{\"body\":\"${COMMENT_BODY}\"}")
+          
+          COMMENT_ID=$(echo "${COMMENT_RESPONSE}" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
+          echo "Comment created with ID: ${COMMENT_ID}"
+          echo "✅ Successfully added logs as comment to issue #${EXISTING_ISSUE_NUMBER}"
+          echo "Exiting without creating duplicate issue."
+          exit 0
+        fi
+        
+        echo "✅ No existing open issue found"
+        echo "Proceeding to create new issue..."
+        
         # Create issue title
         TITLE="[CRITICAL] Redis Crash: ${POD_NAME} in ${NAMESPACE} (${CLUSTER}) - ${ISRAEL_TIME}"
+        echo "Issue title: ${TITLE}"
         
         # Upload logs to gist using file to avoid argument list too long
+        echo "Creating gist for new issue..."
         GIST_FILE="redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
         GIST_PAYLOAD="/tmp/gist-payload.json"
         
@@ -89,6 +166,7 @@ spec:
         echo '}' >> "${GIST_PAYLOAD}"
         
         # Create gist
+        echo "Uploading gist to GitHub..."
         GIST_RESPONSE=$(curl -s -X POST \
           -H "Authorization: token ${GITHUB_TOKEN}" \
           -H "Accept: application/vnd.github.v3+json" \
@@ -97,16 +175,19 @@ spec:
           -d @"${GIST_PAYLOAD}")
         
         GIST_URL=$(echo "${GIST_RESPONSE}" | sed -n 's/.*"html_url":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+        echo "Gist URL: ${GIST_URL}"
         
         # Create issue body
         if [ -n "${GIST_URL}" ]; then
+          echo "Creating issue with gist logs..."
           ISSUE_BODY="## Redis Crash Detected\n\n**Pod:** ${POD_NAME}\n**Namespace:** ${NAMESPACE}\n**Cluster:** ${CLUSTER}\n**Time (IST):** ${ISRAEL_TIME}\n\n**Crash Logs:** [View logs on GitHub Gist](${GIST_URL})"
         else
-          echo "Warning: Failed to create gist, creating issue without logs"
+          echo "⚠️  Warning: Failed to create gist, creating issue without logs"
           ISSUE_BODY="## Redis Crash Detected\n\n**Pod:** ${POD_NAME}\n**Namespace:** ${NAMESPACE}\n**Cluster:** ${CLUSTER}\n**Time (IST):** ${ISRAEL_TIME}\n\n**Note:** Check VictoriaLogs for logs using: \`pod:\\\"${POD_NAME}\\\" AND namespace:\\\"${NAMESPACE}\\\"\`"
         fi
         
         # Create issue via GitHub API
+        echo "Creating GitHub issue..."
         ISSUE_RESPONSE=$(curl -s -X POST \
           -H "Authorization: token ${GITHUB_TOKEN}" \
           -H "Accept: application/vnd.github.v3+json" \
@@ -116,16 +197,21 @@ spec:
         ISSUE_NUMBER=$(echo "${ISSUE_RESPONSE}" | sed -n 's/.*"number":[[:space:]]*\([0-9]*\).*/\1/p')
         NODE_ID=$(echo "${ISSUE_RESPONSE}" | grep -m1 '"node_id"' | sed -n 's/.*"node_id":[[:space:]]*"\([^"]*\)".*/\1/p')
         
-        echo "✅ Issue #${ISSUE_NUMBER} created with gist logs"
+        echo "✅ Issue #${ISSUE_NUMBER} created successfully"
+        echo "Issue URL: https://github.com/${REPO_OWNER}/${REPO_NAME}/issues/${ISSUE_NUMBER}"
+        echo "Node ID: ${NODE_ID}"
         
         # Add to project board
-        curl -s -X POST \
+        echo "Adding issue to project board (ID: ${PROJECT_ID})..."
+        PROJECT_RESPONSE=$(curl -s -X POST \
           -H "Authorization: bearer ${GITHUB_TOKEN}" \
           -H "Content-Type: application/json" \
           "${GITHUB_API}/graphql" \
-          -d "{\"query\":\"mutation {addProjectV2ItemById(input: {projectId: \\\"${PROJECT_ID}\\\", contentId: \\\"${NODE_ID}\\\"}) {item {id}}}\"}"
+          -d "{\"query\":\"mutation {addProjectV2ItemById(input: {projectId: \\\"${PROJECT_ID}\\\", contentId: \\\"${NODE_ID}\\\"}) {item {id}}}\"}")
         
-        echo "✅ Done"
+        echo "Project board response: ${PROJECT_RESPONSE}"
+        echo "✅ Issue added to project board"
+        echo "✅ Done - new issue workflow completed"
     env:
     - name: POD_NAME
       valueFrom:
