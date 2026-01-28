@@ -1,0 +1,245 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-redis-crash-detection
+  namespace: observability
+spec:
+  serviceAccountName: default
+  containers:
+  - name: test
+    image: alpine:3.21
+    command: ["/bin/sh", "-c"]
+    args:
+    - |
+      set -e
+      
+      # Install curl
+      apk add --no-cache curl
+      
+      echo "=========================================="
+      echo "Redis Crash Duplicate Detection Test"
+      echo "=========================================="
+      echo ""
+      
+      # Configuration
+      VLOGS_URL="http://victorialogs-server.observability.svc.cluster.local:9428/select/logsql/query"
+      GITHUB_API="https://api.github.com"
+      GITHUB_TOKEN="${GITHUB_TOKEN}"
+      REPO_OWNER="FalkorDB"
+      REPO_NAME="private"
+      
+      # Test with real crash data
+      POD_NAME="node-s-0"
+      NAMESPACE="instance-o21wb1mp3"
+      CLUSTER="hc-vqoxdmrqs"
+      
+      echo "Testing with:"
+      echo "  Pod: ${POD_NAME}"
+      echo "  Namespace: ${NAMESPACE}"
+      echo "  Cluster: ${CLUSTER}"
+      echo ""
+      
+      # Step 1: Collect logs
+      echo "Step 1: Collecting logs from VictoriaLogs..."
+      END_TIME=$(date +%s)
+      START_TIME=$((END_TIME - 7200))
+      
+      QUERY="_time:2h AND namespace:${NAMESPACE} AND pod:${POD_NAME} AND container:service | fields _msg"
+      
+      LOG_FILE="/tmp/redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
+      
+      echo "  VictoriaLogs URL: ${VLOGS_URL}"
+      echo "  Time range: ${START_TIME} to ${END_TIME}"
+      echo "  Query: ${QUERY}"
+      echo "  Fetching logs..."
+      
+      curl -s -m 30 -G "${VLOGS_URL}" \
+        --data-urlencode "query=${QUERY}" \
+        --data-urlencode "start=${START_TIME}" \
+        --data-urlencode "end=${END_TIME}" \
+        --data-urlencode "limit=10000" \
+        -o "${LOG_FILE}" || echo "  ⚠️  Curl failed with code $?"
+      
+      LOG_SIZE=$(wc -c < "${LOG_FILE}")
+      echo "✅ Logs collected: ${LOG_FILE} (${LOG_SIZE} bytes)"
+      echo ""
+      
+      # Step 2: Search for existing issues
+      echo "Step 2: Searching for existing open issues..."
+      SEARCH_QUERY="repo:${REPO_OWNER}/${REPO_NAME} is:open is:issue in:title ${POD_NAME} ${NAMESPACE} ${CLUSTER}"
+      echo "  Query: ${SEARCH_QUERY}"
+      
+      EXISTING_ISSUES=$(curl -s -G \
+        -H "Authorization: token ${GITHUB_TOKEN}" \
+        -H "Accept: application/vnd.github.v3+json" \
+        "${GITHUB_API}/search/issues" \
+        --data-urlencode "q=${SEARCH_QUERY}")
+      
+      echo ""
+      echo "  Raw API response (first 800 chars):"
+      echo "  ${EXISTING_ISSUES:0:800}"
+      echo ""
+      
+      # Step 3: Parse issue count
+      echo "Step 3: Parsing issue count..."
+      echo "  Extraction steps:"
+      
+      GREP_OUTPUT=$(echo "${EXISTING_ISSUES}" | grep -o '"total_count":[[:space:]]*[0-9][0-9]*' | head -1)
+      echo "    grep output: ${GREP_OUTPUT}"
+      
+      CUT_OUTPUT=$(echo "${GREP_OUTPUT}" | cut -d: -f2)
+      echo "    After cut: ${CUT_OUTPUT}"
+      
+      ISSUE_COUNT=$(echo "${CUT_OUTPUT}" | tr -d ' ')
+      echo "    Final (after tr): '${ISSUE_COUNT}'"
+      echo ""
+      
+      echo "  Total matching issues: ${ISSUE_COUNT:-0}"
+      echo ""
+      
+      if [ -n "${ISSUE_COUNT}" ] && [ "${ISSUE_COUNT}" -gt 0 ] 2>/dev/null; then
+        echo "✅ Found existing open issue"
+        
+        EXISTING_ISSUE_NUMBER=$(echo "${EXISTING_ISSUES}" | grep -o '"number":[[:space:]]*[0-9][0-9]*' | head -1 | cut -d: -f2 | tr -d ' ')
+        echo "  Issue number: #${EXISTING_ISSUE_NUMBER}"
+        echo ""
+        
+        # Step 4: Extract crash signature
+        if [ -n "${EXISTING_ISSUE_NUMBER}" ]; then
+          # Try argv first (shows command), then fall back to signal+address
+          echo "Step 4: Extracting crash signature from current logs..."
+          CURRENT_ARGV0=$(grep -o 'argv\[0\]:[[:space:]]*[^ }]*' "${LOG_FILE}" | head -1 | sed 's/argv\[0\]:[[:space:]]*//g' | sed 's/""}//; s/"$//' || echo "")
+          CURRENT_ARGV1=$(grep -o 'argv\[1\]:[[:space:]]*[^ }]*' "${LOG_FILE}" | head -1 | sed 's/argv\[1\]:[[:space:]]*//g' | sed 's/""}//; s/"$//' || echo "")
+          
+          if [ -n "${CURRENT_ARGV0}" ] && [ -n "${CURRENT_ARGV1}" ]; then
+            echo "  Current crash signature (argv):"
+            echo "    argv[0] = ${CURRENT_ARGV0}"
+            echo "    argv[1] = ${CURRENT_ARGV1}"
+            SIGNATURE_TYPE="argv"
+          else
+            CURRENT_SIGNAL=$(grep -o 'crashed by signal:[[:space:]]*[0-9]*, si_code:[[:space:]]*[0-9]*' "${LOG_FILE}" | head -1 || echo "")
+            CURRENT_ADDRESS=$(grep -o 'Accessing address:[[:space:]]*0x[0-9a-fA-F]*' "${LOG_FILE}" | head -1 | sed 's/Accessing address:[[:space:]]*//g' || echo "")
+            echo "  Current crash signature (signal+address):"
+            echo "    signal = ${CURRENT_SIGNAL}"
+            echo "    address = ${CURRENT_ADDRESS}"
+            SIGNATURE_TYPE="signal"
+          fi
+          echo ""
+          
+          if [ -z "${CURRENT_ARGV0}" ] && [ -z "${CURRENT_ARGV1}" ] && [ -z "${CURRENT_SIGNAL}" ]; then
+            echo "⚠️  Could not extract crash signature - no argv or signal found"
+            echo "   ACTION: Would proceed with upload (safe default)"
+            echo ""
+          else
+            # Step 5: Fetch issue body and comments
+            echo "Step 5: Fetching issue body and comments from issue #${EXISTING_ISSUE_NUMBER}..."
+            
+            # Get full issue to extract gist from body
+            ISSUE_RESPONSE=$(curl -s -G \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues/${EXISTING_ISSUE_NUMBER}")
+            
+            # Get comments
+            EXISTING_COMMENTS=$(curl -s -G \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues/${EXISTING_ISSUE_NUMBER}/comments")
+            
+            COMMENT_COUNT=$(echo "${EXISTING_COMMENTS}" | grep -c '"id":' || echo "0")
+            echo "  Found ${COMMENT_COUNT} comments"
+            echo ""
+            
+            # Step 6: Extract gist URLs from both issue body and comments
+            echo "Step 6: Extracting gist URLs from issue body and comments..."
+            GIST_URLS_BODY=$(echo "${ISSUE_RESPONSE}" | grep -o 'https://gist.github.com/[^")]*' || echo "")
+            GIST_URLS_COMMENTS=$(echo "${EXISTING_COMMENTS}" | grep -o 'https://gist.github.com/[^")]*' || echo "")
+            
+            # Combine gist URLs from both sources
+            GIST_URLS=$(printf "%s\n%s" "${GIST_URLS_BODY}" "${GIST_URLS_COMMENTS}" | grep -v '^$' || echo "")
+            
+            if [ -z "${GIST_URLS}" ]; then
+              echo "  No gist URLs found in comments"
+              echo "   ACTION: Would add new comment with logs"
+              echo ""
+            else
+              GIST_COUNT=$(echo "${GIST_URLS}" | wc -l | tr -d ' ')
+              echo "  Found ${GIST_COUNT} gist URL(s):"
+              echo "${GIST_URLS}" | sed 's/^/    /'
+              echo ""
+              
+              # Step 8: Check each gist for duplicate signature
+              echo "Step 7: Checking gists for duplicate crash signature..."
+              IS_DUPLICATE=false
+              GIST_NUM=0
+              
+              for GIST_URL in ${GIST_URLS}; do
+                GIST_NUM=$((GIST_NUM + 1))
+                echo "  Gist ${GIST_NUM}: ${GIST_URL}"
+                
+                GIST_ID=$(echo "${GIST_URL}" | grep -o '[a-f0-9]\{32\}' | head -1)
+                
+                if [ -n "${GIST_ID}" ]; then
+                  echo "    ID: ${GIST_ID}"
+                  
+                  # Build raw gist URL directly from the gist URL
+                  RAW_GIST_URL="${GIST_URL/github.com/githubusercontent.com}/raw"
+                  
+                  # Fetch gist content directly from raw URL
+                  GIST_CONTENT=$(curl -s "${RAW_GIST_URL}")
+                  
+                  # Extract argv values - match "argv[0]: value" format and remove JSON trailing characters
+                  EXISTING_ARGV0=$(echo "${GIST_CONTENT}" | grep -o 'argv\[0\]: [^ ]*' | sed 's/argv\[0\]: //g; s/""}$//; s/"}$//; s/"$//;' | head -1 || echo "")
+                  EXISTING_ARGV1=$(echo "${GIST_CONTENT}" | grep -o 'argv\[1\]: [^ ]*' | sed 's/argv\[1\]: //g; s/""}$//; s/"}$//; s/"$//;' | head -1 || echo "")
+                  
+                  echo "    Existing crash signature (argv):"
+                  echo "      argv[0] = ${EXISTING_ARGV0}"
+                  echo "      argv[1] = ${EXISTING_ARGV1}"
+                  
+                  if [ "${CURRENT_ARGV0}" = "${EXISTING_ARGV0}" ] && [ "${CURRENT_ARGV1}" = "${EXISTING_ARGV1}" ]; then
+                    echo "    ✅ MATCH - Same crash signature!"
+                    IS_DUPLICATE=true
+                    break
+                  else
+                    echo "    ❌ Different signature"
+                  fi
+                  echo ""
+                else
+                  echo "    ⚠️  Could not extract gist ID"
+                  echo ""
+                fi
+              done
+              
+              echo "Step 8: Final decision..."
+              if [ "${IS_DUPLICATE}" = "true" ]; then
+                echo "  ✅ DUPLICATE DETECTED"
+                echo "   ACTION: Would skip upload - same crash already reported"
+              else
+                echo "  🆕 NEW CRASH"
+                echo "   ACTION: Would add new comment with logs"
+              fi
+              echo ""
+            fi
+          fi
+        fi
+      else
+        echo "✅ No existing open issue found"
+        echo "   ACTION: Would create new issue with gist"
+        echo ""
+      fi
+      
+      echo ""
+      echo "=========================================="
+      echo "Test completed"
+      echo "Log file: ${LOG_FILE}"
+      echo "=========================================="
+      echo ""
+      echo "Keeping pod alive for inspection. Press Ctrl+C to exit."
+      sleep infinity
+    env:
+    - name: GITHUB_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: redis-crash-token
+          key: token
+  restartPolicy: Never
