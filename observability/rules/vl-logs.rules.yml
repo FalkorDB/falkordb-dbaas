@@ -75,6 +75,7 @@ spec:
           # LogsQL: Detect Redis crash by signal
           # Triggers when Redis crashes with a signal (single occurrence)
           # This triggers log collection and a warning alert
+          # Note: Duplicate issues are prevented by checking for existing open issues in the alert-reaction script
           expr: |
             ~"Redis .+ crashed by signal" and -pod:~"vmalert*" | 
             stats by (pod, namespace, cluster) count() as crash_count    
