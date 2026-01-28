@@ -88,7 +88,7 @@ spec:
         echo "API Response received. Parsing results..."
         echo "Raw response (first 500 chars): ${EXISTING_ISSUES:0:500}"
         
-        ISSUE_COUNT=$(echo "${EXISTING_ISSUES}" | grep -o '"total_count":[0-9]*' | cut -d: -f2)
+        ISSUE_COUNT=$(echo "${EXISTING_ISSUES}" | grep -o '"total_count":[[:space:]]*[0-9]*' | sed 's/"total_count":[[:space:]]*//g')
         echo "Total count of matching issues: ${ISSUE_COUNT:-0}"
         
         if [ "${ISSUE_COUNT:-0}" -gt 0 ]; then
