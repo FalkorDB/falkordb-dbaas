@@ -88,11 +88,11 @@ spec:
         echo "API Response received. Parsing results..."
         echo "Raw response (first 500 chars): ${EXISTING_ISSUES:0:500}"
         
-        ISSUE_COUNT=$(echo "${EXISTING_ISSUES}" | grep -o '"total_count":[[:space:]]*[0-9]*' | head -1 | sed 's/.*://g' | tr -d ' ')
+        ISSUE_COUNT=$(echo "${EXISTING_ISSUES}" | grep -o '"total_count":[[:space:]]*[0-9][0-9]*' | head -1 | cut -d: -f2 | tr -d ' ')
         echo "Total count of matching issues: ${ISSUE_COUNT:-0}"
         
-        if [ "${ISSUE_COUNT:-0}" -gt 0 ]; then
-          EXISTING_ISSUE_NUMBER=$(echo "${EXISTING_ISSUES}" | grep -o '"number":[[:space:]]*[0-9]*' | head -1 | sed 's/.*://g' | tr -d ' ')
+        if [ -n "${ISSUE_COUNT}" ] && [ "${ISSUE_COUNT}" -gt 0 ] 2>/dev/null; then
+          EXISTING_ISSUE_NUMBER=$(echo "${EXISTING_ISSUES}" | grep -o '"number":[[:space:]]*[0-9][0-9]*' | head -1 | cut -d: -f2 | tr -d ' ')
           echo "⚠️  Open issue #${EXISTING_ISSUE_NUMBER} already exists"
           echo "Checking if this is a new crash or duplicate of same crash..."
           
@@ -117,15 +117,27 @@ spec:
             echo "⚠️  Warning: Could not extract crash signature from logs"
             echo "Proceeding with upload as crash signature is incomplete"
           else
-            # Get existing comments to check for duplicate crash signatures
-            echo "Fetching existing comments from issue #${EXISTING_ISSUE_NUMBER}..."
+            # Get issue body and comments to check for duplicate crash signatures
+            echo "Fetching issue body and comments from issue #${EXISTING_ISSUE_NUMBER}..."
+            
+            # Get full issue to extract gist from body
+            ISSUE_RESPONSE=$(curl -s -G \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues/${EXISTING_ISSUE_NUMBER}")
+            
+            # Get comments
             EXISTING_COMMENTS=$(curl -s -G \
               -H "Authorization: token ${GITHUB_TOKEN}" \
               -H "Accept: application/vnd.github.v3+json" \
               "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues/${EXISTING_ISSUE_NUMBER}/comments")
             
-            # Extract gist URLs from comments
-            GIST_URLS=$(echo "${EXISTING_COMMENTS}" | grep -o 'https://gist.github.com/[^)]*' || echo "")
+            # Extract gist URLs from both issue body and comments
+            GIST_URLS_BODY=$(echo "${ISSUE_RESPONSE}" | grep -o 'https://gist.github.com/[^")]*' || echo "")
+            GIST_URLS_COMMENTS=$(echo "${EXISTING_COMMENTS}" | grep -o 'https://gist.github.com/[^")]*' || echo "")
+            
+            # Combine gist URLs from both sources
+            GIST_URLS=$(printf "%s\n%s" "${GIST_URLS_BODY}" "${GIST_URLS_COMMENTS}" | grep -v '^$' || echo "")
             
             IS_DUPLICATE=false
             echo "Checking ${GIST_URLS} for duplicate crash signature..."
@@ -133,15 +145,18 @@ spec:
             # Check each gist for matching argv signatures
             for GIST_URL in ${GIST_URLS}; do
               echo "Checking gist: ${GIST_URL}"
-              # Extract gist ID and fetch raw content
+              # Extract gist ID
               GIST_ID=$(echo "${GIST_URL}" | grep -o '[a-f0-9]\{32\}' | head -1)
               if [ -n "${GIST_ID}" ]; then
-                GIST_RESPONSE=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" "${GITHUB_API}/gists/${GIST_ID}")
-                GIST_CONTENT=$(echo "${GIST_RESPONSE}" | grep -o '"content":"[^"]*' | head -1 | cut -d'"' -f4 | sed 's/\\n/\n/g')
+                # Build raw gist URL directly from the gist URL
+                RAW_GIST_URL="${GIST_URL/github.com/githubusercontent.com}/raw"
                 
-                # Try argv first, then signal+address
-                EXISTING_ARGV0=$(echo "${GIST_CONTENT}" | grep -o 'argv\[0\]:[[:space:]]*[^ }]*' | head -1 | sed 's/argv\[0\]:[[:space:]]*//g' | sed 's/""}//; s/"$//' || echo "")
-                EXISTING_ARGV1=$(echo "${GIST_CONTENT}" | grep -o 'argv\[1\]:[[:space:]]*[^ }]*' | head -1 | sed 's/argv\[1\]:[[:space:]]*//g' | sed 's/""}//; s/"$//' || echo "")
+                # Fetch gist content directly from raw URL
+                GIST_CONTENT=$(curl -s "${RAW_GIST_URL}")
+                
+                # Extract argv values - match "argv[0]: value" format and remove JSON trailing characters
+                EXISTING_ARGV0=$(echo "${GIST_CONTENT}" | grep -o 'argv\[0\]: [^ ]*' | sed 's/argv\[0\]: //g; s/"}$//; s/"$//;' | head -1 || echo "")
+                EXISTING_ARGV1=$(echo "${GIST_CONTENT}" | grep -o 'argv\[1\]: [^ ]*' | sed 's/argv\[1\]: //g; s/"}$//; s/"$//;' | head -1 || echo "")
                 
                 if [ "${SIGNATURE_TYPE}" = "argv" ] && [ -n "${EXISTING_ARGV0}" ] && [ -n "${EXISTING_ARGV1}" ]; then
                   echo "  Existing crash signature: argv[0]=${EXISTING_ARGV0}, argv[1]=${EXISTING_ARGV1}"
