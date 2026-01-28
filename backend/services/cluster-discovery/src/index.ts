@@ -2,9 +2,16 @@ import { discoverGCPClusters } from './discovery/gcp';
 import { discoverAWSClusters } from './discovery/aws';
 // import { discoverAzureClusters } from './discovery/azure';
 import logger from './logger';
-import { createClusterSecret, deleteClusterSecret, listClusterSecrets, makeClusterLabels, updateClusterSecret, rotateAWSSecret } from './registration/argocd';
-import { isEqual } from 'lodash'
-import { Cluster } from './types'
+import {
+  createClusterSecret,
+  deleteClusterSecret,
+  listClusterSecrets,
+  makeClusterLabels,
+  updateClusterSecret,
+  rotateAWSSecret,
+} from './registration/argocd';
+import { isEqual } from 'lodash';
+import { Cluster } from './types';
 import { createObservabilityNodePool } from './nodepool';
 import { createTargetClusterPagerDutySecret } from './pagerDutySecret';
 import { createOrUpdateTargetClusterVMUserSecretJob } from './vmUserSecret';
@@ -25,7 +32,7 @@ async function main() {
   });
   const { clusters: awsClusters, credentials: awsCredentials } = await discoverAWSClusters().catch((err) => {
     logger.error(err, 'Error discovering AWS clusters:');
-    return { clusters: [], credentials: undefined, };
+    return { clusters: [], credentials: undefined };
   });
   // const { clusters: azureClusters } = await discoverAzureClusters().catch((err) => {
   //   logger.error(err, 'Error discovering Azure clusters:');
@@ -37,47 +44,46 @@ async function main() {
   });
 
   // Combine all discovered clusters
-  let discoveredClusters: Cluster[] = [...gcpClusters, ...awsClusters, ...byoaClusters] // ...azureClusters];
+  let discoveredClusters: Cluster[] = [...gcpClusters, ...awsClusters, ...byoaClusters]; // ...azureClusters];
 
   // Apply whitelist and blacklist filters
   if (WHITELIST_CLUSTERS.length > 0) {
     discoveredClusters = discoveredClusters.filter((cluster) => {
-      const includes = WHITELIST_CLUSTERS.includes(cluster.name.trim().toLowerCase())
+      const includes = WHITELIST_CLUSTERS.includes(cluster.name.trim().toLowerCase());
       if (includes) return true;
-      logger.info(`Cluster ${cluster.name} is not whitelisted`)
+      logger.info(`Cluster ${cluster.name} is not whitelisted`);
       return false;
     });
   }
   if (BLACKLIST_CLUSTERS.length > 0) {
-    discoveredClusters = discoveredClusters.filter(
-      (cluster) => {
-        if (BLACKLIST_CLUSTERS.includes(cluster.name.trim().toLowerCase())) {
-          logger.info(`Cluster ${cluster.name} is blacklisted.`);
-          return false;
-        }
-        return true;
+    discoveredClusters = discoveredClusters.filter((cluster) => {
+      if (BLACKLIST_CLUSTERS.includes(cluster.name.trim().toLowerCase())) {
+        logger.info(`Cluster ${cluster.name} is blacklisted.`);
+        return false;
       }
-    );
+      return true;
+    });
   }
 
-  if (awsCredentials)
-    await rotateAWSSecret(awsCredentials);
+  if (awsCredentials) await rotateAWSSecret(awsCredentials);
 
   // Get existing secrets in the Kubernetes cluster
   const existingSecrets = await listClusterSecrets();
 
   // Add or update secrets for discovered clusters
-  logger.info({ clusters: discoveredClusters.map(e => e.name) }, 'Adding clusters')
+  logger.info({ clusters: discoveredClusters.map((e) => e.name) }, 'Adding clusters');
   for (const cluster of discoveredClusters) {
-    const existingSecret = existingSecrets.find((secret) => (secret.labels.cluster === cluster.name || secret.name === cluster.name));
+    const existingSecret = existingSecrets.find(
+      (secret) => secret.labels.cluster === cluster.name || secret.name === cluster.name,
+    );
     if (existingSecret) {
-      if (!isEqual(makeClusterLabels(cluster), existingSecret.labels)) {
+      if (!isEqual(makeClusterLabels(cluster), existingSecret.labels) || cluster.hostMode === 'byoa') {
         await updateClusterSecret(existingSecret.name, cluster);
       }
     } else {
-      await createObservabilityNodePool(cluster).catch((e) => { });
+      await createObservabilityNodePool(cluster).catch((e) => {});
       await createClusterSecret(cluster);
-      await createTargetClusterPagerDutySecret(cluster).catch((e) => { });
+      await createTargetClusterPagerDutySecret(cluster).catch((e) => {});
     }
 
     await createOrUpdateTargetClusterVMUserSecretJob(cluster).catch((e) => {
@@ -87,12 +93,14 @@ async function main() {
 
   // Remove secrets for clusters that are no longer discovered
   for (const secret of existingSecrets) {
-    if (secret.name.startsWith("cluster-kubernetes.default.svc") || secret.labels["role"] === "ctrl-plane") continue; // Skip control plane secrets
+    if (secret.name.startsWith('cluster-kubernetes.default.svc') || secret.labels['role'] === 'ctrl-plane') continue; // Skip control plane secrets
     if (!discoveredClusters.some((cluster) => cluster.name === secret.labels.cluster)) {
-      if (process.env.DELETE_UNKNOWN_SECRETS === "true") {
+      if (process.env.DELETE_UNKNOWN_SECRETS === 'true') {
         await deleteClusterSecret(secret.name);
       } else {
-        logger.info(`Skipping deletion of secret ${secret.name}. Env variable DELETE_UNKNOWN_SECRETS is not set to "true".`);
+        logger.info(
+          `Skipping deletion of secret ${secret.name}. Env variable DELETE_UNKNOWN_SECRETS is not set to "true".`,
+        );
       }
     }
   }
