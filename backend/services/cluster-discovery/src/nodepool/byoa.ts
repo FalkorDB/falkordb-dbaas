@@ -6,7 +6,6 @@ import * as k8s from '@kubernetes/client-node';
 import { getK8sConfig } from '../common/k8s';
 import { getBastionCluster } from '../common/bastion';
 import { GoogleAuth, Impersonated, OAuth2Client } from 'google-auth-library';
-import { Writable } from 'stream';
 
 interface AWSCredentials {
   accessKeyId: string;
@@ -50,22 +49,20 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
 
   logger.info({ podName, namespace, command }, 'Executing command in pod');
 
-  // Execute command in pod - create writable streams to capture output
+  // Execute command in pod - use PassThrough streams to properly capture output
   let stdout = '';
   let stderr = '';
 
-  const stdoutStream = new Writable({
-    write(chunk, encoding, callback) {
-      stdout += chunk.toString();
-      callback();
-    },
+  const { PassThrough } = await import('stream');
+  
+  const stdoutStream = new PassThrough();
+  stdoutStream.on('data', (chunk) => {
+    stdout += chunk.toString();
   });
 
-  const stderrStream = new Writable({
-    write(chunk, encoding, callback) {
-      stderr += chunk.toString();
-      callback();
-    },
+  const stderrStream = new PassThrough();
+  stderrStream.on('data', (chunk) => {
+    stderr += chunk.toString();
   });
 
   try {
@@ -79,6 +76,29 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
       null, // stdin
       false, // tty
     );
+    
+    // Wait for streams to finish
+    await new Promise((resolve) => {
+      let stdoutEnded = false;
+      let stderrEnded = false;
+      
+      const checkBothEnded = () => {
+        if (stdoutEnded && stderrEnded) resolve(undefined);
+      };
+      
+      stdoutStream.on('end', () => {
+        stdoutEnded = true;
+        checkBothEnded();
+      });
+      
+      stderrStream.on('end', () => {
+        stderrEnded = true;
+        checkBothEnded();
+      });
+      
+      // Timeout after 5 seconds
+      setTimeout(() => resolve(undefined), 5000);
+    });
   } catch (error) {
     logger.error(
       {
@@ -107,7 +127,7 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
     logger.warn({ stderr, podName, command }, 'Command produced stderr output');
   }
 
-  logger.info({ stdout: stdout.substring(0, 100), stderr, podName }, 'Command executed successfully');
+  logger.info({ stdoutLength: stdout.length, stderrLength: stderr.length, stdoutPreview: stdout.substring(0, 100), podName }, 'Command executed successfully');
 
   return stdout;
 }
@@ -117,20 +137,17 @@ async function getAWSBYOACredentials(cluster: Cluster): Promise<AWSCredentials> 
   const roleSessionName = `bootstrap-session-org-${cluster.destinationAccountID}`;
 
   const command = [
-    'aws',
-    'sts',
-    'assume-role-with-web-identity',
-    '--role-arn',
-    roleArn,
-    '--role-session-name',
-    roleSessionName,
-    '--web-identity-token',
-    'file://$AWS_WEB_IDENTITY_TOKEN_FILE',
+    'sh',
+    '-c',
+    `aws sts assume-role-with-web-identity \
+      --role-arn ${roleArn} \
+      --role-session-name ${roleSessionName} \
+      --web-identity-token file://\$AWS_WEB_IDENTITY_TOKEN_FILE`,
   ];
 
   const output = await executePodCommandInBastion(command);
 
-  const result = JSON.parse(output);
+  const result = JSON.parse(output.trim());
 
   return {
     accessKeyId: result.Credentials.AccessKeyId,
@@ -145,10 +162,10 @@ async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> 
   const audience = `//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov`;
 
   // Exchange AWS EKS service account token for GCP access token using Workload Identity Federation
-const command = [
-  'sh',
-  '-c',
-  `
+  const command = [
+    'sh',
+    '-c',
+    `
 TMP_CRED="/tmp/cred_$(head -c 8 /dev/urandom | base64 | tr -dc a-z0-9).json"
 printf '{
   "type": "external_account",
@@ -159,9 +176,9 @@ printf '{
 }' > "$TMP_CRED"
 
 export GOOGLE_APPLICATION_CREDENTIALS="$TMP_CRED"
-gcloud auth application-default print-access-token
+gcloud auth application-default print-access-token 2>&1
 `,
-];
+  ];
 
   const output = await executePodCommandInBastion(command).catch((error) => {
     logger.error(
@@ -179,24 +196,21 @@ gcloud auth application-default print-access-token
     throw error;
   });
 
-  if (!output || output.trim() === '') {
+  const token = output.trim();
+
+  if (!token || token === '') {
     logger.error({ cluster: cluster.name, output }, 'Empty response from GCP STS token exchange');
     throw new Error('Empty response from GCP STS token exchange');
   }
 
-  if (output.startsWith('CURL_FAILED_')) {
-    logger.error({ cluster: cluster.name, output }, 'Curl command failed in pod');
-    throw new Error(`Curl command failed: ${output}`);
-  }
-
-  if (!output.startsWith('ya29.')) {
-    logger.error({ cluster: cluster.name, output }, 'Invalid GCP access token format received');
+  if (!token.startsWith('ya29.')) {
+    logger.error({ cluster: cluster.name, output: token.substring(0, 200) }, 'Invalid GCP access token format received');
     throw new Error('Invalid GCP access token format received');
   }
 
   const baseAuth = new GoogleAuth({
     credentials: {
-      access_token: output,
+      access_token: token,
     } as any,
   });
 
@@ -209,9 +223,9 @@ gcloud auth application-default print-access-token
     lifetime: 3600,
   });
 
-  const { token } = await impersonatedClient.getAccessToken();
+  const { token: impersonatedToken } = await impersonatedClient.getAccessToken();
 
-  return { token };
+  return { token: impersonatedToken };
 }
 
 export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Promise<void> {
