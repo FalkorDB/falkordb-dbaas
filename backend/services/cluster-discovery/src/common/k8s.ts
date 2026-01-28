@@ -12,13 +12,13 @@ export async function getK8sConfig(
 ): Promise<k8s.KubeConfig> {
   const cloudProvider = cluster.cloud;
   const clusterId = cluster.name;
+  const isBYOA = cluster.hostMode === 'byoa';
 
-  const k8sCredentials =
-    cluster.hostMode === 'byoa'
-      ? getBYOACredentials(cluster)
-      : cloudProvider === 'gcp'
-        ? await getGKECredentials(cluster, opts)
-        : await getEKSCredentials(cluster);
+  const k8sCredentials = isBYOA
+    ? getBYOACredentials(cluster)
+    : cloudProvider === 'gcp'
+      ? await getGKECredentials(cluster, opts)
+      : await getEKSCredentials(cluster);
 
   const kubeConfig = new k8s.KubeConfig();
   kubeConfig.loadFromOptions({
@@ -33,7 +33,7 @@ export async function getK8sConfig(
       {
         name: clusterId,
         authProvider: cloudProvider === 'gcp' ? cloudProvider : undefined,
-        token: k8sCredentials.accessToken,
+        token: isBYOA ? undefined : k8sCredentials.accessToken,
         certData: (cluster.secretConfig as any)?.tlsClientConfig?.certData,
         keyData: (cluster.secretConfig as any)?.tlsClientConfig?.keyData,
       },
@@ -50,7 +50,10 @@ export async function getK8sConfig(
 
   kubeConfig.applyToRequest = async (opts) => {
     opts.ca = Buffer.from(k8sCredentials.certificateAuthority, 'base64');
-    opts.headers.Authorization = 'Bearer ' + k8sCredentials.accessToken;
+    // Only set Authorization header for non-BYOA clusters
+    if (!isBYOA && k8sCredentials.accessToken) {
+      opts.headers.Authorization = 'Bearer ' + k8sCredentials.accessToken;
+    }
   };
 
   return kubeConfig;
