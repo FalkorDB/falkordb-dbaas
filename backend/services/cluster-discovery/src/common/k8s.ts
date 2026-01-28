@@ -50,8 +50,18 @@ export async function getK8sConfig(
 
   kubeConfig.applyToRequest = async (opts) => {
     opts.ca = Buffer.from(k8sCredentials.certificateAuthority, 'base64');
-    // Only set Authorization header for non-BYOA clusters
-    if (!isBYOA && k8sCredentials.accessToken) {
+    
+    if (isBYOA) {
+      // For BYOA clusters, use client certificate authentication
+      const certData = (cluster.secretConfig as any)?.tlsClientConfig?.certData;
+      const keyData = (cluster.secretConfig as any)?.tlsClientConfig?.keyData;
+      
+      if (certData && keyData) {
+        opts.cert = Buffer.from(certData, 'base64');
+        opts.key = Buffer.from(keyData, 'base64');
+      }
+    } else if (k8sCredentials.accessToken) {
+      // For managed clusters, use bearer token authentication
       opts.headers.Authorization = 'Bearer ' + k8sCredentials.accessToken;
     }
   };
