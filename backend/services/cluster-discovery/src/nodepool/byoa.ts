@@ -208,16 +208,14 @@ gcloud auth application-default print-access-token 2>&1
     throw new Error('Invalid GCP access token format received');
   }
 
-  const baseAuth = new GoogleAuth({
-    credentials: {
-      access_token: token,
-    } as any,
-  });
+  // Create OAuth2Client with the access token
+  const oauthClient = new OAuth2Client();
+  oauthClient.setCredentials({ access_token: token });
 
-  const serviceAccountEmail = `bootstrap-${cluster.organizationId}@${cluster.destinationAccountNumber}.iam.gserviceaccount.com`;
+  const serviceAccountEmail = `bootstrap-${cluster.organizationId}@${cluster.destinationAccountID}.iam.gserviceaccount.com`;
 
   const impersonatedClient = new Impersonated({
-    sourceClient: await baseAuth.getClient(),
+    sourceClient: oauthClient,
     targetPrincipal: serviceAccountEmail,
     targetScopes: ['https://www.googleapis.com/auth/cloud-platform'],
     lifetime: 3600,
@@ -225,7 +223,7 @@ gcloud auth application-default print-access-token 2>&1
 
   const { token: impersonatedToken } = await impersonatedClient.getAccessToken();
 
-  return { token: impersonatedToken };
+  return { token: impersonatedToken.trim() };
 }
 
 export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Promise<void> {
