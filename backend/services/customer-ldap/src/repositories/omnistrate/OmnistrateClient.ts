@@ -18,6 +18,7 @@ export class OmnistrateClient {
 
     this._client = axios.create({
       baseURL: 'https://api.omnistrate.cloud',
+      timeout: 20000,
     });
 
     this._client.interceptors.request.use(this._getBearer());
