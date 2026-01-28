@@ -26,6 +26,8 @@ spec:
             alertmanagerAddress: "http://vmalertmanager-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:9093"
             nodeSelector:
               node_pool: observability
+            podMonitor:
+              enabled: false
       destination:
         server: "{{.server}}"
         namespace: observability
