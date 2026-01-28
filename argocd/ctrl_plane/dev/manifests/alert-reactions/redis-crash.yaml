@@ -93,10 +93,64 @@ spec:
         
         if [ "${ISSUE_COUNT:-0}" -gt 0 ]; then
           EXISTING_ISSUE_NUMBER=$(echo "${EXISTING_ISSUES}" | grep -o '"number":[0-9]*' | head -1 | cut -d: -f2)
-          echo "⚠️  DUPLICATE DETECTED: Open issue #${EXISTING_ISSUE_NUMBER} already exists"
-          echo "Strategy: Adding logs as comment to existing issue instead of creating new one"
+          echo "⚠️  Open issue #${EXISTING_ISSUE_NUMBER} already exists"
+          echo "Checking if this is a new crash or duplicate of same crash..."
           
-          # Still collect and upload logs to gist for reference
+          # Extract crash signature from current logs (argv[0] and argv[1])
+          echo "Extracting crash signature from logs..."
+          CURRENT_ARGV0=$(grep -o 'argv\[0\]:[[:space:]]*["'"'"'][^"'"'"']*["'"'"']' "${LOG_FILE}" | head -1 | sed 's/argv\[0\]:[[:space:]]*//g' || echo "")
+          CURRENT_ARGV1=$(grep -o 'argv\[1\]:[[:space:]]*["'"'"'][^"'"'"']*["'"'"']' "${LOG_FILE}" | head -1 | sed 's/argv\[1\]:[[:space:]]*//g' || echo "")
+          
+          echo "Current crash signature: argv[0]=${CURRENT_ARGV0}, argv[1]=${CURRENT_ARGV1}"
+          
+          if [ -z "${CURRENT_ARGV0}" ] || [ -z "${CURRENT_ARGV1}" ]; then
+            echo "⚠️  Warning: Could not extract argv values from logs"
+            echo "Proceeding with upload as crash signature is incomplete"
+          else
+            # Get existing comments to check for duplicate crash signatures
+            echo "Fetching existing comments from issue #${EXISTING_ISSUE_NUMBER}..."
+            EXISTING_COMMENTS=$(curl -s -G \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues/${EXISTING_ISSUE_NUMBER}/comments")
+            
+            # Extract gist URLs from comments
+            GIST_URLS=$(echo "${EXISTING_COMMENTS}" | grep -o 'https://gist.github.com/[^)]*' || echo "")
+            
+            IS_DUPLICATE=false
+            echo "Checking ${GIST_URLS} for duplicate crash signature..."
+            
+            # Check each gist for matching argv signatures
+            for GIST_URL in ${GIST_URLS}; do
+              echo "Checking gist: ${GIST_URL}"
+              # Extract gist ID and fetch raw content
+              GIST_ID=$(echo "${GIST_URL}" | grep -o '[a-f0-9]\{32\}' | head -1)
+              if [ -n "${GIST_ID}" ]; then
+                GIST_CONTENT=$(curl -s -H "Authorization: token ${GITHUB_TOKEN}" "${GITHUB_API}/gists/${GIST_ID}" | grep -o '"content":"[^"]*' | head -1 | cut -d'"' -f4 | sed 's/\\n/\n/g')
+                
+                EXISTING_ARGV0=$(echo "${GIST_CONTENT}" | grep -o 'argv\[0\]:[[:space:]]*["'"'"'][^"'"'"']*["'"'"']' | head -1 | sed 's/argv\[0\]:[[:space:]]*//g' || echo "")
+                EXISTING_ARGV1=$(echo "${GIST_CONTENT}" | grep -o 'argv\[1\]:[[:space:]]*["'"'"'][^"'"'"']*["'"'"']' | head -1 | sed 's/argv\[1\]:[[:space:]]*//g' || echo "")
+                
+                echo "  Existing crash signature: argv[0]=${EXISTING_ARGV0}, argv[1]=${EXISTING_ARGV1}"
+                
+                if [ "${CURRENT_ARGV0}" = "${EXISTING_ARGV0}" ] && [ "${CURRENT_ARGV1}" = "${EXISTING_ARGV1}" ]; then
+                  echo "  🔄 Match found! Same crash signature detected"
+                  IS_DUPLICATE=true
+                  break
+                fi
+              fi
+            done
+            
+            if [ "${IS_DUPLICATE}" = "true" ]; then
+              echo "🔄 Same crash detected - identical argv signature found in existing comments"
+              echo "Skipping duplicate log upload to avoid noise"
+              exit 0
+            fi
+          fi
+          
+          echo "✅ New crash detected - different crash signature, adding logs as comment to existing issue"
+          
+          # Collect and upload logs to gist for this new crash
           echo "Creating gist with crash logs..."
           GIST_FILE="redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
           GIST_PAYLOAD="/tmp/gist-payload.json"
