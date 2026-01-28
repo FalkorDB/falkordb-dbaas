@@ -76,8 +76,6 @@ spec:
         
         # Check if an open issue already exists for this pod/namespace/cluster
         SEARCH_QUERY="repo:${REPO_OWNER}/${REPO_NAME} is:open is:issue in:title ${POD_NAME} ${NAMESPACE} ${CLUSTER}"
-        echo "Search query: ${SEARCH_QUERY}"
-        echo "Calling GitHub API to search for existing issues..."
         
         EXISTING_ISSUES=$(curl -s -G \
           -H "Authorization: token ${GITHUB_TOKEN}" \
@@ -85,11 +83,7 @@ spec:
           "${GITHUB_API}/search/issues" \
           --data-urlencode "q=${SEARCH_QUERY}")
         
-        echo "API Response received. Parsing results..."
-        echo "Raw response (first 500 chars): ${EXISTING_ISSUES:0:500}"
-        
         ISSUE_COUNT=$(echo "${EXISTING_ISSUES}" | grep -o '"total_count":[[:space:]]*[0-9][0-9]*' | head -1 | cut -d: -f2 | tr -d ' ')
-        echo "Total count of matching issues: ${ISSUE_COUNT:-0}"
         
         if [ -n "${ISSUE_COUNT}" ] && [ "${ISSUE_COUNT}" -gt 0 ] 2>/dev/null; then
           EXISTING_ISSUE_NUMBER=$(echo "${EXISTING_ISSUES}" | grep -o '"number":[[:space:]]*[0-9][0-9]*' | head -1 | cut -d: -f2 | tr -d ' ')
@@ -98,7 +92,7 @@ spec:
           
           # Extract crash signature from current logs
           # Try argv first (shows the command that caused crash), then fall back to signal+address
-          echo "Extracting crash signature from logs..."
+
           CURRENT_ARGV0=$(grep -o 'argv\[0\]:[[:space:]]*[^ }]*' "${LOG_FILE}" | head -1 | sed 's/argv\[0\]:[[:space:]]*//g' | sed 's/""}//; s/"$//' || echo "")
           CURRENT_ARGV1=$(grep -o 'argv\[1\]:[[:space:]]*[^ }]*' "${LOG_FILE}" | head -1 | sed 's/argv\[1\]:[[:space:]]*//g' | sed 's/""}//; s/"$//' || echo "")
           
@@ -118,7 +112,6 @@ spec:
             echo "Proceeding with upload as crash signature is incomplete"
           else
             # Get issue body and comments to check for duplicate crash signatures
-            echo "Fetching issue body and comments from issue #${EXISTING_ISSUE_NUMBER}..."
             
             # Get full issue to extract gist from body
             ISSUE_RESPONSE=$(curl -s -G \
@@ -140,11 +133,9 @@ spec:
             GIST_URLS=$(printf "%s\n%s" "${GIST_URLS_BODY}" "${GIST_URLS_COMMENTS}" | grep -v '^$' || echo "")
             
             IS_DUPLICATE=false
-            echo "Checking ${GIST_URLS} for duplicate crash signature..."
             
             # Check each gist for matching argv signatures
             for GIST_URL in ${GIST_URLS}; do
-              echo "Checking gist: ${GIST_URL}"
               # Extract gist ID
               GIST_ID=$(echo "${GIST_URL}" | grep -o '[a-f0-9]\{32\}' | head -1)
               if [ -n "${GIST_ID}" ]; then
@@ -188,7 +179,6 @@ spec:
           echo "✅ New crash detected - different crash signature, adding logs as comment to existing issue"
           
           # Collect and upload logs to gist for this new crash
-          echo "Creating gist with crash logs..."
           GIST_FILE="redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
           GIST_PAYLOAD="/tmp/gist-payload.json"
           
@@ -202,7 +192,6 @@ spec:
           echo '  "public": false' >> "${GIST_PAYLOAD}"
           echo '}' >> "${GIST_PAYLOAD}"
           
-          echo "Uploading gist to GitHub..."
           GIST_RESPONSE=$(curl -s -X POST \
             -H "Authorization: token ${GITHUB_TOKEN}" \
             -H "Accept: application/vnd.github.v3+json" \
@@ -211,11 +200,9 @@ spec:
             -d @"${GIST_PAYLOAD}")
           
           GIST_URL=$(echo "${GIST_RESPONSE}" | sed -n 's/.*"html_url":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-          echo "Gist created: ${GIST_URL}"
           
           # Add comment to existing issue
           COMMENT_BODY="### Another crash detected at ${ISRAEL_TIME}\n\n**Crash Logs:** [View logs on GitHub Gist](${GIST_URL})"
-          echo "Adding comment to issue #${EXISTING_ISSUE_NUMBER}..."
           
           COMMENT_RESPONSE=$(curl -s -X POST \
             -H "Authorization: token ${GITHUB_TOKEN}" \
@@ -223,22 +210,17 @@ spec:
             "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues/${EXISTING_ISSUE_NUMBER}/comments" \
             -d "{\"body\":\"${COMMENT_BODY}\"}")
           
-          COMMENT_ID=$(echo "${COMMENT_RESPONSE}" | grep -o '"id":[0-9]*' | head -1 | cut -d: -f2)
-          echo "Comment created with ID: ${COMMENT_ID}"
           echo "✅ Successfully added logs as comment to issue #${EXISTING_ISSUE_NUMBER}"
           echo "Exiting without creating duplicate issue."
           exit 0
         fi
         
-        echo "✅ No existing open issue found"
-        echo "Proceeding to create new issue..."
+        echo "✅ No existing open issue found - creating new issue"
         
         # Create issue title
         TITLE="[CRITICAL] Redis Crash: ${POD_NAME} in ${NAMESPACE} (${CLUSTER}) - ${ISRAEL_TIME}"
-        echo "Issue title: ${TITLE}"
         
         # Upload logs to gist using file to avoid argument list too long
-        echo "Creating gist for new issue..."
         GIST_FILE="redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
         GIST_PAYLOAD="/tmp/gist-payload.json"
         
@@ -257,7 +239,6 @@ spec:
         echo '}' >> "${GIST_PAYLOAD}"
         
         # Create gist
-        echo "Uploading gist to GitHub..."
         GIST_RESPONSE=$(curl -s -X POST \
           -H "Authorization: token ${GITHUB_TOKEN}" \
           -H "Accept: application/vnd.github.v3+json" \
@@ -266,11 +247,9 @@ spec:
           -d @"${GIST_PAYLOAD}")
         
         GIST_URL=$(echo "${GIST_RESPONSE}" | sed -n 's/.*"html_url":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-        echo "Gist URL: ${GIST_URL}"
         
         # Create issue body
         if [ -n "${GIST_URL}" ]; then
-          echo "Creating issue with gist logs..."
           ISSUE_BODY="## Redis Crash Detected\n\n**Pod:** ${POD_NAME}\n**Namespace:** ${NAMESPACE}\n**Cluster:** ${CLUSTER}\n**Time (IST):** ${ISRAEL_TIME}\n\n**Crash Logs:** [View logs on GitHub Gist](${GIST_URL})"
         else
           echo "⚠️  Warning: Failed to create gist, creating issue without logs"
@@ -278,7 +257,6 @@ spec:
         fi
         
         # Create issue via GitHub API
-        echo "Creating GitHub issue..."
         ISSUE_RESPONSE=$(curl -s -X POST \
           -H "Authorization: token ${GITHUB_TOKEN}" \
           -H "Accept: application/vnd.github.v3+json" \
@@ -290,17 +268,15 @@ spec:
         
         echo "✅ Issue #${ISSUE_NUMBER} created successfully"
         echo "Issue URL: https://github.com/${REPO_OWNER}/${REPO_NAME}/issues/${ISSUE_NUMBER}"
-        echo "Node ID: ${NODE_ID}"
         
         # Add to project board
-        echo "Adding issue to project board (ID: ${PROJECT_ID})..."
         PROJECT_RESPONSE=$(curl -s -X POST \
           -H "Authorization: bearer ${GITHUB_TOKEN}" \
           -H "Content-Type: application/json" \
           "${GITHUB_API}/graphql" \
           -d "{\"query\":\"mutation {addProjectV2ItemById(input: {projectId: \\\"${PROJECT_ID}\\\", contentId: \\\"${NODE_ID}\\\"}) {item {id}}}\"}")
         
-        echo "Project board response: ${PROJECT_RESPONSE}"
+
         echo "✅ Issue added to project board"
         echo "✅ Done - new issue workflow completed"
     env:
