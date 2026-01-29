@@ -44,10 +44,10 @@ export async function start() {
   fastify.log.info(
     {
       port,
-      nodeEnv: fastify.config.NODE_ENV,
-      scanInterval: fastify.config.SCAN_INTERVAL_MS,
+      nodeEnv: process.env.NODE_ENV || 'production',
+      scanInterval: fastify.config?.SCAN_INTERVAL_MS ?? process.env.SCAN_INTERVAL_MS,
     },
-    `${fastify.config.SERVICE_NAME} started`,
+    `${fastify.config?.SERVICE_NAME ?? process.env.SERVICE_NAME ?? 'cluster-discovery'} started`,
   );
 
   // Graceful shutdown

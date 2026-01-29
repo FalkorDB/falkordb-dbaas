@@ -533,6 +533,9 @@ importers:
       '@falkordb/configs':
         specifier: workspace:*
         version: link:../../libs/configs
+      '@fastify/cors':
+        specifier: ^9.0.1
+        version: 9.0.1
       '@fastify/env':
         specifier: ^4.3.0
         version: 4.3.0

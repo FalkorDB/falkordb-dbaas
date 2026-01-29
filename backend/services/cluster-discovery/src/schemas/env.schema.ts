@@ -8,6 +8,7 @@ export const EnvSchema = Type.Object({
   }),
   PORT: Type.Number({ default: 3000 }),
   REQUEST_TIMEOUT_MS: Type.Number({ default: 30000 }),
+  CORS_ORIGINS: Type.String({ default: '' }),
 
   // Scanner configuration
   SCAN_INTERVAL_MS: Type.Number({ default: 120000 }),

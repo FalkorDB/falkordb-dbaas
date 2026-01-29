@@ -7,6 +7,7 @@ init(process.env.SERVICE_NAME || 'cluster-discovery', process.env.NODE_ENV);
 import { type FastifyInstance, type FastifyPluginOptions } from 'fastify';
 import Sensible from '@fastify/sensible';
 import Env from '@fastify/env';
+import Cors from '@fastify/cors';
 import openTelemetryPlugin from '@autotelic/fastify-opentelemetry';
 import { EnvSchema } from './schemas/env.schema';
 import { runDiscovery } from './scanner';
@@ -20,6 +21,20 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   });
 
   await fastify.register(Sensible);
+
+  // Parse CORS origins from comma-separated string
+  const corsOrigins =
+    fastify.config.CORS_ORIGINS === '*'
+      ? true
+      : fastify.config.CORS_ORIGINS
+        ? fastify.config.CORS_ORIGINS.split(',')
+            .map((o) => o.trim())
+            .filter(Boolean)
+        : false;
+
+  await fastify.register(Cors, {
+    origin: corsOrigins,
+  });
 
   // Register OpenTelemetry if enabled
   if (fastify.config.OTEL_ENABLED) {

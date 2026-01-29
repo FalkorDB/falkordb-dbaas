@@ -30,6 +30,7 @@
     "@falkordb/configs": "workspace:*",
     "@fastify/env": "^4.3.0",
     "@fastify/sensible": "^5.5.0",
+    "@fastify/cors": "^9.0.1",
     "@google-cloud/container": "^6.4.0",
     "@kubernetes/client-node": "^0.21.0",
     "@sinclair/typebox": "^0.34.33",
