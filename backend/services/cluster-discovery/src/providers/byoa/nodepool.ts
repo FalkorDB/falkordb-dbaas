@@ -28,7 +28,8 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
       throw error;
     });
 
-    // Create GCP client with workload identity credentials
+    // Create GCP client with Impersonated credentials
+    // Using authClient property (not auth) as it bypasses some gRPC plugin issues
     const client = new ClusterManagerClient({
       authClient: authClient as any,
     });

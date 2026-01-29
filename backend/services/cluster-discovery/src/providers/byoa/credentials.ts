@@ -3,7 +3,7 @@ import logger from '../../logger';
 import * as k8s from '@kubernetes/client-node';
 import { getK8sConfig } from '../../utils/k8s';
 import { getBastionCluster } from '../../integrations/bastion';
-import { OAuth2Client, Impersonated } from 'google-auth-library';
+import { GoogleAuth, OAuth2Client, Impersonated } from 'google-auth-library';
 
 export interface AWSCredentials {
   accessKeyId: string;
@@ -14,7 +14,7 @@ export interface AWSCredentials {
 
 export interface GCPCredentials {
   token: string;
-  authClient: Impersonated;
+  authClient: any; // Custom auth client wrapper
 }
 
 /**
@@ -237,8 +237,33 @@ gcloud auth application-default print-access-token 2>&1
 
   const { token: impersonatedToken } = await impersonatedClient.getAccessToken();
 
+  // Create a custom auth client wrapper that properly implements getRequestHeaders
+  // This fixes the gRPC "headers.forEach is not a function" error that occurs when
+  // using impersonated credentials with google-auth-library and gRPC clients.
+  // The issue is that some versions return headers in incompatible formats.
+  // See: https://github.com/googleapis/google-auth-library-nodejs/issues/1960
+  const wrappedAuthClient = {
+    async getRequestHeaders(url?: string) {
+      // Must return a plain object (not Map or other structure)
+      // The gRPC plugin expects headers that can be iterated with forEach
+      const headers = {
+        'Authorization': `Bearer ${impersonatedToken.trim()}`
+      };
+      // Add forEach method to ensure compatibility with gRPC's expectations
+      if (typeof (headers as any).forEach !== 'function') {
+        (headers as any).forEach = function(callback: (value: string, key: string) => void) {
+          Object.entries(this).forEach(([key, value]) => callback(value as string, key));
+        };
+      }
+      return headers;
+    },
+    async getAccessToken() {
+      return { token: impersonatedToken.trim() };
+    },
+  };
+
   return { 
     token: impersonatedToken.trim(),
-    authClient: impersonatedClient
+    authClient: wrappedAuthClient as any
   };
 }
