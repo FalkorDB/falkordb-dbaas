@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cluster-discovery-ingress
+  namespace: argocd
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.falkordb.cloud
+      secretName: cluster-discovery-tls
+  rules:
+    - host: api.falkordb.cloud
+      http:
+        paths:
+          - path: /omnistrate/cell-delete-started
+            pathType: Exact
+            backend:
+              service:
+                name: cluster-discovery
+                port:
+                  number: 3000

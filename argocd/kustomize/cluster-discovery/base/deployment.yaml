@@ -2,7 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cluster-discovery
-  namespace: argocd
+  labels:
+    app: cluster-discovery
+    app.kubernetes.io/name: cluster-discovery
+    app.kubernetes.io/component: infrastructure
 spec:
   replicas: 1
   selector:
@@ -12,18 +15,21 @@ spec:
     metadata:
       labels:
         app: cluster-discovery
+        app.kubernetes.io/name: cluster-discovery
+        app.kubernetes.io/component: infrastructure
     spec:
+      serviceAccountName: argocd-server
       containers:
         - name: cluster-discovery
-          image: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/cluster-discovery:1.0.0
+          image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery:1.0.0
           imagePullPolicy: Always
-          envFrom:
-            - secretRef:
-                name: cluster-discovery-env
           ports:
             - name: http
               containerPort: 3000
               protocol: TCP
+          envFrom:
+            - secretRef:
+                name: cluster-discovery-env
           livenessProbe:
             httpGet:
               path: /health
@@ -47,21 +53,5 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
-      serviceAccountName: argocd-server
       nodeSelector:
         node_pool: observability-resources
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: cluster-discovery
-  namespace: argocd
-spec:
-  type: ClusterIP
-  ports:
-    - port: 3000
-      targetPort: http
-      protocol: TCP
-      name: http
-  selector:
-    app: cluster-discovery
