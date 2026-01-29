@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-discovery
+  labels:
+    app: cluster-discovery
+    app.kubernetes.io/name: cluster-discovery
+    app.kubernetes.io/component: infrastructure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-discovery
+  template:
+    metadata:
+      labels:
+        app: cluster-discovery
+        app.kubernetes.io/name: cluster-discovery
+        app.kubernetes.io/component: infrastructure
+    spec:
+      serviceAccountName: argocd-server
+      containers:
+        - name: cluster-discovery
+          image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery:1.0.0
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: cluster-discovery-env
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      nodeSelector:
+        node_pool: observability-resources

@@ -1,114 +1,74 @@
-import { discoverGCPClusters } from './discovery/gcp';
-import { discoverAWSClusters } from './discovery/aws';
-// import { discoverAzureClusters } from './discovery/azure';
-import logger from './logger';
-import {
-  createClusterSecret,
-  deleteClusterSecret,
-  listClusterSecrets,
-  makeClusterLabels,
-  updateClusterSecret,
-  rotateAWSSecret,
-} from './registration/argocd';
-import { isEqual } from 'lodash';
-import { Cluster } from './types';
-import { createObservabilityNodePool } from './nodepool';
-import { createTargetClusterPagerDutySecret } from './pagerDutySecret';
-import { createOrUpdateTargetClusterVMUserSecretJob } from './vmUserSecret';
-import { discoverBYOAClusters } from './discovery/omnistrate';
+import Fastify from 'fastify';
+import App from './app';
 
-// Parse environment variables as comma-separated lists
-const WHITELIST_CLUSTERS = process.env.WHITELIST_CLUSTERS?.split(',').map((name) => name.trim().toLowerCase()) || [];
-const BLACKLIST_CLUSTERS = process.env.BLACKLIST_CLUSTERS?.split(',').map((name) => name.trim().toLowerCase()) || [];
+const envToLogger = {
+  development: {
+    level: 'debug',
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        translateTime: 'HH:MM:ss Z',
+        ignore: 'pid,hostname',
+      },
+    },
+  },
+  production: {
+    level: 'info',
+  },
+  test: false,
+};
 
-// Main function to discover, register, and deregister clusters
-async function main() {
-  logger.info('Starting cluster discovery...');
+type Environment = 'development' | 'production' | 'test';
 
-  // Discover clusters
-  const { clusters: gcpClusters } = await discoverGCPClusters().catch((err) => {
-    logger.error(err, 'Error discovering GCP clusters:');
-    return { clusters: [] };
-  });
-  const { clusters: awsClusters, credentials: awsCredentials } = await discoverAWSClusters().catch((err) => {
-    logger.error(err, 'Error discovering AWS clusters:');
-    return { clusters: [], credentials: undefined };
-  });
-  // const { clusters: azureClusters } = await discoverAzureClusters().catch((err) => {
-  //   logger.error(err, 'Error discovering Azure clusters:');
-  //   return { clusters: [] };
-  // });
-  const { clusters: byoaClusters } = await discoverBYOAClusters().catch((err) => {
-    logger.error(err, 'Error discovering BYOA clusters:');
-    return { clusters: [] };
-  });
-
-  // Combine all discovered clusters
-  let discoveredClusters: Cluster[] = [...gcpClusters, ...awsClusters, ...byoaClusters]; // ...azureClusters];
-
-  // Apply whitelist and blacklist filters
-  if (WHITELIST_CLUSTERS.length > 0) {
-    discoveredClusters = discoveredClusters.filter((cluster) => {
-      const includes = WHITELIST_CLUSTERS.includes(cluster.name.trim().toLowerCase());
-      if (includes) return true;
-      logger.info(`Cluster ${cluster.name} is not whitelisted`);
-      return false;
-    });
-  }
-  if (BLACKLIST_CLUSTERS.length > 0) {
-    discoveredClusters = discoveredClusters.filter((cluster) => {
-      if (BLACKLIST_CLUSTERS.includes(cluster.name.trim().toLowerCase())) {
-        logger.info(`Cluster ${cluster.name} is blacklisted.`);
-        return false;
-      }
-      return true;
-    });
-  }
-
-  if (awsCredentials) await rotateAWSSecret(awsCredentials);
-
-  // Get existing secrets in the Kubernetes cluster
-  const existingSecrets = await listClusterSecrets();
-
-  // Add or update secrets for discovered clusters
-  logger.info({ clusters: discoveredClusters.map((e) => e.name) }, 'Adding clusters');
-  for (const cluster of discoveredClusters) {
-    const existingSecret = existingSecrets.find(
-      (secret) => secret.labels.cluster === cluster.name || secret.name === cluster.name,
-    );
-    if (existingSecret) {
-      if (!isEqual(makeClusterLabels(cluster), existingSecret.labels) || cluster.hostMode === 'byoa') {
-        await updateClusterSecret(existingSecret.name, cluster);
-      }
-    } else {
-      await createObservabilityNodePool(cluster).catch((e) => {});
-      await createClusterSecret(cluster);
-      await createTargetClusterPagerDutySecret(cluster).catch((e) => {});
-    }
-
-    await createOrUpdateTargetClusterVMUserSecretJob(cluster).catch((e) => {
-      logger.error(e, `Error creating/updating vmuser secret job for cluster ${cluster.name}`);
-    });
-  }
-
-  // Remove secrets for clusters that are no longer discovered
-  for (const secret of existingSecrets) {
-    if (secret.name.startsWith('cluster-kubernetes.default.svc') || secret.labels['role'] === 'ctrl-plane') continue; // Skip control plane secrets
-    if (!discoveredClusters.some((cluster) => cluster.name === secret.labels.cluster)) {
-      if (process.env.DELETE_UNKNOWN_SECRETS === 'true') {
-        await deleteClusterSecret(secret.name);
-      } else {
-        logger.info(
-          `Skipping deletion of secret ${secret.name}. Env variable DELETE_UNKNOWN_SECRETS is not set to "true".`,
-        );
-      }
-    }
-  }
-
-  logger.info('Cluster discovery and registration completed.');
+function getLoggerConfig(env: string) {
+  const validEnv = (env in envToLogger ? env : 'production') as Environment;
+  return envToLogger[validEnv];
 }
 
-main().catch((err) => {
-  logger.error('Error during cluster discovery:', err);
+export async function start() {
+  const fastify = Fastify({
+    logger: getLoggerConfig(process.env.NODE_ENV || 'production'),
+    trustProxy: true,
+    requestTimeout: parseInt(process.env.REQUEST_TIMEOUT_MS || '30000', 10),
+  });
+
+  await fastify.register(App);
+
+  const port = parseInt(process.env.PORT || '3000', 10);
+
+  await fastify.listen({
+    host: '0.0.0.0',
+    port,
+  });
+
+  fastify.log.info(
+    {
+      port,
+      nodeEnv: fastify.config.NODE_ENV,
+      scanInterval: fastify.config.SCAN_INTERVAL_MS,
+    },
+    `${fastify.config.SERVICE_NAME} started`,
+  );
+
+  // Graceful shutdown
+  let isShuttingDown = false;
+  const closeGracefully = async (signal: string) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+    fastify.log.info(`Received ${signal}, closing server gracefully`);
+    await fastify.close();
+    fastify.log.info('Server closed');
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => closeGracefully('SIGTERM'));
+  process.on('SIGINT', () => closeGracefully('SIGINT'));
+
+  return fastify;
+}
+
+start().catch((error) => {
+  console.error('Failed to start server', error);
   process.exit(1);
 });
+

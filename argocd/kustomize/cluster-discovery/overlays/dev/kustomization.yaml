@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: argocd
+
+resources:
+  - ../../base/
+  - cluster-discovery-env-secret.yaml
+
+patches:
+  - target:
+      kind: Deployment
+      name: cluster-discovery
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: replace
+        path: /spec/template/spec/containers/0/image
+        value: "us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery:latest"
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: "Always"
+  - target:
+      kind: Ingress
+      name: cluster-discovery-ingress
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: "api.dev.falkordb.cloud"
+      - op: replace
+        path: /spec/rules/0/host
+        value: "api.dev.falkordb.cloud"
