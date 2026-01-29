@@ -43,7 +43,7 @@ async function fetchDeploymentCell(client: OmnistrateClient, deploymentCellId: s
 
   logger.info(
     {
-      deploymentCellId,
+      deploymentCellId: deploymentCell.id,
       cloudProvider: deploymentCell.cloudProvider,
       region: deploymentCell.region,
       modelType: deploymentCell.modelType,

@@ -187,25 +187,10 @@ export class OmnistrateClient {
     intermediaryAccountID?: string;
     destinationAccountID: string;
   } | null> {
-    try {
-      const response = await OmnistrateClient._client.get(
-        `/2022-09-01-00/fleet/host-cluster/${deploymentCellId}`
-      );
-      const hc = response.data;
-      return {
-        cloudProvider: hc.cloudProvider,
-        region: hc.region,
-        id: hc.id,
-        status: hc.status,
-        modelType: hc.modelType,
-        customer_email: hc.customer_email,
-        intermediaryAccountID: hc.intermediaryAccountDetail?.intermediaryAccountID,
-        destinationAccountID: hc.accountID,
-      };
-    } catch (error) {
-      logger.error({ error, deploymentCellId }, 'Failed to get deployment cell');
-      return null;
-    }
+    return this.getDeploymentCells().then((cells) => {
+      const cell = cells.find((c) => c.id === deploymentCellId);
+      return cell || null;
+    });
   }
 
   async getDeploymentCellCredentials(deploymentCellId: string): Promise<{
