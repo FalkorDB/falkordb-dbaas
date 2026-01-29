@@ -25,6 +25,7 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
   const kc = await getK8sConfig(bastionCluster);
   const namespace = process.env.BASTION_NAMESPACE || 'bootstrap';
   const podLabelSelector = process.env.BASTION_POD_LABEL || 'app.kubernetes.io/instance=bootstrap-dataplane-worker';
+  const containerName = process.env.BASTION_CONTAINER_NAME || 'bootstrap-dataplane-worker';
 
   const coreApi = kc.makeApiClient(k8s.CoreV1Api);
   const exec = new k8s.Exec(kc);
@@ -48,32 +49,85 @@ async function executePodCommandInBastion(command: string[]): Promise<string> {
 
   logger.info({ podName, namespace, command }, 'Executing command in pod');
 
-  // Execute command in pod
+  // Execute command in pod - use PassThrough streams to properly capture output
   let stdout = '';
   let stderr = '';
 
-  await exec.exec(
-    namespace,
-    podName,
-    pod.spec.containers[0].name,
-    command,
-    process.stdout,
-    process.stderr,
-    process.stdin,
-    false,
-    async ({ status, data }: { status: string; data: string }) => {
-      if (status === 'stdout') {
-        stdout += data;
-      } else if (status === 'stderr') {
-        stderr += data;
-      }
-    },
-  );
+  const { PassThrough } = await import('stream');
+  
+  const stdoutStream = new PassThrough();
+  stdoutStream.on('data', (chunk) => {
+    stdout += chunk.toString();
+  });
+
+  const stderrStream = new PassThrough();
+  stderrStream.on('data', (chunk) => {
+    stderr += chunk.toString();
+  });
+
+  try {
+    await exec.exec(
+      namespace,
+      podName,
+      containerName,
+      command,
+      stdoutStream,
+      stderrStream,
+      null, // stdin
+      false, // tty
+    );
+    
+    // Wait for streams to finish
+    await new Promise((resolve) => {
+      let stdoutEnded = false;
+      let stderrEnded = false;
+      
+      const checkBothEnded = () => {
+        if (stdoutEnded && stderrEnded) resolve(undefined);
+      };
+      
+      stdoutStream.on('end', () => {
+        stdoutEnded = true;
+        checkBothEnded();
+      });
+      
+      stderrStream.on('end', () => {
+        stderrEnded = true;
+        checkBothEnded();
+      });
+      
+      // Timeout after 5 seconds
+      setTimeout(() => resolve(undefined), 5000);
+    });
+  } catch (error) {
+    logger.error(
+      {
+        podName,
+        namespace,
+        containerName,
+        command,
+        stdout,
+        stderr,
+        errorName: error?.name,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        errorCode: error?.code,
+        errorBody: error?.body,
+        errorResponse: error?.response,
+        errorStatusCode: error?.statusCode,
+        errorReason: error?.reason,
+        errorDetails: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+      },
+      'Failed to execute command in pod',
+    );
+    throw error;
+  }
 
   if (stderr) {
-    logger.error({ stderr, podName, command }, 'Error executing command in pod');
-    throw new Error(`Command execution failed: ${stderr}`);
+    logger.warn({ stderr, podName, command }, 'Command produced stderr output');
   }
+
+  logger.info({ stdoutLength: stdout.length, stderrLength: stderr.length, stdoutPreview: stdout.substring(0, 100), podName }, 'Command executed successfully');
 
   return stdout;
 }
@@ -83,20 +137,17 @@ async function getAWSBYOACredentials(cluster: Cluster): Promise<AWSCredentials> 
   const roleSessionName = `bootstrap-session-org-${cluster.destinationAccountID}`;
 
   const command = [
-    'aws',
-    'sts',
-    'assume-role-with-web-identity',
-    '--role-arn',
-    roleArn,
-    '--role-session-name',
-    roleSessionName,
-    '--web-identity-token',
-    'file://$AWS_WEB_IDENTITY_TOKEN_FILE',
+    'sh',
+    '-c',
+    `aws sts assume-role-with-web-identity \
+      --role-arn ${roleArn} \
+      --role-session-name ${roleSessionName} \
+      --web-identity-token file://\$AWS_WEB_IDENTITY_TOKEN_FILE`,
   ];
 
   const output = await executePodCommandInBastion(command);
 
-  const result = JSON.parse(output);
+  const result = JSON.parse(output.trim());
 
   return {
     accessKeyId: result.Credentials.AccessKeyId,
@@ -108,50 +159,71 @@ async function getAWSBYOACredentials(cluster: Cluster): Promise<AWSCredentials> 
 
 async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> {
   const gcpProjectNumber = cluster.destinationAccountNumber; // GCP project number
+  const audience = `//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov`;
 
   // Exchange AWS EKS service account token for GCP access token using Workload Identity Federation
   const command = [
     'sh',
     '-c',
-    `curl -X POST https://sts.googleapis.com/v1/token \\
-      -H "Content-Type: application/json" \\
-      -d "{
-        \"audience\": \"//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov\",
-        \"grantType\": \"urn:ietf:params:oauth:grant-type:token-exchange\",
-        \"requestedTokenType\": \"urn:ietf:params:oauth:token-type:access_token\",
-        \"subjectTokenType\": \"urn:ietf:params:oauth:token-type:jwt\",
-        \"scope\": \"https://www.googleapis.com/auth/cloud-platform\",
-        \"subjectToken\": \"$(cat $AWS_WEB_IDENTITY_TOKEN_FILE)\"
-      }"`,
+    `
+TMP_CRED="/tmp/cred_$(head -c 8 /dev/urandom | base64 | tr -dc a-z0-9).json"
+printf '{
+  "type": "external_account",
+  "audience": "${audience}",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+  "token_url": "https://sts.googleapis.com/v1/token",
+  "credential_source": {"file": "/var/run/secrets/eks.amazonaws.com/serviceaccount/token"}
+}' > "$TMP_CRED"
+
+export GOOGLE_APPLICATION_CREDENTIALS="$TMP_CRED"
+gcloud auth application-default print-access-token 2>&1
+`,
   ];
 
-  const output = await executePodCommandInBastion(command);
-  const result = JSON.parse(output);
-
-  const stsCredentials = {
-    accessToken: result.access_token,
-    tokenType: result.token_type,
-    expiresIn: result.expires_in,
-  };
-
-  const baseAuth = new GoogleAuth({
-    credentials: {
-      access_token: stsCredentials.accessToken,
-    } as any,
+  const output = await executePodCommandInBastion(command).catch((error) => {
+    logger.error(
+      {
+        cluster: cluster.name,
+        errorName: error?.name,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        errorCode: error?.code,
+        errorResponse: error?.response,
+        errorDetails: error,
+      },
+      'Failed to exchange AWS token for GCP access token',
+    );
+    throw error;
   });
 
-  const serviceAccountEmail = `bootstrap-${cluster.organizationId}@${cluster.destinationAccountNumber}.iam.gserviceaccount.com`;
+  const token = output.trim();
+
+  if (!token || token === '') {
+    logger.error({ cluster: cluster.name, output }, 'Empty response from GCP STS token exchange');
+    throw new Error('Empty response from GCP STS token exchange');
+  }
+
+  if (!token.startsWith('ya29.')) {
+    logger.error({ cluster: cluster.name, output: token.substring(0, 200) }, 'Invalid GCP access token format received');
+    throw new Error('Invalid GCP access token format received');
+  }
+
+  // Create OAuth2Client with the access token
+  const oauthClient = new OAuth2Client();
+  oauthClient.setCredentials({ access_token: token });
+
+  const serviceAccountEmail = `bootstrap-${cluster.organizationId}@${cluster.destinationAccountID}.iam.gserviceaccount.com`;
 
   const impersonatedClient = new Impersonated({
-    sourceClient: await baseAuth.getClient(),
+    sourceClient: oauthClient,
     targetPrincipal: serviceAccountEmail,
     targetScopes: ['https://www.googleapis.com/auth/cloud-platform'],
     lifetime: 3600,
   });
 
-  const { token } = await impersonatedClient.getAccessToken();
+  const { token: impersonatedToken } = await impersonatedClient.getAccessToken();
 
-  return { token };
+  return { token: impersonatedToken.trim() };
 }
 
 export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Promise<void> {
@@ -164,7 +236,19 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
       return;
     }
 
-    const { token } = await getGCPBYOACredentials(cluster);
+    const { token } = await getGCPBYOACredentials(cluster).catch((error) => {
+      logger.error(
+        {
+          cluster: cluster.name,
+          errorName: error?.name,
+          errorMessage: error?.message,
+          errorStack: error?.stack,
+          errorDetails: error,
+        },
+        'Failed to get GCP BYOA credentials',
+      );
+      throw error;
+    });
 
     const oauthClient = new OAuth2Client();
     oauthClient.setCredentials({ access_token: token });
@@ -174,9 +258,23 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
       authClient: oauthClient as any,
     });
 
-    const [nodePools] = await client.listNodePools({
-      parent: `projects/${cluster.destinationAccountID}/locations/${cluster.region}/clusters/${cluster.name}`,
-    });
+    const [nodePools] = await client
+      .listNodePools({
+        parent: `projects/${cluster.destinationAccountID}/locations/${cluster.region}/clusters/${cluster.name}`,
+      })
+      .catch((error) => {
+        logger.error(
+          {
+            cluster: cluster.name,
+            errorName: error?.name,
+            errorMessage: error?.message,
+            errorStack: error?.stack,
+            errorDetails: error,
+          },
+          'Failed to list node pools for BYOA GCP cluster',
+        );
+        throw error;
+      });
 
     const exists = nodePools.nodePools?.some((np) => np.name === 'observability');
 
@@ -209,7 +307,13 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
     logger.info({ cluster: cluster.name }, 'Observability node pool created for BYOA GCP cluster.');
   } catch (error) {
     logger.error(
-      { cluster: cluster.name, error, errorName: error.name, errorMessage: error.message },
+      {
+        cluster: cluster.name,
+        errorName: error?.name,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        errorDetails: error,
+      },
       'Failed to create observability node pool for BYOA GCP cluster',
     );
   }
@@ -273,7 +377,13 @@ export async function createObservabilityNodePoolAWSBYOA(cluster: Cluster): Prom
     logger.info({ cluster: cluster.name }, 'Observability node pool created for BYOA AWS cluster.');
   } catch (error) {
     logger.error(
-      { cluster: cluster.name, error, errorName: error.name, errorMessage: error.message },
+      {
+        cluster: cluster.name,
+        errorName: error?.name,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        errorDetails: error,
+      },
       'Failed to create observability node pool for BYOA AWS cluster',
     );
   }

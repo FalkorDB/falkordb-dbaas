@@ -19,13 +19,15 @@ spec:
       source:
         chart: silence-operator
         repoURL: https://giantswarm.github.io/control-plane-catalog
-        targetRevision: v0.18.0
+        targetRevision: v0.20.0
         helm:
           valuesObject:
             fullnameOverride: silence-operator
             alertmanagerAddress: "http://vmalertmanager-vm-victoria-metrics-k8s-stack.observability.svc.cluster.local:9093"
             nodeSelector:
               node_pool: observability
+            podMonitor:
+              enabled: false
       destination:
         server: "{{.server}}"
         namespace: observability

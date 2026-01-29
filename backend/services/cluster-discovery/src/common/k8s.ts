@@ -3,6 +3,7 @@ import { DescribeClusterCommand, EKSClient } from '@aws-sdk/client-eks';
 import { getEKSCredentials } from './aws';
 import { getGKECredentials } from './gcp';
 import { Cluster } from '../types';
+import logger from '../logger';
 
 export async function getK8sConfig(
   cluster: Cluster,
@@ -12,13 +13,29 @@ export async function getK8sConfig(
 ): Promise<k8s.KubeConfig> {
   const cloudProvider = cluster.cloud;
   const clusterId = cluster.name;
+  const isBYOA = cluster.hostMode === 'byoa';
 
-  const k8sCredentials =
-    cluster.hostMode === 'byoa'
-      ? getBYOACredentials(cluster)
-      : cloudProvider === 'gcp'
-        ? await getGKECredentials(cluster, opts)
-        : await getEKSCredentials(cluster);
+  const k8sCredentials = isBYOA
+    ? getBYOACredentials(cluster)
+    : cloudProvider === 'gcp'
+      ? await getGKECredentials(cluster, opts)
+      : await getEKSCredentials(cluster);
+
+  if (isBYOA) {
+    const certData = (cluster.secretConfig as any)?.tlsClientConfig?.certData;
+    const keyData = (cluster.secretConfig as any)?.tlsClientConfig?.keyData;
+
+    logger.info(
+      {
+        cluster: cluster.name,
+        hasCertData: !!certData,
+        hasKeyData: !!keyData,
+        certDataLength: certData?.length,
+        keyDataLength: keyData?.length,
+      },
+      'BYOA cluster certificate configuration',
+    );
+  }
 
   const kubeConfig = new k8s.KubeConfig();
   kubeConfig.loadFromOptions({
@@ -34,6 +51,8 @@ export async function getK8sConfig(
         name: clusterId,
         authProvider: cloudProvider === 'gcp' ? cloudProvider : undefined,
         token: k8sCredentials.accessToken,
+        certData: (cluster.secretConfig as any)?.tlsClientConfig?.certData,
+        keyData: (cluster.secretConfig as any)?.tlsClientConfig?.keyData,
       },
     ],
     contexts: [
@@ -48,6 +67,19 @@ export async function getK8sConfig(
 
   kubeConfig.applyToRequest = async (opts) => {
     opts.ca = Buffer.from(k8sCredentials.certificateAuthority, 'base64');
+
+    if (isBYOA) {
+      // For BYOA clusters, use client certificate authentication
+      const certData = (cluster.secretConfig as any)?.tlsClientConfig?.certData;
+      const keyData = (cluster.secretConfig as any)?.tlsClientConfig?.keyData;
+
+      if (certData && keyData) {
+        opts.cert = Buffer.from(certData, 'base64');
+        opts.key = Buffer.from(keyData, 'base64');
+      }
+    }
+    
+    // For managed clusters, use bearer token authentication
     opts.headers.Authorization = 'Bearer ' + k8sCredentials.accessToken;
   };
 
@@ -60,7 +92,7 @@ function getBYOACredentials(cluster: Cluster): {
   accessToken: string;
 } {
   return {
-    accessToken: (cluster.secretConfig as any)?.serviceAccountToken || '',
+    accessToken: (cluster.secretConfig as any)?.bearerToken || '',
     certificateAuthority: (cluster.secretConfig as any)?.tlsClientConfig?.caData || '',
     endpoint: cluster.endpoint,
   };

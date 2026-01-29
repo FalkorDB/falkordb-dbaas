@@ -26,7 +26,7 @@ export async function getBastionCluster(): Promise<Cluster> {
     name: cluster.name!,
     region: process.env.BASTION_CLUSTER_REGION || 'us-east-2',
     cloud: 'aws',
-    hostMode: 'byoa',
+    hostMode: 'managed',
     endpoint: cluster.endpoint!,
     labels: cluster.tags,
     secretConfig: {
