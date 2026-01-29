@@ -53,6 +53,9 @@ overrides:
   tsup@<8.3.10: '>=8.3.10'
   diff@<5.2.0: '>=8.0.3'
   diff@<8.0.3: '>=8.0.3'
+  '@fastify/middie@<=9.0.3': '>=9.1.0'
+  lodash@>=4.0.0 <=4.17.22: '>=4.17.23'
+  tar@<7.5.7: '>=7.5.7'
 
 importers:
 
@@ -310,8 +313,8 @@ importers:
         specifier: '>=4.1.1'
         version: 4.1.1
       lodash:
-        specifier: ^4.17.21
-        version: 4.17.21
+        specifier: '>=4.17.23'
+        version: 4.17.23
       pino:
         specifier: ^9.3.2
         version: 9.3.2
@@ -389,8 +392,8 @@ importers:
         specifier: ^4.3.0
         version: 4.3.0
       '@fastify/middie':
-        specifier: ^8.3.0
-        version: 8.3.0
+        specifier: '>=9.1.0'
+        version: 9.1.0
       '@fastify/mongodb':
         specifier: ^8.0.0
         version: 8.0.0
@@ -531,8 +534,8 @@ importers:
         specifier: workspace:*
         version: link:../../libs/configs
       '@fastify/env':
-        specifier: ^5.0.1
-        version: 5.0.3
+        specifier: ^4.3.0
+        version: 4.3.0
       '@fastify/sensible':
         specifier: ^5.5.0
         version: 5.5.0
@@ -555,8 +558,8 @@ importers:
         specifier: ^17.2.1
         version: 17.2.1
       fastify:
-        specifier: ^5.2.1
-        version: 5.3.2
+        specifier: ^4.26.1
+        version: 4.26.2
       google-auth-library:
         specifier: ^9.15.0
         version: 9.15.1
@@ -564,8 +567,8 @@ importers:
         specifier: '>=4.1.1'
         version: 4.1.1
       lodash:
-        specifier: ^4.17.21
-        version: 4.17.21
+        specifier: '>=4.17.23'
+        version: 4.17.23
       pino:
         specifier: ^9.3.2
         version: 9.3.2
@@ -661,8 +664,8 @@ importers:
         specifier: ^4.3.0
         version: 4.3.0
       '@fastify/middie':
-        specifier: ^8.3.0
-        version: 8.3.0
+        specifier: '>=9.1.0'
+        version: 9.1.0
       '@fastify/mongodb':
         specifier: ^8.0.0
         version: 8.0.0
@@ -824,8 +827,8 @@ importers:
         specifier: ^4.3.0
         version: 4.3.0
       '@fastify/middie':
-        specifier: ^8.3.0
-        version: 8.3.0
+        specifier: '>=9.1.0'
+        version: 9.1.0
       '@fastify/mongodb':
         specifier: ^8.0.0
         version: 8.0.0
@@ -1120,8 +1123,8 @@ importers:
         specifier: ^4.3.0
         version: 4.3.0
       '@fastify/middie':
-        specifier: ^8.3.0
-        version: 8.3.0
+        specifier: '>=9.1.0'
+        version: 9.1.0
       '@fastify/mongodb':
         specifier: ^8.0.0
         version: 8.0.0
@@ -3870,13 +3873,6 @@ packages:
       fastify-plugin: 4.5.1
     dev: false
 
-  /@fastify/env@5.0.3:
-    resolution: {integrity: sha512-VqXKcw+keaZaCry9dDtphDQy6l+B1UOodk4q57NdIK/tjZsPMYEBTXjEDiZCAiD9KaGJXbJOMgYdgejU1iD0jA==}
-    dependencies:
-      env-schema: 6.1.0
-      fastify-plugin: 5.0.1
-    dev: false
-
   /@fastify/error@3.4.1:
     resolution: {integrity: sha512-wWSvph+29GR783IhmvdwWnN4bUxTD01Vm5Xad4i7i1VuAOItLvbPAb69sb0IQ2N57yprvhNIwAP5B6xfKTmjmQ==}
     dev: false
@@ -3923,11 +3919,12 @@ packages:
       dequal: 2.0.3
     dev: false
 
-  /@fastify/middie@8.3.0:
-    resolution: {integrity: sha512-h+zBxCzMlkEkh4fM7pZaSGzqS7P9M0Z6rXnWPdUEPfe7x1BCj++wEk/pQ5jpyYY4pF8AknFqb77n7uwh8HdxEA==}
+  /@fastify/middie@9.1.0:
+    resolution: {integrity: sha512-cObruXSFB5CCqn2m9sF5ktf6pNQX+QQth2N39FGXXV+8M4O+dWzkvqjqzwpIWvwvIffP9+O7KaLN+5xVgFFdWw==}
     dependencies:
-      '@fastify/error': 3.4.1
-      fastify-plugin: 4.5.1
+      '@fastify/error': 4.1.0
+      fastify-plugin: 5.0.1
+      find-my-way: 9.4.0
       path-to-regexp: 8.2.0
       reusify: 1.0.4
     dev: false
@@ -4962,7 +4959,7 @@ packages:
       request: /@cypress/request@3.0.10
       rfc4648: 1.5.3
       stream-buffers: 3.0.3
-      tar: 7.5.4
+      tar: 7.5.7
       tslib: 2.6.2
       ws: 8.18.3
     optionalDependencies:
@@ -9521,7 +9518,7 @@ packages:
       minipass-pipeline: 1.2.4
       p-map: 4.0.0
       ssri: 10.0.5
-      tar: 7.5.4
+      tar: 7.5.7
       unique-filename: 3.0.0
 
   /call-bind-apply-helpers@1.0.1:
@@ -10393,14 +10390,6 @@ packages:
       dotenv-expand: 10.0.0
     dev: false
 
-  /env-schema@6.1.0:
-    resolution: {integrity: sha512-TWtYV2jKe7bd/19kzvNGa8GRRrSwmIMarhcWBzuZYPbHtdlUdjYhnaFvxrO4+GvcwF10sEeVGzf9b/wqLIyf9A==}
-    dependencies:
-      ajv: 8.12.0
-      dotenv: 17.2.1
-      dotenv-expand: 10.0.0
-    dev: false
-
   /err-code@2.0.3:
     resolution: {integrity: sha512-2bmlRpNKBxT/CRmPOlyISQpNj+qSeYvcym/uT0Jx2bMOlKLtSy1ZmLuVxSEKKyor/N5yhvp/ZiG1oE3DEYMSFA==}
 
@@ -10780,7 +10769,7 @@ packages:
       '@redis/client': 1.6.0
       cluster-key-slot: 1.1.2
       generic-pool: 3.9.0
-      lodash: 4.17.21
+      lodash: 4.17.23
       redis: 4.7.0
     dev: false
 
@@ -10944,7 +10933,7 @@ packages:
       proxy-addr: 2.0.7
       rfdc: 1.3.1
       secure-json-parse: 2.7.0
-      semver: 7.6.0
+      semver: 7.7.2
       toad-cache: 3.7.0
     transitivePeerDependencies:
       - supports-color
@@ -11056,6 +11045,15 @@ packages:
 
   /find-my-way@9.3.0:
     resolution: {integrity: sha512-eRoFWQw+Yv2tuYlK2pjFS2jGXSxSppAs3hSQjfxVKxM5amECzIgYYc1FEI8ZmhSh/Ig+FrKEz43NLRKJjYCZVg==}
+    engines: {node: '>=20'}
+    dependencies:
+      fast-deep-equal: 3.1.3
+      fast-querystring: 1.1.2
+      safe-regex2: 5.0.0
+    dev: false
+
+  /find-my-way@9.4.0:
+    resolution: {integrity: sha512-5Ye4vHsypZRYtS01ob/iwHzGRUDELlsoCftI/OZFhcLs1M0tkGPcXldE80TAZC5yYuJMBPJQQ43UHlqbJWiX2w==}
     engines: {node: '>=20'}
     dependencies:
       fast-deep-equal: 3.1.3
@@ -11898,7 +11896,7 @@ packages:
       is-ci: 3.0.1
       is-lower-case: 2.0.2
       is-upper-case: 2.0.2
-      lodash: 4.17.21
+      lodash: 4.17.23
       patch-console: 2.0.0
       react: 18.3.1
       react-reconciler: 0.29.0(react@18.3.1)
@@ -13499,8 +13497,8 @@ packages:
     resolution: {integrity: sha512-xfBaXQd9ryd9dlSDvnvI0lvxfLJlYAZzXomUYzLKtUeOQvOP5piqAWuGtrhWeqaXK9hhoM/iyJc5AV+XfsX3HQ==}
     dev: false
 
-  /lodash@4.17.21:
-    resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
+  /lodash@4.17.23:
+    resolution: {integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==}
 
   /long@2.4.0:
     resolution: {integrity: sha512-ijUtjmO/n2A5PaosNG9ZGDsQ3vxJg7ZW8vsY8Kp0f2yIZWhSJvjmegV7t+9RPQKxKrvj8yKGehhS+po14hPLGQ==}
@@ -13793,7 +13791,7 @@ packages:
     resolution: {integrity: sha512-zflu7r1ycAnPsXUIwqEutqm+eomOHofmnE9c0X2s3ZD2MT4aEQpWDo67Lz3zSqbFpQAFRLWczXclD2/b4udMMA==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -13809,7 +13807,7 @@ packages:
     resolution: {integrity: sha512-gbZ8/zj1OFpJpnST3fwQQNbl9qk6LnHTkYsD1RDm63xQT601s4veFPo8uciD/biuvNEgt2fVkFHPc75deyBgJw==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -13825,7 +13823,7 @@ packages:
     resolution: {integrity: sha512-teWRyr9TPZx5N6bJnra9YKydvLoStAUEtc+qXU9YnTpYdlXD/s4fpH6ClN0wbS9GUy10znZOjYd0tsYD5ULoGA==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -13841,7 +13839,7 @@ packages:
     resolution: {integrity: sha512-L7WXd180cXl0jIc71vvdKYCX7Gea9ePebpyhl6IJQYrLHjeVGyB768D0qUw7CzEQvPr1vfy3OWvddRqPByHVkQ==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -13860,7 +13858,7 @@ packages:
       '@babel/runtime': 7.28.4
       chokidar: 3.6.0
       glob: 13.0.0
-      lodash: 4.17.21
+      lodash: 4.17.23
       minimatch: 9.0.5
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
       mjml-parser-xml: 5.0.0-alpha.9
@@ -13881,7 +13879,7 @@ packages:
     resolution: {integrity: sha512-4Dfqqm7b71y/e1+RZSgXQciWw3GVtJSoxI16/0dCSdY/mLUCztjrj+71pCkch6FvpaaYFFTfMv+uFr7v8Ridmw==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -13902,7 +13900,7 @@ packages:
       detect-node: 2.1.0
       htmlnano: 2.1.5(cssnano@7.1.2)(postcss@8.5.6)(typescript@5.3.3)
       juice: 11.1.0
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-parser-xml: 5.0.0-alpha.9
       mjml-validator: 5.0.0-alpha.9
       postcss: 8.5.6
@@ -13921,7 +13919,7 @@ packages:
     resolution: {integrity: sha512-G0VaDexwu7LC9PYukPR2r5VBqJXN7NBpgOW8iV79VkQOFZw+BhNi2m02tK+h5DuJ69fNf1QsBdjkln14+4nXGg==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -13937,7 +13935,7 @@ packages:
     resolution: {integrity: sha512-1VyEfelWQ9vkYqw37Z9+R6yrGZjLE3ybzd2HbphgeNuAqlpjT6ADhRMCxb7IXqZpeyXPvX4/qtYalfJIHvubsQ==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -13953,7 +13951,7 @@ packages:
     resolution: {integrity: sha512-+JpRWGyNgLn0p/ddo/pBWhx2o7/fGZkXAWy1Vpd3n1kLwgI6IIchf4qxd9mN1+OlQa4u2+YUy3O5jpQGfk0wpQ==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -13969,7 +13967,7 @@ packages:
     resolution: {integrity: sha512-VU91BbrHVb4FnOXNUAC5zaUTAtF7nA4swlgNIZOhg4TQo4BiFAz6p0RvMZY6hWOu+oHGj4n1nbZrAHCk8GjNCA==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -13985,7 +13983,7 @@ packages:
     resolution: {integrity: sha512-5M4lM0TJyjcHhITozua/iwgrN7oGL/kK82fN5E8Aze38Y+L5kZZvAj+L0vKiQJRe+OMyU7eftY9mybYhJ47FGw==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14001,7 +13999,7 @@ packages:
     resolution: {integrity: sha512-kDs+D8+ccOgjbu6KaPzHhA47rtH1u8BB49UXITbYNOwUxAlxOWVNS/i8ym7Ppb0AeuAeR+/3XfmNbuApJqd5bA==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14017,7 +14015,7 @@ packages:
     resolution: {integrity: sha512-i/SJtGuepHiyrjOg6wJBaMOh+PRsAxo34TCi4AsWtiYAvOXOWeeEkVqT23Jg4O8a3Gdk5bKo5mRUlLAwdKhavg==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14033,7 +14031,7 @@ packages:
     resolution: {integrity: sha512-Zt8lhL1f48IyfqTHphjQiV/XXNQIH3u8B9UIsSm9BaqgZtnjuSC29BxmK0E89BmUBaA/yOu5udodxoSFAy2UHQ==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14049,7 +14047,7 @@ packages:
     resolution: {integrity: sha512-VUk7C8UIoLp8D9i3ZMJcLkZ9DGhc8Y7Dplz0pPFh86gpDnTv/CRjDA4IUT7Cc7C4s/LFHCE4NPH+zJq1JuHvoQ==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14065,7 +14063,7 @@ packages:
     resolution: {integrity: sha512-SNk1qXnsMr0aeMQJvzRVRzT5NQh2V1Bf8tVs3v1g+dBisTOfqdZkSNXvMdFezOPXaWn+W0et3b9/naVNgakRnA==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14081,7 +14079,7 @@ packages:
     resolution: {integrity: sha512-GL4J1O7ew0HDJwsSHwdUSfljmpNoGXNXz1TvoF/GjFxQDJglv5mcOrlQsJ1i1Pp6gCrn3xoKW85YyBKQ9j/quw==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14097,7 +14095,7 @@ packages:
     resolution: {integrity: sha512-KKRTldF7vRUZrMZki10bBTSMeLQWXt7pL7c2er/a7Pr85pDgQP2RsQy0fz4wcm2O5PWQ9Ls6zG3Rrz37YyUs+Q==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14113,7 +14111,7 @@ packages:
     resolution: {integrity: sha512-UhHXZSWHaiwvD5nisPFMmlEO+5XB5sy+/h6+acB9l1GxUpfRte+TXh0hv6WQ0o0OtHzF0NGlgwe4ylxCnrDAdw==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14131,7 +14129,7 @@ packages:
       '@babel/runtime': 7.28.4
       detect-node: 2.1.0
       htmlparser2: 9.1.0
-      lodash: 4.17.21
+      lodash: 4.17.23
     dev: false
 
   /mjml-preset-core@5.0.0-alpha.9(typescript@5.3.3):
@@ -14177,7 +14175,7 @@ packages:
     resolution: {integrity: sha512-YZ/0mQY0HXodcWNUHQkLDKfkByzhIuQryL3RSLhQwILEKR2rRXCMxvOtQ/kiNjNIqCjUHBRsNTvQAvqXAZ8TNA==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14193,7 +14191,7 @@ packages:
     resolution: {integrity: sha512-NjiKDMtNRykP5RcKQ3ySGNc+z/tGIV6iKZIgOmkjq0vdOeiBjMT44lyfrwmAD6ZdgG/PaI3DPFTlSWvOXLkLSA==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14209,7 +14207,7 @@ packages:
     resolution: {integrity: sha512-g4eO7NZ66Gbu1hh4PfYbx9YU4sYbbTXTwScwwMivTCoeMqjVJKCNsEGWBRSimNqC3ivYON5awaOZj49DDBMLJA==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14225,7 +14223,7 @@ packages:
     resolution: {integrity: sha512-YQrEf40Sp+Q3FyUW8SKyISyRcRGIhtahHW51GWT+4ejfKJOd+IUlk1craq0LeXv/0kDO4rW3GgvXIDSkf3ucLQ==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14241,7 +14239,7 @@ packages:
     resolution: {integrity: sha512-cbC+VPTR4WB4mUybq0ehG0sGWyA9fFBxHuHfjM0zlZw1HXv0rwhpxgo6RF1RXgIdz7SRansryKI/KnMK6yvKvw==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14257,7 +14255,7 @@ packages:
     resolution: {integrity: sha512-nVhjnuaWCO0Gjieo65M+iqDDyQGJ5C8VPtrIVy+yPVSTOao8thRf/BBylmI/jsqnusQiSvFFFQNqYpw7KZHvwg==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
       - purgecss
@@ -14279,7 +14277,7 @@ packages:
     resolution: {integrity: sha512-gxD06VT2vp7hIv34tgIO8Ej08i4lKeOjH5P+S/5b9CRYj0BXYQ2dQW2n7ihfEyybCXoeCA47DhUxtMj6sNLM4A==}
     dependencies:
       '@babel/runtime': 7.28.4
-      lodash: 4.17.21
+      lodash: 4.17.23
       mjml-core: 5.0.0-alpha.9(typescript@5.3.3)
       mjml-section: 5.0.0-alpha.9(typescript@5.3.3)
     transitivePeerDependencies:
@@ -14540,7 +14538,7 @@ packages:
       nopt: 7.2.0
       proc-log: 3.0.0
       semver: 7.7.2
-      tar: 7.5.4
+      tar: 7.5.7
       which: 4.0.0
     transitivePeerDependencies:
       - supports-color
@@ -14831,7 +14829,7 @@ packages:
       read-package-json-fast: 3.0.2
       sigstore: 2.2.2
       ssri: 10.0.5
-      tar: 7.5.4
+      tar: 7.5.7
     transitivePeerDependencies:
       - bluebird
       - supports-color
@@ -15828,7 +15826,7 @@ packages:
   /redis-info@3.1.0:
     resolution: {integrity: sha512-ER4L9Sh/vm63DkIE0bkSjxluQlioBiBgf5w1UuldaW/3vPcecdljVDisZhmnCMvsxHNiARTTDDHGg9cGwTfrKg==}
     dependencies:
-      lodash: 4.17.21
+      lodash: 4.17.23
     dev: false
 
   /redis-parser@3.0.0:
@@ -16679,8 +16677,8 @@ packages:
       - typescript
       - utf-8-validate
 
-  /tar@7.5.4:
-    resolution: {integrity: sha512-AN04xbWGrSTDmVwlI4/GTlIIwMFk/XEv7uL8aa57zuvRy6s4hdBed+lVq2fAZ89XDa7Us3ANXcE3Tvqvja1kTA==}
+  /tar@7.5.7:
+    resolution: {integrity: sha512-fov56fJiRuThVFXD6o6/Q354S7pnWMJIVlDBYijsTNx6jKSE4pvrDTs6lUnmGvNyfJwFQQwWy3owKz1ucIhveQ==}
     engines: {node: '>=18'}
     dependencies:
       '@isaacs/fs-minipass': 4.0.1
