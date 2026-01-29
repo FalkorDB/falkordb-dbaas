@@ -244,17 +244,26 @@ gcloud auth application-default print-access-token 2>&1
   // See: https://github.com/googleapis/google-auth-library-nodejs/issues/1960
   const wrappedAuthClient = {
     async getRequestHeaders(url?: string) {
-      // Must return a plain object (not Map or other structure)
-      // The gRPC plugin expects headers that can be iterated with forEach
-      const headers = {
+      // Create a plain object with headers
+      const headers: any = {
         'Authorization': `Bearer ${impersonatedToken.trim()}`
       };
-      // Add forEach method to ensure compatibility with gRPC's expectations
-      if (typeof (headers as any).forEach !== 'function') {
-        (headers as any).forEach = function(callback: (value: string, key: string) => void) {
-          Object.entries(this).forEach(([key, value]) => callback(value as string, key));
-        };
-      }
+      
+      // Add forEach method as a non-enumerable property so it won't be 
+      // included when gRPC iterates over the headers object
+      Object.defineProperty(headers, 'forEach', {
+        value: function(callback: (value: string, key: string) => void) {
+          Object.entries(headers).forEach(([key, value]) => {
+            if (key !== 'forEach') {
+              callback(value as string, key);
+            }
+          });
+        },
+        enumerable: false,  // Critical: prevents forEach from being enumerated as a header
+        writable: false,
+        configurable: false
+      });
+      
       return headers;
     },
     async getAccessToken() {
