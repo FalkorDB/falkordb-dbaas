@@ -1,6 +1,6 @@
-import { discoverAWSClusters } from '../src/discovery/aws';
-import { discoverGCPClusters } from '../src/discovery/gcp';
-import { discoverAzureClusters } from '../src/discovery/azure';
+import { discoverAWSClusters } from '../src/providers/aws/discovery';
+import { discoverGCPClusters } from '../src/providers/gcp/discovery';
+import { discoverBYOAClusters } from '../src/providers/omnistrate/client';
 
 describe('Cluster Discovery', () => {
     describe('GCP Cluster Discovery', () => {
@@ -29,9 +29,9 @@ describe('Cluster Discovery', () => {
         });
     });
 
-    describe('Azure Cluster Discovery', () => {
+    describe('BYOA Cluster Discovery', () => {
         it('should return an array of valid clusters', async () => {
-            const { clusters } = await discoverAzureClusters();
+            const { clusters } = await discoverBYOAClusters();
             expect(clusters).toBeInstanceOf(Array);
             clusters.forEach(cluster => {
                 expect(cluster).toHaveProperty('endpoint');

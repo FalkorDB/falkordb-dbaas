@@ -1,27 +1,68 @@
-apiVersion: batch/v1
-kind: CronJob
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: cluster-discovery
   namespace: argocd
 spec:
-  schedule: "*/5 * * * *"
-  concurrencyPolicy: "Forbid"
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 1
-  jobTemplate:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-discovery
+  template:
+    metadata:
+      labels:
+        app: cluster-discovery
     spec:
-      backoffLimit: 1
-      ttlSecondsAfterFinished: 300
-      template:
-        spec:
-          containers:
-            - name: cluster-discovery
-              image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery:latest
-              imagePullPolicy: Always
-              envFrom:
-                - secretRef:
-                    name: cluster-discovery-env
-          restartPolicy: Never
-          serviceAccountName: argocd-server
-          nodeSelector:
-            node_pool: observability-resources
+      containers:
+        - name: cluster-discovery
+          image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery:latest
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: cluster-discovery-env
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      serviceAccountName: argocd-server
+      nodeSelector:
+        node_pool: observability-resources
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cluster-discovery
+  namespace: argocd
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3000
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: cluster-discovery
+
