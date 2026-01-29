@@ -14,6 +14,7 @@ export interface AWSCredentials {
 
 export interface GCPCredentials {
   token: string;
+  authClient: Impersonated;
 }
 
 /**
@@ -236,5 +237,8 @@ gcloud auth application-default print-access-token 2>&1
 
   const { token: impersonatedToken } = await impersonatedClient.getAccessToken();
 
-  return { token: impersonatedToken.trim() };
+  return { 
+    token: impersonatedToken.trim(),
+    authClient: impersonatedClient
+  };
 }

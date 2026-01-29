@@ -2,7 +2,6 @@ import { Cluster } from '../../types';
 import logger from '../../logger';
 import { EKSClient, DeleteNodegroupCommand, DescribeNodegroupCommand } from '@aws-sdk/client-eks';
 import { ClusterManagerClient } from '@google-cloud/container';
-import { OAuth2Client } from 'google-auth-library';
 import { getAWSBYOACredentials, getGCPBYOACredentials } from './credentials';
 
 export async function deleteObservabilityNodePoolGCPBYOA(cluster: Cluster): Promise<void> {
@@ -15,7 +14,7 @@ export async function deleteObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
       return;
     }
 
-    const { token } = await getGCPBYOACredentials(cluster).catch((error) => {
+    const { authClient } = await getGCPBYOACredentials(cluster).catch((error) => {
       logger.error(
         {
           cluster: cluster.name,
@@ -29,12 +28,9 @@ export async function deleteObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
       throw error;
     });
 
-    const oauthClient = new OAuth2Client();
-    oauthClient.setCredentials({ access_token: token });
-
     // Create GCP client with workload identity credentials
     const client = new ClusterManagerClient({
-      authClient: oauthClient as any,
+      authClient: authClient as any,
     });
 
     const [nodePools] = await client
