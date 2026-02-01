@@ -18,6 +18,9 @@ import { setupContainer, setupGlobalContainer } from './container';
 import { swaggerPlugin, omnistratePlugin } from '@falkordb/plugins';
 import openTelemetryPlugin from '@autotelic/fastify-opentelemetry';
 import { IOmnistrateRepository } from './repositories/omnistrate/IOmnistrateRepository';
+import { QueueManager } from './queues/QueueManager';
+import type { Context as QueueDashContext } from '@queuedash/api';
+import { fastifyQueueDashPlugin } from '@queuedash/api';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   await fastify.register(Env, {
@@ -71,6 +74,40 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   await fastify.register(omnistratePlugin, {
     omnistrateRepository: fastify.diContainer.resolve<IOmnistrateRepository>(IOmnistrateRepository.repositoryName),
+  });
+
+  // Initialize queue manager
+  const queueManager = new QueueManager(fastify);
+  await queueManager.startWorkers();
+  fastify.queueManager = queueManager;
+
+  // Register QueueDash UI for queue monitoring
+  if (fastify.config.NODE_ENV === 'development' || fastify.config.NODE_ENV === 'test') {
+    try {
+      const ctx: QueueDashContext = {
+        queues: queueManager.getQueues().map((queue) => ({
+          type: 'bullmq',
+          queue,
+          displayName: queue.name,
+        })),
+      };
+
+      await fastify.register(
+        (fastify, opts, done) => {
+          fastifyQueueDashPlugin(fastify, { ctx, baseUrl: '/queues' }, done);
+        },
+        { prefix: '/queues' },
+      );
+      fastify.log.info('QueueDash UI available at /queues');
+    } catch (error) {
+      fastify.log.warn({ error }, 'Failed to register QueueDash UI');
+    }
+  }
+
+  // 
+  // Gracefully close queue manager on shutdown
+  fastify.addHook('onClose', async () => {
+    await queueManager.close();
   });
 
   fastify.addHook('onRequest', (request, _, done) => {

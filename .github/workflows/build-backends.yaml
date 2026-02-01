@@ -27,7 +27,7 @@ jobs:
           - name: db-importer-worker
           - name: db-importer
           - name: cluster-discovery
-            test: "false"
+            test: "true"
           - name: alert-silence-syncer
           - name: customer-ldap
             test: "true"
