@@ -27,268 +27,86 @@ spec:
       valueFrom:
         alertRef:
           fieldPath: "."
-  - name: create-issue-with-logs
-    image: python:3-alpine
-    serviceAccount: alert-reaction-actions-sa
-    command: ["sh", "-c"]
-    args:
-      - |
-        # Install curl
-        apk add --no-cache curl tzdata
+  # - name: trigger-crash-workflow
+  #   image: alpine:latest
+  #   serviceAccount: alert-reaction-actions-sa
+  #   command: ["sh", "-c"]
+  #   args:
+  #     - |
+  #       # Install curl and jq
+  #       apk add --no-cache curl jq
         
-        # Collect logs and create GitHub issue with attachment
-        POD_NAME="${POD_NAME}"
-        NAMESPACE="${NAMESPACE}"
-        CLUSTER="${CLUSTER}"
-        VLOGS_URL="http://victorialogs-server.observability.svc.cluster.local:9428"
-        export GH_TOKEN="${GITHUB_TOKEN}"
+  #       echo "=========================================="
+  #       echo "Redis Crash Alert Triggered"
+  #       echo "Cluster: ${CLUSTER}"
+  #       echo "Pod: ${POD_NAME}"
+  #       echo "Container: service"
+  #       echo "Namespace: ${NAMESPACE}"
+  #       echo "=========================================="
         
-        # Create log file
-        LOG_FILE="/tmp/redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
+  #       # Trigger GitHub Workflow with minimal context
+  #       echo "Triggering GitHub workflow..."
         
-        echo "Redis Crash Diagnostics" > "${LOG_FILE}"
-        echo "========================" >> "${LOG_FILE}"
-        echo "Pod: ${POD_NAME}" >> "${LOG_FILE}"
-        echo "Namespace: ${NAMESPACE}" >> "${LOG_FILE}"
-        echo "Cluster: ${CLUSTER}" >> "${LOG_FILE}"
-        echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "${LOG_FILE}"
-        echo "" >> "${LOG_FILE}"
-        echo "Logs (5 minutes around alert):" >> "${LOG_FILE}"
-        echo "" >> "${LOG_FILE}"
+  #       WORKFLOW_RESPONSE=$(curl -s -X POST \
+  #         -H "Authorization: token ${GITHUB_TOKEN}" \
+  #         -H "Accept: application/vnd.github.v3+json" \
+  #         -H "Content-Type: application/json" \
+  #         "${GITHUB_API}/repos/${WORKFLOW_REPO_OWNER}/${WORKFLOW_REPO_NAME}/actions/workflows/${WORKFLOW_FILE}/dispatches" \
+  #         -d "$(jq -n \
+  #           --arg ref "main" \
+  #           --arg pod "${POD_NAME}" \
+  #           --arg namespace "${NAMESPACE}" \
+  #           --arg cluster "${CLUSTER}" \
+  #           --arg container "service" \
+  #           --arg vmauth "https://vmauth.observability.internal.falkordb.cloud" \
+  #           '{
+  #             ref: $ref,
+  #             inputs: {
+  #               pod: $pod,
+  #               namespace: $namespace,
+  #               cluster: $cluster,
+  #               container: $container,
+  #               vmauth_url: $vmauth
+  #             }
+  #           }')")
         
-        # Collect 5 minutes of logs
-        curl -s -G "${VLOGS_URL}/select/logsql/query" \
-          --data-urlencode "query=pod:\"${POD_NAME}\" AND namespace:\"${NAMESPACE}\" AND container:\"service\" | fields _time, container, level, _msg | sort by (_time) asc" \
-          --data-urlencode "limit=99999" \
-          --data-urlencode "time=5m" >> "${LOG_FILE}" || echo "Failed to fetch logs" >> "${LOG_FILE}"
+  #       if echo "${WORKFLOW_RESPONSE}" | grep -q "error"; then
+  #         echo "❌ Failed to trigger workflow"
+  #         echo "${WORKFLOW_RESPONSE}" | jq '.' || echo "${WORKFLOW_RESPONSE}"
+  #         exit 1
+  #       fi
         
-        echo "✅ Logs collected: ${LOG_FILE}"
-        
-        # Get Israeli datetime
-        ISRAEL_TIME=$(TZ=Asia/Jerusalem date '+%Y-%m-%d %H:%M:%S %Z')
-        
-        echo "=========================================="
-        echo "Starting duplicate issue detection"
-        echo "Pod: ${POD_NAME}"
-        echo "Namespace: ${NAMESPACE}"
-        echo "Cluster: ${CLUSTER}"
-        echo "=========================================="
-        
-        # Check if an open issue already exists for this pod/namespace/cluster
-        SEARCH_QUERY="repo:${REPO_OWNER}/${REPO_NAME} is:open is:issue in:title ${POD_NAME} ${NAMESPACE} ${CLUSTER}"
-        
-        EXISTING_ISSUES=$(curl -s -G \
-          -H "Authorization: token ${GITHUB_TOKEN}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          "${GITHUB_API}/search/issues" \
-          --data-urlencode "q=${SEARCH_QUERY}")
-        
-        ISSUE_COUNT=$(echo "${EXISTING_ISSUES}" | grep -o '"total_count":[[:space:]]*[0-9][0-9]*' | head -1 | cut -d: -f2 | tr -d ' ')
-        
-        if [ -n "${ISSUE_COUNT}" ] && [ "${ISSUE_COUNT}" -gt 0 ] 2>/dev/null; then
-          EXISTING_ISSUE_NUMBER=$(echo "${EXISTING_ISSUES}" | grep -o '"number":[[:space:]]*[0-9][0-9]*' | head -1 | cut -d: -f2 | tr -d ' ')
-          echo "⚠️  Open issue #${EXISTING_ISSUE_NUMBER} already exists"
-          echo "Checking if this is a new crash or duplicate of same crash..."
-          
-          # Extract crash signature from current logs
-          # Try argv first (shows the command that caused crash), then fall back to signal+address
-
-          CURRENT_ARGV0=$(grep -o 'argv\[0\]:[[:space:]]*[^ }]*' "${LOG_FILE}" | head -1 | sed 's/argv\[0\]:[[:space:]]*//g' | sed 's/""}//; s/"$//' || echo "")
-          CURRENT_ARGV1=$(grep -o 'argv\[1\]:[[:space:]]*[^ }]*' "${LOG_FILE}" | head -1 | sed 's/argv\[1\]:[[:space:]]*//g' | sed 's/""}//; s/"$//' || echo "")
-          
-          if [ -n "${CURRENT_ARGV0}" ] && [ -n "${CURRENT_ARGV1}" ]; then
-            echo "Current crash signature: argv[0]=${CURRENT_ARGV0}, argv[1]=${CURRENT_ARGV1}"
-            SIGNATURE_TYPE="argv"
-          else
-            # Fall back to signal and address
-            CURRENT_SIGNAL=$(grep -o 'crashed by signal:[[:space:]]*[0-9]*, si_code:[[:space:]]*[0-9]*' "${LOG_FILE}" | head -1 || echo "")
-            CURRENT_ADDRESS=$(grep -o 'Accessing address:[[:space:]]*0x[0-9a-fA-F]*' "${LOG_FILE}" | head -1 | sed 's/Accessing address:[[:space:]]*//g' || echo "")
-            echo "Current crash signature: signal=${CURRENT_SIGNAL}, address=${CURRENT_ADDRESS}"
-            SIGNATURE_TYPE="signal"
-          fi
-          
-          if [ -z "${CURRENT_ARGV0}" ] && [ -z "${CURRENT_ARGV1}" ] && [ -z "${CURRENT_SIGNAL}" ]; then
-            echo "⚠️  Warning: Could not extract crash signature from logs"
-            echo "Proceeding with upload as crash signature is incomplete"
-          else
-            # Get issue body and comments to check for duplicate crash signatures
-            
-            # Get full issue to extract gist from body
-            ISSUE_RESPONSE=$(curl -s -G \
-              -H "Authorization: token ${GITHUB_TOKEN}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues/${EXISTING_ISSUE_NUMBER}")
-            
-            # Get comments
-            EXISTING_COMMENTS=$(curl -s -G \
-              -H "Authorization: token ${GITHUB_TOKEN}" \
-              -H "Accept: application/vnd.github.v3+json" \
-              "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues/${EXISTING_ISSUE_NUMBER}/comments")
-            
-            # Extract gist URLs from both issue body and comments
-            GIST_URLS_BODY=$(echo "${ISSUE_RESPONSE}" | grep -o 'https://gist.github.com/[^")]*' || echo "")
-            GIST_URLS_COMMENTS=$(echo "${EXISTING_COMMENTS}" | grep -o 'https://gist.github.com/[^")]*' || echo "")
-            
-            # Combine gist URLs from both sources
-            GIST_URLS=$(printf "%s\n%s" "${GIST_URLS_BODY}" "${GIST_URLS_COMMENTS}" | grep -v '^$' || echo "")
-            
-            IS_DUPLICATE=false
-            
-            # Check each gist for matching argv signatures
-            for GIST_URL in ${GIST_URLS}; do
-              # Extract gist ID
-              GIST_ID=$(echo "${GIST_URL}" | grep -o '[a-f0-9]\{32\}' | head -1)
-              if [ -n "${GIST_ID}" ]; then
-                # Build raw gist URL directly from the gist URL
-                RAW_GIST_URL="${GIST_URL/github.com/githubusercontent.com}/raw"
-                
-                # Fetch gist content directly from raw URL
-                GIST_CONTENT=$(curl -s "${RAW_GIST_URL}")
-                
-                # Extract argv values - match "argv[0]: value" format and remove JSON trailing characters
-                EXISTING_ARGV0=$(echo "${GIST_CONTENT}" | grep -o 'argv\[0\]: [^ ]*' | sed 's/argv\[0\]: //g; s/"}$//; s/"$//;' | head -1 || echo "")
-                EXISTING_ARGV1=$(echo "${GIST_CONTENT}" | grep -o 'argv\[1\]: [^ ]*' | sed 's/argv\[1\]: //g; s/"}$//; s/"$//;' | head -1 || echo "")
-                
-                if [ "${CURRENT_ARGV0}" = "${EXISTING_ARGV0}" ] && [ "${CURRENT_ARGV1}" = "${EXISTING_ARGV1}" ]; then
-                  IS_DUPLICATE=true
-                  break
-                fi
-              fi
-            done
-            
-            if [ "${IS_DUPLICATE}" = "true" ]; then
-              echo "🔄 Same crash detected - identical argv signature found in existing comments"
-              echo "Skipping duplicate log upload to avoid noise"
-              exit 0
-            fi
-          fi
-          
-          echo "✅ New crash detected - different crash signature, adding logs as comment to existing issue"
-          
-          # Collect and upload logs to gist for this new crash
-          GIST_FILE="redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
-          GIST_PAYLOAD="/tmp/gist-payload.json"
-          
-          echo '{' > "${GIST_PAYLOAD}"
-          echo '  "files": {' >> "${GIST_PAYLOAD}"
-          echo '    "'${GIST_FILE}'": {' >> "${GIST_PAYLOAD}"
-          echo '      "content": ' >> "${GIST_PAYLOAD}"
-          python3 -c 'import json, sys; print(json.dumps(sys.stdin.read()))' < "${LOG_FILE}" >> "${GIST_PAYLOAD}"
-          echo '    }' >> "${GIST_PAYLOAD}"
-          echo '  },' >> "${GIST_PAYLOAD}"
-          echo '  "public": false' >> "${GIST_PAYLOAD}"
-          echo '}' >> "${GIST_PAYLOAD}"
-          
-          GIST_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: token ${GITHUB_TOKEN}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Content-Type: application/json" \
-            "${GITHUB_API}/gists" \
-            -d @"${GIST_PAYLOAD}")
-          
-          GIST_URL=$(echo "${GIST_RESPONSE}" | sed -n 's/.*"html_url":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-          
-          # Add comment to existing issue
-          COMMENT_BODY="### Another crash detected at ${ISRAEL_TIME}\n\n**Crash Logs:** [View logs on GitHub Gist](${GIST_URL})"
-          
-          COMMENT_RESPONSE=$(curl -s -X POST \
-            -H "Authorization: token ${GITHUB_TOKEN}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues/${EXISTING_ISSUE_NUMBER}/comments" \
-            -d "{\"body\":\"${COMMENT_BODY}\"}")
-          
-          echo "✅ Successfully added logs as comment to issue #${EXISTING_ISSUE_NUMBER}"
-          echo "Exiting without creating duplicate issue."
-          exit 0
-        fi
-        
-        echo "✅ No existing open issue found - creating new issue"
-        
-        # Create issue title
-        TITLE="[CRITICAL] Redis Crash: ${POD_NAME} in ${NAMESPACE} (${CLUSTER}) - ${ISRAEL_TIME}"
-        
-        # Upload logs to gist using file to avoid argument list too long
-        GIST_FILE="redis-crash-${POD_NAME}-$(date +%Y%m%d-%H%M%S).log"
-        GIST_PAYLOAD="/tmp/gist-payload.json"
-        
-        # Create gist JSON payload in a file
-        echo '{' > "${GIST_PAYLOAD}"
-        echo '  "files": {' >> "${GIST_PAYLOAD}"
-        echo '    "'${GIST_FILE}'": {' >> "${GIST_PAYLOAD}"
-        echo '      "content": ' >> "${GIST_PAYLOAD}"
-        
-        # Use Python to properly escape and format log content as JSON
-        python3 -c 'import json, sys; print(json.dumps(sys.stdin.read()))' < "${LOG_FILE}" >> "${GIST_PAYLOAD}"
-        
-        echo '    }' >> "${GIST_PAYLOAD}"
-        echo '  },' >> "${GIST_PAYLOAD}"
-        echo '  "public": false' >> "${GIST_PAYLOAD}"
-        echo '}' >> "${GIST_PAYLOAD}"
-        
-        # Create gist
-        GIST_RESPONSE=$(curl -s -X POST \
-          -H "Authorization: token ${GITHUB_TOKEN}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          -H "Content-Type: application/json" \
-          "${GITHUB_API}/gists" \
-          -d @"${GIST_PAYLOAD}")
-        
-        GIST_URL=$(echo "${GIST_RESPONSE}" | sed -n 's/.*"html_url":[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
-        
-        # Create issue body
-        if [ -n "${GIST_URL}" ]; then
-          ISSUE_BODY="## Redis Crash Detected\n\n**Pod:** ${POD_NAME}\n**Namespace:** ${NAMESPACE}\n**Cluster:** ${CLUSTER}\n**Time (IST):** ${ISRAEL_TIME}\n\n**Crash Logs:** [View logs on GitHub Gist](${GIST_URL})"
-        else
-          echo "⚠️  Warning: Failed to create gist, creating issue without logs"
-          ISSUE_BODY="## Redis Crash Detected\n\n**Pod:** ${POD_NAME}\n**Namespace:** ${NAMESPACE}\n**Cluster:** ${CLUSTER}\n**Time (IST):** ${ISRAEL_TIME}\n\n**Note:** Check VictoriaLogs for logs using: \`pod:\\\"${POD_NAME}\\\" AND namespace:\\\"${NAMESPACE}\\\"\`"
-        fi
-        
-        # Create issue via GitHub API
-        ISSUE_RESPONSE=$(curl -s -X POST \
-          -H "Authorization: token ${GITHUB_TOKEN}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          "${GITHUB_API}/repos/${REPO_OWNER}/${REPO_NAME}/issues" \
-          -d "{\"title\":\"${TITLE}\",\"body\":\"${ISSUE_BODY}\"}")
-        
-        ISSUE_NUMBER=$(echo "${ISSUE_RESPONSE}" | sed -n 's/.*"number":[[:space:]]*\([0-9]*\).*/\1/p')
-        NODE_ID=$(echo "${ISSUE_RESPONSE}" | grep -m1 '"node_id"' | sed -n 's/.*"node_id":[[:space:]]*"\([^"]*\)".*/\1/p')
-        
-        echo "✅ Issue #${ISSUE_NUMBER} created successfully"
-        echo "Issue URL: https://github.com/${REPO_OWNER}/${REPO_NAME}/issues/${ISSUE_NUMBER}"
-        
-        # Add to project board
-        PROJECT_RESPONSE=$(curl -s -X POST \
-          -H "Authorization: bearer ${GITHUB_TOKEN}" \
-          -H "Content-Type: application/json" \
-          "${GITHUB_API}/graphql" \
-          -d "{\"query\":\"mutation {addProjectV2ItemById(input: {projectId: \\\"${PROJECT_ID}\\\", contentId: \\\"${NODE_ID}\\\"}) {item {id}}}\"}")
-        
-
-        echo "✅ Issue added to project board"
-        echo "✅ Done - new issue workflow completed"
-    env:
-    - name: POD_NAME
-      valueFrom:
-        alertRef:
-          fieldPath: "labels.pod"
-    - name: NAMESPACE
-      valueFrom:
-        alertRef:
-          fieldPath: "labels.namespace"
-    - name: CLUSTER
-      valueFrom:
-        alertRef:
-          fieldPath: "labels.cluster"
-    - name: GITHUB_TOKEN
-      valueFrom:
-        secretKeyRef:
-          name: redis-crash-token
-          key: token
-    - name: GITHUB_API
-      value: "https://api.github.com"
-    - name: REPO_OWNER
-      value: "FalkorDB"
-    - name: REPO_NAME
-      value: "private"
-    - name: PROJECT_ID
-      value: "PVT_kwDOCFj3QM4BM1wV"
+  #       echo "✅ Workflow triggered successfully"
+  #       echo "All processing will be handled by the GitHub workflow"
+  #   env:
+  #   - name: POD_NAME
+  #     valueFrom:
+  #       alertRef:
+  #         fieldPath: "labels.pod"
+  #   - name: NAMESPACE
+  #     valueFrom:
+  #       alertRef:
+  #         fieldPath: "labels.namespace"
+  #   - name: CLUSTER
+  #     valueFrom:
+  #       alertRef:
+  #         fieldPath: "labels.cluster"
+  #   - name: GITHUB_TOKEN
+  #     valueFrom:
+  #       secretKeyRef:
+  #         name: redis-crash-token
+  #         key: token
+  #   - name: GITHUB_API
+  #     value: "https://api.github.com"
+  #   - name: REPO_OWNER
+  #     value: "FalkorDB"
+  #   - name: REPO_NAME
+  #     value: "private"
+  #   - name: PROJECT_ID
+  #     value: "PVT_kwDOCFj3QM4BM1wV"
+  #   - name: WORKFLOW_REPO_OWNER
+  #     value: "FalkorDB"
+  #   - name: WORKFLOW_REPO_NAME
+  #     value: "falkordb-omnistrate"
+  #   - name: WORKFLOW_FILE
+  #     value: "redis-crash-handler.yml"
