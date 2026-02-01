@@ -6,6 +6,7 @@ resources:
   - ../../base/
   - hpa.yaml
   - pdb.yaml
+  - customer-ldap-api-env-secret.yaml
 
 patches:
   - target:
@@ -14,7 +15,7 @@ patches:
     patch: |-
       - op: replace
         path: /spec/replicas
-        value: 1
+        value: 2
       - op: replace
         path: /spec/template/spec/containers/0/image
         value: "us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/customer-ldap:1.0.0"

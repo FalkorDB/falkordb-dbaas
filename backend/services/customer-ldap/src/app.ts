@@ -18,6 +18,7 @@ import { setupContainer, setupGlobalContainer } from './container';
 import { swaggerPlugin, omnistratePlugin } from '@falkordb/plugins';
 import openTelemetryPlugin from '@autotelic/fastify-opentelemetry';
 import { IOmnistrateRepository } from './repositories/omnistrate/IOmnistrateRepository';
+import { QueueManager } from './queues/QueueManager';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   await fastify.register(Env, {
@@ -71,6 +72,16 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   await fastify.register(omnistratePlugin, {
     omnistrateRepository: fastify.diContainer.resolve<IOmnistrateRepository>(IOmnistrateRepository.repositoryName),
+  });
+
+  // Initialize queue manager
+  const queueManager = new QueueManager(fastify);
+  await queueManager.startWorkers();
+  fastify.queueManager = queueManager;
+
+  // Gracefully close queue manager on shutdown
+  fastify.addHook('onClose', async () => {
+    await queueManager.close();
   });
 
   fastify.addHook('onRequest', (request, _, done) => {

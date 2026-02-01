@@ -14,6 +14,11 @@ export const EnvSchema = Type.Object({
   REQUEST_TIMEOUT_MS: Type.Number({ default: 30000 }),
   LDAP_CONNECTION_TIMEOUT_MS: Type.Number({ default: 10000 }),
   K8S_PORT_FORWARD_TIMEOUT_MS: Type.Number({ default: 15000 }),
+  REDIS_HOST: Type.String({ default: 'localhost' }),
+  REDIS_PORT: Type.Number({ default: 6379 }),
+  REDIS_USERNAME: Type.Optional(Type.String()),
+  REDIS_PASSWORD: Type.Optional(Type.String()),
+  REDIS_DB: Type.Number({ default: 0 }),
 });
 
 export type EnvSchemaType = Static<typeof EnvSchema>;
