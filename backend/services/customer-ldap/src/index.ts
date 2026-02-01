@@ -30,6 +30,15 @@ const envToLogger = {
           remoteAddress: request.ip,
         };
       },
+      res(reply: any) {
+        // Skip logging for health check endpoints
+        if (reply.request?.url === '/v1/health' || reply.request?.url === '/v1/readiness') {
+          return undefined;
+        }
+        return {
+          statusCode: reply.statusCode,
+        };
+      },
     },
   },
   production: {
@@ -58,6 +67,15 @@ const envToLogger = {
           url: request.url,
           hostname: request.hostname,
           remoteAddress: request.ip,
+        };
+      },
+      res(reply: any) {
+        // Skip logging for health check endpoints
+        if (reply.request?.url === '/v1/health' || reply.request?.url === '/v1/readiness') {
+          return undefined;
+        }
+        return {
+          statusCode: reply.statusCode,
         };
       },
     },
