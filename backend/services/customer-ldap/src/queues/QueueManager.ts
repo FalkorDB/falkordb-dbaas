@@ -139,6 +139,20 @@ export class QueueManager {
   }
 
   /**
+   * Get all queues for monitoring (e.g., QueueDash)
+   */
+  getQueues(): Queue[] {
+    return [this.instanceCreatedQueue, this.instanceDeletedQueue];
+  }
+
+  /**
+   * Get Redis connection for monitoring (e.g., QueueDash)
+   */
+  getConnection(): ConnectionOptions {
+    return this.connection;
+  }
+
+  /**
    * Close all workers and queues gracefully
    */
   async close(): Promise<void> {

@@ -675,6 +675,9 @@ importers:
       '@opentelemetry/exporter-jaeger':
         specifier: ^1.22.0
         version: 1.26.0(@opentelemetry/api@1.9.0)
+      '@queuedash/api':
+        specifier: ^3.5.0
+        version: 3.5.0(typescript@5.3.3)
       '@sinclair/typebox':
         specifier: ^0.34.33
         version: 0.34.33
@@ -13083,7 +13086,7 @@ packages:
     dependencies:
       '@jest/core': 29.7.0(ts-node@10.9.2)
       '@jest/types': 29.6.3
-      import-local: 3.2.0
+      import-local: 3.1.0
       jest-cli: 29.7.0(@types/node@20.11.24)(ts-node@10.9.2)
     transitivePeerDependencies:
       - '@types/node'
