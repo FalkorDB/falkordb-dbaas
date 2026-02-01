@@ -2,8 +2,8 @@ import { type JobsOptions } from 'bullmq';
 
 // Queue names
 export const QUEUE_NAMES = {
-  INSTANCE_CREATED: 'customer-ldap:omnistrate:instance-created',
-  INSTANCE_DELETED: 'customer-ldap:omnistrate:instance-deleted',
+  INSTANCE_CREATED: 'customer-ldap_omnistrate_instance-created',
+  INSTANCE_DELETED: 'customer-ldap_omnistrate_instance-deleted',
 } as const;
 
 // Job options with retry logic
