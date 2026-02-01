@@ -42,10 +42,26 @@ export const setupGlobalContainer = (fastify: FastifyInstance) => {
     [IConnectionCacheRepository.repositoryName]: asFunction(() => {
       return new ConnectionCacheRepository({ logger: fastify.log });
     }).singleton(),
+
+    // Register repositories as singletons for worker access
+    [IK8sRepository.repositoryName]: asFunction(() => {
+      return new K8sRepository({ logger: fastify.log });
+    }).singleton(),
+
+    [IK8sCredentialsRepository.repositoryName]: asFunction(() => {
+      const omnistrateClient = fastify.diContainer.resolve<OmnistrateClient>(IOmnistrateClient.repositoryName);
+      return new K8sCredentialsOmnistrateRepository(omnistrateClient, { logger: fastify.log });
+    }).singleton(),
+
+    [ILdapRepository.repositoryName]: asFunction(() => {
+      return new LdapRepository({ logger: fastify.log });
+    }).singleton(),
   });
 };
 
 export const setupContainer = (req: FastifyRequest) => {
+  // Request-scoped repositories with request-specific logger
+  // These override the global singletons for the duration of the request
   req.diScope.register({
     [IK8sRepository.repositoryName]: asFunction(() => {
       return new K8sRepository({ logger: req.log });
