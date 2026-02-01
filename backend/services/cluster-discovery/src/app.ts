@@ -147,6 +147,14 @@ function startRecurringScanner(fastify: FastifyInstance) {
   // Run initial scan immediately
   runScan();
 
-  // Schedule recurring scans
-  setInterval(runScan, intervalMs);
+  // Schedule recurring scans and store the interval ID
+  const intervalId = setInterval(runScan, intervalMs);
+
+  // Register cleanup hook to clear interval on server shutdown
+  fastify.addHook('onClose', async () => {
+    if (intervalId !== undefined) {
+      fastify.log.info('Clearing cluster discovery scanner interval');
+      clearInterval(intervalId);
+    }
+  });
 }

@@ -128,6 +128,7 @@ export class OmnistrateClient {
         //
       }
       const bearer = await OmnistrateClient._getBearer(user, password);
+      OmnistrateClient._token = bearer;
       config.headers.Authorization = `Bearer ${bearer}`;
       return config;
     };

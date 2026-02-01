@@ -54,6 +54,7 @@ export class K8sRepository implements IK8sRepository {
         throw ApiError.notFound(`Secret ${secretName} not found in namespace ${namespace}`, 'SECRET_NOT_FOUND');
       }
       this._options.logger.error({ error, namespace, secretName, key }, 'Error getting secret value');
+      throw ApiError.internalServerError('Error retrieving secret value', 'SECRET_RETRIEVAL_ERROR');
     }
   }
 

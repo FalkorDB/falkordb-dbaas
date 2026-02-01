@@ -6,6 +6,7 @@ export default fp(async function healthRoutes(fastify) {
   fastify.get(
     '/v1/health',
     {
+      logLevel: 'silent',
       schema: {
         tags: ['Health'],
         description: 'Liveness probe - checks if service is running',
@@ -29,6 +30,7 @@ export default fp(async function healthRoutes(fastify) {
   fastify.get(
     '/v1/readiness',
     {
+      logLevel: 'silent',
       schema: {
         tags: ['Health'],
         description: 'Readiness probe - checks if service can handle requests',

@@ -20,7 +20,7 @@ const envToLogger = {
 
 type Environment = 'development' | 'production' | 'test';
 
-function getLoggerConfig(env: string) {
+function getLoggerConfig(env: string = 'production') {
   const validEnv = (env in envToLogger ? env : 'production') as Environment;
   return envToLogger[validEnv];
 }

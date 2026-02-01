@@ -1,6 +1,22 @@
 import App from './app';
 import Fastify from 'fastify';
 
+const commonSerializers = {
+  req(request: any) {
+    return {
+      method: request.method,
+      url: request.url,
+      hostname: request.hostname,
+      remoteAddress: request.ip,
+    };
+  },
+  res(reply: any) {
+    return {
+      statusCode: reply.statusCode,
+    };
+  },
+};
+
 const envToLogger = {
   development: {
     level: 'debug',
@@ -17,29 +33,7 @@ const envToLogger = {
       ],
       censor: '***',
     },
-    serializers: {
-      req(request: any) {
-        // Skip logging for health check endpoints
-        if (request.url === '/v1/health' || request.url === '/v1/readiness') {
-          return undefined;
-        }
-        return {
-          method: request.method,
-          url: request.url,
-          hostname: request.hostname,
-          remoteAddress: request.ip,
-        };
-      },
-      res(reply: any) {
-        // Skip logging for health check endpoints
-        if (reply.request?.url === '/v1/health' || reply.request?.url === '/v1/readiness') {
-          return undefined;
-        }
-        return {
-          statusCode: reply.statusCode,
-        };
-      },
-    },
+    serializers: commonSerializers,
   },
   production: {
     level: 'info',
@@ -56,29 +50,7 @@ const envToLogger = {
       ],
       censor: '***',
     },
-    serializers: {
-      req(request: any) {
-        // Skip logging for health check endpoints
-        if (request.url === '/v1/health' || request.url === '/v1/readiness') {
-          return undefined;
-        }
-        return {
-          method: request.method,
-          url: request.url,
-          hostname: request.hostname,
-          remoteAddress: request.ip,
-        };
-      },
-      res(reply: any) {
-        // Skip logging for health check endpoints
-        if (reply.request?.url === '/v1/health' || reply.request?.url === '/v1/readiness') {
-          return undefined;
-        }
-        return {
-          statusCode: reply.statusCode,
-        };
-      },
-    },
+    serializers: commonSerializers,
   },
   test: false,
 };

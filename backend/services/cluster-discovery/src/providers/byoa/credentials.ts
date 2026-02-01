@@ -131,8 +131,6 @@ export async function executePodCommandInBastion(command: string[]): Promise<str
     logger.warn({ stderr, podName, command }, 'Command produced stderr output');
   }
 
-  logger.info({ stdoutLength: stdout.length, stderrLength: stderr.length, stdoutPreview: stdout.substring(0, 100), podName }, 'Command executed successfully');
-
   return stdout;
 }
 
