@@ -110,7 +110,7 @@ export class ClusterDiscoveryService {
       }
 
       // Check if cluster still exists
-      const clusterExists = discoveredClusters.some((cluster) => cluster.name === secret.labels.cluster || cluster.name === secret.name);
+      const clusterExists = discoveredClusters.some((cluster) => cluster.name === secret.labels.cluster);
 
       if (!clusterExists) {
         await this.registrationService.deregisterCluster(secret.name, this.config.deleteUnknownSecrets);
