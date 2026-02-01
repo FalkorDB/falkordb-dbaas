@@ -17,6 +17,20 @@ const envToLogger = {
       ],
       censor: '***',
     },
+    serializers: {
+      req(request: any) {
+        // Skip logging for health check endpoints
+        if (request.url === '/v1/health' || request.url === '/v1/readiness') {
+          return undefined;
+        }
+        return {
+          method: request.method,
+          url: request.url,
+          hostname: request.hostname,
+          remoteAddress: request.ip,
+        };
+      },
+    },
   },
   production: {
     level: 'info',
@@ -32,6 +46,20 @@ const envToLogger = {
         'req.headers.authorization',
       ],
       censor: '***',
+    },
+    serializers: {
+      req(request: any) {
+        // Skip logging for health check endpoints
+        if (request.url === '/v1/health' || request.url === '/v1/readiness') {
+          return undefined;
+        }
+        return {
+          method: request.method,
+          url: request.url,
+          hostname: request.hostname,
+          remoteAddress: request.ip,
+        };
+      },
     },
   },
   test: false,
