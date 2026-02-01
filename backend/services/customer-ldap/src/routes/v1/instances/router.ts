@@ -1,4 +1,5 @@
 import fp from 'fastify-plugin';
+import rateLimit from '@fastify/rate-limit';
 import {
   ListUsersResponseSchema,
   CreateUserRequestSchema,
@@ -18,6 +19,20 @@ import { createAuthenticateHook } from './hooks/authenticate';
 
 export default fp(
   async function instancesRoutes(fastify) {
+    // Register rate limiting for instances routes
+    // 100 requests per minute per IP
+    await fastify.register(rateLimit, {
+      max: 100,
+      timeWindow: '1 minute',
+      errorResponseBuilder: () => {
+        return {
+          statusCode: 429,
+          error: 'Too Many Requests',
+          message: 'Rate limit exceeded. Please try again later.',
+        };
+      },
+    });
+
     // List users - GET /v1/instances/:instanceId/users
     fastify.get(
       '/v1/instances/:instanceId/users',
