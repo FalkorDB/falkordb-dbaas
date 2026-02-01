@@ -4,6 +4,7 @@ namespace: api
 
 resources:
   - ../../base/
+  - customer-ldap-api-env-secret.yaml
 
 patches:
   - target:

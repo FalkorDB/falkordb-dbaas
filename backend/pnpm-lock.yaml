@@ -726,6 +726,9 @@ importers:
       fastify-user:
         specifier: ^1.4.0
         version: 1.4.0
+      ioredis:
+        specifier: ^5.4.1
+        version: 5.6.0
       mongodb:
         specifier: ^6.3.0
         version: 6.15.0
