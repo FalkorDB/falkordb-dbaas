@@ -102,7 +102,7 @@ export class OmnistrateClient {
   ) {
     OmnistrateClient._client = axios.create({
       baseURL: OmnistrateClient._baseUrl,
-      timeout: 20000, // 10 seconds
+      timeout: 20000, // 20 seconds
     });
     assert(_omnistrateUser, 'OmnistrateClient: Omnistrate user is required');
     assert(_omnistratePassword, 'OmnistrateClient: Omnistrate password is required');
