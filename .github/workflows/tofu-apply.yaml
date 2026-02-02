@@ -101,11 +101,6 @@ jobs:
           cd ${{ matrix.stack.path }}
           tofu init --upgrade ${{ env.init_param }}
 
-      - name: Refresh state
-        run: |
-          cd ${{ matrix.stack.path }}
-          tofu apply -refresh-only -auto-approve
-
       - name: Apply stack
         run: |
           cd ${{ matrix.stack.path }}
