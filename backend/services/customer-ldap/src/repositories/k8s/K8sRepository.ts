@@ -8,11 +8,7 @@ import { ApiError } from '@falkordb/errors';
 export class K8sRepository implements IK8sRepository {
   constructor(private _options: { logger: FastifyBaseLogger }) {}
 
-  async getPodNameByPrefix(
-    kubeConfig: k8s.KubeConfig,
-    namespace: string,
-    podNamePrefix: string,
-  ): Promise<string> {
+  async getPodNameByPrefix(kubeConfig: k8s.KubeConfig, namespace: string, podNamePrefix: string): Promise<string> {
     assert(namespace, 'K8sRepository: namespace is required');
     assert(podNamePrefix, 'K8sRepository: podNamePrefix is required');
 
@@ -41,16 +37,25 @@ export class K8sRepository implements IK8sRepository {
     assert(key, 'K8sRepository: key is required');
 
     this._options.logger.info({ namespace, secretName, key }, 'Getting secret value');
+    try {
+      const k8sApi = kubeConfig.makeApiClient(k8s.CoreV1Api);
+      const secretResponse = await k8sApi.readNamespacedSecret(secretName, namespace);
+      const valueBase64 = secretResponse.body.data?.[key];
 
-    const k8sApi = kubeConfig.makeApiClient(k8s.CoreV1Api);
-    const secretResponse = await k8sApi.readNamespacedSecret(secretName, namespace);
-    const valueBase64 = secretResponse.body.data?.[key];
-
-    if (!valueBase64) {
-      throw ApiError.notFound(`${key} not found in secret ${secretName}`, 'SECRET_KEY_NOT_FOUND');
+      if (!valueBase64) {
+        throw ApiError.notFound(`${key} not found in secret ${secretName}`, 'SECRET_KEY_NOT_FOUND');
+      }
+      return Buffer.from(valueBase64, 'base64').toString('utf-8');
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      if (error.statusCode === 404) {
+        throw ApiError.notFound(`Secret ${secretName} not found in namespace ${namespace}`, 'SECRET_NOT_FOUND');
+      }
+      this._options.logger.error({ error, namespace, secretName, key }, 'Error getting secret value');
+      throw ApiError.internalServerError('Error retrieving secret value', 'SECRET_RETRIEVAL_ERROR');
     }
-
-    return Buffer.from(valueBase64, 'base64').toString('utf-8');
   }
 
   async createPortForward(

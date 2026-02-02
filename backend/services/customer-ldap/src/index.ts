@@ -1,16 +1,25 @@
 import App from './app';
 import Fastify from 'fastify';
 
+const commonSerializers = {
+  req(request: any) {
+    return {
+      method: request.method,
+      url: request.url,
+      hostname: request.hostname,
+      remoteAddress: request.ip,
+    };
+  },
+  res(reply: any) {
+    return {
+      statusCode: reply.statusCode,
+    };
+  },
+};
+
 const envToLogger = {
   development: {
     level: 'debug',
-    transport: {
-      target: 'pino-pretty',
-      options: {
-        translateTime: 'HH:MM:ss Z',
-        ignore: 'pid,hostname',
-      },
-    },
     redact: {
       paths: [
         'username',
@@ -24,6 +33,7 @@ const envToLogger = {
       ],
       censor: '***',
     },
+    serializers: commonSerializers,
   },
   production: {
     level: 'info',
@@ -40,6 +50,7 @@ const envToLogger = {
       ],
       censor: '***',
     },
+    serializers: commonSerializers,
   },
   test: false,
 };
