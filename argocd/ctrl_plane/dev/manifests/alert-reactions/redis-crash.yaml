@@ -59,6 +59,7 @@ spec:
             --arg cluster "${CLUSTER}" \
             --arg container "service" \
             --arg vmauth "https://vmauth.observability.dev.internal.falkordb.cloud" \
+            --arg env "dev" \
             '{
               ref: $ref,
               inputs: {
@@ -66,7 +67,8 @@ spec:
                 namespace: $namespace,
                 cluster: $cluster,
                 container: $container,
-                vmauth_url: $vmauth
+                vmauth_url: $vmauth,
+                environment: $env
               }
             }')")
         
