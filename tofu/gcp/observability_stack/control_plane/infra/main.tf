@@ -75,7 +75,7 @@ resource "random_string" "cluster_suffix" {
 }
 
 module "gke" {
-  source                               = "../../../../../tofu/modules/gke"
+  source                               = "../../../../../tofu/modules/gke/modules/private-cluster"
   project_id                           = var.project_id
   name                                 = "observability-stack-${random_string.cluster_suffix.result}"
   region                               = var.region
