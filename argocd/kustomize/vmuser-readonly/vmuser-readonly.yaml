@@ -8,7 +8,7 @@ spec:
   username: vmuser-readonly
   passwordRef:
     key: password
-    name: vmuser-readonly
+    name: vmuser-readonly-secret
   targetRefs:
     - static:
         url: http://victorialogs-server.observability.svc.cluster.local:9428
