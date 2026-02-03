@@ -60,6 +60,7 @@ spec:
             --arg container "service" \
             --arg vmauth "https://vmauth.observability.dev.internal.falkordb.cloud" \
             --arg env "dev" \
+            --arg grafana "${GRAFANA_URL}" \
             '{
               ref: $ref,
               inputs: {
@@ -68,7 +69,8 @@ spec:
                 cluster: $cluster,
                 container: $container,
                 vmauth_url: $vmauth,
-                environment: $env
+                environment: $env,
+                grafana_url: $grafana
               }
             }')")
         
@@ -112,3 +114,5 @@ spec:
       value: "falkordb-omnistrate"
     - name: WORKFLOW_FILE
       value: "redis-crash-handler.yml"
+    - name: GRAFANA_URL
+      value: "https://grafana.observability.dev.internal.falkordb.cloud"
