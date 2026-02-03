@@ -103,7 +103,7 @@ export async function start() {
   if (temp.length > 0) grouped.push(temp);
 
   for await (const instances of grouped) {
-    await Promise.all(instances.map((instance) => handleFreeInstance(instance, omnistrateRepo, k8sRepo, mailRepo)));
+    await Promise.allSettled(instances.map((instance) => handleFreeInstance(instance, omnistrateRepo, k8sRepo, mailRepo)));
   }
 
   logger.info('Done');
