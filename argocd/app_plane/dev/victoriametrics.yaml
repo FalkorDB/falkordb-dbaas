@@ -72,12 +72,6 @@ spec:
                 global:
                   resolve_timeout: 5m
                 inhibit_rules:
-                  # When RedisCrashLoop triggers, suppress RedisCrashed, FalkorDBDown, and SustainedErrorLogInK8s
-                  - source_match:
-                      alertname: RedisCrashLoop
-                    target_match_re:
-                      alertname: (RedisCrashed|FalkorDBDown|SustainedErrorLogInK8s)
-                    equal: ['namespace', 'pod', 'cluster']
                   # When RedisCrashed triggers, suppress FalkorDBDown and SustainedErrorLogInK8s
                   - source_match:
                       alertname: RedisCrashed
