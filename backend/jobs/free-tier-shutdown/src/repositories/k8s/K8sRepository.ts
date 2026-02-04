@@ -9,7 +9,7 @@ import { EKSClient, DescribeClusterCommand } from '@aws-sdk/client-eks';
 import axios from 'axios';
 
 export class K8sRepository {
-  constructor(private _options: { logger: Logger }) { }
+  constructor(private _options: { logger: Logger }) {}
 
   private async _getGKECredentials(clusterId: string, region: string) {
     const client = new googleContainerV1.ClusterManagerClient();
@@ -35,7 +35,7 @@ export class K8sRepository {
 
     const res = await axios.get(
       'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=' +
-      targetAudience,
+        targetAudience,
       {
         headers: {
           'Metadata-Flavor': 'Google',
@@ -132,7 +132,7 @@ export class K8sRepository {
     let password = '';
     if (!process.env.SKIP_K8S_ENV_CHECK) {
       const envResponse = await this._executeCommand(kubeConfig, instanceId, ['env']).catch((e) => {
-        console.error(e);
+        this._options.logger.error(e);
         throw e;
       });
 
@@ -146,7 +146,7 @@ export class K8sRepository {
         'cat',
         '/run/secrets/adminpassword',
       ]).catch((e) => {
-        console.error(e);
+        this._options.logger.error(e);
         throw e;
       });
       password = fileResponse;
@@ -170,7 +170,7 @@ export class K8sRepository {
       instanceId,
       ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', 'GRAPH.LIST'].filter((c) => c),
     ).catch((e) => {
-      console.error(e);
+      this._options.logger.error(e);
       throw e;
     });
 
@@ -201,9 +201,14 @@ export class K8sRepository {
         '1',
       ].filter((c) => c),
     ).catch((e) => {
-      console.error(e);
-      throw e;
+      this._options.logger.error(e);
+      return null
     });
+
+    if (!response) {
+      this._options.logger.error('No response for last query time for instance ' + instanceId);
+      return null;
+    }
 
     /**
      * Extract Received at from response:
@@ -232,7 +237,8 @@ export class K8sRepository {
     const receivedAt = response.split('\n')[2];
 
     if (!receivedAt) {
-      throw new Error('Could not parse last query time for instance ' + instanceId);
+      this._options.logger.error('Could not parse last query time for instance ' + instanceId);
+      return null;
     }
 
     return parseInt(receivedAt);
@@ -269,6 +275,9 @@ export class K8sRepository {
         password,
         graph,
       );
+      if (!graphLastQueryTime) {
+        continue;
+      }
       lastQueryTime = Math.max(lastQueryTime, graphLastQueryTime);
     }
 
@@ -293,7 +302,7 @@ export class K8sRepository {
       instanceId,
       ['redis-cli', hasTLS ? '--tls' : '', '-a', password, '--no-auth-warning', 'info'].filter((c) => c),
     ).catch((e) => {
-      console.error(e);
+      this._options.logger.error(e);
       throw e;
     });
 
@@ -335,7 +344,7 @@ export class K8sRepository {
         output.end();
       });
       output.on('error', (error) => {
-        console.error(error);
+        this._options.logger.error(error);
         reject(error);
       });
     });
