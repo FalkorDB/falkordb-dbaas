@@ -31,19 +31,47 @@ async function handleFreeInstance(
       instance.tls,
     );
 
+    if (!lastUsedTime) {
+      // Check if created date is older than LAST_USED_TIME_THRESHOLD
+      const createdDate = new Date(instance.createdDate).getTime();
+      if (Date.now() - createdDate > LAST_USED_TIME_THRESHOLD) {
+        logger.info(
+          `Instance ${instance.id} has no query time and is older than threshold, created at: ${new Date(
+            createdDate,
+          ).toISOString()}. Stopping it.`,
+        );
+        await stopInstance(instance, omnistrateRepo, mailRepo);
+      } else {
+        logger.info(
+          `Instance ${instance.id} has no query time but is still within threshold. Created at: ${new Date(
+            createdDate,
+          ).toISOString()}`,
+        );
+      }
+      return;
+    }
+
     if (Date.now() - lastUsedTime > LAST_USED_TIME_THRESHOLD) {
       logger.info(
         `Instance ${instance.id} is not in use, last used time: ${new Date(lastUsedTime).toISOString()}. Stopping it.`,
       );
-      await omnistrateRepo.stopInstance(instance);
-      const { email, name } = await omnistrateRepo.getUser(instance.userId);
-      await mailRepo.sendInstanceStoppedEmail(email, name, instanceId);
+      await stopInstance(instance, omnistrateRepo, mailRepo);
     } else {
       logger.info(`Instance ${instance.id} is still in use. Last used time: ${new Date(lastUsedTime).toISOString()}`);
     }
   } catch (error) {
     logger.error(error);
   }
+}
+
+async function stopInstance(
+  instance: OmnistrateInstanceSchemaType,
+  omnistrateRepo: OmnistrateRepository,
+  mailRepo: MailRepository,
+) {
+  await omnistrateRepo.stopInstance(instance);
+  const { email, name } = await omnistrateRepo.getUser(instance.userId);
+  await mailRepo.sendInstanceStoppedEmail(email, name, instance.id);
 }
 
 export async function start() {
@@ -75,7 +103,7 @@ export async function start() {
   if (temp.length > 0) grouped.push(temp);
 
   for await (const instances of grouped) {
-    await Promise.all(instances.map((instance) => handleFreeInstance(instance, omnistrateRepo, k8sRepo, mailRepo)));
+    await Promise.allSettled(instances.map((instance) => handleFreeInstance(instance, omnistrateRepo, k8sRepo, mailRepo)));
   }
 
   logger.info('Done');
