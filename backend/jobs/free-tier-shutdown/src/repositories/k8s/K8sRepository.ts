@@ -202,7 +202,7 @@ export class K8sRepository {
       ].filter((c) => c),
     ).catch((e) => {
       this._options.logger.error(e);
-      return null
+      return null;
     });
 
     if (!response) {
