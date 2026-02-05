@@ -85,9 +85,6 @@ spec:
         fi
         
         echo "✅ Workflow triggered successfully (HTTP ${HTTP_STATUS})"
-        fi
-        
-        echo "✅ Workflow triggered successfully"
         echo "All processing will be handled by the GitHub workflow"
     env:
     - name: POD_NAME
