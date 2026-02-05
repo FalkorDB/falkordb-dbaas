@@ -47,7 +47,9 @@ spec:
         # Trigger GitHub Workflow with minimal context
         echo "Triggering GitHub workflow..."
         
-        WORKFLOW_RESPONSE=$(curl -s -X POST \
+        HTTP_STATUS=$(curl -sS --max-time 10 -X POST \
+          -o /tmp/workflow_body \
+          -w "%{http_code}" \
           -H "Authorization: token ${GITHUB_TOKEN}" \
           -H "Accept: application/vnd.github.v3+json" \
           -H "Content-Type: application/json" \
@@ -74,13 +76,15 @@ spec:
               }
             }')")
         
-        if echo "${WORKFLOW_RESPONSE}" | grep -q "error"; then
-          echo "❌ Failed to trigger workflow"
-          echo "${WORKFLOW_RESPONSE}" | jq '.' || echo "${WORKFLOW_RESPONSE}"
+        WORKFLOW_RESPONSE=$(cat /tmp/workflow_body)
+        
+        if [ "${HTTP_STATUS:0:1}" != "2" ]; then
+          echo "❌ Failed to trigger workflow (HTTP ${HTTP_STATUS})"
+          echo "${WORKFLOW_RESPONSE}" | jq '.' 2>/dev/null || echo "${WORKFLOW_RESPONSE}"
           exit 1
         fi
         
-        echo "✅ Workflow triggered successfully"
+        echo "✅ Workflow triggered successfully (HTTP ${HTTP_STATUS})"
         echo "All processing will be handled by the GitHub workflow"
     env:
     - name: POD_NAME
