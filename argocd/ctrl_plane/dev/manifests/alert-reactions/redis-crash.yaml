@@ -27,3 +27,96 @@ spec:
       valueFrom:
         alertRef:
           fieldPath: "."
+  - name: trigger-crash-workflow
+    image: alpine:latest
+    serviceAccount: alert-reaction-actions-sa
+    command: ["sh", "-c"]
+    args:
+      - |
+        # Install curl and jq
+        apk add --no-cache curl jq
+        
+        echo "=========================================="
+        echo "Redis Crash Alert Triggered"
+        echo "Cluster: ${CLUSTER}"
+        echo "Pod: ${POD_NAME}"
+        echo "Container: service"
+        echo "Namespace: ${NAMESPACE}"
+        echo "=========================================="
+        
+        # Trigger GitHub Workflow with minimal context
+        echo "Triggering GitHub workflow..."
+        
+        HTTP_STATUS=$(curl -sS --max-time 10 -X POST \
+          -o /tmp/workflow_body \
+          -w "%{http_code}" \
+          -H "Authorization: token ${GITHUB_TOKEN}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Content-Type: application/json" \
+          "${GITHUB_API}/repos/${WORKFLOW_REPO_OWNER}/${WORKFLOW_REPO_NAME}/actions/workflows/${WORKFLOW_FILE}/dispatches" \
+          -d "$(jq -n \
+            --arg ref "main" \
+            --arg pod "${POD_NAME}" \
+            --arg namespace "${NAMESPACE}" \
+            --arg cluster "${CLUSTER}" \
+            --arg container "service" \
+            --arg vmauth "https://vmauth.observability.dev.internal.falkordb.cloud" \
+            --arg env "dev" \
+            --arg grafana "${GRAFANA_URL}" \
+            '{
+              ref: $ref,
+              inputs: {
+                pod: $pod,
+                namespace: $namespace,
+                cluster: $cluster,
+                container: $container,
+                vmauth_url: $vmauth,
+                environment: $env,
+                grafana_url: $grafana
+              }
+            }')")
+        
+        WORKFLOW_RESPONSE=$(cat /tmp/workflow_body)
+        
+        if [ "${HTTP_STATUS:0:1}" != "2" ]; then
+          echo "❌ Failed to trigger workflow (HTTP ${HTTP_STATUS})"
+          echo "${WORKFLOW_RESPONSE}" | jq '.' 2>/dev/null || echo "${WORKFLOW_RESPONSE}"
+          exit 1
+        fi
+        
+        echo "✅ Workflow triggered successfully (HTTP ${HTTP_STATUS})"
+        echo "All processing will be handled by the GitHub workflow"
+    env:
+    - name: POD_NAME
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.pod"
+    - name: NAMESPACE
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.namespace"
+    - name: CLUSTER
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.cluster"
+    - name: GITHUB_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: redis-crash-token
+          key: token
+    - name: GITHUB_API
+      value: "https://api.github.com"
+    - name: REPO_OWNER
+      value: "FalkorDB"
+    - name: REPO_NAME
+      value: "private"
+    - name: PROJECT_ID
+      value: "PVT_kwDOCFj3QM4BM1wV"
+    - name: WORKFLOW_REPO_OWNER
+      value: "FalkorDB"
+    - name: WORKFLOW_REPO_NAME
+      value: "falkordb-omnistrate"
+    - name: WORKFLOW_FILE
+      value: "redis-crash-handler.yml"
+    - name: GRAFANA_URL
+      value: "https://grafana.observability.dev.internal.falkordb.cloud"

@@ -18,7 +18,7 @@ spec:
           annotations:
             summary: FalkorDB down (instance {{ $labels.namespace }})
             description: "[cluster={{ $labels.cluster }}] FalkorDB instance is down\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
-            view_logs: '{{ if eq $labels.environment "prod" }}https://grafana.observability.internal.falkordb.cloud{{ else }}https://grafana.observability.dev.internal.falkordb.cloud{{ end }}/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
         
         - alert: FalkorDBSentinelMasterDisagreement
           expr: count(count_values("master_address", redis_sentinel_master_status[1m]) by (namespace)) by (namespace) > 1
@@ -165,7 +165,7 @@ spec:
             summary: "FalkorDB AOF file size exceeded the 512MB threshold in namespace {{ $labels.namespace }}"
             description: "[cluster={{ $labels.cluster }}] The AOF file size for FalkorDB in namespace {{ $labels.namespace }} has exceeded 512MB. Current size: {{ $value | humanize1024 }}"
             runbook_url: "https://FalkorDB.github.io/runbooks/alerts/falkordbaoffilesizeexceededcriticalrunbook"
-            view_logs: '{{ if eq $labels.environment "prod" }}https://grafana.observability.internal.falkordb.cloud{{ else }}https://grafana.observability.dev.internal.falkordb.cloud{{ end }}/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
         - alert: FalkorDBAOFPendingRewriteWarning
           expr: |
@@ -190,7 +190,7 @@ spec:
             summary: "AOF pending rewrite is critically delayed (namespace {{ $labels.namespace }})"
             description: "[cluster={{ $labels.cluster }}] AOF pending rewrite has been pending for more than 20 minutes on namespace {{ $labels.namespace }}. This is a critical issue that could impact data durability."
             runbook_url: "https://FalkorDB.github.io/runbooks/alerts/falkordbaofpendingrewritecriticalrunbook"
-            view_logs: '{{ if eq $labels.environment "prod" }}https://grafana.observability.internal.falkordb.cloud{{ else }}https://grafana.observability.dev.internal.falkordb.cloud{{ end }}/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
     - name: falkordb.rules.standalone
       rules: []
 
@@ -205,7 +205,7 @@ spec:
           annotations:
             summary: FalkorDB replication broken (instance {{ $labels.namespace }})
             description: "[cluster={{ $labels.cluster }}] FalkorDB instance lost a slave\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
-            view_logs: '{{ if eq $labels.environment "prod" }}https://grafana.observability.internal.falkordb.cloud{{ else }}https://grafana.observability.dev.internal.falkordb.cloud{{ end }}/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
     - name: falkordb.rules.cluster
       rules:
