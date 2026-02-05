@@ -4,5 +4,5 @@ metadata:
   name: vmuser-readonly-kustomization
 namespace: observability
 resources:
-  - vmuser-readonly.yaml
+  - vmuser-crash-logs.yaml
   - string-secret.yaml
