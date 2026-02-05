@@ -1,8 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 metadata:
-  name: vmuser-crash-logs-kustomization
+  name: vmuser-redis-crash-logs-kustomization
 namespace: observability
 resources:
-  - vmuser-crash-logs.yaml
+  - vmuser-redis-crash-logs.yaml
   - string-secret.yaml

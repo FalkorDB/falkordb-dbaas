@@ -1,14 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: vmuser-crash-logs
+  name: vmuser-log-reader
   namespace: argocd
 spec:
   project: default
   source:
     repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
     targetRevision: prod
-    path: argocd/kustomize/vmuser-crash-logs
+    path: argocd/kustomize/vmuser-log-reader
   destination:
     server: https://kubernetes.default.svc
     namespace: observability

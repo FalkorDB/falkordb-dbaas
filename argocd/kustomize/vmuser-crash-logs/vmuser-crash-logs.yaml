@@ -1,14 +1,14 @@
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMUser
 metadata:
-  name: vmuser-crash-logs
+  name: vmuser-redis-crash-logs
   namespace: observability
 spec:
-  name: vmuser-crash-logs
-  username: vmuser-crash-logs
+  name: vmuser-redis-crash-logs
+  username: vmuser-redis-crash-logs
   passwordRef:
     key: password
-    name: vmuser-crash-logs-secret
+    name: vmuser-redis-crash-logs-secret
   targetRefs:
     - static:
         url: http://victorialogs-server.observability.svc.cluster.local:9428

@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
     targetRevision: dev
-    path: argocd/kustomize/vmuser-readonly
+    path: argocd/kustomize/vmuser-crash-logs
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
