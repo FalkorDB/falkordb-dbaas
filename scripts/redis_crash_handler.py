@@ -753,6 +753,50 @@ class GoogleChatNotifier:
         self.webhook_url = webhook_url
         self.verify_ssl = verify_ssl
     
+    def send_error_notification(
+        self,
+        error_message: str,
+        pod: str,
+        namespace: str,
+        cluster: str,
+        error_details: Optional[str] = None
+    ):
+        """Send error notification to Google Chat"""
+        payload = {
+            "text": "❌ Redis Crash Handler Failed",
+            "cards": [{
+                "header": {
+                    "title": "❌ Redis Crash Handler Failed",
+                    "subtitle": f"Error processing crash for {namespace}"
+                },
+                "sections": [
+                    {
+                        "widgets": [
+                            {"keyValue": {"topLabel": "Cluster", "content": cluster}},
+                            {"keyValue": {"topLabel": "Pod", "content": pod}},
+                            {"keyValue": {"topLabel": "Namespace", "content": namespace}},
+                            {"keyValue": {"topLabel": "Error", "content": error_message}}
+                        ]
+                    }
+                ]
+            }]
+        }
+        
+        if error_details:
+            payload["cards"][0]["sections"].append({
+                "widgets": [{
+                    "textParagraph": {
+                        "text": f"<b>Details:</b><br><code>{error_details[:500]}</code>"
+                    }
+                }]
+            })
+        
+        try:
+            response = requests.post(self.webhook_url, json=payload, timeout=30, verify=self.verify_ssl)
+            response.raise_for_status()
+        except Exception as e:
+            print(f"⚠️  Failed to send error notification to Google Chat: {e}", file=sys.stderr)
+    
     def send_notification(
         self,
         customer_email: str,
@@ -888,15 +932,39 @@ def main():
     
     # Step 1: Extract customer info
     print("Extracting customer information...")
-    omnistrate = OmnistrateClient(omnistrate_url, omnistrate_user, omnistrate_pass, verify_ssl=verify_ssl)
-    customer = omnistrate.get_customer_info(service_id, environment_id, args.namespace)
-    print(f"Customer: {customer.name} ({customer.email})")
+    try:
+        omnistrate = OmnistrateClient(omnistrate_url, omnistrate_user, omnistrate_pass, verify_ssl=verify_ssl)
+        customer = omnistrate.get_customer_info(service_id, environment_id, args.namespace)
+        print(f"Customer: {customer.name} ({customer.email})")
+    except Exception as e:
+        print(f"❌ Failed to get customer info: {e}", file=sys.stderr)
+        notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
+        notifier.send_error_notification(
+            error_message="Failed to extract customer information from Omnistrate",
+            pod=args.pod,
+            namespace=args.namespace,
+            cluster=args.cluster,
+            error_details=str(e)
+        )
+        raise
     
     # Step 2: Collect logs (last 5 minutes - crash just happened)
     print("Collecting logs from VictoriaLogs (last 5 minutes)...")
-    vmauth = VMAauthClient(vmauth_url, vmauth_user, vmauth_pass, verify_ssl=verify_ssl)
-    logs = vmauth.get_logs(args.namespace, args.pod, args.container, hours=5/60)  # 5 minutes
-    print(f"Collected {len(logs)} bytes of logs")
+    try:
+        vmauth = VMAauthClient(vmauth_url, vmauth_user, vmauth_pass, verify_ssl=verify_ssl)
+        logs = vmauth.get_logs(args.namespace, args.pod, args.container, hours=5/60)  # 5 minutes
+        print(f"Collected {len(logs)} bytes of logs")
+    except Exception as e:
+        print(f"❌ Failed to collect logs: {e}", file=sys.stderr)
+        notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
+        notifier.send_error_notification(
+            error_message="Failed to collect logs from VictoriaLogs",
+            pod=args.pod,
+            namespace=args.namespace,
+            cluster=args.cluster,
+            error_details=str(e)
+        )
+        raise
     
     # Step 3: Parse crash summary
     print("Analyzing crash...")
@@ -975,10 +1043,56 @@ def main():
 
 
 if __name__ == '__main__':
+    # Get basic info for error notifications
+    pod = None
+    namespace = None
+    cluster = None
+    google_chat_webhook = None
+    verify_ssl = True
+    
     try:
+        parser = argparse.ArgumentParser(description='Process Redis crash alerts')
+        parser.add_argument('--pod', required=True, help='Pod name')
+        parser.add_argument('--namespace', required=True, help='Namespace')
+        parser.add_argument('--cluster', required=True, help='Cluster name')
+        parser.add_argument('--container', required=True, help='Container name')
+        parser.add_argument('--vmauth-url', required=True, help='VMAuth URL for log collection')
+        parser.add_argument('--grafana-url', required=True, help='Grafana URL for log viewing')
+        
+        args = parser.parse_args()
+        
+        # Extract for error notifications
+        pod = args.pod
+        namespace = args.namespace
+        cluster = args.cluster
+        
+        # Get Google Chat webhook early for error notifications
+        google_chat_webhook = os.environ.get('GOOGLE_CHAT_WEBHOOK_URL')
+        
+        # Configure SSL verification
+        verify_ssl = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() != 'true'
+        
         main()
     except Exception as e:
-        print(f"❌ Error: {e}", file=sys.stderr)
+        error_msg = str(e)
+        print(f"❌ Error: {error_msg}", file=sys.stderr)
         import traceback
-        traceback.print_exc()
+        error_details = traceback.format_exc()
+        print(error_details, file=sys.stderr)
+        
+        # Send error notification to Google Chat if possible
+        if google_chat_webhook and pod and namespace and cluster:
+            try:
+                notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
+                notifier.send_error_notification(
+                    error_message=error_msg,
+                    pod=pod,
+                    namespace=namespace,
+                    cluster=cluster,
+                    error_details=error_details
+                )
+                print("Error notification sent to Google Chat")
+            except Exception as notify_error:
+                print(f"⚠️  Failed to send error notification: {notify_error}", file=sys.stderr)
+        
         sys.exit(1)
