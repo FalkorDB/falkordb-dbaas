@@ -76,7 +76,7 @@ resource "random_string" "cluster_suffix" {
 
 module "gke" {
   source                               = "terraform-google-modules/kubernetes-engine/google//modules/private-cluster"
-  version                              = "~> 43.0.0"
+  version                              = "~> 42.0.0"
   project_id                           = var.project_id
   name                                 = "observability-stack-${random_string.cluster_suffix.result}"
   region                               = var.region
