@@ -19,6 +19,18 @@ import urllib3
 from urllib.parse import quote
 
 
+def mask_email(email: str) -> str:
+    """Mask email address to protect PII (e.g., a****@gmail.com)"""
+    if '@' not in email:
+        return email
+    local, domain = email.split('@', 1)
+    if len(local) <= 1:
+        masked_local = local
+    else:
+        masked_local = local[0] + '*' * (len(local) - 1)
+    return f"{masked_local}@{domain}"
+
+
 @dataclass
 class CustomerInfo:
     """Customer information from Omnistrate API"""
@@ -820,17 +832,6 @@ class GoogleChatNotifier:
         is_new_crash_type: bool
     ):
         """Send crash notification to Google Chat"""
-        # Mask customer email (e.g., a****@gmail.com)
-        def mask_email(email: str) -> str:
-            if '@' not in email:
-                return email
-            local, domain = email.split('@', 1)
-            if len(local) <= 1:
-                masked_local = local
-            else:
-                masked_local = local[0] + '*' * (len(local) - 1)
-            return f"{masked_local}@{domain}"
-        
         masked_email = mask_email(customer_email)
         
         if is_new_crash_type:
@@ -975,7 +976,7 @@ def main(args):
     try:
         omnistrate = OmnistrateClient(omnistrate_url, omnistrate_user, omnistrate_pass, verify_ssl=verify_ssl)
         customer = omnistrate.get_customer_info(service_id, environment_id, args.namespace)
-        print(f"Customer: {customer.name} ({customer.email})")
+        print(f"Customer: {customer.name} ({mask_email(customer.email)})")
     except Exception as e:
         print(f"⚠️  Failed to get customer info: {e}", file=sys.stderr)
         print("   Continuing with fallback customer info...", file=sys.stderr)
