@@ -529,7 +529,7 @@ class GitHubIssueManager:
         }
         
         print("\n🔍 Searching for existing issue...")
-        print(f"   Customer: {customer_email}")
+        print(f"   Customer: {mask_email(customer_email)}")
         print(f"   Namespace: {namespace}")
         
         response = self.session.get(
@@ -650,7 +650,7 @@ class GitHubIssueManager:
         
         body = f"""## Redis Crash Detected
 
-**Customer:** {customer.name} ({customer.email})
+**Customer:** {customer.name} ( {customer.email})
 **Subscription ID:** {customer.subscription_id}
 **Pod:** {pod}
 **Container:** {container}
@@ -1089,7 +1089,7 @@ def main(args):
             f.write(f"cluster={args.cluster}\n")
     else:
         # Fallback for local testing or older GitHub Actions
-        print(f"\nIssue: #{issue_number}, Duplicate: {is_duplicate}, Customer: {customer.email}")
+        print(f"\nIssue: #{issue_number}, Duplicate: {is_duplicate}, Customer: {mask_email(customer.email)}")
         print(f"Namespace: {args.namespace}, Pod: {args.pod}, Cluster: {args.cluster}")
     
     print("\n✅ Crash handling complete!")
