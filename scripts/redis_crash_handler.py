@@ -92,58 +92,59 @@ class OmnistrateClient:
     def get_customer_info(self, service_id: str, environment_id: str, namespace: str) -> CustomerInfo:
         """Extract customer info from instance details
         
-        The namespace parameter is the subscription ID.
-        We query instances by subscription ID to get the owner, then look up the user email.
+        Uses ListAllResourceInstances API filtered by instance ID (namespace).
+        This approach is more efficient than the previous subscription-based filtering.
         """
-        # Get instances filtered by subscription ID (namespace)
+        # List all resource instances to find the one matching namespace
         response = requests.get(
-            f"{self.api_url}/fleet/service/{service_id}/environment/{environment_id}/instances",
-            params={
-                "Filter": "excludeCloudAccounts",
-                "ExcludeDetail": "true",
-                "SubscriptionId": namespace
-            },
+            f"{self.api_url}/resource-instance",
             headers=self._get_headers(),
             timeout=30,
             verify=self.verify_ssl
         )
         response.raise_for_status()
-        resource_instances = response.json().get("resourceInstances", [])
+        instances = response.json().get("resourceInstances", [])
         
-        if not resource_instances:
+        # Find the instance matching the namespace (instance ID)
+        instance_data = None
+        for instance in instances:
+            if instance.get("id") == namespace:
+                instance_data = instance
+                break
+        
+        if not instance_data:
             return CustomerInfo(
                 email='unknown@unknown.com',
                 name='Unknown Customer',
                 subscription_id=namespace
             )
         
-        # Get subscription owner name from first instance
-        subscription_owner_name = resource_instances[0].get("subscriptionOwnerName", "Unknown")
+        # Extract owner info from instance data
+        subscription_owner_name = instance_data.get("createdByUserName", "Unknown")
+        subscription_owner_id = instance_data.get("createdByUserId")
+        subscription_id = instance_data.get("subscriptionId", namespace)
         
-        # Get all users to find the email
-        users_response = requests.get(
-            f"{self.api_url}/fleet/users",
+        if not subscription_owner_id:
+            return CustomerInfo(
+                email='unknown@unknown.com',
+                name=subscription_owner_name,
+                subscription_id=subscription_id
+            )
+        
+        # Get customer email using owner ID
+        user_response = requests.get(
+            f"{self.api_url}/user/{subscription_owner_id}",
             headers=self._get_headers(),
             timeout=30,
             verify=self.verify_ssl
         )
-        users_response.raise_for_status()
-        users = users_response.json().get("users", [])
+        user_response.raise_for_status()
+        user_data = user_response.json()
         
-        # Find user by matching userName with subscriptionOwnerName
-        for user in users:
-            if user.get("userName") == subscription_owner_name:
-                return CustomerInfo(
-                    email=user.get('email', 'unknown@unknown.com'),
-                    name=subscription_owner_name,
-                    subscription_id=namespace
-                )
-        
-        # If user not found, return with known name but unknown email
         return CustomerInfo(
-            email='unknown@unknown.com',
+            email=user_data.get('email', 'unknown@unknown.com'),
             name=subscription_owner_name,
-            subscription_id=namespace
+            subscription_id=subscription_id
         )
 
 
@@ -819,12 +820,25 @@ class GoogleChatNotifier:
         is_new_crash_type: bool
     ):
         """Send crash notification to Google Chat"""
+        # Mask customer email (e.g., a****@gmail.com)
+        def mask_email(email: str) -> str:
+            if '@' not in email:
+                return email
+            local, domain = email.split('@', 1)
+            if len(local) <= 1:
+                masked_local = local
+            else:
+                masked_local = local[0] + '*' * (len(local) - 1)
+            return f"{masked_local}@{domain}"
+        
+        masked_email = mask_email(customer_email)
+        
         if is_new_crash_type:
             crash_type = "⚠️ Redis Crash (New Type)"
-            subtitle = f"New crash type for {customer_email}"
+            subtitle = f"New crash type for {masked_email}"
         else:
             crash_type = "🚨 Redis Crash (New Issue)"
-            subtitle = f"Customer: {customer_email}"
+            subtitle = f"Customer: {masked_email}"
         
         payload = {
             "text": crash_type,
@@ -836,7 +850,7 @@ class GoogleChatNotifier:
                 "sections": [
                     {
                         "widgets": [
-                            {"keyValue": {"topLabel": "Customer", "content": customer_email}},
+                            {"keyValue": {"topLabel": "Customer", "content": masked_email}},
                             {"keyValue": {"topLabel": "Cluster", "content": cluster}},
                             {"keyValue": {"topLabel": "Pod", "content": pod}},
                             {"keyValue": {"topLabel": "Namespace", "content": namespace}},
@@ -963,16 +977,14 @@ def main(args):
         customer = omnistrate.get_customer_info(service_id, environment_id, args.namespace)
         print(f"Customer: {customer.name} ({customer.email})")
     except Exception as e:
-        print(f"❌ Failed to get customer info: {e}", file=sys.stderr)
-        notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
-        notifier.send_error_notification(
-            error_message="Failed to extract customer information from Omnistrate",
-            pod=args.pod,
-            namespace=args.namespace,
-            cluster=args.cluster,
-            error_details=str(e)
+        print(f"⚠️  Failed to get customer info: {e}", file=sys.stderr)
+        print("   Continuing with fallback customer info...", file=sys.stderr)
+        # Use fallback customer info instead of stopping
+        customer = CustomerInfo(
+            email='failed-to-retrieve@unknown.com',
+            name='Failed to retrieve customer',
+            subscription_id=args.namespace
         )
-        raise
     
     # Step 2: Collect logs (last 5 minutes - crash just happened)
     print("Collecting logs from VictoriaLogs (last 5 minutes)...")
@@ -981,16 +993,10 @@ def main(args):
         logs = vmauth.get_logs(args.namespace, args.pod, args.container, hours=5/60)  # 5 minutes
         print(f"Collected {len(logs)} bytes of logs")
     except Exception as e:
-        print(f"❌ Failed to collect logs: {e}", file=sys.stderr)
-        notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
-        notifier.send_error_notification(
-            error_message="Failed to collect logs from VictoriaLogs",
-            pod=args.pod,
-            namespace=args.namespace,
-            cluster=args.cluster,
-            error_details=str(e)
-        )
-        raise
+        print(f"⚠️  Failed to collect logs: {e}", file=sys.stderr)
+        print("   Continuing with empty logs...", file=sys.stderr)
+        # Use empty logs instead of stopping
+        logs = ""
     
     # Step 3: Parse crash summary
     print("Analyzing crash...")
@@ -1010,9 +1016,17 @@ def main(args):
     existing_issue, is_same_crash = github.find_or_get_issue(customer.email, args.namespace, crash)
     
     if existing_issue and is_same_crash:
-        # Same crash already reported in this issue - do nothing
+        # Same crash already reported in this issue - add comment to track occurrences
         print(f"✅ Exact same crash already reported in issue #{existing_issue}")
-        print("   No action needed - skipping comment and notification")
+        print("   Adding comment to track crash occurrence...")
+        
+        # Add a brief comment to track that this crash happened again
+        duplicate_comment = f"**Same crash detected again at {timestamp}**\n\nPod: {args.pod}, Namespace: {args.namespace}, Cluster: {args.cluster}"
+        github.add_comment(
+            existing_issue, crash, args.pod, args.namespace,
+            args.cluster, args.container, log_url, timestamp
+        )
+        
         issue_number = existing_issue
         is_duplicate = True
         is_new_crash_type = False
