@@ -59,29 +59,41 @@ jobs:
         run: |
           echo "Environment is 'dev'. Exiting job early. It is worth noting that a crash happened!."
           exit 0
+      
       - name: Checkout repository
+        if: ${{ inputs.environment != 'dev' }}
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       
       - name: Set up Python
+        if: ${{ inputs.environment != 'dev' }}
         uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5
         with:
           python-version: '3.11'
       
       - name: Install dependencies
+        if: ${{ inputs.environment != 'dev' }}
         run: |
           pip install requests
       
       - name: Set environment variables
+        if: ${{ inputs.environment != 'dev' }}
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          OMNISTRATE_DEV_ENV: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
+          OMNISTRATE_PROD_ENV: ${{ vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}
+          VMAUTH_PASS_DEV: ${{ secrets.VMAUTH_PASSWORD_DEV }}
+          VMAUTH_PASS_PROD: ${{ secrets.VMAUTH_PASSWORD_PROD }}
         run: |
-          if [ "${{ inputs.environment }}" = "dev" ]; then
-            echo "OMNISTRATE_ENVIRONMENT_ID=${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}" >> $GITHUB_ENV
-            echo "VMAUTH_PASSWORD=${{ secrets.VMAUTH_PASSWORD_DEV }}" >> $GITHUB_ENV
+          if [ "$ENVIRONMENT" = "dev" ]; then
+            echo "OMNISTRATE_ENVIRONMENT_ID=$OMNISTRATE_DEV_ENV" >> $GITHUB_ENV
+            echo "VMAUTH_PASSWORD=$VMAUTH_PASS_DEV" >> $GITHUB_ENV
           else
-            echo "OMNISTRATE_ENVIRONMENT_ID=${{ vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}" >> $GITHUB_ENV
-            echo "VMAUTH_PASSWORD=${{ secrets.VMAUTH_PASSWORD_PROD }}" >> $GITHUB_ENV
+            echo "OMNISTRATE_ENVIRONMENT_ID=$OMNISTRATE_PROD_ENV" >> $GITHUB_ENV
+            echo "VMAUTH_PASSWORD=$VMAUTH_PASS_PROD" >> $GITHUB_ENV
           fi
       
       - name: Process crash
+        if: ${{ inputs.environment != 'dev' }}
         id: process_crash
         env:
           OMNISTRATE_API_URL: "https://api.omnistrate.cloud/2022-09-01-00/"
