@@ -373,7 +373,7 @@ class CrashAnalyzer:
         if client_command == "unknown":
             argv_parts = []
             argv_pattern = re.compile(r"argv\[\d+\]:\s*['\"]([^'\"]+)['\"]")
-            for line in lines:
+            for line in lines_to_search:
                 matches = argv_pattern.findall(line)
                 argv_parts.extend(matches)
             if argv_parts:
@@ -386,7 +386,7 @@ class CrashAnalyzer:
                 re.compile(r'last.*command[:\s]+["\']?([^"\']+)["\']?', re.IGNORECASE),
             ]
             
-            for line in reversed(lines):
+            for line in reversed(lines_to_search):
                 for pattern in command_patterns:
                     match = pattern.search(line)
                     if match:
@@ -884,8 +884,13 @@ class GoogleChatNotifier:
             response = requests.post(self.webhook_url, json=payload, timeout=30, verify=self.verify_ssl)
             response.raise_for_status()
         except requests.RequestException as e:
+            # Redact webhook URL to avoid exposing secret tokens
+            from urllib.parse import urlparse
+            parsed = urlparse(self.webhook_url)
+            redacted_url = f"{parsed.scheme}://{parsed.netloc}/..." if parsed.scheme and parsed.netloc else "[REDACTED]"
+            
             print(f"⚠️  Failed to send crash notification to Google Chat: {e}", file=sys.stderr)
-            print(f"   Webhook URL: {self.webhook_url}", file=sys.stderr)
+            print(f"   Webhook URL: {redacted_url}", file=sys.stderr)
             print(f"   Payload summary: Issue #{issue_number} for {namespace}", file=sys.stderr)
         except Exception as e:
             print(f"⚠️  Unexpected error sending crash notification to Google Chat: {e}", file=sys.stderr)
