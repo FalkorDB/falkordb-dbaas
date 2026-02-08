@@ -84,25 +84,24 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
     }
 
     // Validate request body
-    const body = request.body as { payload?: { deploymentCellId?: string } };
-    if (!body?.payload?.deploymentCellId) {
-      return reply.code(400).send({ error: 'Missing deploymentCellId in payload' });
+    const body = request.body as { payload?: { host_cluster_id?: string } };
+    if (!body?.payload?.host_cluster_id) {
+      return reply.code(400).send({ error: 'Missing host_cluster_id in payload' });
     }
 
-    const { deploymentCellId } = body.payload;
-    fastify.log.info({ deploymentCellId }, 'Received cell-delete-started webhook');
-
+    const { host_cluster_id } = body.payload;
+    fastify.log.info({ host_cluster_id }, 'Received cell-delete-started webhook');
     try {
       const { handleCellDeletion } = await import('./services/CellDeletionService.js');
-      await handleCellDeletion(deploymentCellId);
+      await handleCellDeletion(host_cluster_id);
       
       return reply.code(200).send({ 
         success: true, 
         message: 'Cell deletion processed successfully',
-        deploymentCellId 
+        host_cluster_id
       });
     } catch (error) {
-      fastify.log.error({ error, deploymentCellId }, 'Failed to handle cell deletion');
+      fastify.log.error({ error, host_cluster_id }, 'Failed to handle cell deletion');
       return reply.code(500).send({ 
         error: 'Failed to process cell deletion',
         message: error instanceof Error ? error.message : 'Unknown error'
