@@ -101,11 +101,11 @@ class OmnistrateClient:
             "Authorization": f"Bearer {self.token}"
         }
     
-    def get_customer_info(self, service_id: str, environment_id: str, namespace: str) -> CustomerInfo:
+    def get_customer_info(self, namespace: str) -> CustomerInfo:
         """Extract customer info from instance details
         
-        Uses ListAllResourceInstances API filtered by instance ID (namespace).
-        This approach is more efficient than the previous subscription-based filtering.
+        Uses ListAllResourceInstances API to find the instance matching the given
+        namespace (instance ID), which is globally unique.
         """
         # List all resource instances to find the one matching namespace
         response = requests.get(
@@ -737,6 +737,15 @@ class GitHubIssueManager:
             timeout=30
         )
         response.raise_for_status()
+    
+    def add_raw_comment(self, issue_number: int, comment: str):
+        """Add a raw text comment to an existing issue"""
+        response = self.session.post(
+            f"{self.api_url}/repos/{self.repo}/issues/{issue_number}/comments",
+            json={'body': comment},
+            timeout=30
+        )
+        response.raise_for_status()
 
 
 class GrafanaLinkGenerator:
@@ -978,7 +987,7 @@ def main(args):
     print("Extracting customer information...")
     try:
         omnistrate = OmnistrateClient(omnistrate_url, omnistrate_user, omnistrate_pass, verify_ssl=verify_ssl)
-        customer = omnistrate.get_customer_info(service_id, environment_id, args.namespace)
+        customer = omnistrate.get_customer_info(args.namespace)
         print(f"Customer: {customer.name} ({mask_email(customer.email)})")
     except Exception as e:
         print(f"⚠️  Failed to get customer info: {e}", file=sys.stderr)
@@ -1020,16 +1029,13 @@ def main(args):
     existing_issue, is_same_crash = github.find_or_get_issue(customer.email, args.namespace, crash)
     
     if existing_issue and is_same_crash:
-        # Same crash already reported in this issue - add comment to track occurrences
+        # Same crash already reported in this issue - add brief comment to track occurrences
         print(f"✅ Exact same crash already reported in issue #{existing_issue}")
         print("   Adding comment to track crash occurrence...")
         
         # Add a brief comment to track that this crash happened again
         duplicate_comment = f"**Same crash detected again at {timestamp}**\n\nPod: {args.pod}, Namespace: {args.namespace}, Cluster: {args.cluster}"
-        github.add_comment(
-            existing_issue, crash, args.pod, args.namespace,
-            args.cluster, args.container, log_url, timestamp
-        )
+        github.add_raw_comment(existing_issue, duplicate_comment)
         
         issue_number = existing_issue
         is_duplicate = True
