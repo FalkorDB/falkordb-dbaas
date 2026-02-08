@@ -924,8 +924,11 @@ def _build_parser():
 
 
 def main(args):
-    """Main entry point"""
+    """Main entry point
     
+    Args:
+        args: Parsed command-line arguments from argparse
+    """
     # Configure SSL verification: True for prod (default), False for dev
     # Set DISABLE_SSL_VERIFY=true in dev environments only
     verify_ssl = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() != 'true'
