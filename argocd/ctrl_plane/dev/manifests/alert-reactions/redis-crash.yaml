@@ -115,7 +115,7 @@ spec:
     - name: WORKFLOW_REPO_OWNER
       value: "FalkorDB"
     - name: WORKFLOW_REPO_NAME
-      value: "falkordb-omnistrate"
+      value: "falkordb-dbaas"
     - name: WORKFLOW_FILE
       value: "redis-crash-handler.yml"
     - name: GRAFANA_URL
