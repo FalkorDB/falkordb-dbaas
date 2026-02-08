@@ -18,9 +18,6 @@ import argparse
 import urllib3
 from urllib.parse import quote
 
-# Disable SSL warnings for dev environment
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 
 @dataclass
 class CustomerInfo:
@@ -212,8 +209,20 @@ class VMAauthClient:
         
         result = '\n'.join(logs)
         if not result:
-            print(f"DEBUG: Empty result. Response text length: {len(response.text)}")
-            print(f"DEBUG: Full response text:\n{response.text}")
+            # Check if debug mode is enabled via environment variable
+            debug_enabled = os.environ.get('DEBUG', 'false').lower() == 'true'
+            
+            print(f"DEBUG: Empty result. Response status: {response.status_code}, length: {len(response.text)} bytes")
+            
+            if debug_enabled:
+                # Only print full response in debug mode
+                print(f"DEBUG: Full response text:\n{response.text}")
+            else:
+                # Print truncated response (first 200 chars) for safety
+                truncated = response.text[:200] + '...' if len(response.text) > 200 else response.text
+                print(f"DEBUG: Response preview (first 200 chars): {truncated}")
+                print("DEBUG: Set DEBUG=true environment variable to see full response")
+            
             raise ValueError("No logs retrieved from VictoriaLogs. Check query parameters and data availability.")
         return result
 
@@ -871,12 +880,19 @@ class GoogleChatNotifier:
             }]
         }
         
-        response = requests.post(self.webhook_url, json=payload, timeout=30, verify=self.verify_ssl)
-        response.raise_for_status()
+        try:
+            response = requests.post(self.webhook_url, json=payload, timeout=30, verify=self.verify_ssl)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            print(f"⚠️  Failed to send crash notification to Google Chat: {e}", file=sys.stderr)
+            print(f"   Webhook URL: {self.webhook_url}", file=sys.stderr)
+            print(f"   Payload summary: Issue #{issue_number} for {namespace}", file=sys.stderr)
+        except Exception as e:
+            print(f"⚠️  Unexpected error sending crash notification to Google Chat: {e}", file=sys.stderr)
 
 
-def main():
-    """Main entry point"""
+def _build_parser():
+    """Build argument parser"""
     parser = argparse.ArgumentParser(description='Process Redis crash alerts')
     parser.add_argument('--pod', required=True, help='Pod name')
     parser.add_argument('--namespace', required=True, help='Namespace')
@@ -884,13 +900,18 @@ def main():
     parser.add_argument('--container', required=True, help='Container name')
     parser.add_argument('--vmauth-url', required=True, help='VMAuth URL for log collection')
     parser.add_argument('--grafana-url', required=True, help='Grafana URL for log viewing')
-    
-    args = parser.parse_args()
+    return parser
+
+
+def main(args):
+    """Main entry point"""
     
     # Configure SSL verification: True for prod (default), False for dev
     # Set DISABLE_SSL_VERIFY=true in dev environments only
     verify_ssl = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() != 'true'
     if not verify_ssl:
+        # Disable SSL warnings only when verification is explicitly disabled
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         print("⚠️  WARNING: SSL verification is DISABLED. Use only in development environments.", file=sys.stderr)
     
     # Validate required environment variables
@@ -1026,11 +1047,14 @@ def main():
     # Output for GitHub Actions
     github_output = os.environ.get('GITHUB_OUTPUT')
     if github_output:
+        # Extract email domain for non-PII identification
+        email_domain = customer.email.split('@')[1] if '@' in customer.email else 'unknown'
+        
         with open(github_output, 'a') as f:
             f.write(f"issue_number={issue_number}\n")
             f.write(f"is_duplicate={str(is_duplicate).lower()}\n")
             f.write(f"is_new_crash={str(not is_duplicate).lower()}\n")
-            f.write(f"customer_email={customer.email}\n")
+            f.write(f"customer_domain={email_domain}\n")
             f.write(f"namespace={args.namespace}\n")
             f.write(f"pod={args.pod}\n")
             f.write(f"cluster={args.cluster}\n")
@@ -1051,14 +1075,7 @@ if __name__ == '__main__':
     verify_ssl = True
     
     try:
-        parser = argparse.ArgumentParser(description='Process Redis crash alerts')
-        parser.add_argument('--pod', required=True, help='Pod name')
-        parser.add_argument('--namespace', required=True, help='Namespace')
-        parser.add_argument('--cluster', required=True, help='Cluster name')
-        parser.add_argument('--container', required=True, help='Container name')
-        parser.add_argument('--vmauth-url', required=True, help='VMAuth URL for log collection')
-        parser.add_argument('--grafana-url', required=True, help='Grafana URL for log viewing')
-        
+        parser = _build_parser()
         args = parser.parse_args()
         
         # Extract for error notifications
@@ -1072,7 +1089,7 @@ if __name__ == '__main__':
         # Configure SSL verification
         verify_ssl = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() != 'true'
         
-        main()
+        main(args)
     except Exception as e:
         error_msg = str(e)
         print(f"❌ Error: {error_msg}", file=sys.stderr)

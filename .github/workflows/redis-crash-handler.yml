@@ -94,11 +94,17 @@ jobs:
           GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
           ISSUE_REPO: ${{ env.ISSUE_REPO }}
           PROJECT_ID: ${{ env.PROJECT_ID }}
+          POD: ${{ inputs.pod }}
+          NAMESPACE: ${{ inputs.namespace }}
+          CLUSTER: ${{ inputs.cluster }}
+          CONTAINER: ${{ inputs.container }}
+          VMAUTH_URL: ${{ inputs.vmauth_url }}
+          GRAFANA_URL: ${{ inputs.grafana_url }}
         run: |
           python ./scripts/redis_crash_handler.py \
-            --pod "${{ inputs.pod }}" \
-            --namespace "${{ inputs.namespace }}" \
-            --cluster "${{ inputs.cluster }}" \
-            --container "${{ inputs.container }}" \
-            --vmauth-url "${{ inputs.vmauth_url }}" \
-            --grafana-url "${{ inputs.grafana_url }}"
+            --pod "$POD" \
+            --namespace "$NAMESPACE" \
+            --cluster "$CLUSTER" \
+            --container "$CONTAINER" \
+            --vmauth-url "$VMAUTH_URL" \
+            --grafana-url "$GRAFANA_URL"
