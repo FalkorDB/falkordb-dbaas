@@ -17,6 +17,7 @@ from dataclasses import dataclass
 import argparse
 import urllib3
 from urllib.parse import quote
+import time
 
 
 def mask_email(email: str) -> str:
@@ -75,10 +76,12 @@ class CrashSummary:
 class OmnistrateClient:
     """Client for Omnistrate API"""
     
-    def __init__(self, api_url: str, username: str, password: str, verify_ssl: bool = True):
+    def __init__(self, api_url: str, username: str, password: str, service_id: str = None, environment_id: str = None, verify_ssl: bool = True):
         self.api_url = api_url.rstrip('/')
         self.username = username
         self.password = password
+        self.service_id = service_id
+        self.environment_id = environment_id
         self.verify_ssl = verify_ssl
         self.token = None
         self._login()
@@ -104,60 +107,84 @@ class OmnistrateClient:
     def get_customer_info(self, namespace: str) -> CustomerInfo:
         """Extract customer info from instance details
         
-        Uses ListAllResourceInstances API to find the instance matching the given
-        namespace (instance ID), which is globally unique.
+        The namespace parameter is the instance ID (e.g., instance-ljsr6b3gz).
+        In Omnistrate's model:
+        - Instance ID (namespace) uniquely identifies a deployed resource
+        - Each instance belongs to a subscription
+        - Each subscription has an owner (user)
+        
+        We query the Fleet API to find the instance matching this ID,
+        then extract the subscription ID and owner info.
         """
-        # List all resource instances to find the one matching namespace
+        if not self.service_id or not self.environment_id:
+            raise ValueError("service_id and environment_id are required for customer info retrieval")
+        
+        # Get all instances - we'll filter client-side
+        fleet_url = f"{self.api_url}/fleet/service/{self.service_id}/environment/{self.environment_id}/instances"
+        params = {
+            "Filter": "excludeCloudAccounts",
+            "ExcludeDetail": "false"  # We need full details to get subscription info
+        }
+        
         response = requests.get(
-            f"{self.api_url}/resource-instance",
+            fleet_url,
+            params=params,
             headers=self._get_headers(),
             timeout=30,
             verify=self.verify_ssl
         )
         response.raise_for_status()
-        instances = response.json().get("resourceInstances", [])
+        response_data = response.json()
+        all_instances = response_data.get("resourceInstances", [])
         
-        # Find the instance matching the namespace (instance ID)
-        instance_data = None
-        for instance in instances:
-            if instance.get("id") == namespace:
-                instance_data = instance
+        # Find the instance matching our namespace/instance ID
+        # The instance ID is nested in consumptionResourceInstanceResult.id
+        matching_instance = None
+        for instance in all_instances:
+            # Extract instance ID from nested structure
+            nested_result = instance.get("consumptionResourceInstanceResult")
+            if nested_result and isinstance(nested_result, dict):
+                instance_id = nested_result.get("id", "")
+            else:
+                instance_id = ""
+            
+            # Direct match on instance ID (which is the namespace)
+            if instance_id == namespace:
+                matching_instance = instance
                 break
         
-        if not instance_data:
-            return CustomerInfo(
-                email='unknown@unknown.com',
-                name='Unknown Customer',
-                subscription_id=namespace
-            )
+        if not matching_instance:
+            print(f"❌ ERROR: Instance not found with ID/namespace: {namespace}", file=sys.stderr)
+            raise ValueError(f"Instance not found for instance ID/namespace: {namespace}")
         
-        # Extract owner info from instance data
-        subscription_owner_name = instance_data.get("createdByUserName", "Unknown")
-        subscription_owner_id = instance_data.get("createdByUserId")
-        subscription_id = instance_data.get("subscriptionId", namespace)
+        # Extract subscription owner info from the instance
+        subscription_id = matching_instance.get("subscriptionId", "")
+        subscription_owner_name = matching_instance.get("subscriptionOwnerName", "Unknown")
         
-        if not subscription_owner_id:
-            return CustomerInfo(
-                email='unknown@unknown.com',
-                name=subscription_owner_name,
-                subscription_id=subscription_id
-            )
-        
-        # Get customer email using owner ID
-        user_response = requests.get(
-            f"{self.api_url}/user/{subscription_owner_id}",
+        # Get all users to find the email for the subscription owner
+        users_response = requests.get(
+            f"{self.api_url}/fleet/users",
             headers=self._get_headers(),
             timeout=30,
             verify=self.verify_ssl
         )
-        user_response.raise_for_status()
-        user_data = user_response.json()
+        users_response.raise_for_status()
+        users = users_response.json().get("users", [])
         
-        return CustomerInfo(
-            email=user_data.get('email', 'unknown@unknown.com'),
-            name=subscription_owner_name,
-            subscription_id=subscription_id
-        )
+        # Find user by matching userName with subscriptionOwnerName
+        for user in users:
+            user_name = user.get("userName")
+            if user_name == subscription_owner_name:
+                email = user.get('email', 'unknown@unknown.com')
+                return CustomerInfo(
+                    email=email,
+                    name=subscription_owner_name,
+                    subscription_id=subscription_id
+                )
+        
+        # If user not found in users list
+        print(f"⚠️ WARNING: User '{subscription_owner_name}' not found in user list", file=sys.stderr)
+        raise ValueError(f"User '{subscription_owner_name}' not found - cannot retrieve email")
 
 
 class VMAauthClient:
@@ -168,20 +195,21 @@ class VMAauthClient:
         self.auth = (username, password)
         self.verify_ssl = verify_ssl
     
-    def get_logs(self, namespace: str, pod: str, container: str, hours: int = 24) -> str:
-        """Fetch logs from VictoriaLogs"""
+    def get_logs(self, namespace: str, pod: str, container: str, cluster: str = None, hours: float = 7/60) -> str:
+        """Fetch logs from VictoriaLogs (default: last 7 minutes)"""
         # Calculate time range
         end_time = datetime.now(timezone.utc)
         start_time = end_time - timedelta(hours=hours)
         
         # Build LogsQL query
-        query = f'{{namespace="{namespace}", pod=~"{pod}.*", container="{container}"}}'
+        # Use exact match for pod name (pod="...") instead of regex (pod=~"...")
+        query = f'{{namespace="{namespace}", pod="{pod}", container="{container}"}}'
         
         params = {
             'query': query,
             'start': int(start_time.timestamp() * 1000000000),  # nanoseconds
             'end': int(end_time.timestamp() * 1000000000),
-            'limit': 10000
+            'limit': 50000
         }
         
         response = requests.get(
@@ -204,38 +232,24 @@ class VMAauthClient:
         
         # Parse response - VictoriaLogs returns newline-delimited JSON (NDJSON)
         logs = []
+        lines = response.text.strip().split('\n')
         
-        for line in response.text.strip().split('\n'):
+        for line in lines:
             if not line:
                 continue
             try:
                 data = json.loads(line)
-                
-                # VictoriaLogs returns _msg directly in each JSON object
                 msg = data.get('_msg', '')
                 if msg:
                     logs.append(msg)
-            except json.JSONDecodeError as e:
-                # Skip malformed lines
-                print(f"Warning: Failed to parse log line: {e}", file=sys.stderr)
+            except json.JSONDecodeError:
                 continue
         
         result = '\n'.join(logs)
+        if len(logs) > 0:
+            print(f"   Retrieved {len(logs)} log lines", file=sys.stderr)
+        
         if not result:
-            # Check if debug mode is enabled via environment variable
-            debug_enabled = os.environ.get('DEBUG', 'false').lower() == 'true'
-            
-            print(f"DEBUG: Empty result. Response status: {response.status_code}, length: {len(response.text)} bytes")
-            
-            if debug_enabled:
-                # Only print full response in debug mode
-                print(f"DEBUG: Full response text:\n{response.text}")
-            else:
-                # Print truncated response (first 200 chars) for safety
-                truncated = response.text[:200] + '...' if len(response.text) > 200 else response.text
-                print(f"DEBUG: Response preview (first 200 chars): {truncated}")
-                print("DEBUG: Set DEBUG=true environment variable to see full response")
-            
             raise ValueError("No logs retrieved from VictoriaLogs. Check query parameters and data availability.")
         return result
 
@@ -251,16 +265,31 @@ class CrashAnalyzer:
         # Extract stack traces - try multiple formats
         stack_traces = []
         
-        # Pattern 1: FalkorDB module format: /var/lib/falkordb/bin/falkordb.so(AlgebraicExpression_Dest+0x4)[0x7fae4dd95664]
-        falkordb_pattern = re.compile(r'/var/lib/falkordb/[^(]+\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
+        # Pattern 1: Raw stack trace lines with hex addresses - capture entire line
+        # Example: /lib/x86_64-linux-gnu/libc.so.6(+0x3c050)[0x7f8b8c3c050]
+        # Example: redis-server *:6379(debugCommand+0x244)[0xaaaab1e89984]
+        hex_address_pattern = re.compile(r'\[[0x[0-9a-f]+]\]')
         for line in lines:
-            if '/var/lib/falkordb/' in line and '(' in line:
-                matches = falkordb_pattern.findall(line)
-                for func in matches:
-                    if func and func not in ['_start', '_libc_start_main']:
-                        stack_traces.append(func)
+            if hex_address_pattern.search(line) and ('/' in line or 'redis-server' in line):
+                # This looks like a stack trace line - clean it up
+                trace_line = line.strip()
+                # Remove timestamp prefix if present
+                if 'stdout F' in trace_line:
+                    trace_line = trace_line.split('stdout F', 1)[1].strip()
+                if trace_line and len(trace_line) > 10:  # Skip very short lines
+                    stack_traces.append(trace_line)
         
-        # Pattern 2: Redis crash stack trace format: redis-server *:6379(debugCommand+0x244)[0xaaaab1e89984]
+        # Pattern 2: FalkorDB module format with function names: /var/lib/falkordb/bin/falkordb.so(AlgebraicExpression_Dest+0x4)
+        if not stack_traces:
+            falkordb_pattern = re.compile(r'/var/lib/falkordb/[^(]+\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
+            for line in lines:
+                if '/var/lib/falkordb/' in line and '(' in line:
+                    matches = falkordb_pattern.findall(line)
+                    for func in matches:
+                        if func and func not in ['_start', '_libc_start_main']:
+                            stack_traces.append(func)
+        
+        # Pattern 3: Redis crash stack trace format: redis-server *:6379(debugCommand+0x244)
         if not stack_traces:
             redis_stack_pattern = re.compile(r'redis-server[^(]*\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
             for line in lines:
@@ -270,7 +299,7 @@ class CrashAnalyzer:
                         if func and func not in ['_start', '_libc_start_main']:
                             stack_traces.append(func)
         
-        # Pattern 3: Generic file:line format
+        # Pattern 4: Generic file:line format
         if not stack_traces:
             file_pattern = re.compile(r'([a-zA-Z0-9_/.-]+\.[ch]:?\d+)(?:\s+\(?(\w+)\)?)?')
             for line in lines:
@@ -292,9 +321,9 @@ class CrashAnalyzer:
                 if len(unique_stacks) >= 3:
                     break
         
-        # Pad with "N/A" if less than 3
-        while len(unique_stacks) < 3:
-            unique_stacks.append("N/A")
+        # If no stack traces found, use single N/A
+        if not unique_stacks:
+            unique_stacks = ["N/A"]
         
         # Extract exit code
         exit_code = "unknown"
@@ -341,7 +370,6 @@ class CrashAnalyzer:
         client_command = "unknown"
         
         # Find the most recent crash dump section to extract command from
-        # Crash dumps are between "=== REDIS BUG REPORT START ===" and "=== REDIS BUG REPORT END ==="
         crash_sections = []
         current_section = []
         in_crash_dump = False
@@ -371,7 +399,7 @@ class CrashAnalyzer:
             if match:
                 query = match.group(1).strip()
                 client_command = f"GRAPH.QUERY {query[:100]}"
-                break  # Can break now since we're only looking in the relevant crash section
+                break
         
         # Pattern 2: Redis client info format: cmd=debug
         if client_command == "unknown":
@@ -408,12 +436,14 @@ class CrashAnalyzer:
                 if client_command != "unknown":
                     break
         
-        return CrashSummary(
+        summary = CrashSummary(
             stack_traces=unique_stacks,
             exit_code=exit_code,
             memory_rss=memory_rss,
             client_command=client_command
         )
+        
+        return summary
 
 
 class GitHubIssueManager:
@@ -648,6 +678,12 @@ class GitHubIssueManager:
         """Create new GitHub issue"""
         title = f"[CRITICAL] Redis Crash: {pod} in {namespace} ({cluster}) - {timestamp}"
         
+        # Format stack traces - handle variable length
+        if crash.stack_traces and crash.stack_traces[0] != "N/A":
+            stack_trace_section = "\n".join([f"**Stack Trace {i+1}:** {trace}" for i, trace in enumerate(crash.stack_traces)])
+        else:
+            stack_trace_section = "**Stack Traces:** N/A (crash occurred too quickly to generate stack trace)"
+        
         body = f"""## Redis Crash Detected
 
 **Customer:** {customer.name} ( {customer.email})
@@ -660,9 +696,7 @@ class GitHubIssueManager:
 
 ### Crash Summary
 
-**Stack Trace 1:** {crash.stack_traces[0]}
-**Stack Trace 2:** {crash.stack_traces[1]}
-**Stack Trace 3:** {crash.stack_traces[2]}
+{stack_trace_section}
 **Exit Code:** {crash.exit_code}
 **Memory RSS:** {crash.memory_rss} bytes
 **Client Command:** {crash.client_command}
@@ -715,6 +749,12 @@ class GitHubIssueManager:
         timestamp: str
     ):
         """Add comment to existing issue"""
+        # Format stack traces - handle variable length
+        if crash.stack_traces and crash.stack_traces[0] != "N/A":
+            stack_trace_section = "\n".join([f"**Stack Trace {i+1}:** {trace}" for i, trace in enumerate(crash.stack_traces)])
+        else:
+            stack_trace_section = "**Stack Traces:** N/A (crash occurred too quickly to generate stack trace)"
+        
         comment = f"""### Another crash detected at {timestamp}
 
 **Pod:** {pod}
@@ -722,9 +762,7 @@ class GitHubIssueManager:
 **Namespace:** {namespace}
 **Cluster:** {cluster}
 
-**Stack Trace 1:** {crash.stack_traces[0]}
-**Stack Trace 2:** {crash.stack_traces[1]}
-**Stack Trace 3:** {crash.stack_traces[2]}
+{stack_trace_section}
 **Exit Code:** {crash.exit_code}
 **Memory RSS:** {crash.memory_rss} bytes
 **Client Command:** {crash.client_command}
@@ -828,6 +866,13 @@ class GoogleChatNotifier:
         except Exception as e:
             print(f"⚠️  Failed to send error notification to Google Chat: {e}", file=sys.stderr)
     
+    @staticmethod
+    def _format_stack_traces_html(stack_traces: list[str]) -> str:
+        """Format stack traces for HTML display"""
+        if not stack_traces or stack_traces[0] == "N/A":
+            return "N/A (crash occurred too quickly)"
+        return "<br>".join(stack_traces)
+    
     def send_notification(
         self,
         customer_email: str,
@@ -870,7 +915,7 @@ class GoogleChatNotifier:
                     {
                         "widgets": [{
                             "textParagraph": {
-                                "text": f"<b>Stack Trace:</b><br><code>{crash.stack_traces[0]}<br>{crash.stack_traces[1]}<br>{crash.stack_traces[2]}</code>"
+                                "text": f"<b>Stack Trace:</b><br><code>{self._format_stack_traces_html(crash.stack_traces)}</code>"
                             }
                         }]
                     },
@@ -939,12 +984,18 @@ def main(args):
         args: Parsed command-line arguments from argparse
     """
     # Configure SSL verification: True for prod (default), False for dev
-    # Set DISABLE_SSL_VERIFY=true in dev environments only
-    verify_ssl = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() != 'true'
+    # Check ENVIRONMENT variable first, then fall back to DISABLE_SSL_VERIFY
+    environment = os.environ.get('ENVIRONMENT', 'prod').lower()
+    disable_ssl_verify = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() == 'true'
+    
+    # Disable SSL for dev environment or when explicitly requested
+    verify_ssl = not (environment == 'dev' or disable_ssl_verify)
+    
     if not verify_ssl:
         # Disable SSL warnings only when verification is explicitly disabled
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        print("⚠️  WARNING: SSL verification is DISABLED. Use only in development environments.", file=sys.stderr)
+        reason = "dev environment" if environment == 'dev' else "DISABLE_SSL_VERIFY=true"
+        print(f"⚠️  WARNING: SSL verification is DISABLED ({reason}). Use only in development environments.", file=sys.stderr)
     
     # Validate required environment variables
     required_env_vars = [
@@ -981,50 +1032,48 @@ def main(args):
     # Generate timestamp in Israel timezone
     timestamp = datetime.now(ZoneInfo('Asia/Jerusalem')).strftime('%Y%m%d-%H%M%S')
     
+    print(f"\n{'='*60}")
     print(f"Processing crash for pod {args.pod} in namespace {args.namespace}")
+    print(f"{'='*60}\n")
     
     # Step 1: Extract customer info
-    print("Extracting customer information...")
+    print("\n[1/6] Extracting customer information...")
     try:
-        omnistrate = OmnistrateClient(omnistrate_url, omnistrate_user, omnistrate_pass, verify_ssl=verify_ssl)
+        omnistrate = OmnistrateClient(omnistrate_url, omnistrate_user, omnistrate_pass, service_id, environment_id, verify_ssl=verify_ssl)
         customer = omnistrate.get_customer_info(args.namespace)
         print(f"Customer: {customer.name} ({mask_email(customer.email)})")
     except Exception as e:
-        print(f"⚠️  Failed to get customer info: {e}", file=sys.stderr)
-        print("   Continuing with fallback customer info...", file=sys.stderr)
-        # Use fallback customer info instead of stopping
-        customer = CustomerInfo(
-            email='failed-to-retrieve@unknown.com',
-            name='Failed to retrieve customer',
-            subscription_id=args.namespace
-        )
+        print(f"❌ ERROR: Failed to get customer info: {e}", file=sys.stderr)
+        import traceback
+        print(f"DEBUG: Full traceback:\n{traceback.format_exc()}", file=sys.stderr)
+        raise
     
-    # Step 2: Collect logs (last 5 minutes - crash just happened)
-    print("Collecting logs from VictoriaLogs (last 5 minutes)...")
+    # Step 2: Collect logs (last 7 minutes)
+    print("\n[2/6] Collecting logs from VictoriaLogs (last 7 minutes)...")
     try:
         vmauth = VMAauthClient(vmauth_url, vmauth_user, vmauth_pass, verify_ssl=verify_ssl)
-        logs = vmauth.get_logs(args.namespace, args.pod, args.container, hours=5/60)  # 5 minutes
+        logs = vmauth.get_logs(args.namespace, args.pod, args.container, cluster=args.cluster, hours=7/60)  # 7 minutes
         print(f"Collected {len(logs)} bytes of logs")
     except Exception as e:
-        print(f"⚠️  Failed to collect logs: {e}", file=sys.stderr)
-        print("   Continuing with empty logs...", file=sys.stderr)
-        # Use empty logs instead of stopping
-        logs = ""
+        print(f"❌ ERROR: Failed to collect logs: {e}", file=sys.stderr)
+        import traceback
+        print(f"DEBUG: Full traceback:\n{traceback.format_exc()}", file=sys.stderr)
+        raise
     
     # Step 3: Parse crash summary
-    print("Analyzing crash...")
+    print("\n[3/6] Analyzing crash...")
     analyzer = CrashAnalyzer()
     crash = analyzer.parse_logs(logs)
     print(f"Exit code: {crash.exit_code}, Stack traces: {len([s for s in crash.stack_traces if s != 'N/A'])}")
     
     # Step 4: Generate Grafana link
-    print("Generating Grafana link...")
+    print("\n[4/6] Generating Grafana link...")
     grafana = GrafanaLinkGenerator(grafana_url)
     log_url = grafana.generate_link(args.namespace, args.pod, args.container, minutes=7)
     print(f"Grafana link: {log_url}")
     
     # Step 5: Check for existing issue and crash duplication
-    print("Checking for existing issue...")
+    print("\n[5/6] Checking for existing issue...")
     github = GitHubIssueManager(github_token, issue_repo, project_id)
     existing_issue, is_same_crash = github.find_or_get_issue(customer.email, args.namespace, crash)
     
@@ -1062,8 +1111,8 @@ def main(args):
         is_new_crash_type = False
     
     # Step 6: Send notification (only for new issues or new crash types, not same crashes)
+    print("\n[6/6] Sending notification...")
     if not is_same_crash:
-        print("Sending Google Chat notification...")
         notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
         notifier.send_notification(
             customer.email, args.cluster, args.pod, args.namespace,
@@ -1092,7 +1141,9 @@ def main(args):
         print(f"\nIssue: #{issue_number}, Duplicate: {is_duplicate}, Customer: {mask_email(customer.email)}")
         print(f"Namespace: {args.namespace}, Pod: {args.pod}, Cluster: {args.cluster}")
     
-    print("\n✅ Crash handling complete!")
+    print(f"\n{'='*60}")
+    print("✅ Crash handling complete!")
+    print(f"{'='*60}")
 
 
 if __name__ == '__main__':

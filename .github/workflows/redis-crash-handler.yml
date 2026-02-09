@@ -96,6 +96,7 @@ jobs:
         if: ${{ inputs.environment != 'dev' }}
         id: process_crash
         env:
+          ENVIRONMENT: ${{ inputs.environment }}
           OMNISTRATE_API_URL: "https://api.omnistrate.cloud/2022-09-01-00/"
           OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
