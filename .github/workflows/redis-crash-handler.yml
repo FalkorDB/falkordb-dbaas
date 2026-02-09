@@ -43,8 +43,17 @@ env:
   PROJECT_ID: 'PVT_kwDOCFj3QM4BM1wV'
 
 jobs:
+  log-dev-crash:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.environment == 'dev' }}
+    steps:
+      - name: Log dev environment crash
+        run: |
+          echo "Environment is 'dev'. It is worth noting that a crash happened!"
+  
   analyze-crash:
     runs-on: ubuntu-latest
+    if: ${{ inputs.environment != 'dev' }}
     outputs:
       issue_number: ${{ steps.process_crash.outputs.issue_number }}
       is_new_crash: ${{ steps.process_crash.outputs.is_new_crash }}
@@ -54,29 +63,19 @@ jobs:
       cluster: ${{ steps.process_crash.outputs.cluster }}
     
     steps:
-      - name: If environment is dev exit early
-        if: ${{ inputs.environment == 'dev' }}
-        run: |
-          echo "Environment is 'dev'. Exiting job early. It is worth noting that a crash happened!."
-          exit 0
-      
       - name: Checkout repository
-        if: ${{ inputs.environment != 'dev' }}
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
       
       - name: Set up Python
-        if: ${{ inputs.environment != 'dev' }}
         uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5
         with:
           python-version: '3.11'
       
       - name: Install dependencies
-        if: ${{ inputs.environment != 'dev' }}
         run: |
           pip install requests
       
       - name: Set environment variables
-        if: ${{ inputs.environment != 'dev' }}
         env:
           ENVIRONMENT: ${{ inputs.environment }}
           OMNISTRATE_DEV_ENV: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
@@ -93,7 +92,6 @@ jobs:
           fi
       
       - name: Process crash
-        if: ${{ inputs.environment != 'dev' }}
         id: process_crash
         env:
           ENVIRONMENT: ${{ inputs.environment }}
