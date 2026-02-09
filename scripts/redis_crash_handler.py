@@ -119,38 +119,57 @@ class OmnistrateClient:
         if not self.service_id or not self.environment_id:
             raise ValueError("service_id and environment_id are required for customer info retrieval")
         
-        # Get all instances - we'll filter client-side
+        # Get instances with pagination - search each page and return early when match found
         fleet_url = f"{self.api_url}/fleet/service/{self.service_id}/environment/{self.environment_id}/instances"
         params = {
             "Filter": "excludeCloudAccounts",
-            "ExcludeDetail": "false"  # We need full details to get subscription info
+            "ExcludeDetail": "false",  # We need full details to get subscription info
+            "pageSize": 100  # Request 100 instances per page
         }
         
-        response = requests.get(
-            fleet_url,
-            params=params,
-            headers=self._get_headers(),
-            timeout=30,
-            verify=self.verify_ssl
-        )
-        response.raise_for_status()
-        response_data = response.json()
-        all_instances = response_data.get("resourceInstances", [])
-        
-        # Find the instance matching our namespace/instance ID
-        # The instance ID is nested in consumptionResourceInstanceResult.id
         matching_instance = None
-        for instance in all_instances:
-            # Extract instance ID from nested structure
-            nested_result = instance.get("consumptionResourceInstanceResult")
-            if nested_result and isinstance(nested_result, dict):
-                instance_id = nested_result.get("id", "")
-            else:
-                instance_id = ""
+        next_page_token = None
+        
+        # Loop through pages until instance is found or no more pages
+        while True:
+            # Add nextPageToken to params if we have one
+            if next_page_token:
+                params["nextPageToken"] = next_page_token
             
-            # Direct match on instance ID (which is the namespace)
-            if instance_id == namespace:
-                matching_instance = instance
+            response = requests.get(
+                fleet_url,
+                params=params,
+                headers=self._get_headers(),
+                timeout=30,
+                verify=self.verify_ssl
+            )
+            response.raise_for_status()
+            response_data = response.json()
+            page_instances = response_data.get("resourceInstances", [])
+            
+            # Search this page for matching instance
+            # The instance ID is nested in consumptionResourceInstanceResult.id
+            for instance in page_instances:
+                # Extract instance ID from nested structure
+                nested_result = instance.get("consumptionResourceInstanceResult")
+                if nested_result and isinstance(nested_result, dict):
+                    instance_id = nested_result.get("id", "")
+                else:
+                    instance_id = ""
+                
+                # Direct match on instance ID (which is the namespace)
+                if instance_id == namespace:
+                    matching_instance = instance
+                    break
+            
+            # If found, stop searching
+            if matching_instance:
+                break
+            
+            # Check for next page
+            next_page_token = response_data.get("nextPageToken")
+            if not next_page_token:
+                # No more pages and instance not found
                 break
         
         if not matching_instance:
@@ -161,28 +180,49 @@ class OmnistrateClient:
         subscription_id = matching_instance.get("subscriptionId", "")
         subscription_owner_name = matching_instance.get("subscriptionOwnerName", "Unknown")
         
-        # Get all users to find the email for the subscription owner
-        users_response = requests.get(
-            f"{self.api_url}/fleet/users",
-            headers=self._get_headers(),
-            timeout=30,
-            verify=self.verify_ssl
-        )
-        users_response.raise_for_status()
-        users = users_response.json().get("users", [])
+        # Get users with pagination - search each page and return early when match found
+        users_url = f"{self.api_url}/fleet/users"
+        users_params = {
+            "pageSize": 100  # Request 100 users per page
+        }
         
-        # Find user by matching userName with subscriptionOwnerName
-        for user in users:
-            user_name = user.get("userName")
-            if user_name == subscription_owner_name:
-                email = user.get('email', 'unknown@unknown.com')
-                return CustomerInfo(
-                    email=email,
-                    name=subscription_owner_name,
-                    subscription_id=subscription_id
-                )
+        next_page_token = None
         
-        # If user not found in users list
+        # Loop through pages until user is found or no more pages
+        while True:
+            # Add nextPageToken to params if we have one
+            if next_page_token:
+                users_params["nextPageToken"] = next_page_token
+            
+            users_response = requests.get(
+                users_url,
+                params=users_params,
+                headers=self._get_headers(),
+                timeout=30,
+                verify=self.verify_ssl
+            )
+            users_response.raise_for_status()
+            users_data = users_response.json()
+            page_users = users_data.get("users", [])
+            
+            # Search this page for matching user
+            for user in page_users:
+                user_name = user.get("userName")
+                if user_name == subscription_owner_name:
+                    email = user.get('email', 'unknown@unknown.com')
+                    return CustomerInfo(
+                        email=email,
+                        name=subscription_owner_name,
+                        subscription_id=subscription_id
+                    )
+            
+            # Check for next page
+            next_page_token = users_data.get("nextPageToken")
+            if not next_page_token:
+                # No more pages and user not found
+                break
+        
+        # If user not found in any page
         print(f"⚠️ WARNING: User '{subscription_owner_name}' not found in user list", file=sys.stderr)
         raise ValueError(f"User '{subscription_owner_name}' not found - cannot retrieve email")
 
@@ -497,8 +537,6 @@ class GitHubIssueManager:
     
     def _add_issue_to_project(self, issue_node_id: str):
         """Add issue to GitHub project using GraphQL API"""
-        print(f"DEBUG: _add_issue_to_project called with node_id: {issue_node_id}")
-        print(f"DEBUG: self.project_id = {self.project_id}")
         
         if not self.project_id:
             print("DEBUG: No project_id configured, skipping project linking")
@@ -526,8 +564,6 @@ class GitHubIssueManager:
             timeout=30
         )
         
-        print(f"DEBUG: Project linking response status: {response.status_code}")
-        print(f"DEBUG: Project linking response: {response.text}")
         
         if response.status_code == 200:
             result = response.json()
@@ -706,13 +742,9 @@ class GitHubIssueManager:
 
 **Crash Logs:** [View in Grafana]({log_url})"""
         
-        # Create domain-based label for customer (e.g., "customer-domain:falkordb.com")
-        # This avoids exposing PII while still allowing issue grouping by customer
-        email_domain = customer.email.split('@')[1] if '@' in customer.email else 'unknown'
-        
         # Ensure all labels exist before creating the issue
         labels = [
-            f'customer-domain:{email_domain}',
+            f'customer:{customer.email}',
             f'namespace:{namespace}',
             'crash',
             'redis'
@@ -736,8 +768,6 @@ class GitHubIssueManager:
         issue_number = issue_data['number']
         issue_node_id = issue_data['node_id']
         
-        print(f"DEBUG: Created issue #{issue_number} with node_id: {issue_node_id}")
-        print(f"DEBUG: Project ID configured: {self.project_id}")
         
         # Add issue to project
         self._add_issue_to_project(issue_node_id)
