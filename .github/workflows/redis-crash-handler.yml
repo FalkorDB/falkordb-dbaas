@@ -38,6 +38,11 @@ on:
         description: 'Environment (dev or prod)'
         required: true
         type: string
+      test:
+        description: 'Boolean to allow testing on dev branch'
+        required: false
+        type: boolean
+        default: false
 env:
   ISSUE_REPO: 'FalkorDB/private'
   PROJECT_ID: 'PVT_kwDOCFj3QM4BM1wV'
@@ -53,7 +58,7 @@ jobs:
   
   analyze-crash:
     runs-on: ubuntu-latest
-    if: ${{ inputs.environment != 'dev' }}
+    if: ${{ inputs.environment != 'dev' || inputs.test }}
     outputs:
       issue_number: ${{ steps.process_crash.outputs.issue_number }}
       is_new_crash: ${{ steps.process_crash.outputs.is_new_crash }}
