@@ -990,18 +990,17 @@ def main(args):
     Args:
         args: Parsed command-line arguments from argparse
     """
-    # Configure SSL verification: True for prod (default), False for dev
-    # Check ENVIRONMENT variable first, then fall back to DISABLE_SSL_VERIFY
-    environment = os.environ.get('ENVIRONMENT', 'prod').lower()
+    # Configure SSL verification based on DISABLE_SSL_VERIFY environment variable
+    # By default, SSL verification is enabled unless explicitly disabled
     disable_ssl_verify = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() == 'true'
-    
-    # Disable SSL for dev environment or when explicitly requested
-    verify_ssl = not (environment == 'dev' or disable_ssl_verify)
-    
+
+    # Disable SSL only when explicitly requested via DISABLE_SSL_VERIFY
+    verify_ssl = not disable_ssl_verify
+
     if not verify_ssl:
         # Disable SSL warnings only when verification is explicitly disabled
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        reason = "dev environment" if environment == 'dev' else "DISABLE_SSL_VERIFY=true"
+        reason = "DISABLE_SSL_VERIFY=true"
         print(f"⚠️  WARNING: SSL verification is DISABLED ({reason}). Use only in development environments.", file=sys.stderr)
     
     # Validate required environment variables
