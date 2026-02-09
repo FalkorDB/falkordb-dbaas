@@ -720,7 +720,7 @@ class GitHubIssueManager:
         
         body = f"""## Redis Crash Detected
 
-**Customer:** {customer.name} ({masked_email})
+**Customer:** {customer.name} {customer.email}
 **Subscription ID:** {customer.subscription_id}
 **Pod:** {pod}
 **Container:** {container}
