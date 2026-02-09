@@ -195,7 +195,7 @@ class VMAauthClient:
         self.auth = (username, password)
         self.verify_ssl = verify_ssl
     
-    def get_logs(self, namespace: str, pod: str, container: str, cluster: str = None, hours: float = 7/60) -> str:
+    def get_logs(self, namespace: str, pod: str, container: str, hours: float = 7/60) -> str:
         """Fetch logs from VictoriaLogs (default: last 7 minutes)"""
         # Calculate time range
         end_time = datetime.now(timezone.utc)
@@ -268,7 +268,7 @@ class CrashAnalyzer:
         # Pattern 1: Raw stack trace lines with hex addresses - capture entire line
         # Example: /lib/x86_64-linux-gnu/libc.so.6(+0x3c050)[0x7f8b8c3c050]
         # Example: redis-server *:6379(debugCommand+0x244)[0xaaaab1e89984]
-        hex_address_pattern = re.compile(r'\[[0x[0-9a-f]+]\]')
+        hex_address_pattern = re.compile(r'\[0x[0-9a-fA-F]+\]')
         for line in lines:
             if hex_address_pattern.search(line) and ('/' in line or 'redis-server' in line):
                 # This looks like a stack trace line - clean it up
@@ -684,9 +684,12 @@ class GitHubIssueManager:
         else:
             stack_trace_section = "**Stack Traces:** N/A (crash occurred too quickly to generate stack trace)"
         
+        # Mask email for privacy in issue body
+        masked_email = mask_email(customer.email)
+        
         body = f"""## Redis Crash Detected
 
-**Customer:** {customer.name} ( {customer.email})
+**Customer:** {customer.name} ({masked_email})
 **Subscription ID:** {customer.subscription_id}
 **Pod:** {pod}
 **Container:** {container}
@@ -703,9 +706,13 @@ class GitHubIssueManager:
 
 **Crash Logs:** [View in Grafana]({log_url})"""
         
+        # Create domain-based label for customer (e.g., "customer-domain:falkordb.com")
+        # This avoids exposing PII while still allowing issue grouping by customer
+        email_domain = customer.email.split('@')[1] if '@' in customer.email else 'unknown'
+        
         # Ensure all labels exist before creating the issue
         labels = [
-            f'customer:{customer.email}',
+            f'customer-domain:{email_domain}',
             f'namespace:{namespace}',
             'crash',
             'redis'
@@ -1052,7 +1059,7 @@ def main(args):
     print("\n[2/6] Collecting logs from VictoriaLogs (last 7 minutes)...")
     try:
         vmauth = VMAauthClient(vmauth_url, vmauth_user, vmauth_pass, verify_ssl=verify_ssl)
-        logs = vmauth.get_logs(args.namespace, args.pod, args.container, cluster=args.cluster, hours=7/60)  # 7 minutes
+        logs = vmauth.get_logs(args.namespace, args.pod, args.container, hours=7/60)  # 7 minutes
         print(f"Collected {len(logs)} bytes of logs")
     except Exception as e:
         print(f"❌ ERROR: Failed to collect logs: {e}", file=sys.stderr)
@@ -1166,8 +1173,10 @@ if __name__ == '__main__':
         # Get Google Chat webhook early for error notifications
         google_chat_webhook = os.environ.get('GOOGLE_CHAT_WEBHOOK_URL')
         
-        # Configure SSL verification
-        verify_ssl = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() != 'true'
+        # Configure SSL verification - must match logic in main()
+        environment = os.environ.get('ENVIRONMENT', 'prod').lower()
+        disable_ssl_verify = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() == 'true'
+        verify_ssl = not (environment == 'dev' or disable_ssl_verify)
         
         main(args)
     except Exception as e:
