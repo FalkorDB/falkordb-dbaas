@@ -222,9 +222,16 @@ class OmnistrateClient:
                 # No more pages and user not found
                 break
         
-        # If user not found in any page
-        print(f"⚠️ WARNING: User '{subscription_owner_name}' not found in user list", file=sys.stderr)
-        raise ValueError(f"User '{subscription_owner_name}' not found - cannot retrieve email")
+        # If user not found in any page (likely internal team member)
+        # Use synthetic email as fallback to avoid script failure
+        print(f"⚠️ WARNING: User '{subscription_owner_name}' not found in Fleet users API", file=sys.stderr)
+        print(f"   This is likely an internal team member. Using synthetic email as fallback.", file=sys.stderr)
+        synthetic_email = f"{subscription_owner_name}@internal.falkordb.com"
+        return CustomerInfo(
+            email=synthetic_email,
+            name=subscription_owner_name,
+            subscription_id=subscription_id
+        )
 
 
 class VMAauthClient:
