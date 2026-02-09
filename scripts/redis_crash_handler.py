@@ -510,15 +510,10 @@ class GitHubIssueManager:
         )
         
         if response.status_code == 404:
-            # Label doesn't exist, create it
-            # Use a default color based on label type
-            color = "d73a4a"  # Red for crash/redis
-            if label.startswith("customer:"):
-                color = "0075ca"  # Blue for customer labels
-            
+            # Label doesn't exist, create it with default color
             create_response = self.session.post(
                 f"{self.api_url}/repos/{self.repo}/labels",
-                json={"name": label, "color": color},
+                json={"name": label, "color": "ededed"},  # Default gray color
                 timeout=30
             )
             
@@ -1020,17 +1015,21 @@ def main(args):
     Args:
         args: Parsed command-line arguments from argparse
     """
-    # Configure SSL verification based on DISABLE_SSL_VERIFY environment variable
-    # By default, SSL verification is enabled unless explicitly disabled
+    # Configure SSL verification - disabled in dev environment or when explicitly disabled
+    # By default, SSL verification is enabled unless in dev or explicitly disabled
+    environment = os.environ.get('ENVIRONMENT', 'prod').lower()
     disable_ssl_verify = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() == 'true'
-
-    # Disable SSL only when explicitly requested via DISABLE_SSL_VERIFY
-    verify_ssl = not disable_ssl_verify
+    verify_ssl = not (environment == 'dev' or disable_ssl_verify)
 
     if not verify_ssl:
-        # Disable SSL warnings only when verification is explicitly disabled
+        # Disable SSL warnings when verification is disabled
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        reason = "DISABLE_SSL_VERIFY=true"
+        reasons = []
+        if environment == 'dev':
+            reasons.append("ENVIRONMENT=dev")
+        if disable_ssl_verify:
+            reasons.append("DISABLE_SSL_VERIFY=true")
+        reason = " and ".join(reasons)
         print(f"⚠️  WARNING: SSL verification is DISABLED ({reason}). Use only in development environments.", file=sys.stderr)
     
     # Validate required environment variables
