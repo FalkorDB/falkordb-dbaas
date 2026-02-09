@@ -48,7 +48,7 @@ jobs:
     outputs:
       issue_number: ${{ steps.process_crash.outputs.issue_number }}
       is_new_crash: ${{ steps.process_crash.outputs.is_new_crash }}
-      customer_email: ${{ steps.process_crash.outputs.customer_email }}
+      customer_domain: ${{ steps.process_crash.outputs.customer_domain }}
       namespace: ${{ steps.process_crash.outputs.namespace }}
       pod: ${{ steps.process_crash.outputs.pod }}
       cluster: ${{ steps.process_crash.outputs.cluster }}
