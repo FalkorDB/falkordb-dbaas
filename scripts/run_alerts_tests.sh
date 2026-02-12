@@ -18,6 +18,9 @@ mkdir -p observability/rules/tests/rules
 # For each file under observability/rules directory, create a temp yaml file and run the tests under observability/rules/tests directory
 for file in observability/rules/*.yml
 do
+  # Skip if no files match the pattern
+  [[ -f "$file" ]] || continue
+  
   filename=$(basename "$file")
   
   # Skip OOM tests
