@@ -38,6 +38,9 @@ do
   yq eval -i '.groups = .spec.groups | del(.apiVersion, .kind, .metadata, .groups[].params, .spec)' "observability/rules/tests/rules/$filename"
 done
 
+# Disable nullglob after rule files loop
+shopt -u nullglob
+
 errors=0
 for test_file in observability/rules/tests/*.test.yml
 do
@@ -45,9 +48,6 @@ do
     errors=$((errors+1))
   fi
 done
-
-# Disable nullglob after all glob operations
-shopt -u nullglob
 
 # Clean up temp files
 rm -rf observability/rules/tests/rules
