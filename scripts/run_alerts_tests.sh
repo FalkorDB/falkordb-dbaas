@@ -30,7 +30,7 @@ do
   skip=false
   for skip_file in "${SKIP_FILES[@]}"; do
     if [[ "$filename" == "$skip_file" ]]; then
-      echo "Skipping tests: $filename"
+      echo "Skipping alert tests for configured exclusion: $filename"
       skip=true
       break
     fi
@@ -52,7 +52,7 @@ errors=0
 for test_file in observability/rules/tests/*.test.yml
 do
   promtool test rules --debug "$test_file"
-  if [ $? -ne 0 ]; then
+  if [ "$?" -ne 0 ]; then
     errors=$((errors+1))
   fi
 done
