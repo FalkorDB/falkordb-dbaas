@@ -18,8 +18,7 @@ mkdir -p observability/rules/tests/rules
 # Files to skip during testing
 SKIP_FILES=("containeroom.rules.yml")
 
-# Store original nullglob setting and enable it to handle case where no files match the pattern
-original_nullglob=$(shopt -p nullglob)
+# Enable nullglob to handle case where no files match the pattern
 shopt -s nullglob
 
 # For each file under observability/rules directory, create a temp yaml file and run the tests under observability/rules/tests directory
@@ -46,8 +45,8 @@ do
   yq eval -i '.groups = .spec.groups | del(.apiVersion, .kind, .metadata, .groups[].params, .spec)' "observability/rules/tests/rules/$filename"
 done
 
-# Restore original nullglob setting
-eval "$original_nullglob"
+# Disable nullglob
+shopt -u nullglob
 
 errors=0
 for test_file in observability/rules/tests/*.test.yml
