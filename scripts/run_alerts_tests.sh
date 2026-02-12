@@ -19,14 +19,14 @@ mkdir -p observability/rules/tests/rules
 for file in observability/rules/*.yml
 do
   # Skip OOM tests
-  if [[ $(basename $file) == "containeroom.rules.yml" ]]; then
-    echo "Skipping OOM tests: $(basename $file)"
+  if [[ $(basename "$file") == "containeroom.rules.yml" ]]; then
+    echo "Skipping OOM tests: $(basename "$file")"
     continue
   fi
   
   # Create temp rule file under observability/rules/tests directory
-  cp $file observability/rules/tests/rules/
-  yq eval -i '.groups = .spec.groups | del(.apiVersion, .kind, .metadata, .groups[].params, .spec)' observability/rules/tests/rules/$(basename $file)
+  cp "$file" observability/rules/tests/rules/
+  yq eval -i '.groups = .spec.groups | del(.apiVersion, .kind, .metadata, .groups[].params, .spec)' observability/rules/tests/rules/$(basename "$file")
 done
 
 errors=0
