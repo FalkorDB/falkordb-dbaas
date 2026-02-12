@@ -15,12 +15,12 @@ fi
 
 mkdir -p observability/rules/tests/rules
 
+# Enable nullglob to handle case where no files match the pattern
+shopt -s nullglob
+
 # For each file under observability/rules directory, create a temp yaml file and run the tests under observability/rules/tests directory
 for file in observability/rules/*.yml
 do
-  # Skip if no files match the pattern
-  [[ -f "$file" ]] || continue
-  
   filename=$(basename "$file")
   
   # Skip OOM tests
@@ -33,6 +33,9 @@ do
   cp "$file" observability/rules/tests/rules/
   yq eval -i '.groups = .spec.groups | del(.apiVersion, .kind, .metadata, .groups[].params, .spec)' "observability/rules/tests/rules/$filename"
 done
+
+# Disable nullglob
+shopt -u nullglob
 
 errors=0
 for test_file in observability/rules/tests/*.test.yml
