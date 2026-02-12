@@ -29,7 +29,7 @@ do
   filename=$(basename "$file")
   
   # Skip files in the skip list - use -v to check key existence
-  if [[ -v SKIP_FILES[$filename] ]]; then
+  if [[ -v SKIP_FILES["$filename"] ]]; then
     echo "Skipping alert tests for configured exclusion: $filename"
     continue
   fi
