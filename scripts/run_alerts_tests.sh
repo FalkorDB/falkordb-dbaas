@@ -26,7 +26,7 @@ do
   
   # Create temp rule file under observability/rules/tests directory
   cp "$file" observability/rules/tests/rules/
-  yq eval -i '.groups = .spec.groups | del(.apiVersion, .kind, .metadata, .groups[].params, .spec)' observability/rules/tests/rules/$(basename "$file")
+  yq eval -i '.groups = .spec.groups | del(.apiVersion, .kind, .metadata, .groups[].params, .spec)' "observability/rules/tests/rules/$(basename "$file")"
 done
 
 errors=0
