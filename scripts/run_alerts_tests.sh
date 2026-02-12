@@ -15,7 +15,8 @@ fi
 
 mkdir -p observability/rules/tests/rules
 
-# Enable nullglob to handle case where no files match the pattern
+# Store original nullglob setting and enable it to handle case where no files match the pattern
+original_nullglob=$(shopt -p nullglob)
 shopt -s nullglob
 
 # For each file under observability/rules directory, create a temp yaml file and run the tests under observability/rules/tests directory
@@ -34,8 +35,8 @@ do
   yq eval -i '.groups = .spec.groups | del(.apiVersion, .kind, .metadata, .groups[].params, .spec)' "observability/rules/tests/rules/$filename"
 done
 
-# Disable nullglob
-shopt -u nullglob
+# Restore original nullglob setting
+$original_nullglob
 
 errors=0
 for test_file in observability/rules/tests/*.test.yml
