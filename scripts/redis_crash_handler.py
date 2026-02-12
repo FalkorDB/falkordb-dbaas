@@ -48,6 +48,25 @@ class CrashSummary:
     memory_rss: str
     client_command: str
     
+    @staticmethod
+    def _normalize_stack_trace(trace: str) -> str:
+        """Normalize stack trace by removing variable memory addresses
+        
+        ASLR (Address Space Layout Randomization) causes memory addresses to change
+        between crashes, but the crash location (function+offset) remains the same.
+        
+        Examples:
+        - /var/lib/falkordb/bin/falkordb.so(AlgebraicExpression_Dest+0x4)[0x7f2c70b95664]
+          -> /var/lib/falkordb/bin/falkordb.so(AlgebraicExpression_Dest+0x4)
+        - redis-server *:6379(debugCommand+0x244)[0xaaaab1e89984]
+          -> redis-server *:6379(debugCommand+0x244)
+        - /lib/x86_64-linux-gnu/libc.so.6(+0x3c050)[0x7f8b8c3c050]
+          -> /lib/x86_64-linux-gnu/libc.so.6(+0x3c050)
+        """
+        # Remove hex addresses in square brackets: [0x7f2c70b95664] -> ""
+        normalized = re.sub(r'\[0x[0-9a-fA-F]+\]', '', trace)
+        return normalized.strip()
+    
     @property
     def signature(self) -> str:
         """Unique signature for duplicate detection
@@ -55,9 +74,14 @@ class CrashSummary:
         Includes stack traces, exit code, and client command to ensure
         different crashes are not incorrectly marked as duplicates.
         Filters out 'N/A' from stack traces and 'unknown' from exit code and client command.
+        Normalizes stack traces to remove ASLR-affected memory addresses.
         """
-        # Filter out N/A stack traces for signature
-        meaningful_stacks = [st for st in self.stack_traces[:3] if st != "N/A"]
+        # Filter out N/A stack traces and normalize them for signature
+        meaningful_stacks = [
+            self._normalize_stack_trace(st) 
+            for st in self.stack_traces[:3] 
+            if st != "N/A"
+        ]
         
         # Build signature components
         components = meaningful_stacks.copy()
@@ -668,8 +692,13 @@ class GitHubIssueManager:
             client_cmd = self._extract_field(text, 'Client Command')
             
             # Build existing signature using the same logic as CrashSummary
+            # Normalize stack traces to ignore ASLR memory addresses
             existing_stacks = [stack_1, stack_2, stack_3]
-            meaningful_stacks = [st for st in existing_stacks if st and st != "N/A"]
+            meaningful_stacks = [
+                CrashSummary._normalize_stack_trace(st) 
+                for st in existing_stacks 
+                if st and st != "N/A"
+            ]
             
             # Start with meaningful stacks
             components = meaningful_stacks.copy()
