@@ -15,6 +15,9 @@ fi
 
 mkdir -p observability/rules/tests/rules
 
+# Files to skip during testing
+SKIP_FILES=("containeroom.rules.yml")
+
 # Store original nullglob setting and enable it to handle case where no files match the pattern
 original_nullglob=$(shopt -p nullglob)
 shopt -s nullglob
@@ -24,9 +27,17 @@ for file in observability/rules/*.yml
 do
   filename=$(basename "$file")
   
-  # Skip OOM tests
-  if [[ "$filename" == "containeroom.rules.yml" ]]; then
-    echo "Skipping OOM tests: $filename"
+  # Skip files in the skip list
+  skip=false
+  for skip_file in "${SKIP_FILES[@]}"; do
+    if [[ "$filename" == "$skip_file" ]]; then
+      echo "Skipping tests: $filename"
+      skip=true
+      break
+    fi
+  done
+  
+  if [[ "$skip" == true ]]; then
     continue
   fi
   
@@ -36,7 +47,7 @@ do
 done
 
 # Restore original nullglob setting
-$original_nullglob
+eval "$original_nullglob"
 
 errors=0
 for test_file in observability/rules/tests/*.test.yml
