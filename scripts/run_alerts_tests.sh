@@ -15,8 +15,9 @@ fi
 
 mkdir -p observability/rules/tests/rules
 
-# Files to skip during testing
-SKIP_FILES=("containeroom.rules.yml")
+# Files to skip during testing - using associative array for O(1) lookup
+declare -A SKIP_FILES
+SKIP_FILES["containeroom.rules.yml"]=1
 
 # Enable nullglob to handle case where no files match the pattern
 shopt -s nullglob
@@ -27,16 +28,8 @@ do
   filename=$(basename "$file")
   
   # Skip files in the skip list
-  skip=false
-  for skip_file in "${SKIP_FILES[@]}"; do
-    if [[ "$filename" == "$skip_file" ]]; then
-      echo "Skipping alert tests for configured exclusion: $filename"
-      skip=true
-      break
-    fi
-  done
-  
-  if [[ "$skip" == true ]]; then
+  if [[ -n "${SKIP_FILES[$filename]}" ]]; then
+    echo "Skipping alert tests for configured exclusion: $filename"
     continue
   fi
   
@@ -45,9 +38,6 @@ do
   yq eval -i '.groups = .spec.groups | del(.apiVersion, .kind, .metadata, .groups[].params, .spec)' "observability/rules/tests/rules/$filename"
 done
 
-# Disable nullglob
-shopt -u nullglob
-
 errors=0
 for test_file in observability/rules/tests/*.test.yml
 do
@@ -55,6 +45,9 @@ do
     errors=$((errors+1))
   fi
 done
+
+# Disable nullglob after all glob operations
+shopt -u nullglob
 
 # Clean up temp files
 rm -rf observability/rules/tests/rules
