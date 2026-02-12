@@ -19,7 +19,8 @@ mkdir -p observability/rules/tests/rules
 declare -A SKIP_FILES
 SKIP_FILES["containeroom.rules.yml"]=1
 
-# Enable nullglob to handle case where no files match the pattern
+# Enable nullglob so the glob expands to nothing if no .yml files exist,
+# preventing the loop from executing with a literal pattern
 shopt -s nullglob
 
 # For each file under observability/rules directory, create a temp yaml file and run the tests under observability/rules/tests directory
@@ -27,8 +28,8 @@ for file in observability/rules/*.yml
 do
   filename=$(basename "$file")
   
-  # Skip files in the skip list
-  if [[ -n "${SKIP_FILES[$filename]}" ]]; then
+  # Skip files in the skip list - use -v to check key existence
+  if [[ -v SKIP_FILES[$filename] ]]; then
     echo "Skipping alert tests for configured exclusion: $filename"
     continue
   fi
