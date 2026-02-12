@@ -1,0 +1,126 @@
+# GitHub Workflow for FalkorDB/falkordb-omnistrate repository
+# Place at: .github/workflows/redis-crash-handler.yml
+
+name: Redis Crash Handler
+
+permissions:
+  contents: read
+  issues: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      pod:
+        description: 'Pod name'
+        required: true
+        type: string
+      namespace:
+        description: 'Namespace (subscription ID)'
+        required: true
+        type: string
+      cluster:
+        description: 'Cluster name'
+        required: true
+        type: string
+      container:
+        description: 'Container name (service)'
+        required: true
+        type: string
+      vmauth_url:
+        description: 'VMAuth URL for log collection'
+        required: true
+        type: string
+      grafana_url:
+        description: 'Grafana URL for log viewing'
+        required: true
+        type: string
+      environment:
+        description: 'Environment (dev or prod)'
+        required: true
+        type: string
+      test:
+        description: 'Boolean to allow testing on dev branch'
+        required: false
+        type: boolean
+        default: false
+env:
+  ISSUE_REPO: 'FalkorDB/private'
+  PROJECT_ID: 'PVT_kwDOCFj3QM4BM1wV'
+
+jobs:
+  log-dev-crash:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.environment == 'dev' }}
+    steps:
+      - name: Log dev environment crash
+        run: |
+          echo "Environment is 'dev'. It is worth noting that a crash happened!"
+  
+  analyze-crash:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.environment != 'dev' || inputs.test }}
+    outputs:
+      issue_number: ${{ steps.process_crash.outputs.issue_number }}
+      is_new_crash: ${{ steps.process_crash.outputs.is_new_crash }}
+      customer_domain: ${{ steps.process_crash.outputs.customer_domain }}
+      namespace: ${{ steps.process_crash.outputs.namespace }}
+      pod: ${{ steps.process_crash.outputs.pod }}
+      cluster: ${{ steps.process_crash.outputs.cluster }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install requests
+      
+      - name: Set environment variables
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          OMNISTRATE_DEV_ENV: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
+          OMNISTRATE_PROD_ENV: ${{ vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}
+          VMAUTH_PASS_DEV: ${{ secrets.VMAUTH_PASSWORD_DEV }}
+          VMAUTH_PASS_PROD: ${{ secrets.VMAUTH_PASSWORD_PROD }}
+        run: |
+          if [ "$ENVIRONMENT" = "dev" ]; then
+            echo "OMNISTRATE_ENVIRONMENT_ID=$OMNISTRATE_DEV_ENV" >> $GITHUB_ENV
+            echo "VMAUTH_PASSWORD=$VMAUTH_PASS_DEV" >> $GITHUB_ENV
+          else
+            echo "OMNISTRATE_ENVIRONMENT_ID=$OMNISTRATE_PROD_ENV" >> $GITHUB_ENV
+            echo "VMAUTH_PASSWORD=$VMAUTH_PASS_PROD" >> $GITHUB_ENV
+          fi
+      
+      - name: Process crash
+        id: process_crash
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          OMNISTRATE_API_URL: "https://api.omnistrate.cloud/2022-09-01-00/"
+          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
+          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
+          OMNISTRATE_SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
+          VMAUTH_PASSWORD: ${{ env.VMAUTH_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+          ISSUE_REPO: ${{ env.ISSUE_REPO }}
+          PROJECT_ID: ${{ env.PROJECT_ID }}
+          POD: ${{ inputs.pod }}
+          NAMESPACE: ${{ inputs.namespace }}
+          CLUSTER: ${{ inputs.cluster }}
+          CONTAINER: ${{ inputs.container }}
+          VMAUTH_URL: ${{ inputs.vmauth_url }}
+          GRAFANA_URL: ${{ inputs.grafana_url }}
+        run: |
+          python ./scripts/redis_crash_handler.py \
+            --pod "$POD" \
+            --namespace "$NAMESPACE" \
+            --cluster "$CLUSTER" \
+            --container "$CONTAINER" \
+            --vmauth-url "$VMAUTH_URL" \
+            --grafana-url "$GRAFANA_URL"
