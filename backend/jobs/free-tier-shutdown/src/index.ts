@@ -42,13 +42,13 @@ async function handleFreeInstance(
 
     if (graphQueryCount === 0) {
       logger.info(
-        `Instance ${instance.id} has 0 graph.query commands in the last 24h and is older than threshold, created at: ${new Date(
+        `Instance ${instance.id} has 0 graph query commands (QUERY/RO_QUERY) in the last 24h and is older than threshold, created at: ${new Date(
           createdDate,
         ).toISOString()}. Stopping it.`,
       );
       await stopInstance(instance, omnistrateRepo, mailRepo);
     } else {
-      logger.info(`Instance ${instance.id} has ${graphQueryCount} graph.query commands in the last 24h. Not stopping.`);
+      logger.info(`Instance ${instance.id} has ${graphQueryCount} graph query commands (QUERY/RO_QUERY) in the last 24h. Not stopping.`);
     }
   } catch (error) {
     logger.error(error);

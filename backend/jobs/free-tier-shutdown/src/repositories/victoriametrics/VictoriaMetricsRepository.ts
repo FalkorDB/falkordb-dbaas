@@ -23,9 +23,9 @@ export class VictoriaMetricsRepository {
   }
 
   /**
-   * Query the number of graph.query commands executed in the last 24 hours for a specific namespace
+   * Query the number of graph.QUERY and graph.RO_QUERY commands executed in the last 24 hours for a specific namespace
    * @param namespace - The namespace (instance ID)
-   * @returns The count of graph.query commands, 0 if none found, or null if query fails
+   * @returns The count of graph query commands, 0 if none found, or null if query fails
    */
   async getGraphQueryCount(namespace: string): Promise<number | null> {
     try {
@@ -42,7 +42,7 @@ export class VictoriaMetricsRepository {
       // Use the container="service" to target the service container in node-f-0
       const query = `sum(increase(redis_commands_total{cmd=~"graph.QUERY|graph.RO_QUERY",namespace="${namespace}",container="service"}[24h]))`;
 
-      this._options.logger.info({ namespace, query }, 'Querying VictoriaMetrics for graph.query count');
+      this._options.logger.info({ namespace, query }, 'Querying VictoriaMetrics for graph query count (QUERY/RO_QUERY)');
 
       const response = await this.client.get('/api/v1/query', {
         params: {
