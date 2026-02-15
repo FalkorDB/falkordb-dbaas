@@ -6,10 +6,19 @@ export class VictoriaMetricsRepository {
 
   constructor(
     private serverUrl: string,
+    private username: string | undefined,
+    private password: string | undefined,
     private _options: { logger: Logger },
   ) {
     this.client = axios.create({
       baseURL: serverUrl,
+      auth:
+        username && password
+          ? {
+              username,
+              password,
+            }
+          : undefined,
     });
   }
 
@@ -29,9 +38,9 @@ export class VictoriaMetricsRepository {
         return null;
       }
 
-      // Query for the sum of graph.query commands in the last 24 hours
+      // Query for the sum of graph.QUERY and graph.RO_QUERY commands in the last 24 hours
       // Use the container="service" to target the service container in node-f-0
-      const query = `sum(increase(redis_commands_total{cmd="graph.query",namespace="${namespace}",container="service"}[24h]))`;
+      const query = `sum(increase(redis_commands_total{cmd=~"graph.QUERY|graph.RO_QUERY",namespace="${namespace}",container="service"}[24h]))`;
 
       this._options.logger.info({ namespace, query }, 'Querying VictoriaMetrics for graph.query count');
 

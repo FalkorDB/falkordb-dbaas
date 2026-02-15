@@ -37,7 +37,7 @@ describe('VictoriaMetricsRepository', () => {
   it('should return graph.query count when metrics exist', async () => {
     mockAxiosInstance.get.mockResolvedValue(createSuccessResponse('42'));
 
-    const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
+    const repo = new VictoriaMetricsRepository('http://test-url:8429', undefined, undefined, { logger });
     const count = await repo.getGraphQueryCount('test-namespace');
 
     expect(count).toBe(42);
@@ -53,7 +53,7 @@ describe('VictoriaMetricsRepository', () => {
       },
     });
 
-    const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
+    const repo = new VictoriaMetricsRepository('http://test-url:8429', undefined, undefined, { logger });
     const count = await repo.getGraphQueryCount('test-namespace');
 
     expect(count).toBe(0);
@@ -62,7 +62,7 @@ describe('VictoriaMetricsRepository', () => {
   it('should return null when query fails', async () => {
     mockAxiosInstance.get.mockRejectedValue(new Error('Network error'));
 
-    const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
+    const repo = new VictoriaMetricsRepository('http://test-url:8429', undefined, undefined, { logger });
     const count = await repo.getGraphQueryCount('test-namespace');
 
     expect(count).toBeNull();
@@ -76,14 +76,14 @@ describe('VictoriaMetricsRepository', () => {
       },
     });
 
-    const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
+    const repo = new VictoriaMetricsRepository('http://test-url:8429', undefined, undefined, { logger });
     const count = await repo.getGraphQueryCount('test-namespace');
 
     expect(count).toBeNull();
   });
 
   it('should return null for invalid namespace with special characters', async () => {
-    const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
+    const repo = new VictoriaMetricsRepository('http://test-url:8429', undefined, undefined, { logger });
 
     // Test various invalid characters
     expect(await repo.getGraphQueryCount('test{namespace}')).toBeNull();
@@ -97,12 +97,28 @@ describe('VictoriaMetricsRepository', () => {
   it('should accept valid namespace with alphanumeric, hyphens, and underscores', async () => {
     mockAxiosInstance.get.mockResolvedValue(createSuccessResponse('10'));
 
-    const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
+    const repo = new VictoriaMetricsRepository('http://test-url:8429', undefined, undefined, { logger });
 
     // Test valid namespace formats
     expect(await repo.getGraphQueryCount('test-namespace')).toBe(10);
     expect(await repo.getGraphQueryCount('test_namespace')).toBe(10);
     expect(await repo.getGraphQueryCount('TestNamespace123')).toBe(10);
     expect(await repo.getGraphQueryCount('test-namespace_123')).toBe(10);
+  });
+
+  it('should use basic auth when username and password are provided', async () => {
+    mockAxiosInstance.get.mockResolvedValue(createSuccessResponse('5'));
+
+    const repo = new VictoriaMetricsRepository('http://test-url:8429', 'testuser', 'testpass', { logger });
+    await repo.getGraphQueryCount('test-namespace');
+
+    // Verify axios.create was called with auth config
+    expect(mockedAxios.create).toHaveBeenCalledWith({
+      baseURL: 'http://test-url:8429',
+      auth: {
+        username: 'testuser',
+        password: 'testpass',
+      },
+    });
   });
 });

@@ -21,7 +21,18 @@ async function handleFreeInstance(
   try {
     const { id: instanceId } = instance;
 
-    // Get the number of graph.query commands executed in the last 24 hours from VictoriaMetrics
+    // Check if created date is older than LAST_USED_TIME_THRESHOLD before querying metrics
+    const createdDate = new Date(instance.createdDate).getTime();
+    if (Date.now() - createdDate <= LAST_USED_TIME_THRESHOLD) {
+      logger.info(
+        `Instance ${instance.id} is still within threshold. Created at: ${new Date(
+          createdDate,
+        ).toISOString()}. Skipping metrics check.`,
+      );
+      return;
+    }
+
+    // Get the number of graph.QUERY and graph.RO_QUERY commands executed in the last 24 hours from VictoriaMetrics
     const graphQueryCount = await victoriaMetricsRepo.getGraphQueryCount(instanceId);
 
     if (graphQueryCount === null) {
@@ -30,22 +41,12 @@ async function handleFreeInstance(
     }
 
     if (graphQueryCount === 0) {
-      // Check if created date is older than LAST_USED_TIME_THRESHOLD
-      const createdDate = new Date(instance.createdDate).getTime();
-      if (Date.now() - createdDate > LAST_USED_TIME_THRESHOLD) {
-        logger.info(
-          `Instance ${instance.id} has 0 graph.query commands in the last 24h and is older than threshold, created at: ${new Date(
-            createdDate,
-          ).toISOString()}. Stopping it.`,
-        );
-        await stopInstance(instance, omnistrateRepo, mailRepo);
-      } else {
-        logger.info(
-          `Instance ${instance.id} has 0 graph.query commands but is still within threshold. Created at: ${new Date(
-            createdDate,
-          ).toISOString()}`,
-        );
-      }
+      logger.info(
+        `Instance ${instance.id} has 0 graph.query commands in the last 24h and is older than threshold, created at: ${new Date(
+          createdDate,
+        ).toISOString()}. Stopping it.`,
+      );
+      await stopInstance(instance, omnistrateRepo, mailRepo);
     } else {
       logger.info(`Instance ${instance.id} has ${graphQueryCount} graph.query commands in the last 24h. Not stopping.`);
     }
@@ -70,6 +71,8 @@ export async function start() {
   });
   const victoriaMetricsRepo = new VictoriaMetricsRepository(
     process.env.VICTORIAMETRICS_URL || 'http://vmsingle-vm.observability.svc.cluster.local:8429',
+    process.env.VICTORIAMETRICS_USERNAME,
+    process.env.VICTORIAMETRICS_PASSWORD,
     { logger },
   );
   const mailRepo = new MailRepository({ logger });
