@@ -1,6 +1,5 @@
 import { config } from 'dotenv';
 config({ path: process.env.NODE_ENV === 'production' ? './.env.prod' : undefined });
-import { K8sRepository } from './repositories/k8s/K8sRepository';
 import { MailRepository } from './repositories/mail/MailRepository';
 import { OmnistrateRepository } from './repositories/omnistrate/OmnistrateRepository';
 import { VictoriaMetricsRepository } from './repositories/victoriametrics/VictoriaMetricsRepository';
@@ -15,7 +14,6 @@ const logger = pino(gcpLogOptions());
 async function handleFreeInstance(
   instance: OmnistrateInstanceSchemaType,
   omnistrateRepo: OmnistrateRepository,
-  k8sRepo: K8sRepository,
   victoriaMetricsRepo: VictoriaMetricsRepository,
   mailRepo: MailRepository,
 ) {
@@ -70,7 +68,6 @@ export async function start() {
   const omnistrateRepo = new OmnistrateRepository(process.env.OMNISTRATE_USER, process.env.OMNISTRATE_PASSWORD, {
     logger,
   });
-  const k8sRepo = new K8sRepository({ logger });
   const victoriaMetricsRepo = new VictoriaMetricsRepository(
     process.env.VICTORIAMETRICS_URL || 'http://vmsingle-vm.observability.svc.cluster.local:8429',
     { logger },
@@ -99,7 +96,7 @@ export async function start() {
   if (temp.length > 0) grouped.push(temp);
 
   for await (const instances of grouped) {
-    await Promise.allSettled(instances.map((instance) => handleFreeInstance(instance, omnistrateRepo, k8sRepo, victoriaMetricsRepo, mailRepo)));
+    await Promise.allSettled(instances.map((instance) => handleFreeInstance(instance, omnistrateRepo, victoriaMetricsRepo, mailRepo)));
   }
 
   logger.info('Done');
