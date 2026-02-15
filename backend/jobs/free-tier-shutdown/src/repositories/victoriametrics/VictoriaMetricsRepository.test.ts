@@ -86,4 +86,43 @@ describe('VictoriaMetricsRepository', () => {
 
     expect(count).toBeNull();
   });
+
+  it('should return null for invalid namespace with special characters', async () => {
+    const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
+
+    // Test various invalid characters
+    expect(await repo.getGraphQueryCount('test{namespace}')).toBeNull();
+    expect(await repo.getGraphQueryCount('test[namespace]')).toBeNull();
+    expect(await repo.getGraphQueryCount('test"namespace')).toBeNull();
+    expect(await repo.getGraphQueryCount('test\\namespace')).toBeNull();
+    expect(await repo.getGraphQueryCount('test namespace')).toBeNull();
+    expect(await repo.getGraphQueryCount('test\nnamespace')).toBeNull();
+  });
+
+  it('should accept valid namespace with alphanumeric, hyphens, and underscores', async () => {
+    const mockResponse = {
+      data: {
+        status: 'success',
+        data: {
+          result: [
+            {
+              value: [1234567890, '10'],
+            },
+          ],
+        },
+      },
+    };
+
+    mockedAxios.create = jest.fn().mockReturnValue({
+      get: jest.fn().mockResolvedValue(mockResponse),
+    }) as any;
+
+    const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
+
+    // Test valid namespace formats
+    expect(await repo.getGraphQueryCount('test-namespace')).toBe(10);
+    expect(await repo.getGraphQueryCount('test_namespace')).toBe(10);
+    expect(await repo.getGraphQueryCount('TestNamespace123')).toBe(10);
+    expect(await repo.getGraphQueryCount('test-namespace_123')).toBe(10);
+  });
 });

@@ -20,12 +20,16 @@ export class VictoriaMetricsRepository {
    */
   async getGraphQueryCount(namespace: string): Promise<number | null> {
     try {
-      // Sanitize namespace to prevent PromQL injection
-      const sanitizedNamespace = namespace.replace(/["\\]/g, '\\$&');
+      // Validate and sanitize namespace to prevent PromQL injection
+      // Only allow alphanumeric characters, hyphens, and underscores
+      if (!/^[a-zA-Z0-9_-]+$/.test(namespace)) {
+        this._options.logger.error({ namespace }, 'Invalid namespace format');
+        return null;
+      }
 
       // Query for the sum of graph.query commands in the last 24 hours
       // Use the container="service" to target the service container in node-f-0
-      const query = `sum(increase(redis_commands_total{cmd="graph.query",namespace="${sanitizedNamespace}",container="service"}[24h]))`;
+      const query = `sum(increase(redis_commands_total{cmd="graph.query",namespace="${namespace}",container="service"}[24h]))`;
 
       this._options.logger.info({ namespace, query }, 'Querying VictoriaMetrics for graph.query count');
 
