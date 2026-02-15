@@ -22,6 +22,8 @@ export class VictoriaMetricsRepository {
     try {
       // Validate and sanitize namespace to prevent PromQL injection
       // Only allow alphanumeric characters, hyphens, and underscores
+      // Note: VictoriaMetrics/Prometheus API doesn't support parameterized queries,
+      // so whitelist validation is the industry-standard approach for this API
       if (!/^[a-zA-Z0-9_-]+$/.test(namespace)) {
         this._options.logger.error({ namespace }, 'Invalid namespace format');
         return null;

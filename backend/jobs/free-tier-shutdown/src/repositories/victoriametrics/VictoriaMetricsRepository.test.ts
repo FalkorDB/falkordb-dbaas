@@ -8,29 +8,34 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('VictoriaMetricsRepository', () => {
   let logger: pino.Logger;
+  let mockAxiosInstance: any;
 
   beforeEach(() => {
     logger = pino({ level: 'silent' }); // Silent logger for tests
     jest.clearAllMocks();
+
+    // Default mock implementation
+    mockAxiosInstance = {
+      get: jest.fn(),
+    };
+    mockedAxios.create = jest.fn().mockReturnValue(mockAxiosInstance);
+  });
+
+  const createSuccessResponse = (value: string) => ({
+    data: {
+      status: 'success',
+      data: {
+        result: [
+          {
+            value: [1234567890, value],
+          },
+        ],
+      },
+    },
   });
 
   it('should return graph.query count when metrics exist', async () => {
-    const mockResponse = {
-      data: {
-        status: 'success',
-        data: {
-          result: [
-            {
-              value: [1234567890, '42'],
-            },
-          ],
-        },
-      },
-    };
-
-    mockedAxios.create = jest.fn().mockReturnValue({
-      get: jest.fn().mockResolvedValue(mockResponse),
-    }) as any;
+    mockAxiosInstance.get.mockResolvedValue(createSuccessResponse('42'));
 
     const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
     const count = await repo.getGraphQueryCount('test-namespace');
@@ -39,18 +44,14 @@ describe('VictoriaMetricsRepository', () => {
   });
 
   it('should return 0 when no metrics exist', async () => {
-    const mockResponse = {
+    mockAxiosInstance.get.mockResolvedValue({
       data: {
         status: 'success',
         data: {
           result: [],
         },
       },
-    };
-
-    mockedAxios.create = jest.fn().mockReturnValue({
-      get: jest.fn().mockResolvedValue(mockResponse),
-    }) as any;
+    });
 
     const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
     const count = await repo.getGraphQueryCount('test-namespace');
@@ -59,9 +60,7 @@ describe('VictoriaMetricsRepository', () => {
   });
 
   it('should return null when query fails', async () => {
-    mockedAxios.create = jest.fn().mockReturnValue({
-      get: jest.fn().mockRejectedValue(new Error('Network error')),
-    }) as any;
+    mockAxiosInstance.get.mockRejectedValue(new Error('Network error'));
 
     const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
     const count = await repo.getGraphQueryCount('test-namespace');
@@ -70,16 +69,12 @@ describe('VictoriaMetricsRepository', () => {
   });
 
   it('should return null when VictoriaMetrics returns error status', async () => {
-    const mockResponse = {
+    mockAxiosInstance.get.mockResolvedValue({
       data: {
         status: 'error',
         error: 'Query failed',
       },
-    };
-
-    mockedAxios.create = jest.fn().mockReturnValue({
-      get: jest.fn().mockResolvedValue(mockResponse),
-    }) as any;
+    });
 
     const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
     const count = await repo.getGraphQueryCount('test-namespace');
@@ -100,22 +95,7 @@ describe('VictoriaMetricsRepository', () => {
   });
 
   it('should accept valid namespace with alphanumeric, hyphens, and underscores', async () => {
-    const mockResponse = {
-      data: {
-        status: 'success',
-        data: {
-          result: [
-            {
-              value: [1234567890, '10'],
-            },
-          ],
-        },
-      },
-    };
-
-    mockedAxios.create = jest.fn().mockReturnValue({
-      get: jest.fn().mockResolvedValue(mockResponse),
-    }) as any;
+    mockAxiosInstance.get.mockResolvedValue(createSuccessResponse('10'));
 
     const repo = new VictoriaMetricsRepository('http://test-url:8429', { logger });
 
