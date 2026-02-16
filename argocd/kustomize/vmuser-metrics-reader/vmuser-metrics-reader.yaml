@@ -4,8 +4,8 @@ metadata:
   name: vmuser-metrics-reader
   namespace: observability
 spec:
-  name: vmuser
-  username: vmuser
+  name: vmuser-metrics-reader
+  username: vmuser-metrics-reader
   passwordRef:
     key: password
     name: vmuser-metrics-reader-secret
