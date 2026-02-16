@@ -186,7 +186,6 @@ spec:
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
-            environment: '{{ $labels.environment | default "prod" }}'
           annotations:
             summary: "AOF pending rewrite is critically delayed (namespace {{ $labels.namespace }})"
             description: "[cluster={{ $labels.cluster }}] AOF pending rewrite has been pending for more than 20 minutes on namespace {{ $labels.namespace }}. This is a critical issue that could impact data durability."

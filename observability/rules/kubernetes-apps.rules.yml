@@ -23,7 +23,6 @@ spec:
           labels:
             severity: warning
             cluster: '{{ $labels.cluster }}'
-            environment: '{{ $labels.environment | default "prod" }}'
         - alert: KubePodNotReady
           annotations:
             description: '[cluster={{ $labels.cluster }}] Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state for longer than 15 minutes.'
