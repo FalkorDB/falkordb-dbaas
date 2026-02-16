@@ -23,6 +23,7 @@ spec:
           labels:
             severity: warning
             cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
         - alert: KubePodNotReady
           annotations:
             description: '[cluster={{ $labels.cluster }}] Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready state for longer than 15 minutes.'
@@ -41,6 +42,7 @@ spec:
           labels:
             severity: warning
             cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
 
         - alert: KubeDeploymentGenerationMismatch
           annotations:

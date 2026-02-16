@@ -15,6 +15,7 @@ spec:
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
           annotations:
             summary: FalkorDB down (instance {{ $labels.namespace }})
             description: "[cluster={{ $labels.cluster }}] FalkorDB instance is down\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
@@ -161,6 +162,7 @@ spec:
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
           annotations:
             summary: "FalkorDB AOF file size exceeded the 512MB threshold in namespace {{ $labels.namespace }}"
             description: "[cluster={{ $labels.cluster }}] The AOF file size for FalkorDB in namespace {{ $labels.namespace }} has exceeded 512MB. Current size: {{ $value | humanize1024 }}"
@@ -186,6 +188,7 @@ spec:
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
           annotations:
             summary: "AOF pending rewrite is critically delayed (namespace {{ $labels.namespace }})"
             description: "[cluster={{ $labels.cluster }}] AOF pending rewrite has been pending for more than 20 minutes on namespace {{ $labels.namespace }}. This is a critical issue that could impact data durability."
@@ -202,6 +205,7 @@ spec:
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
           annotations:
             summary: FalkorDB replication broken (instance {{ $labels.namespace }})
             description: "[cluster={{ $labels.cluster }}] FalkorDB instance lost a slave\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"

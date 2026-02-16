@@ -18,6 +18,7 @@ spec:
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
           annotations:
             summary: "Container OOMKilled"
             description: "Container {{ $labels.container }} in pod {{ $labels.pod }} in namespace {{ $labels.namespace }} was terminated due to OOMKilled."
