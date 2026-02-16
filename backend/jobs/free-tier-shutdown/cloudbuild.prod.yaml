@@ -59,4 +59,4 @@ substitutions:
   _APPLICATION_PLANE_PROJECT_ID: app-plane-prod-b1b92df2
   _LAST_USED_TIME_THRESHOLD: '86400000'
   _AWS_ROLE_ARN: arn:aws:iam::148761665810:role/FreeTierJobRole
-  _VICTORIAMETRICS_URL: 'http://vmsingle-vm.observability.svc.cluster.local:8429'
+  _VICTORIAMETRICS_URL: 'https://vmauth.observability.internal.falkordb.cloud'
