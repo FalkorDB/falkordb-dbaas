@@ -17,7 +17,7 @@ spec:
           # Trigger if any pod/namespace combination generates more than 10 error logs per minute.
           expr: |
             level: "error" | 
-            stats by (pod, namespace, cluster) count() as error_count | 
+            stats by (pod, namespace, cluster, environment) count() as error_count | 
             filter error_count :> 10
           for: 5m
           labels:
@@ -37,7 +37,7 @@ spec:
           # (equivalent to 2.5 errors/second, indicating a potential crash loop or critical bug).
           expr: |
             level: "error" | 
-            stats by (pod, namespace, cluster) count() as error_count | 
+            stats by (pod, namespace, cluster, environment) count() as error_count | 
             filter error_count :> 150
           for: 2m
           labels:
@@ -56,7 +56,7 @@ spec:
           # Triggers when sentinel nodes fail to resolve hostnames (e.g., wrong sentinel address configuration)
           expr: |
             ~"Failed to resolve hostname .+f2e0a955bb84.cloud.+" and ~namespace: 'instance-.*' | 
-            stats by (pod, namespace, cluster) count() as failure_count | 
+            stats by (pod, namespace, cluster, environment) count() as failure_count | 
             filter failure_count :> 10
           for: 2m
           labels:
@@ -78,7 +78,7 @@ spec:
           # Note: Duplicate issues are prevented by checking for existing open issues in the alert-reaction script
           expr: |
             ~"Redis .+ crashed by signal" and -pod:~"vmalert*" | 
-            stats by (pod, namespace, cluster) count() as crash_count    
+            stats by (pod, namespace, cluster, environment) count() as crash_count    
           for: 0m
           labels:
             severity: critical
@@ -96,7 +96,7 @@ spec:
           # Triggers critical alert immediately when Redis is repeatedly crashing
           expr: |
             ~"Redis .+ crashed by signal" and -pod:~"vmalert*" and _time:10m | 
-            stats by (pod, namespace, cluster) count() as crash_count |
+            stats by (pod, namespace, cluster, environment) count() as crash_count | 
             filter crash_count :>= 2
           for: 1m
           labels:
