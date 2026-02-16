@@ -43,7 +43,6 @@ spec:
           labels:
             severity: critical
             cluster: "{{ $labels.cluster }}"
-            environment: '{{ $labels.environment | default "prod" }}'
           annotations:
             summary: "CRITICAL: Major Error Log Spike in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
@@ -63,7 +62,6 @@ spec:
           labels:
             severity: critical
             cluster: "{{ $labels.cluster }}"
-            environment: '{{ $labels.environment | default "prod" }}'
           annotations:
             summary: "Sentinel hostname resolution failure in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
