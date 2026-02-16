@@ -7,8 +7,6 @@ spec:
   evaluationInterval: "10s"
   nodeSelector:
     node_pool: observability-resources
-  externalLabels:
-    environment: dev
   ruleSelector:
     matchLabels:
       is_logs: "true"
