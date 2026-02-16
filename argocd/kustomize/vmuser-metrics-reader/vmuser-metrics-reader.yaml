@@ -1,0 +1,18 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMUser
+metadata:
+  name: vmuser-metrics-reader
+  namespace: observability
+spec:
+  name: vmuser
+  username: vmuser
+  passwordRef:
+    key: password
+    name: vmuser-metrics-reader-secret
+  targetRefs:
+    - crd:
+        kind: VMSingle
+        name: vm
+        namespace: observability
+      paths:
+        - "/api/v1/query"

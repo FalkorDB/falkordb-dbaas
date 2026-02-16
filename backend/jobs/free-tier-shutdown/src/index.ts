@@ -1,8 +1,8 @@
 import { config } from 'dotenv';
 config({ path: process.env.NODE_ENV === 'production' ? './.env.prod' : undefined });
-import { K8sRepository } from './repositories/k8s/K8sRepository';
 import { MailRepository } from './repositories/mail/MailRepository';
 import { OmnistrateRepository } from './repositories/omnistrate/OmnistrateRepository';
+import { VictoriaMetricsRepository } from './repositories/victoriametrics/VictoriaMetricsRepository';
 import { OmnistrateInstanceSchemaType } from './schemas/OmnistrateInstance';
 import pino from 'pino';
 import { gcpLogOptions } from 'pino-cloud-logging';
@@ -14,50 +14,41 @@ const logger = pino(gcpLogOptions());
 async function handleFreeInstance(
   instance: OmnistrateInstanceSchemaType,
   omnistrateRepo: OmnistrateRepository,
-  k8sRepo: K8sRepository,
+  victoriaMetricsRepo: VictoriaMetricsRepository,
   mailRepo: MailRepository,
 ) {
   logger.info(`Handling free instance ${instance.id}`);
   try {
-    // 2. For each instance, get the last used time from k8s
-    const { cloudProvider, clusterId, region, id: instanceId } = instance;
+    const { id: instanceId } = instance;
 
-    // 3. If the last used time is more than 24 hours, stop the instance in omnistrate, and send an email to the user
-    const lastUsedTime = await k8sRepo.getFalkorDBLastQueryTime(
-      cloudProvider,
-      clusterId,
-      region,
-      instanceId,
-      instance.tls,
-    );
-
-    if (!lastUsedTime) {
-      // Check if created date is older than LAST_USED_TIME_THRESHOLD
-      const createdDate = new Date(instance.createdDate).getTime();
-      if (Date.now() - createdDate > LAST_USED_TIME_THRESHOLD) {
-        logger.info(
-          `Instance ${instance.id} has no query time and is older than threshold, created at: ${new Date(
-            createdDate,
-          ).toISOString()}. Stopping it.`,
-        );
-        await stopInstance(instance, omnistrateRepo, mailRepo);
-      } else {
-        logger.info(
-          `Instance ${instance.id} has no query time but is still within threshold. Created at: ${new Date(
-            createdDate,
-          ).toISOString()}`,
-        );
-      }
+    // Check if created date is older than LAST_USED_TIME_THRESHOLD before querying metrics
+    const createdDate = new Date(instance.createdDate).getTime();
+    if (Date.now() - createdDate <= LAST_USED_TIME_THRESHOLD) {
+      logger.info(
+        `Instance ${instance.id} is still within threshold. Created at: ${new Date(
+          createdDate,
+        ).toISOString()}. Skipping metrics check.`,
+      );
       return;
     }
 
-    if (Date.now() - lastUsedTime > LAST_USED_TIME_THRESHOLD) {
+    // Get the number of graph.QUERY and graph.RO_QUERY commands executed in the last 24 hours from VictoriaMetrics
+    const graphQueryCount = await victoriaMetricsRepo.getGraphQueryCount(instanceId);
+
+    if (graphQueryCount === null) {
+      logger.error(`Failed to get graph.query count for instance ${instanceId}. Skipping.`);
+      return;
+    }
+
+    if (graphQueryCount === 0) {
       logger.info(
-        `Instance ${instance.id} is not in use, last used time: ${new Date(lastUsedTime).toISOString()}. Stopping it.`,
+        `Instance ${instance.id} has 0 graph query commands (QUERY/RO_QUERY) in the last 24h and is older than threshold, created at: ${new Date(
+          createdDate,
+        ).toISOString()}. Stopping it.`,
       );
       await stopInstance(instance, omnistrateRepo, mailRepo);
     } else {
-      logger.info(`Instance ${instance.id} is still in use. Last used time: ${new Date(lastUsedTime).toISOString()}`);
+      logger.info(`Instance ${instance.id} has ${graphQueryCount} graph query commands (QUERY/RO_QUERY) in the last 24h. Not stopping.`);
     }
   } catch (error) {
     logger.error(error);
@@ -78,7 +69,12 @@ export async function start() {
   const omnistrateRepo = new OmnistrateRepository(process.env.OMNISTRATE_USER, process.env.OMNISTRATE_PASSWORD, {
     logger,
   });
-  const k8sRepo = new K8sRepository({ logger });
+  const victoriaMetricsRepo = new VictoriaMetricsRepository(
+    process.env.VICTORIAMETRICS_URL || 'http://vmsingle-vm.observability.svc.cluster.local:8429',
+    process.env.VICTORIAMETRICS_USERNAME,
+    process.env.VICTORIAMETRICS_PASSWORD,
+    { logger },
+  );
   const mailRepo = new MailRepository({ logger });
 
   // !. Get all free instances from omnistrate
@@ -103,7 +99,7 @@ export async function start() {
   if (temp.length > 0) grouped.push(temp);
 
   for await (const instances of grouped) {
-    await Promise.allSettled(instances.map((instance) => handleFreeInstance(instance, omnistrateRepo, k8sRepo, mailRepo)));
+    await Promise.allSettled(instances.map((instance) => handleFreeInstance(instance, omnistrateRepo, victoriaMetricsRepo, mailRepo)));
   }
 
   logger.info('Done');
