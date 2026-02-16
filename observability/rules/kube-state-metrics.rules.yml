@@ -76,3 +76,4 @@ spec:
           labels:
             severity: warning
             cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'

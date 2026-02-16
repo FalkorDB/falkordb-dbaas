@@ -36,6 +36,7 @@ spec:
           labels:
             severity: info
             cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
           annotations:
             summary: "Pod Restart Info"
             description: "[cluster={{ $labels.cluster }}] Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 10 or more times in the last hour. Investigate potential instability."
@@ -61,6 +62,7 @@ spec:
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
           annotations:
             summary: "Pod Restart Critical"
             description: "[cluster={{ $labels.cluster }}] Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} restarted 5 or more times in the last 10 minutes. Possible crash-loop detected."

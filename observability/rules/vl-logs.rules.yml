@@ -23,6 +23,7 @@ spec:
           labels:
             severity: warning
             cluster: "{{ $labels.cluster }}"
+            environment: "{{ $labels.environment }}"
           annotations:
             summary: "WARNING: Sustained Error Rate in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
@@ -62,6 +63,7 @@ spec:
           labels:
             severity: critical
             cluster: "{{ $labels.cluster }}"
+            environment: "{{ $labels.environment }}"
           annotations:
             summary: "Sentinel hostname resolution failure in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
@@ -83,6 +85,7 @@ spec:
           labels:
             severity: critical
             cluster: "{{ $labels.cluster }}"
+            environment: "{{ $labels.environment }}"
           annotations:
             summary: "Critical: Redis crashed in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
@@ -102,6 +105,7 @@ spec:
           labels:
             severity: critical
             cluster: "{{ $labels.cluster }}"
+            environment: "{{ $labels.environment }}"
           annotations:
             summary: "CRITICAL: Redis crash loop detected in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |

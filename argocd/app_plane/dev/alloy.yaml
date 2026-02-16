@@ -459,6 +459,11 @@ spec:
                       target_label  = "cluster"
                       replacement   = "{{ regexFind "h?c-[A-Za-z0-9]+" .name }}"
                     }
+
+                    rule {
+                      target_label  = "environment"
+                      replacement   = "dev"
+                    }
                   }
 
                   prometheus.relabel "remove_unwanted_labels" {
