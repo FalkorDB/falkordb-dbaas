@@ -21,7 +21,7 @@ spec:
               service:
                 name: n8n-webhook
                 port:
-                  name: webhook
+                  name: http
           - path: /
             pathType: Prefix
             backend:
