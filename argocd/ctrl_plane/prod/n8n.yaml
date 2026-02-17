@@ -15,16 +15,6 @@ spec:
         existingEncryptionKeySecret: n8n-encryption-key-secret
         db:
           type: postgresdb
-        externalPostgresql:
-          host: n8n-postgresql
-          port: 5432
-          username: n8n
-          database: n8n
-          existingSecret: n8n-postgresql-secret
-        externalRedis:
-          host: n8n-redis-master
-          port: 6379
-          existingSecret: n8n-redis-secret
         main:
           count: 1
         worker:
@@ -33,6 +23,10 @@ spec:
         webhook:
           mode: queue
           count: 1
+        redis:
+          enabled: true
+        postgresql:
+          enabled: true
   destination:
     server: https://kubernetes.default.svc
     namespace: n8n
