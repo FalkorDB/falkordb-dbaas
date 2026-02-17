@@ -18,7 +18,6 @@ spec:
               This indicates a failure in the data delivery pipeline from app plane clusters.
               Either Prometheus remote storage samples or VictoriaLogs rows have been absent for 10 minutes.
             summary: 'Alloy data delivery failure from app plane clusters to control plane'
-            runbook_url: "https://runbooks.falkordb.cloud/alerts/alloynodatadeliverytocontrolplanerunbook"
           expr: |
             (
               (
@@ -44,7 +43,6 @@ spec:
             summary: Grafana Alloy is failing to write metrics
             description: |
               [cluster={{ $labels.cluster }}] The rate of failed Prometheus remote write samples is increasing on instance {{ $labels.instance }} in cluster {{ $labels.cluster }}.
-            runbook_url: "https://runbooks.falkordb.cloud/alerts/prometheusremotewritefailingrunbook"
         - alert: PrometheusRemoteWriteQueueFull
           expr: prometheus_remote_storage_samples_pending > 0.9 * prometheus_remote_storage_shard_capacity
           for: 5m
@@ -55,7 +53,6 @@ spec:
             summary: Grafana Alloy remote write queue is nearly full
             description: |
               [cluster={{ $labels.cluster }}] The Prometheus remote write queue on instance {{ $labels.instance }} in cluster {{ $labels.cluster }} is close to its capacity.
-            runbook_url: "https://runbooks.falkordb.cloud/alerts/prometheusremotewritequeuefullrunbook"
         - alert: LokiLogsDropped
           expr: rate(loki_write_dropped_entries_total[5m]) > 0
           for: 1m
@@ -66,7 +63,6 @@ spec:
             summary: Grafana Alloy is dropping logs
             description: |
               [cluster={{ $labels.cluster }}] The rate of dropped log entries is increasing on instance {{ $labels.instance }} in cluster {{ $labels.cluster }}.
-            runbook_url: "https://runbooks.falkordb.cloud/alerts/lokilogsdroppedrunbook"
         - alert: LokiWriteRequestsSlow
           expr: histogram_quantile(0.99, rate(loki_write_request_duration_seconds_bucket[5m])) > 1
           for: 5m
@@ -77,7 +73,6 @@ spec:
             summary: Grafana Alloy Loki write requests are slow
             description: |
               [cluster={{ $labels.cluster }}] The 99th percentile of Loki write request duration on instance {{ $labels.instance }} in cluster {{ $labels.cluster }} is over 1 second.
-            runbook_url: "https://runbooks.falkordb.cloud/alerts/lokiwriterequestsslowrunbook"
         - alert: AlloyConfigLoadFailed
           expr: alloy_config_load_failures_total > 0
           for: 1m
@@ -88,4 +83,3 @@ spec:
             summary: Grafana Alloy failed to load configuration
             description:  |
               [cluster={{ $labels.cluster }}]  Alloy on instance {{ $labels.instance }} in cluster {{ $labels.cluster }} has reported a configuration load failure.
-            runbook_url: "https://runbooks.falkordb.cloud/alerts/alloyconfigloadfailedrunbook"

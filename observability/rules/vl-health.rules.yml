@@ -18,7 +18,6 @@ spec:
               Disk utilisation on instance {{ $labels.instance }} is more than 80%.
                Having less than 20% of free disk space could cripple merge processes and overall performance. Consider to limit the ingestion rate, decrease retention or scale the disk space if possible.
             summary: Instance {{ $labels.instance }} (job={{ $labels.job }}) will run out of disk space soon
-            runbook_url: "https://runbooks.falkordb.cloud/alerts/diskrunsoutofspacerunbook"
           expr: |-
             sum(vl_data_size_bytes) by (job,instance,cluster) /
             (
