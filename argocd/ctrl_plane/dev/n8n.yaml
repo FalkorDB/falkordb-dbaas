@@ -1,0 +1,63 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: n8n
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: n8n
+    repoURL: https://community-charts.github.io/helm-charts
+    targetRevision: 1.16.28
+    helm:
+      releaseName: n8n
+      valuesObject:
+        config:
+          executions:
+            mode: queue
+        secret:
+          database:
+            type: postgresdb
+            postgresdb:
+              host: n8n-postgresql
+              port: 5432
+              database: n8n
+              user: n8n
+        main:
+          enabled: true
+          replicaCount: 1
+        worker:
+          enabled: true
+          replicaCount: 2
+        webhook:
+          enabled: true
+          replicaCount: 1
+        redis:
+          enabled: true
+          architecture: standalone
+          auth:
+            enabled: true
+            existingSecret: n8n-redis-secret
+            existingSecretPasswordKey: password
+        postgresql:
+          enabled: true
+          auth:
+            username: n8n
+            database: n8n
+            existingSecret: n8n-postgresql-secret
+            secretKeys:
+              adminPasswordKey: postgres-password
+              userPasswordKey: password
+          primary:
+            persistence:
+              enabled: true
+              size: 20Gi
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: n8n
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
