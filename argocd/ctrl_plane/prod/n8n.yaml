@@ -17,6 +17,13 @@ spec:
           type: postgresdb
         main:
           count: 1
+          persistence:
+            enabled: true
+            accessMode: ReadWriteOnce
+            volumeName: n8n-main-pvc
+            mountPath: /home/node/.n8n
+            size: 10Gi
+
         worker:
           mode: queue
           count: 2
