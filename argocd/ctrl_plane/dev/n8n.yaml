@@ -29,6 +29,7 @@ spec:
         webhook:
           mode: queue
           count: 1
+          url: https://n8n.dev.falkordb.cloud
         redis:
           enabled: true
           auth:
