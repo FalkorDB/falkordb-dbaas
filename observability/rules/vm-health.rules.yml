@@ -17,6 +17,7 @@ spec:
             description: |
               [cluster={{ $labels.cluster }}] Job {{ $labels.job }} (instance {{ $labels.instance }}) has restarted more than twice in the last 15 minutes. It might be crashlooping.
             summary: '{{ $labels.job }} too many restarts (instance {{ $labels.instance }})'
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/toomanyrestartsrunbook"
           expr: changes(process_start_time_seconds{job=~".*(victoriametrics|vmselect|vminsert|vmstorage|vmagent|vmalert|vmsingle|vmalertmanager|vmauth|victorialogs).*"}[15m]) > 2
           labels:
             severity: critical
@@ -25,6 +26,7 @@ spec:
           annotations:
             description: '[cluster={{ $labels.cluster }}] {{ $labels.instance }} of job {{ $labels.job }} has been down for more than 2 minutes.'
             summary: Service {{ $labels.job }} is down on {{ $labels.instance }}
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/servicedownrunbook"
           expr: up{job=~".*(victoriametrics|vmselect|vminsert|vmstorage|vmagent|vmalert|vmsingle|vmalertmanager|vmauth|victorialogs).*"} == 0
           for: 2m
           labels:
@@ -36,6 +38,7 @@ spec:
               [cluster={{ $labels.cluster }}] Exhausting OS file descriptors limit can cause severe degradation of the process.
               Consider to increase the limit as fast as possible.
             summary: Number of free file descriptors is less than 100 for "{{ $labels.job }}"("{{ $labels.instance }}") for the last 5m
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/processnearfdlimitsrunbook"
           expr: (process_max_fds - process_open_fds) < 100
           for: 5m
           labels:
@@ -47,6 +50,7 @@ spec:
               [cluster={{ $labels.cluster }}] Too high memory usage may result into multiple issues such as OOMs or degraded performance.
               Consider to either increase available memory or decrease the load on the process.
             summary: It is more than 80% of memory used by "{{ $labels.job }}"("{{ $labels.instance }}")
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/toohighmemoryusagerunbook"
           expr: (min_over_time(process_resident_memory_anon_bytes[10m]) / vm_available_memory_bytes) > 0.8
           for: 5m
           labels:
@@ -57,6 +61,7 @@ spec:
             description: |
               [cluster={{ $labels.cluster }}] Too high CPU usage may be a sign of insufficient resources and make process unstable. Consider to either increase available CPU resources or decrease the load on the process.
             summary: More than 90% of CPU is used by "{{ $labels.job }}"("{{ $labels.instance }}") during the last 5m
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/toohighcpuusagerunbook"
           expr: rate(process_cpu_seconds_total[5m]) / process_cpu_cores_available > 0.9
           for: 5m
           labels:
@@ -67,6 +72,7 @@ spec:
             description: |
               [cluster={{ $labels.cluster }}] Go runtime is unable to schedule goroutines execution in acceptable time. This is usually a sign of insufficient CPU resources or CPU throttling. Verify that service has enough CPU resources. Otherwise, the service could work unreliably with delays in processing.
             summary: '"{{ $labels.job }}"("{{ $labels.instance }}") has insufficient CPU resources for >15m'
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/toohighgoroutineschedulinglatencyrunbook"
           expr: histogram_quantile(0.99, sum(rate(go_sched_latencies_seconds_bucket[5m])) by (le,job,instance,cluster)) > 0.1
           for: 15m
           labels:
@@ -77,6 +83,7 @@ spec:
             description: |
               [cluster={{ $labels.cluster }}] Logging rate for job \"{{ $labels.job }}\" ({{ $labels.instance }}) is {{ $value }} for last 15m. Worth to check logs for specific error messages.
             summary: Too many logs printed for job "{{ $labels.job }}" ({{ $labels.instance }})
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/toomanylogsrunbook"
           expr: sum(increase(vm_log_messages_total{level="error"}[5m])) without (app_version, location) > 0
           for: 15m
           labels:
@@ -89,6 +96,7 @@ spec:
               Make sure you're running VictoriaMetrics of v1.85.3 or higher.
               Related issue https://github.com/VictoriaMetrics/VictoriaMetrics/issues/3502
             summary: Too many TSID misses for job "{{ $labels.job }}" ({{ $labels.instance }})
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/toomanytsidmissesrunbook"
           expr: rate(vm_missing_tsids_for_metric_id_total[5m]) > 0
           for: 10m
           labels:
@@ -98,6 +106,7 @@ spec:
           annotations:
             description: "[cluster={{ $labels.cluster }}] The limit of concurrent inserts on instance {{ $labels.instance }} depends on the number of CPUs.\nUsually, when component constantly hits the limit it is likely the component is overloaded and requires more CPU.\nIn some cases for components like vmagent or vminsert the alert might trigger if there are too many clients\nmaking write attempts. If vmagent's or vminsert's CPU usage and network saturation are at normal level, then \nit might be worth adjusting `-maxConcurrentInserts` cmd-line flag.\n"
             summary: '{{ $labels.job }} on instance {{ $labels.instance }} is constantly hitting concurrent inserts limit'
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/concurrentinsertshitthelimitrunbook"
           expr: avg_over_time(vm_concurrent_insert_current[1m]) >= vm_concurrent_insert_capacity
           for: 15m
           labels:
@@ -107,6 +116,7 @@ spec:
           annotations:
             description: "[cluster={{ $labels.cluster }}] VictoriaMetrics could skip registering new timeseries during ingestion if they fail the validation process. \nFor example, `reason=too_long_item` means that time series cannot exceed 64KB. Please, reduce the number \nof labels or label values for such series. Or enforce these limits via `-maxLabelsPerTimeseries` and \n`-maxLabelValueLen` command-line flags.\n"
             summary: IndexDB skipped registering items during data ingestion with reason={{ $labels.reason }}.
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/indexdbrecordsdroprunbook"
           expr: increase(vm_indexdb_items_dropped_total[5m]) > 0
           labels:
             severity: critical
@@ -115,6 +125,7 @@ spec:
           annotations:
             description: '[cluster={{ $labels.cluster }}] Ingested rows on instance "{{ $labels.instance }}" are rejected due to the following reason: "{{ $labels.reason }}"'
             summary: Some rows are rejected on "{{ $labels.instance }}" on ingestion attempt
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/rowsrejectedoningestionrunbook"
           expr: rate(vm_rows_ignored_total[5m]) > 0
           for: 15m
           labels:

@@ -20,6 +20,7 @@ spec:
           annotations:
             summary: ArgoCD service not synced (instance {{ $labels.instance }})
             description: "[cluster={{ $labels.cluster }}] Service {{ $labels.name }} run by argo is currently not in sync.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/argocdservicenotsyncedrunbook"
 
         - alert: ArgocdServiceUnhealthy
           expr: 'argocd_app_info{health_status!="Healthy"} != 0'
@@ -30,3 +31,4 @@ spec:
           annotations:
             summary: ArgoCD service unhealthy (instance {{ $labels.instance }})
             description: "[cluster={{ $labels.cluster }}] Service {{ $labels.name }} run by argo is currently not healthy.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/argocdserviceunhealthyrunbook"
