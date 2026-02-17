@@ -106,7 +106,7 @@ export class MailRepository {
     return readFileSync(join(__dirname, '../../assets/templates', `${templateName}.mjml`), 'utf8');
   }
 
-  private _interpolateTemplate(templateName: 'instance-stopped', vars: { [key: string]: string }) {
+  private async _interpolateTemplate(templateName: 'instance-stopped', vars: { [key: string]: string }) {
     // Load template.
     const tpl = this._getTemplate(templateName) ?? DEFAULT_TEMPLATES[templateName];
 
@@ -115,7 +115,12 @@ export class MailRepository {
     }
 
     // Render.
-    let html = mjml2html(tpl).html;
+    const mjmlResult = await mjml2html(tpl);
+    let html = mjmlResult.html;
+
+    if (!html) {
+      throw new Error(`MailRepository: Failed to render template ${templateName}`);
+    }
 
     // Interpolate variables.
     for (const prop in vars) {
@@ -139,7 +144,7 @@ export class MailRepository {
     sendSmtpEmail.subject = 'Your FalkorDB instance has been stopped';
     sendSmtpEmail.replyTo = { email: process.env.REPLY_TO_EMAIL || 'info@falkordb.com', name: 'FalkorDB Support' };
 
-    sendSmtpEmail.htmlContent = this._interpolateTemplate('instance-stopped', { instanceId, name, link });
+    sendSmtpEmail.htmlContent = await this._interpolateTemplate('instance-stopped', { instanceId, name, link });
     await this._apiInstance.sendTransacEmail(sendSmtpEmail);
   }
 }
