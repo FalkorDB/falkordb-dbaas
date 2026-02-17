@@ -81,6 +81,7 @@ spec:
           annotations:
             summary: FalkorDB too many masters (instance {{ $labels.namespace }})
             description: "[cluster={{ $labels.cluster }}] FalkorDB has too many nodes marked as master.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/falkordbtoomanymastersrunbook"
 
         - alert: FalkorDBMissingBackup
           expr: time() - redis_rdb_last_save_timestamp_seconds{container="service"} > 60 * 60 * 24 and rate(redis_commands_processed_total{container="service"}[5m]) < (rate(redis_commands_processed_total{container="service"}[15m]) * 0.2)
