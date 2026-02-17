@@ -107,7 +107,7 @@ jobs:
           VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
           VMAUTH_PASSWORD: ${{ env.VMAUTH_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
-          GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+          GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL_PRODUCTION_CHAT }}
           ISSUE_REPO: ${{ env.ISSUE_REPO }}
           PROJECT_ID: ${{ env.PROJECT_ID }}
           POD: ${{ inputs.pod }}
