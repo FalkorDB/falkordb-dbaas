@@ -33,6 +33,12 @@ spec:
           enabled: true
         postgresql:
           enabled: true
+        externalRedis:
+          host: n8n-redis-master
+          existingSecret: n8n-redis
+        externalPostgresql:
+          host: n8n-postgresql
+          existingSecret: n8n-postgresql
   destination:
     server: https://kubernetes.default.svc
     namespace: n8n
