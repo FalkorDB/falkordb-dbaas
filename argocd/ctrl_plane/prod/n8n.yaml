@@ -8,7 +8,7 @@ spec:
   source:
     chart: n8n
     repoURL: https://community-charts.github.io/helm-charts
-    targetRevision: 0.29.0
+    targetRevision: 1.16.28
     helm:
       releaseName: n8n
       valuesObject:
@@ -35,11 +35,19 @@ spec:
         redis:
           enabled: true
           architecture: standalone
+          auth:
+            enabled: true
+            existingSecret: n8n-redis-secret
+            existingSecretPasswordKey: password
         postgresql:
           enabled: true
           auth:
             username: n8n
             database: n8n
+            existingSecret: n8n-postgresql-secret
+            secretKeys:
+              adminPasswordKey: postgres-password
+              userPasswordKey: password
           primary:
             persistence:
               enabled: true
