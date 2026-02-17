@@ -12,46 +12,27 @@ spec:
     helm:
       releaseName: n8n
       valuesObject:
-        config:
-          executions:
-            mode: queue
-        secret:
-          database:
-            type: postgresdb
-            postgresdb:
-              host: n8n-postgresql
-              port: 5432
-              database: n8n
-              user: n8n
+        existingEncryptionKeySecret: n8n-encryption-key-secret
+        db:
+          type: postgresdb
+        externalPostgresql:
+          host: n8n-postgresql
+          port: 5432
+          username: n8n
+          database: n8n
+          existingSecret: n8n-postgresql-secret
+        externalRedis:
+          host: n8n-redis-master
+          port: 6379
+          existingSecret: n8n-redis-secret
         main:
-          enabled: true
-          replicaCount: 1
+          count: 1
         worker:
-          enabled: true
-          replicaCount: 2
+          mode: queue
+          count: 2
         webhook:
-          enabled: true
-          replicaCount: 1
-        redis:
-          enabled: true
-          architecture: standalone
-          auth:
-            enabled: true
-            existingSecret: n8n-redis-secret
-            existingSecretPasswordKey: password
-        postgresql:
-          enabled: true
-          auth:
-            username: n8n
-            database: n8n
-            existingSecret: n8n-postgresql-secret
-            secretKeys:
-              adminPasswordKey: postgres-password
-              userPasswordKey: password
-          primary:
-            persistence:
-              enabled: true
-              size: 20Gi
+          mode: queue
+          count: 1
   destination:
     server: https://kubernetes.default.svc
     namespace: n8n
