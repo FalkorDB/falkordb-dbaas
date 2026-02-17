@@ -31,8 +31,12 @@ spec:
           count: 1
         redis:
           enabled: true
+          auth:
+            existingSecret: n8n-redis
         postgresql:
           enabled: true
+          auth:
+            existingSecret: n8n-postgresql
         externalRedis:
           host: n8n-redis-master
           existingSecret: n8n-redis
