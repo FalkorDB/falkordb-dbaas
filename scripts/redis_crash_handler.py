@@ -1101,7 +1101,7 @@ def main(args):
     google_chat_webhook = os.environ['GOOGLE_CHAT_WEBHOOK_URL']
     
     # Generate timestamp in Israel timezone
-    timestamp = datetime.now(ZoneInfo('Asia/Jerusalem')).strftime('%Y%m%d-%H%M%S')
+    timestamp = datetime.now(ZoneInfo('Asia/Jerusalem')).strftime('%Y-%m-%d %H:%M:%S')
     
     print(f"\n{'='*60}")
     print(f"Processing crash for pod {args.pod} in namespace {args.namespace}")
