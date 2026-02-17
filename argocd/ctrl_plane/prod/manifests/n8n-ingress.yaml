@@ -21,4 +21,4 @@ spec:
               service:
                 name: n8n
                 port:
-                  number: 80
+                  name: http
