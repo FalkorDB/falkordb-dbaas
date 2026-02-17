@@ -15,6 +15,13 @@ spec:
     - host: n8n.dev.falkordb.cloud
       http:
         paths:
+          - path: /webhook
+            pathType: Prefix
+            backend:
+              service:
+                name: n8n-webhook
+                port:
+                  name: webhook
           - path: /
             pathType: Prefix
             backend:
