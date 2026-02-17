@@ -35,7 +35,7 @@
     "google-auth-library": "^9.7.0",
     "googleapis": "^134.0.0",
     "jsonwebtoken": "^9.0.2",
-    "mjml": "^4.15.3",
+    "mjml": "5.0.0-alpha.11",
     "pino": "^9.3.2",
     "pino-cloud-logging": "^1.0.6",
     "tap": "^18.7.0",
