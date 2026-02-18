@@ -12,10 +12,10 @@
   "license": "SSPL",
   "dependencies": {
     "@falkordb/configs": "workspace:*",
-    "@fastify/sensible": "^5.5.0",
-    "fastify": "^4.26.1"
+    "@fastify/sensible": "^5.6.0",
+    "fastify": "^4.29.1"
   },
   "devDependencies": {
-    "tsup": "^8.0.2"
+    "tsup": "^8.5.1"
   }
 }
