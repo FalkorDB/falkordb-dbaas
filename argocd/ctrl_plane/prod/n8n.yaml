@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: n8n
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: n8n
+    repoURL: https://community-charts.github.io/helm-charts
+    targetRevision: 1.16.28
+    helm:
+      releaseName: n8n
+      valuesObject:
+        existingEncryptionKeySecret: n8n-encryption-key-secret
+        db:
+          type: postgresdb
+        main:
+          count: 1
+          persistence:
+            enabled: true
+            accessMode: ReadWriteOnce
+            volumeName: n8n-main-pvc
+            mountPath: /home/node/.n8n
+            size: 10Gi
+        worker:
+          mode: queue
+          count: 2
+        webhook:
+          mode: queue
+          count: 1
+          url: https://n8n.falkordb.cloud
+        redis:
+          enabled: true
+          auth:
+            existingSecret: n8n-redis-secret
+        postgresql:
+          enabled: true
+          auth:
+            existingSecret: n8n-postgresql-secret
+        externalRedis:
+          host: n8n-redis-master
+          existingSecret: n8n-redis-secret
+        externalPostgresql:
+          host: n8n-postgresql
+          existingSecret: n8n-postgresql-secret
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: n8n
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true

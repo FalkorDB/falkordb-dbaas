@@ -3,7 +3,6 @@ import { setupContainer } from './container';
 import logger from './logger';
 import { setupWorkers, shutdownWorkers } from './workers/workers';
 
-
 logger.info('Starting DB Importer Worker...');
 
 export async function start() {
@@ -13,7 +12,7 @@ export async function start() {
 }
 
 start().catch((error) => {
-  logger.error('Failed to start server', error);
+  logger.error({ error }, 'Failed to start server');
   process.exit(1);
 });
 

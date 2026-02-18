@@ -433,8 +433,8 @@ export class OmnistrateRepository implements IOmnistrateRepository {
 
   async deleteDeployments(params: { marketplaceAccountId: string, productTierId: string }): Promise<void> {
     this._opts.logger.info(
-      'Deleting deployments',
       { marketplaceAccountId: params.marketplaceAccountId, productTierId: params.productTierId, dryRun: this._opts.dryRun },
+      'Deleting deployments',
     );
 
     if (this._opts?.dryRun) {

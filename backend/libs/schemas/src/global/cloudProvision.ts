@@ -55,7 +55,7 @@ export const CloudProvisionGCPConfigSchema = Type.Object({
   updatedAt: Type.String(),
   deploymentConfigVersion: Type.Number(),
 
-  cloudProvider: Type.Literal('gcp'),
+  cloudProvider: Type.Enum(SupportedCloudProviderSchema),
   cloudProviderConfig: Type.Object({
     runnerProjectId: Type.String(),
     runnerServiceAccount: Type.String(),

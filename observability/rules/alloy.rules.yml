@@ -43,6 +43,7 @@ spec:
             summary: Grafana Alloy is failing to write metrics
             description: |
               [cluster={{ $labels.cluster }}] The rate of failed Prometheus remote write samples is increasing on instance {{ $labels.instance }} in cluster {{ $labels.cluster }}.
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/prometheusremotewritefailingrunbook/"
         - alert: PrometheusRemoteWriteQueueFull
           expr: prometheus_remote_storage_samples_pending > 0.9 * prometheus_remote_storage_shard_capacity
           for: 5m
@@ -63,6 +64,7 @@ spec:
             summary: Grafana Alloy is dropping logs
             description: |
               [cluster={{ $labels.cluster }}] The rate of dropped log entries is increasing on instance {{ $labels.instance }} in cluster {{ $labels.cluster }}.
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/lokilogsdroppedrunbook/"
         - alert: LokiWriteRequestsSlow
           expr: histogram_quantile(0.99, rate(loki_write_request_duration_seconds_bucket[5m])) > 1
           for: 5m
