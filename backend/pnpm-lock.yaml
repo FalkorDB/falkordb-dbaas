@@ -5,6 +5,8 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  bullmq@>=5.69.3: 5.69.2
+  ioredis@>=5.9.3: 5.9.2
   follow-redirects@<=1.15.5: '>=1.15.6'
   follow-redirects@<1.15.9: '>=1.15.9'
   tar@<6.2.1: '>=6.2.1'
@@ -704,7 +706,7 @@ importers:
         version: 1.30.1(@opentelemetry/api@1.9.0)
       '@queuedash/api':
         specifier: ^3.16.0
-        version: 3.16.0(bullmq@5.69.3)(fastify@4.29.1)(typescript@5.9.3)
+        version: 3.16.0(bullmq@5.69.2)(fastify@4.29.1)(typescript@5.9.3)
       '@sinclair/typebox':
         specifier: ^0.34.48
         version: 0.34.48
@@ -712,8 +714,8 @@ importers:
         specifier: ^10.0.2
         version: 10.0.2
       bullmq:
-        specifier: ^5.69.3
-        version: 5.69.3
+        specifier: 5.69.2
+        version: 5.69.2
       dotenv:
         specifier: ^16.6.1
         version: 16.6.1
@@ -733,8 +735,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       ioredis:
-        specifier: ^5.9.3
-        version: 5.9.3
+        specifier: 5.9.2
+        version: 5.9.2
       mongodb:
         specifier: ^6.21.0
         version: 6.21.0
@@ -881,8 +883,8 @@ importers:
         specifier: ^1.0.5
         version: 1.0.5
       bullmq:
-        specifier: ^5.69.3
-        version: 5.69.3
+        specifier: 5.69.2
+        version: 5.69.2
       dotenv:
         specifier: ^16.6.1
         version: 16.6.1
@@ -1009,7 +1011,7 @@ importers:
         version: 1.30.1(@opentelemetry/api@1.9.0)
       '@queuedash/api':
         specifier: ^3.16.0
-        version: 3.16.0(bullmq@5.69.3)(express@5.2.1)(typescript@5.9.3)
+        version: 3.16.0(bullmq@5.69.2)(express@5.2.1)(typescript@5.9.3)
       '@sinclair/typebox':
         specifier: ^0.34.48
         version: 0.34.48
@@ -1020,8 +1022,8 @@ importers:
         specifier: ^1.0.5
         version: 1.0.5
       bullmq:
-        specifier: ^5.69.3
-        version: 5.69.3
+        specifier: 5.69.2
+        version: 5.69.2
       dotenv:
         specifier: ^16.6.1
         version: 16.6.1
@@ -5916,13 +5918,13 @@ packages:
     resolution: {integrity: sha512-Vvn3zZrhQZkkBE8LSuW3em98c0FwgO4nxzv6OdSxPKJIEKY2bGbHn+mhGIPerzI4twdxaP8/0+06HBpwf345Lw==}
     dev: false
 
-  /@queuedash/api@3.16.0(bullmq@5.69.3)(express@5.2.1)(typescript@5.9.3):
+  /@queuedash/api@3.16.0(bullmq@5.69.2)(express@5.2.1)(typescript@5.9.3):
     resolution: {integrity: sha512-sHBv9I+C2ybkAoMmeNWWq5nM0/YKDtHAimZawmnw/9qRsxTVL4mrFrXfqRuWlGR5Ir4KqFKN1bDxYcETN4wm5Q==}
     peerDependencies:
       '@hono/trpc-server': ^0.3.0
       bee-queue: ^1.0.0
       bull: ^3.0.0 || ^4.0.0
-      bullmq: ^1.0.0 || ^5.0.0
+      bullmq: 5.69.2
       elysia: ^1.0.0
       express: ^4.0.0 || ^5.0.0
       fastify: ^4.0.0 || ^5.0.0
@@ -5949,7 +5951,7 @@ packages:
         optional: true
     dependencies:
       '@trpc/server': 11.10.0(typescript@5.9.3)
-      bullmq: 5.69.3
+      bullmq: 5.69.2
       express: 5.2.1
       redis: 4.7.1
       redis-info: 3.1.0
@@ -5958,13 +5960,13 @@ packages:
       - typescript
     dev: false
 
-  /@queuedash/api@3.16.0(bullmq@5.69.3)(fastify@4.29.1)(typescript@5.9.3):
+  /@queuedash/api@3.16.0(bullmq@5.69.2)(fastify@4.29.1)(typescript@5.9.3):
     resolution: {integrity: sha512-sHBv9I+C2ybkAoMmeNWWq5nM0/YKDtHAimZawmnw/9qRsxTVL4mrFrXfqRuWlGR5Ir4KqFKN1bDxYcETN4wm5Q==}
     peerDependencies:
       '@hono/trpc-server': ^0.3.0
       bee-queue: ^1.0.0
       bull: ^3.0.0 || ^4.0.0
-      bullmq: ^1.0.0 || ^5.0.0
+      bullmq: 5.69.2
       elysia: ^1.0.0
       express: ^4.0.0 || ^5.0.0
       fastify: ^4.0.0 || ^5.0.0
@@ -5991,7 +5993,7 @@ packages:
         optional: true
     dependencies:
       '@trpc/server': 11.10.0(typescript@5.9.3)
-      bullmq: 5.69.3
+      bullmq: 5.69.2
       fastify: 4.29.1
       redis: 4.7.1
       redis-info: 3.1.0
@@ -8464,8 +8466,8 @@ packages:
       xtend: 4.0.2
     dev: false
 
-  /bullmq@5.69.3:
-    resolution: {integrity: sha512-P9uLsR7fDvejH/1m6uur6j7U9mqY6nNt+XvhlhStOUe7jdwbZoP/c2oWNtE+8ljOlubw4pRUKymtRqkyvloc4A==}
+  /bullmq@5.69.2:
+    resolution: {integrity: sha512-6CRchWQLN9Jp8idN43BmIn49YRiIH5LUJwXOh3nuVYEWWDHFeJS56z+RzcE7+nsFX1LS5qu8obWFkKy7MmXHyg==}
     dependencies:
       cron-parser: 4.9.0
       ioredis: 5.9.2
@@ -10884,23 +10886,6 @@ packages:
 
   /ioredis@5.9.2:
     resolution: {integrity: sha512-tAAg/72/VxOUW7RQSX1pIxJVucYKcjFjfvj60L57jrZpYCHC3XN0WCQ3sNYL4Gmvv+7GPvTAjc+KSdeNuE8oWQ==}
-    engines: {node: '>=12.22.0'}
-    dependencies:
-      '@ioredis/commands': 1.5.0
-      cluster-key-slot: 1.1.2
-      debug: 4.4.3(supports-color@5.5.0)
-      denque: 2.1.0
-      lodash.defaults: 4.2.0
-      lodash.isarguments: 3.1.0
-      redis-errors: 1.2.0
-      redis-parser: 3.0.0
-      standard-as-callback: 2.1.0
-    transitivePeerDependencies:
-      - supports-color
-    dev: false
-
-  /ioredis@5.9.3:
-    resolution: {integrity: sha512-VI5tMCdeoxZWU5vjHWsiE/Su76JGhBvWF1MJnV9ZtGltHk9BmD48oDq8Tj8haZ85aceXZMxLNDQZRVo5QKNgXA==}
     engines: {node: '>=12.22.0'}
     dependencies:
       '@ioredis/commands': 1.5.0

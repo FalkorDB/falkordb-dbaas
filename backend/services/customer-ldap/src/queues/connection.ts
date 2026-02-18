@@ -1,8 +1,8 @@
-import Redis from 'ioredis';
+import * as IORedis from 'ioredis';
 import { type EnvSchemaType } from '../schemas/dotenv';
 
-export function createRedisConnection(config: EnvSchemaType): Redis {
-  return new Redis({
+export function createRedisConnection(config: EnvSchemaType): IORedis.Redis {
+  return new IORedis.Redis({
     host: config.REDIS_HOST,
     port: config.REDIS_PORT,
     username: config.REDIS_USERNAME,
