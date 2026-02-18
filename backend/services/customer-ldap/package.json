@@ -21,8 +21,6 @@
     "@aws-crypto/sha256-js": "^5.2.0",
     "@aws-sdk/client-eks": "^3.992.0",
     "@aws-sdk/client-sts": "^3.992.0",
-    "@aws-sdk/protocol-http": "^3.374.0",
-    "@aws-sdk/signature-v4": "^3.374.0",
     "@falkordb/configs": "workspace:*",
     "@falkordb/errors": "workspace:*",
     "@falkordb/plugins": "workspace:*",
