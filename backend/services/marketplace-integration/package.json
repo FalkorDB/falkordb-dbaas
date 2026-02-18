@@ -42,7 +42,7 @@
     "awilix": "^10.0.1",
     "copyfiles": "^2.4.1",
     "dotenv": "^16.4.5",
-    "fastify": "^4.26.1",
+    "fastify": "^5.7.3",
     "fastify-plugin": "^4.5.1",
     "google-auth-library": "^9.7.0",
     "googleapis": "^134.0.0",

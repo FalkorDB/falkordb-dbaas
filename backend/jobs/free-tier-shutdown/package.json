@@ -30,7 +30,7 @@
     "@opentelemetry/exporter-jaeger": "^1.22.0",
     "@sinclair/typebox": "^0.34.33",
     "aws-eks-token": "^1.0.5",
-    "axios": "^1.6.7",
+    "axios": "^1.13.5",
     "dotenv": "^16.4.5",
     "google-auth-library": "^9.7.0",
     "googleapis": "^134.0.0",

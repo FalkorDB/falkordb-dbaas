@@ -53,7 +53,7 @@
     "ioredis": "^5.4.1",
     "falkordb": "^6.2.7",
     "fast-jwt": "^6.1.0",
-    "fastify": "^4.26.1",
+    "fastify": "^5.7.3",
     "fastify-plugin": "^4.5.1",
     "fastify-user": "^1.4.0",
     "mongodb": "^6.3.0",
