@@ -16,8 +16,8 @@ spec:
           # LogsQL: Filter for error level logs, then group and count them by the pod and namespace.
           # Trigger if any pod/namespace combination generates more than 10 error logs per minute.
           expr: |
-            level: "error" | 
-            stats by (pod, namespace, cluster, environment) count() as error_count | 
+            level: "error" and -~".+error:0A000126:SSL.+" |
+            stats by (pod, namespace, cluster, environment) count() as error_count |
             filter error_count :> 10
           for: 5m
           labels:

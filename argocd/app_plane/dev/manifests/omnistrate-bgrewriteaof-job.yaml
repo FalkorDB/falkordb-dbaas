@@ -164,7 +164,7 @@ data:
       echo "Checking if run_bgrewriteaof exists in /var/lib/falkordb directory of pod $POD_NAME"
       if kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- test -f /var/lib/falkordb/run_bgrewriteaof; then
         echo "Executing bgrewriteaof script on pod: $POD_NAME"
-        kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- sh -c "/var/lib/falkordb/run_bgrewriteaof" || { echo "Bgrewriteaof execution failed in $POD_NAME"; exit 1; }
+        kubectl exec -n $TARGET_NAMESPACE $POD_NAME -c service -- bash -c "/var/lib/falkordb/run_bgrewriteaof" || { echo "Bgrewriteaof execution failed in $POD_NAME"; exit 1; }
         echo "Bgrewriteaof execution completed for pod: $POD_NAME"
       else
         echo "Warning: run_bgrewriteaof not found in /var/lib/falkordb directory of pod $POD_NAME, skipping..."
