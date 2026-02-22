@@ -93,25 +93,89 @@ class CrashSummary:
         
         return parts[0]
     
+    @staticmethod
+    def _extract_primary_crash_function(stack_traces: List[str]) -> Optional[str]:
+        """Extract the primary crashing function from FalkorDB/Redis
+        
+        This identifies the actual function where the crash occurred, regardless
+        of the call path that led to it. This is more reliable for deduplication
+        than using full stack traces, as the same bug can be reached via different
+        execution paths.
+        
+        Priority:
+        1. First FalkorDB function (falkordb.so with a named function)
+        2. First Redis function (redis-server with a named function)
+        3. First FalkorDB function (even if anonymous like +0x...)
+        4. First Redis function (even if anonymous)
+        
+        Returns:
+            The primary crash function or None if not found
+        """
+        falkordb_pattern = re.compile(r'/var/lib/falkordb/bin/falkordb\.so\(([^)]+)\)')
+        redis_pattern = re.compile(r'redis-server[^(]*\(([^)]+)\)')
+        
+        # First pass: Look for named FalkorDB functions
+        for trace in stack_traces:
+            if 'falkordb.so' in trace:
+                match = falkordb_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    # Prefer named functions over anonymous ones (starting with +0x)
+                    if not func.startswith('+0x'):
+                        return f"falkordb.so({func})"
+        
+        # Second pass: Look for named Redis functions
+        for trace in stack_traces:
+            if 'redis-server' in trace:
+                match = redis_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    if not func.startswith('+0x'):
+                        return f"redis-server({func})"
+        
+        # Third pass: Accept anonymous FalkorDB functions
+        for trace in stack_traces:
+            if 'falkordb.so' in trace:
+                match = falkordb_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    return f"falkordb.so({func})"
+        
+        # Fourth pass: Accept anonymous Redis functions
+        for trace in stack_traces:
+            if 'redis-server' in trace:
+                match = redis_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    return f"redis-server({func})"
+        
+        return None
+    
     @property
     def signature(self) -> str:
         """Unique signature for duplicate detection
         
-        Includes stack traces, exit code, and normalized client command to ensure
-        different crashes are not incorrectly marked as duplicates.
-        Filters out 'N/A' from stack traces and 'unknown' from exit code and client command.
-        Normalizes stack traces to remove ASLR-affected memory addresses.
-        Normalizes client command to base command only (e.g., GRAPH.QUERY instead of full query).
-        """
-        # Filter out N/A stack traces and normalize them for signature
-        meaningful_stacks = [
-            self._normalize_stack_trace(st) 
-            for st in self.stack_traces[:3] 
-            if st != "N/A"
-        ]
+        Uses the primary crashing function (where the crash actually occurred)
+        rather than the full call stack, since the same bug can be reached via
+        different execution paths. This prevents false negatives where the same
+        crash is reported as different issues.
         
-        # Build signature components
-        components = meaningful_stacks.copy()
+        Signature components:
+        1. Primary crash function (e.g., "falkordb.so(AlgebraicExpression_Dest+0x4)")
+        2. Exit code (e.g., "139")
+        3. Base command (e.g., "GRAPH.QUERY")
+        """
+        components = []
+        
+        # Extract primary crash function from stack traces
+        if self.stack_traces and self.stack_traces[0] != "N/A":
+            primary_func = self._extract_primary_crash_function(self.stack_traces)
+            if primary_func:
+                components.append(primary_func)
+            else:
+                # Fallback: use normalized first stack trace if no function extracted
+                normalized = self._normalize_stack_trace(self.stack_traces[0])
+                components.append(normalized)
         
         # Add exit code if it's meaningful
         if self.exit_code and self.exit_code != "unknown":
@@ -122,7 +186,7 @@ class CrashSummary:
             normalized_command = self._normalize_client_command(self.client_command)
             components.append(normalized_command)
         
-        return "|".join(components)
+        return "|".join(components) if components else "unknown"
 
 
 class OmnistrateClient:
@@ -719,28 +783,34 @@ class GitHubIssueManager:
             client_cmd = self._extract_field(text, 'Client Command')
             
             # Build existing signature using the same logic as CrashSummary
-            # Normalize stack traces to ignore ASLR memory addresses
-            existing_stacks = [stack_1, stack_2, stack_3]
-            meaningful_stacks = [
-                CrashSummary._normalize_stack_trace(st) 
-                for st in existing_stacks 
-                if st and st != "N/A"
-            ]
+            # Extract primary crash function from existing stack traces
+            existing_stacks = [st for st in [stack_1, stack_2, stack_3] if st and st != "N/A"]
             
-            # Start with meaningful stacks
-            components = meaningful_stacks.copy()
+            components = []
+            
+            if existing_stacks:
+                # Use the same primary function extraction logic
+                primary_func = CrashSummary._extract_primary_crash_function(existing_stacks)
+                if primary_func:
+                    components.append(primary_func)
+                else:
+                    # Fallback: use normalized first stack trace
+                    normalized = CrashSummary._normalize_stack_trace(existing_stacks[0])
+                    components.append(normalized)
             
             # Add exit_code if it's meaningful (matching CrashSummary.signature)
             if exit_code and exit_code != "unknown":
                 components.append(exit_code)
             
+            # Normalize client command to base command only
             if client_cmd and client_cmd != "unknown":
-                components.append(client_cmd)
+                normalized_cmd = CrashSummary._normalize_client_command(client_cmd)
+                components.append(normalized_cmd)
             
-            existing_sig = "|".join(components)
+            existing_sig = "|".join(components) if components else ""
             
-            if not existing_sig or existing_sig == exit_code:
-                # Empty or minimal signature, skip
+            if not existing_sig:
+                # Empty signature, skip
                 continue
             
             if current_sig == existing_sig:
