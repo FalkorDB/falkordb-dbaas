@@ -67,34 +67,126 @@ class CrashSummary:
         normalized = re.sub(r'\[0x[0-9a-fA-F]+\]', '', trace)
         return normalized.strip()
     
+    @staticmethod
+    def _normalize_client_command(command: str) -> str:
+        """Normalize client command to base command only
+        
+        Different queries can trigger the same bug, so we only care about
+        the command type (e.g., GRAPH.QUERY) not the specific query content.
+        This focuses on WHERE the crash happened (command handler), not WHAT
+        data was being processed.
+        
+        Examples:
+        - GRAPH.QUERY // Per-repo delivery metrics... -> GRAPH.QUERY
+        - GRAPH.QUERY CYPHER timeout=45000 -> GRAPH.QUERY
+        - GRAPH.DELETE mykey -> GRAPH.DELETE
+        - SET key value -> SET
+        """
+        if not command or command == "unknown":
+            return command
+        
+        # Extract just the base command (first word)
+        # This groups crashes by the command that was executed, regardless of parameters
+        parts = command.split()
+        if not parts:
+            return command
+        
+        return parts[0]
+    
+    @staticmethod
+    def _extract_primary_crash_function(stack_traces: List[str]) -> Optional[str]:
+        """Extract the primary crashing function from FalkorDB/Redis
+        
+        This identifies the actual function where the crash occurred, regardless
+        of the call path that led to it. This is more reliable for deduplication
+        than using full stack traces, as the same bug can be reached via different
+        execution paths.
+        
+        Priority:
+        1. First FalkorDB function (falkordb.so with a named function)
+        2. First Redis function (redis-server with a named function)
+        3. First FalkorDB function (even if anonymous like +0x...)
+        4. First Redis function (even if anonymous)
+        
+        Returns:
+            The primary crash function or None if not found
+        """
+        falkordb_pattern = re.compile(r'/var/lib/falkordb/bin/falkordb\.so\(([^)]+)\)')
+        redis_pattern = re.compile(r'redis-server[^(]*\(([^)]+)\)')
+        
+        # First pass: Look for named FalkorDB functions
+        for trace in stack_traces:
+            if 'falkordb.so' in trace:
+                match = falkordb_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    # Prefer named functions over anonymous ones (starting with +0x)
+                    if not func.startswith('+0x'):
+                        return f"falkordb.so({func})"
+        
+        # Second pass: Look for named Redis functions
+        for trace in stack_traces:
+            if 'redis-server' in trace:
+                match = redis_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    if not func.startswith('+0x'):
+                        return f"redis-server({func})"
+        
+        # Third pass: Accept anonymous FalkorDB functions
+        for trace in stack_traces:
+            if 'falkordb.so' in trace:
+                match = falkordb_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    return f"falkordb.so({func})"
+        
+        # Fourth pass: Accept anonymous Redis functions
+        for trace in stack_traces:
+            if 'redis-server' in trace:
+                match = redis_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    return f"redis-server({func})"
+        
+        return None
+    
     @property
     def signature(self) -> str:
         """Unique signature for duplicate detection
         
-        Includes stack traces, exit code, and client command to ensure
-        different crashes are not incorrectly marked as duplicates.
-        Filters out 'N/A' from stack traces and 'unknown' from exit code and client command.
-        Normalizes stack traces to remove ASLR-affected memory addresses.
-        """
-        # Filter out N/A stack traces and normalize them for signature
-        meaningful_stacks = [
-            self._normalize_stack_trace(st) 
-            for st in self.stack_traces[:3] 
-            if st != "N/A"
-        ]
+        Uses the primary crashing function (where the crash actually occurred)
+        rather than the full call stack, since the same bug can be reached via
+        different execution paths. This prevents false negatives where the same
+        crash is reported as different issues.
         
-        # Build signature components
-        components = meaningful_stacks.copy()
+        Signature components:
+        1. Primary crash function (e.g., "falkordb.so(AlgebraicExpression_Dest+0x4)")
+        2. Exit code (e.g., "139")
+        3. Base command (e.g., "GRAPH.QUERY")
+        """
+        components = []
+        
+        # Extract primary crash function from stack traces
+        if self.stack_traces and self.stack_traces[0] != "N/A":
+            primary_func = self._extract_primary_crash_function(self.stack_traces)
+            if primary_func:
+                components.append(primary_func)
+            else:
+                # Fallback: use normalized first stack trace if no function extracted
+                normalized = self._normalize_stack_trace(self.stack_traces[0])
+                components.append(normalized)
         
         # Add exit code if it's meaningful
         if self.exit_code and self.exit_code != "unknown":
             components.append(self.exit_code)
         
-        # Add client command if it's meaningful
+        # Add normalized client command if it's meaningful
         if self.client_command and self.client_command != "unknown":
-            components.append(self.client_command)
+            normalized_command = self._normalize_client_command(self.client_command)
+            components.append(normalized_command)
         
-        return "|".join(components)
+        return "|".join(components) if components else "unknown"
 
 
 class OmnistrateClient:
@@ -333,54 +425,53 @@ class CrashAnalyzer:
         """Parse crash logs and extract summary"""
         lines = logs.split('\n')
         
-        # Extract stack traces - try multiple formats
+        # Find the crashing thread (marked with ' *' at the end of thread name line)
+        # This ensures we extract stack traces from the actual crashing thread only
+        crashing_thread_idx = -1
+        for i, line in enumerate(lines):
+            # Look for thread identifier lines ending with ' *'
+            if re.search(r'^\d+\s+\S.*\s+\*\s*$', line.strip()) or \
+               line.strip().endswith('thread-pool-thr *') or \
+               line.strip().endswith('redis-server *'):
+                crashing_thread_idx = i
+                break
+        
+        # Extract stack traces from the crashing thread
         stack_traces = []
         
-        # Pattern 1: Raw stack trace lines with hex addresses - capture entire line
-        # Example: /lib/x86_64-linux-gnu/libc.so.6(+0x3c050)[0x7f8b8c3c050]
-        # Example: redis-server *:6379(debugCommand+0x244)[0xaaaab1e89984]
-        hex_address_pattern = re.compile(r'\[0x[0-9a-fA-F]+\]')
-        for line in lines:
-            if hex_address_pattern.search(line) and ('/' in line or 'redis-server' in line):
-                # This looks like a stack trace line - clean it up
-                trace_line = line.strip()
-                # Remove timestamp prefix if present
-                if 'stdout F' in trace_line:
-                    trace_line = trace_line.split('stdout F', 1)[1].strip()
-                if trace_line and len(trace_line) > 10:  # Skip very short lines
-                    stack_traces.append(trace_line)
+        if crashing_thread_idx >= 0:
+            # Extract stack frames from the crashing thread until we hit the next thread or end
+            hex_address_pattern = re.compile(r'\[0x[0-9a-fA-F]+\]')
+            for i in range(crashing_thread_idx + 1, len(lines)):
+                line = lines[i]
+                
+                # Stop if we hit the next thread marker or end of stack trace section
+                if re.search(r'^\d+\s+\S', line.strip()) or \
+                   '--- STACK TRACE DONE ---' in line or \
+                   '--- REGISTERS ---' in line or \
+                   'expected stacktraces' in line:
+                    break
+                
+                # Extract stack trace lines with hex addresses
+                if hex_address_pattern.search(line) and ('/' in line or 'redis-server' in line):
+                    trace_line = line.strip()
+                    # Remove timestamp prefix if present
+                    if 'stdout F' in trace_line:
+                        trace_line = trace_line.split('stdout F', 1)[1].strip()
+                    if trace_line and len(trace_line) > 10:
+                        stack_traces.append(trace_line)
         
-        # Pattern 2: FalkorDB module format with function names: /var/lib/falkordb/bin/falkordb.so(AlgebraicExpression_Dest+0x4)
+        # Fallback: If we couldn't find crashing thread, try extracting from all threads
+        # This maintains backward compatibility
         if not stack_traces:
-            falkordb_pattern = re.compile(r'/var/lib/falkordb/[^(]+\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
+            hex_address_pattern = re.compile(r'\[0x[0-9a-fA-F]+\]')
             for line in lines:
-                if '/var/lib/falkordb/' in line and '(' in line:
-                    matches = falkordb_pattern.findall(line)
-                    for func in matches:
-                        if func and func not in ['_start', '_libc_start_main']:
-                            stack_traces.append(func)
-        
-        # Pattern 3: Redis crash stack trace format: redis-server *:6379(debugCommand+0x244)
-        if not stack_traces:
-            redis_stack_pattern = re.compile(r'redis-server[^(]*\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
-            for line in lines:
-                if 'redis-server' in line and '(' in line:
-                    matches = redis_stack_pattern.findall(line)
-                    for func in matches:
-                        if func and func not in ['_start', '_libc_start_main']:
-                            stack_traces.append(func)
-        
-        # Pattern 4: Generic file:line format
-        if not stack_traces:
-            file_pattern = re.compile(r'([a-zA-Z0-9_/.-]+\.[ch]:?\d+)(?:\s+\(?(\w+)\)?)?')
-            for line in lines:
-                matches = file_pattern.findall(line)
-                for match in matches:
-                    location, function = match
-                    if function:
-                        stack_traces.append(f"{location} ({function})")
-                    else:
-                        stack_traces.append(location)
+                if hex_address_pattern.search(line) and ('/' in line or 'redis-server' in line):
+                    trace_line = line.strip()
+                    if 'stdout F' in trace_line:
+                        trace_line = trace_line.split('stdout F', 1)[1].strip()
+                    if trace_line and len(trace_line) > 10:
+                        stack_traces.append(trace_line)
         
         # Get top 3 unique stack traces
         unique_stacks = []
@@ -691,29 +782,23 @@ class GitHubIssueManager:
             exit_code = self._extract_field(text, 'Exit Code')
             client_cmd = self._extract_field(text, 'Client Command')
             
-            # Build existing signature using the same logic as CrashSummary
-            # Normalize stack traces to ignore ASLR memory addresses
-            existing_stacks = [stack_1, stack_2, stack_3]
-            meaningful_stacks = [
-                CrashSummary._normalize_stack_trace(st) 
-                for st in existing_stacks 
-                if st and st != "N/A"
-            ]
+            # Build stack traces list (filter out empty/N/A values)
+            existing_stacks = [st for st in [stack_1, stack_2, stack_3] if st and st != "N/A"]
+            if not existing_stacks:
+                existing_stacks = ["N/A"]  # Match CrashSummary default
             
-            # Start with meaningful stacks
-            components = meaningful_stacks.copy()
+            # Create a CrashSummary object and use its signature property
+            # This ensures we use the exact same logic (including normalization) as new crashes
+            existing_crash = CrashSummary(
+                stack_traces=existing_stacks,
+                exit_code=exit_code or "unknown",
+                memory_rss="unknown",  # Not used in signature
+                client_command=client_cmd or "unknown"
+            )
+            existing_sig = existing_crash.signature
             
-            # Add exit_code if it's meaningful (matching CrashSummary.signature)
-            if exit_code and exit_code != "unknown":
-                components.append(exit_code)
-            
-            if client_cmd and client_cmd != "unknown":
-                components.append(client_cmd)
-            
-            existing_sig = "|".join(components)
-            
-            if not existing_sig or existing_sig == exit_code:
-                # Empty or minimal signature, skip
+            if not existing_sig or existing_sig == "unknown":
+                # Empty signature, skip
                 continue
             
             if current_sig == existing_sig:
@@ -954,14 +1039,12 @@ class GoogleChatNotifier:
         is_new_crash_type: bool
     ):
         """Send crash notification to Google Chat"""
-        masked_email = mask_email(customer_email)
-        
         if is_new_crash_type:
             crash_type = "⚠️ Redis Crash (New Type)"
-            subtitle = f"New crash type for {masked_email}"
+            subtitle = f"New crash type for {customer_email}"
         else:
             crash_type = "🚨 Redis Crash (New Issue)"
-            subtitle = f"Customer: {masked_email}"
+            subtitle = f"Customer: {customer_email}"
         
         payload = {
             "text": crash_type,
@@ -973,7 +1056,7 @@ class GoogleChatNotifier:
                 "sections": [
                     {
                         "widgets": [
-                            {"keyValue": {"topLabel": "Customer", "content": masked_email}},
+                            {"keyValue": {"topLabel": "Customer", "content": customer_email}},
                             {"keyValue": {"topLabel": "Cluster", "content": cluster}},
                             {"keyValue": {"topLabel": "Pod", "content": pod}},
                             {"keyValue": {"topLabel": "Namespace", "content": namespace}},
