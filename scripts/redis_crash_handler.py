@@ -1039,14 +1039,12 @@ class GoogleChatNotifier:
         is_new_crash_type: bool
     ):
         """Send crash notification to Google Chat"""
-        masked_email = mask_email(customer_email)
-        
         if is_new_crash_type:
             crash_type = "⚠️ Redis Crash (New Type)"
-            subtitle = f"New crash type for {masked_email}"
+            subtitle = f"New crash type for {customer_email}"
         else:
             crash_type = "🚨 Redis Crash (New Issue)"
-            subtitle = f"Customer: {masked_email}"
+            subtitle = f"Customer: {customer_email}"
         
         payload = {
             "text": crash_type,
@@ -1058,7 +1056,7 @@ class GoogleChatNotifier:
                 "sections": [
                     {
                         "widgets": [
-                            {"keyValue": {"topLabel": "Customer", "content": masked_email}},
+                            {"keyValue": {"topLabel": "Customer", "content": customer_email}},
                             {"keyValue": {"topLabel": "Cluster", "content": cluster}},
                             {"keyValue": {"topLabel": "Pod", "content": pod}},
                             {"keyValue": {"topLabel": "Namespace", "content": namespace}},
