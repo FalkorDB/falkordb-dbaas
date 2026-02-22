@@ -67,14 +67,41 @@ class CrashSummary:
         normalized = re.sub(r'\[0x[0-9a-fA-F]+\]', '', trace)
         return normalized.strip()
     
+    @staticmethod
+    def _normalize_client_command(command: str) -> str:
+        """Normalize client command to base command only
+        
+        Different queries can trigger the same bug, so we only care about
+        the command type (e.g., GRAPH.QUERY) not the specific query content.
+        This focuses on WHERE the crash happened (command handler), not WHAT
+        data was being processed.
+        
+        Examples:
+        - GRAPH.QUERY // Per-repo delivery metrics... -> GRAPH.QUERY
+        - GRAPH.QUERY CYPHER timeout=45000 -> GRAPH.QUERY
+        - GRAPH.DELETE mykey -> GRAPH.DELETE
+        - SET key value -> SET
+        """
+        if not command or command == "unknown":
+            return command
+        
+        # Extract just the base command (first word)
+        # This groups crashes by the command that was executed, regardless of parameters
+        parts = command.split()
+        if not parts:
+            return command
+        
+        return parts[0]
+    
     @property
     def signature(self) -> str:
         """Unique signature for duplicate detection
         
-        Includes stack traces, exit code, and client command to ensure
+        Includes stack traces, exit code, and normalized client command to ensure
         different crashes are not incorrectly marked as duplicates.
         Filters out 'N/A' from stack traces and 'unknown' from exit code and client command.
         Normalizes stack traces to remove ASLR-affected memory addresses.
+        Normalizes client command to base command only (e.g., GRAPH.QUERY instead of full query).
         """
         # Filter out N/A stack traces and normalize them for signature
         meaningful_stacks = [
@@ -90,9 +117,10 @@ class CrashSummary:
         if self.exit_code and self.exit_code != "unknown":
             components.append(self.exit_code)
         
-        # Add client command if it's meaningful
+        # Add normalized client command if it's meaningful
         if self.client_command and self.client_command != "unknown":
-            components.append(self.client_command)
+            normalized_command = self._normalize_client_command(self.client_command)
+            components.append(normalized_command)
         
         return "|".join(components)
 
@@ -333,54 +361,53 @@ class CrashAnalyzer:
         """Parse crash logs and extract summary"""
         lines = logs.split('\n')
         
-        # Extract stack traces - try multiple formats
+        # Find the crashing thread (marked with ' *' at the end of thread name line)
+        # This ensures we extract stack traces from the actual crashing thread only
+        crashing_thread_idx = -1
+        for i, line in enumerate(lines):
+            # Look for thread identifier lines ending with ' *'
+            if re.search(r'^\d+\s+\S.*\s+\*\s*$', line.strip()) or \
+               line.strip().endswith('thread-pool-thr *') or \
+               line.strip().endswith('redis-server *'):
+                crashing_thread_idx = i
+                break
+        
+        # Extract stack traces from the crashing thread
         stack_traces = []
         
-        # Pattern 1: Raw stack trace lines with hex addresses - capture entire line
-        # Example: /lib/x86_64-linux-gnu/libc.so.6(+0x3c050)[0x7f8b8c3c050]
-        # Example: redis-server *:6379(debugCommand+0x244)[0xaaaab1e89984]
-        hex_address_pattern = re.compile(r'\[0x[0-9a-fA-F]+\]')
-        for line in lines:
-            if hex_address_pattern.search(line) and ('/' in line or 'redis-server' in line):
-                # This looks like a stack trace line - clean it up
-                trace_line = line.strip()
-                # Remove timestamp prefix if present
-                if 'stdout F' in trace_line:
-                    trace_line = trace_line.split('stdout F', 1)[1].strip()
-                if trace_line and len(trace_line) > 10:  # Skip very short lines
-                    stack_traces.append(trace_line)
+        if crashing_thread_idx >= 0:
+            # Extract stack frames from the crashing thread until we hit the next thread or end
+            hex_address_pattern = re.compile(r'\[0x[0-9a-fA-F]+\]')
+            for i in range(crashing_thread_idx + 1, len(lines)):
+                line = lines[i]
+                
+                # Stop if we hit the next thread marker or end of stack trace section
+                if re.search(r'^\d+\s+\S', line.strip()) or \
+                   '--- STACK TRACE DONE ---' in line or \
+                   '--- REGISTERS ---' in line or \
+                   'expected stacktraces' in line:
+                    break
+                
+                # Extract stack trace lines with hex addresses
+                if hex_address_pattern.search(line) and ('/' in line or 'redis-server' in line):
+                    trace_line = line.strip()
+                    # Remove timestamp prefix if present
+                    if 'stdout F' in trace_line:
+                        trace_line = trace_line.split('stdout F', 1)[1].strip()
+                    if trace_line and len(trace_line) > 10:
+                        stack_traces.append(trace_line)
         
-        # Pattern 2: FalkorDB module format with function names: /var/lib/falkordb/bin/falkordb.so(AlgebraicExpression_Dest+0x4)
+        # Fallback: If we couldn't find crashing thread, try extracting from all threads
+        # This maintains backward compatibility
         if not stack_traces:
-            falkordb_pattern = re.compile(r'/var/lib/falkordb/[^(]+\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
+            hex_address_pattern = re.compile(r'\[0x[0-9a-fA-F]+\]')
             for line in lines:
-                if '/var/lib/falkordb/' in line and '(' in line:
-                    matches = falkordb_pattern.findall(line)
-                    for func in matches:
-                        if func and func not in ['_start', '_libc_start_main']:
-                            stack_traces.append(func)
-        
-        # Pattern 3: Redis crash stack trace format: redis-server *:6379(debugCommand+0x244)
-        if not stack_traces:
-            redis_stack_pattern = re.compile(r'redis-server[^(]*\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
-            for line in lines:
-                if 'redis-server' in line and '(' in line:
-                    matches = redis_stack_pattern.findall(line)
-                    for func in matches:
-                        if func and func not in ['_start', '_libc_start_main']:
-                            stack_traces.append(func)
-        
-        # Pattern 4: Generic file:line format
-        if not stack_traces:
-            file_pattern = re.compile(r'([a-zA-Z0-9_/.-]+\.[ch]:?\d+)(?:\s+\(?(\w+)\)?)?')
-            for line in lines:
-                matches = file_pattern.findall(line)
-                for match in matches:
-                    location, function = match
-                    if function:
-                        stack_traces.append(f"{location} ({function})")
-                    else:
-                        stack_traces.append(location)
+                if hex_address_pattern.search(line) and ('/' in line or 'redis-server' in line):
+                    trace_line = line.strip()
+                    if 'stdout F' in trace_line:
+                        trace_line = trace_line.split('stdout F', 1)[1].strip()
+                    if trace_line and len(trace_line) > 10:
+                        stack_traces.append(trace_line)
         
         # Get top 3 unique stack traces
         unique_stacks = []
