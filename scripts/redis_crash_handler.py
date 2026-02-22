@@ -782,34 +782,22 @@ class GitHubIssueManager:
             exit_code = self._extract_field(text, 'Exit Code')
             client_cmd = self._extract_field(text, 'Client Command')
             
-            # Build existing signature using the same logic as CrashSummary
-            # Extract primary crash function from existing stack traces
+            # Build stack traces list (filter out empty/N/A values)
             existing_stacks = [st for st in [stack_1, stack_2, stack_3] if st and st != "N/A"]
+            if not existing_stacks:
+                existing_stacks = ["N/A"]  # Match CrashSummary default
             
-            components = []
+            # Create a CrashSummary object and use its signature property
+            # This ensures we use the exact same logic (including normalization) as new crashes
+            existing_crash = CrashSummary(
+                stack_traces=existing_stacks,
+                exit_code=exit_code or "unknown",
+                memory_rss="unknown",  # Not used in signature
+                client_command=client_cmd or "unknown"
+            )
+            existing_sig = existing_crash.signature
             
-            if existing_stacks:
-                # Use the same primary function extraction logic
-                primary_func = CrashSummary._extract_primary_crash_function(existing_stacks)
-                if primary_func:
-                    components.append(primary_func)
-                else:
-                    # Fallback: use normalized first stack trace
-                    normalized = CrashSummary._normalize_stack_trace(existing_stacks[0])
-                    components.append(normalized)
-            
-            # Add exit_code if it's meaningful (matching CrashSummary.signature)
-            if exit_code and exit_code != "unknown":
-                components.append(exit_code)
-            
-            # Normalize client command to base command only
-            if client_cmd and client_cmd != "unknown":
-                normalized_cmd = CrashSummary._normalize_client_command(client_cmd)
-                components.append(normalized_cmd)
-            
-            existing_sig = "|".join(components) if components else ""
-            
-            if not existing_sig:
+            if not existing_sig or existing_sig == "unknown":
                 # Empty signature, skip
                 continue
             
