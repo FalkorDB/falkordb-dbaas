@@ -18,6 +18,7 @@ import argparse
 import urllib3
 from urllib.parse import quote
 import time
+import hashlib
 
 
 def mask_email(email: str) -> str:
@@ -611,6 +612,9 @@ class CrashAnalyzer:
 class GitHubIssueManager:
     """Manages GitHub issues for crash tracking"""
     
+    # GitHub label name maximum length
+    MAX_LABEL_LENGTH = 50
+    
     def __init__(self, token: str, repo: str, project_id: Optional[str] = None):
         self.token = token
         self.repo = repo  # format: "owner/repo"
@@ -622,8 +626,49 @@ class GitHubIssueManager:
         })
         self.api_url = "https://api.github.com"
     
+    @staticmethod
+    def _make_safe_label(prefix: str, value: str) -> str:
+        """Create a GitHub-safe label that fits within the 50-character limit.
+        
+        If the full label would exceed 50 characters, use a hash of the value instead.
+        This ensures labels are unique and trackable while staying within GitHub's limits.
+        
+        Args:
+            prefix: The label prefix (e.g., 'customer', 'namespace')
+            value: The value to include (e.g., email address, namespace name)
+            
+        Returns:
+            A label string that's guaranteed to be <= 50 characters
+            
+        Examples:
+            _make_safe_label('customer', 'short@email.com') -> 'customer:short@email.com'
+            _make_safe_label('customer', 'very-long-email@company.com') -> 'customer:abc123def456...'
+        """
+        full_label = f"{prefix}:{value}"
+        
+        if len(full_label) <= GitHubIssueManager.MAX_LABEL_LENGTH:
+            return full_label
+        
+        # Label is too long, use a hash of the value
+        # Use first 8 characters of SHA256 hash for uniqueness
+        value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+        label = f"{prefix}:{value_hash}"
+        
+        # Ensure even the hashed version fits (it should always fit)
+        if len(label) > GitHubIssueManager.MAX_LABEL_LENGTH:
+            # Extremely unlikely, but truncate prefix if needed
+            max_prefix_len = GitHubIssueManager.MAX_LABEL_LENGTH - 9  # 9 = ':' + 8-char hash
+            label = f"{prefix[:max_prefix_len]}:{value_hash}"
+        
+        print(f"⚠️  Label '{prefix}:{value}' too long ({len(full_label)} chars), using hash: {label}")
+        return label
+    
     def _ensure_label_exists(self, label: str):
         """Ensure a label exists in the repository, create if it doesn't"""
+        # Validate label length
+        if len(label) > self.MAX_LABEL_LENGTH:
+            raise ValueError(f"Label '{label}' exceeds GitHub's {self.MAX_LABEL_LENGTH} character limit (length: {len(label)})")
+        
         # Check if label exists (URL-encode label for valid path)
         encoded_label = quote(label, safe='')
         response = self.session.get(
@@ -642,8 +687,21 @@ class GitHubIssueManager:
             if create_response.status_code == 201:
                 print(f"Created label: {label}")
             elif create_response.status_code == 422:
-                # Label was created by another process, ignore
-                pass
+                # Check if it's a "label already exists" error or validation error
+                try:
+                    error_data = create_response.json()
+                    errors = error_data.get('errors', [])
+                    # If error mentions "already_exists", it's safe to ignore
+                    if any('already_exists' in str(e).lower() for e in errors):
+                        print(f"Label already exists: {label}")
+                    else:
+                        # Some other validation error - log details and raise
+                        print(f"❌ ERROR: Failed to create label '{label}': {error_data.get('message', 'Unknown error')}" , file=sys.stderr)
+                        print(f"   Errors: {errors}", file=sys.stderr)
+                        create_response.raise_for_status()
+                except (ValueError, KeyError):
+                    # Can't parse error, assume label already exists to be safe
+                    print(f"Label creation returned 422, assuming exists: {label}")
             else:
                 create_response.raise_for_status()
         elif response.status_code == 200:
@@ -704,10 +762,14 @@ class GitHubIssueManager:
         from datetime import timezone
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
         
+        # Use safe label names for search (same as what was used during creation)
+        customer_label = self._make_safe_label('customer', customer_email)
+        namespace_label = self._make_safe_label('namespace', namespace)
+        
         # Get all open issues for this customer and namespace
         params = {
             'state': 'open',
-            'labels': f'customer:{customer_email},namespace:{namespace}',
+            'labels': f'{customer_label},{namespace_label}',
             'per_page': 100
         }
         
@@ -858,10 +920,14 @@ class GitHubIssueManager:
 
 **Crash Logs:** [View in Grafana]({log_url})"""
         
+        # Create safe labels that fit within GitHub's 50-character limit
+        customer_label = self._make_safe_label('customer', customer.email)
+        namespace_label = self._make_safe_label('namespace', namespace)
+        
         # Ensure all labels exist before creating the issue
         labels = [
-            f'customer:{customer.email}',
-            f'namespace:{namespace}',
+            customer_label,
+            namespace_label,
             'crash',
             'redis'
         ]
