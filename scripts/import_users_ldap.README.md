@@ -200,7 +200,7 @@ The script handles common scenarios:
 
 ## Output
 
-### Example Output
+### Example Output with Detailed Reporting
 
 ```
 2026-02-23 08:00:00 - INFO - Authenticating with Omnistrate API
@@ -212,16 +212,41 @@ The script handles common scenarios:
 2026-02-23 08:00:04 - INFO - Successfully created user 'admin' in instance 'instance-001'
 2026-02-23 08:00:05 - WARNING - User 'admin' already exists in instance 'instance-002'
 2026-02-23 08:00:06 - INFO - Successfully created user 'dbuser' in instance 'instance-003'
-2026-02-23 08:00:07 - WARNING - Instance instance-004 missing falkordbUser or falkordbPassword in result_params, skipping
+2026-02-23 08:00:07 - WARNING - Instance instance-004: Missing falkordbUser in result_params, skipping
 2026-02-23 08:00:08 - INFO - Successfully created user 'admin' in instance 'instance-005'
 ...
-2026-02-23 08:00:20 - INFO - --------------------------------------------------
-2026-02-23 08:00:20 - INFO - Import Summary:
-2026-02-23 08:00:20 - INFO -   Success: 10
-2026-02-23 08:00:20 - INFO -   Failed:  0
-2026-02-23 08:00:20 - INFO -   Skipped: 2
-2026-02-23 08:00:20 - INFO - --------------------------------------------------
+2026-02-23 08:00:20 - INFO - ======================================================================
+2026-02-23 08:00:20 - INFO - IMPORT REPORT
+2026-02-23 08:00:20 - INFO - ======================================================================
+2026-02-23 08:00:20 - INFO - Total Instances: 12
+2026-02-23 08:00:20 - INFO -   ✓ Success: 10
+2026-02-23 08:00:20 - INFO -   ✗ Failed:  0
+2026-02-23 08:00:20 - INFO -   ⊘ Skipped: 2
+2026-02-23 08:00:20 - INFO - ======================================================================
+2026-02-23 08:00:20 - INFO -
+2026-02-23 08:00:20 - INFO - SUCCESSFUL IMPORTS:
+2026-02-23 08:00:20 - INFO - ----------------------------------------------------------------------
+2026-02-23 08:00:20 - INFO -   ✓ instance-001                           | user: admin
+2026-02-23 08:00:20 - INFO -   ✓ instance-002                           | user: admin
+2026-02-23 08:00:20 - INFO -   ✓ instance-003                           | user: dbuser
+2026-02-23 08:00:20 - INFO -   ✓ instance-005                           | user: admin
+...
+2026-02-23 08:00:20 - INFO -
+2026-02-23 08:00:20 - INFO - SKIPPED INSTANCES:
+2026-02-23 08:00:20 - INFO - ----------------------------------------------------------------------
+2026-02-23 08:00:20 - INFO -   ⊘ instance-004
+2026-02-23 08:00:20 - INFO -     Reason: Missing falkordbUser in result_params
+2026-02-23 08:00:20 - INFO -   ⊘ instance-007
+2026-02-23 08:00:20 - INFO -     Reason: Missing falkordbPassword in result_params
+2026-02-23 08:00:20 - INFO -
+2026-02-23 08:00:20 - INFO - ======================================================================
 ```
+
+The script provides a comprehensive report including:
+- **Summary statistics**: Total instances processed, success/failure/skipped counts
+- **Successful imports**: List of all instances where users were created successfully
+- **Failed imports**: List of failures with error reasons
+- **Skipped instances**: List of instances that couldn't be processed with detailed reasons
 
 ## Exit Codes
 
@@ -267,7 +292,7 @@ Check:
 ## Related Files
 
 - Script: `scripts/import_users_ldap.py`
-- Example (deprecated): `scripts/import_users_ldap.example.csv` (CSV-based approach, no longer used)
+- Documentation: `scripts/import_users_ldap.README.md`
 - Customer LDAP Service: `backend/services/customer-ldap/`
 - API Routes: `backend/services/customer-ldap/src/routes/v1/instances/`
 - Constants: `backend/services/customer-ldap/src/constants.ts` (ALLOWED_ACL)

@@ -340,6 +340,11 @@ Example:
     # Import users
     stats = {"success": 0, "failed": 0, "skipped": 0}
 
+    # Detailed tracking for reporting
+    success_instances = []
+    failed_instances = []
+    skipped_instances = []
+
     # Standard ACL from constants.ts
     ALLOWED_ACL = "+INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +CLUSTER +COMMAND +GRAPH.MEMORY +MEMORY +BGREWRITEAOF +MODULE|LIST +MONITOR"
 
@@ -348,8 +353,10 @@ Example:
         instance_id = instance_result.get("id")
 
         if not instance_id:
-            logger.warning("Instance missing ID, skipping")
+            reason = "Instance missing ID"
+            logger.warning(reason)
             stats["skipped"] += 1
+            skipped_instances.append({"instance_id": "UNKNOWN", "reason": reason})
             continue
 
         # Extract credentials from result_params
@@ -358,10 +365,10 @@ Example:
         falkordb_password = result_params.get("falkordbPassword")
 
         if not falkordb_username or not falkordb_password:
-            logger.warning(
-                f"Instance {instance_id} missing falkordbUser or falkordbPassword in result_params, skipping"
-            )
+            reason = f"Missing {'falkordbUser' if not falkordb_username else 'falkordbPassword'} in result_params"
+            logger.warning(f"Instance {instance_id}: {reason}, skipping")
             stats["skipped"] += 1
+            skipped_instances.append({"instance_id": instance_id, "reason": reason})
             continue
 
         # Create user with standard ACL
@@ -375,16 +382,53 @@ Example:
 
         if success:
             stats["success"] += 1
+            success_instances.append({
+                "instance_id": instance_id,
+                "username": falkordb_username
+            })
         else:
             stats["failed"] += 1
+            failed_instances.append({
+                "instance_id": instance_id,
+                "username": falkordb_username,
+                "reason": "LDAP API error (see logs above)"
+            })
 
-    # Print summary
-    logger.info("-" * 50)
-    logger.info("Import Summary:")
-    logger.info(f"  Success: {stats['success']}")
-    logger.info(f"  Failed:  {stats['failed']}")
-    logger.info(f"  Skipped: {stats['skipped']}")
-    logger.info("-" * 50)
+    # Print detailed summary
+    logger.info("=" * 70)
+    logger.info("IMPORT REPORT")
+    logger.info("=" * 70)
+    logger.info(f"Total Instances: {len(instances)}")
+    logger.info(f"  ✓ Success: {stats['success']}")
+    logger.info(f"  ✗ Failed:  {stats['failed']}")
+    logger.info(f"  ⊘ Skipped: {stats['skipped']}")
+    logger.info("=" * 70)
+
+    if success_instances:
+        logger.info("")
+        logger.info("SUCCESSFUL IMPORTS:")
+        logger.info("-" * 70)
+        for item in success_instances:
+            logger.info(f"  ✓ {item['instance_id']:40} | user: {item['username']}")
+
+    if failed_instances:
+        logger.info("")
+        logger.info("FAILED IMPORTS:")
+        logger.info("-" * 70)
+        for item in failed_instances:
+            logger.info(f"  ✗ {item['instance_id']:40} | user: {item['username']}")
+            logger.info(f"    Reason: {item['reason']}")
+
+    if skipped_instances:
+        logger.info("")
+        logger.info("SKIPPED INSTANCES:")
+        logger.info("-" * 70)
+        for item in skipped_instances:
+            logger.info(f"  ⊘ {item['instance_id']:40}")
+            logger.info(f"    Reason: {item['reason']}")
+
+    logger.info("")
+    logger.info("=" * 70)
 
     # Exit with appropriate code
     if stats["failed"] > 0:
