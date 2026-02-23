@@ -21,7 +21,7 @@ python3 scripts/import_users_ldap.py \
   --omnistrate-environment-id "env-xyz-456" \
   --product-tier "FalkorDB Cloud" \
   --ldap-api-url https://customer-ldap.dev.falkordb.cloud \
-  --session-cookie "your-session-cookie-value" \
+  --gcp-service-account-email "sa@project.iam.gserviceaccount.com" \
   [--dry-run] \
   [--verbose]
 ```
@@ -42,9 +42,10 @@ python3 scripts/import_users_ldap.py \
 
 - `--product-tier`: Filter instances by product tier name (e.g., "FalkorDB Cloud", "FalkorDB Enterprise")
   - If omitted, processes all instances regardless of tier
-- `--session-cookie`: Session cookie for customer-ldap API authentication
-  - Cookie name: `api.falkordb.cloud_customer-ldap-session`
-  - Obtain from browser after logging into FalkorDB Cloud
+- `--gcp-service-account-email`: GCP service account email to impersonate for authentication
+  - Required for authentication with the customer-ldap API
+  - The script will use Application Default Credentials to impersonate this service account
+  - Sets `x-auth-mode: gcp-sa` header for GCP service account authentication
 - `--dry-run`: Validate and show what would be done without creating users
 - `--verbose`: Enable debug logging for troubleshooting
 
@@ -126,15 +127,18 @@ Response includes a JWT token used for subsequent API calls.
 
 ### Customer-LDAP API Authentication
 
-The customer-ldap API requires a session cookie. To obtain it:
+The customer-ldap API uses GCP service account impersonation for authentication:
 
-1. Log into FalkorDB Cloud in your browser
-2. Open browser DevTools → Application/Storage → Cookies
-3. Find cookie: `api.falkordb.cloud_customer-ldap-session`
-4. Copy the cookie value
-5. Pass it to the script via `--session-cookie`
+1. **Provide GCP Service Account Email**: Pass the service account email via `--gcp-service-account-email`
+2. **Impersonation**: The script uses Application Default Credentials (ADC) to impersonate the service account
+3. **Token Generation**: Gets an access token for the impersonated service account
+4. **Authentication Header**: Sets `x-auth-mode: gcp-sa` header to indicate GCP service account authentication mode
+5. **Authorization**: Passes the token in the `Authorization: Bearer {token}` header
 
-**Note**: Session cookies expire after 15 minutes. Refresh if needed.
+**Prerequisites**:
+- `google-auth` Python library installed: `pip install google-auth`
+- Application Default Credentials configured (e.g., via `gcloud auth application-default login`)
+- IAM permissions to impersonate the target service account
 
 ## Examples
 
@@ -159,7 +163,7 @@ python3 scripts/import_users_ldap.py \
   --omnistrate-service-id "srv_12345" \
   --omnistrate-environment-id "env_prod" \
   --ldap-api-url https://customer-ldap.falkordb.cloud \
-  --session-cookie "eyJhbGc..."
+  --gcp-service-account-email "ldap-importer@project.iam.gserviceaccount.com"
 ```
 
 ### Import Users for Specific Product Tier
@@ -172,7 +176,7 @@ python3 scripts/import_users_ldap.py \
   --omnistrate-environment-id "env_prod" \
   --product-tier "FalkorDB Cloud" \
   --ldap-api-url https://customer-ldap.falkordb.cloud \
-  --session-cookie "eyJhbGc..." \
+  --gcp-service-account-email "ldap-importer@project.iam.gserviceaccount.com" \
   --verbose
 ```
 
@@ -185,7 +189,7 @@ python3 scripts/import_users_ldap.py \
   --omnistrate-service-id "srv_12345" \
   --omnistrate-environment-id "env_dev" \
   --ldap-api-url https://customer-ldap.dev.falkordb.cloud \
-  --session-cookie "eyJhbGc..."
+  --gcp-service-account-email "ldap-importer@project.iam.gserviceaccount.com"
 ```
 
 ## Error Handling
@@ -262,9 +266,20 @@ Your Omnistrate credentials are invalid or the API is unreachable. Verify:
 - You have access to the Omnistrate account
 - Network connectivity to `api.omnistrate.cloud`
 
+### "Failed to get GCP service account token"
+
+Issues with GCP service account impersonation. Check:
+- `google-auth` library is installed: `pip install google-auth`
+- Application Default Credentials are configured: `gcloud auth application-default login`
+- You have the `roles/iam.serviceAccountTokenCreator` role on the target service account
+- The service account email is correct
+
 ### "401 Unauthorized" or "403 Forbidden" (LDAP API)
 
-Your session cookie has expired or is invalid. Obtain a fresh cookie from the browser.
+Authentication with the LDAP API failed. Verify:
+- GCP service account email is correct
+- The impersonated service account has necessary permissions
+- The `x-auth-mode: gcp-sa` header is being set correctly
 
 ### "Instance missing falkordbUser or falkordbPassword"
 
@@ -285,7 +300,7 @@ Check:
 ## Security Considerations
 
 - **Omnistrate Credentials**: Store securely, never commit to git
-- **Session Cookies**: Session cookies provide full API access. Keep them confidential.
+- **GCP Service Account**: Use dedicated service account with minimal required permissions
 - **Passwords**: Instance credentials are extracted from Omnistrate and sent to LDAP API over HTTPS
 - **ACL Restrictions**: All users get the same standard ACL. Customize if needed for different security profiles.
 

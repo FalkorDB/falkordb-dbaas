@@ -145,7 +145,7 @@ class LdapUserImporter:
     def __init__(
         self,
         api_base_url: str,
-        session_cookie: Optional[str] = None,
+        gcp_service_account_email: Optional[str] = None,
         dry_run: bool = False,
     ):
         """
@@ -153,19 +153,60 @@ class LdapUserImporter:
 
         Args:
             api_base_url: Base URL of the customer-ldap API
-            session_cookie: Session cookie for authentication
+            gcp_service_account_email: GCP service account email to impersonate
             dry_run: If True, only validate without creating users
         """
         self.api_base_url = api_base_url.rstrip("/")
         self.dry_run = dry_run
+        self.gcp_service_account_email = gcp_service_account_email
         self.session = requests.Session()
 
-        if session_cookie:
-            self.session.cookies.set(
-                "api.falkordb.cloud_customer-ldap-session", session_cookie
+        # Set headers for GCP service account authentication
+        self.session.headers.update({
+            "Content-Type": "application/json",
+            "x-auth-mode": "gcp-sa"
+        })
+
+        # Get GCP service account token if email provided
+        if gcp_service_account_email:
+            token = self._get_gcp_token()
+            self.session.headers.update({"Authorization": f"Bearer {token}"})
+
+    def _get_gcp_token(self) -> str:
+        """
+        Get GCP service account access token for impersonation.
+
+        Returns:
+            Access token string
+        """
+        try:
+            import google.auth
+            import google.auth.transport.requests
+            from google.auth import impersonated_credentials
+
+            # Get default credentials
+            source_credentials, _ = google.auth.default()
+
+            # Create impersonated credentials
+            target_credentials = impersonated_credentials.Credentials(
+                source_credentials=source_credentials,
+                target_principal=self.gcp_service_account_email,
+                target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
             )
 
-        self.session.headers.update({"Content-Type": "application/json"})
+            # Refresh to get the token
+            auth_request = google.auth.transport.requests.Request()
+            target_credentials.refresh(auth_request)
+
+            return target_credentials.token
+        except ImportError:
+            logger.error(
+                "google-auth library not installed. Install with: pip install google-auth"
+            )
+            raise
+        except Exception as e:
+            logger.error(f"Failed to get GCP service account token: {e}")
+            raise
 
     def create_user(
         self, instance_id: str, username: str, password: str, acl: str
@@ -245,7 +286,7 @@ Example:
     --omnistrate-environment-id "env-xyz-456" \\
     --product-tier "FalkorDB Cloud" \\
     --ldap-api-url https://customer-ldap.dev.falkordb.cloud \\
-    --session-cookie "eyJhbGc..."
+    --gcp-service-account-email "sa@project.iam.gserviceaccount.com"
         """,
     )
 
@@ -285,8 +326,8 @@ Example:
     )
 
     parser.add_argument(
-        "--session-cookie",
-        help="Session cookie for authentication (api.falkordb.cloud_customer-ldap-session)",
+        "--gcp-service-account-email",
+        help="GCP service account email to impersonate for authentication",
     )
 
     parser.add_argument(
@@ -318,7 +359,7 @@ Example:
     # Initialize LDAP importer
     importer = LdapUserImporter(
         api_base_url=args.ldap_api_url,
-        session_cookie=args.session_cookie,
+        gcp_service_account_email=args.gcp_service_account_email,
         dry_run=args.dry_run,
     )
 
