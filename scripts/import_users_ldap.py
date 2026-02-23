@@ -2,19 +2,17 @@
 """
 Import users into LDAP for FalkorDB instances.
 
-This script reads a CSV file containing user information and creates
-users in the LDAP system for each FalkorDB instance.
+This script fetches instances from Omnistrate API and creates LDAP users
+for each instance using the credentials stored in the instance's result_params.
 
-CSV format:
-instance_id,username,password,acl
-
-Example:
-my-instance-123,user1,password123,~* +@all
-my-instance-456,user2,password456,~* +@read +@write
+The script:
+1. Authenticates with Omnistrate API
+2. Retrieves all instances for a specified environment and product tier
+3. For each instance, extracts falkordbUsername and falkordbPassword from result_params
+4. Creates LDAP users via the customer-ldap API
 """
 
 import argparse
-import csv
 import logging
 import sys
 import requests
@@ -22,6 +20,123 @@ from typing import List, Dict, Optional
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
+
+class OmnistrateClient:
+    """Handles Omnistrate API authentication and requests."""
+
+    def __init__(self, email: str, password: str):
+        """
+        Initialize Omnistrate client.
+
+        Args:
+            email: Omnistrate user email
+            password: Omnistrate user password
+        """
+        self.session = requests.Session()
+        self.session.headers.update({"Content-Type": "application/json"})
+        self._authenticate(email, password)
+
+    def _authenticate(self, email: str, password: str) -> None:
+        """Authenticate with Omnistrate API."""
+        logger.info("Authenticating with Omnistrate API")
+        try:
+            response = self.session.post(
+                "https://api.omnistrate.cloud/2022-09-01-00/signin",
+                json={"email": email, "password": password},
+            )
+            response.raise_for_status()
+            token = response.json().get("jwtToken")
+            if not token:
+                raise Exception("No JWT token received from Omnistrate")
+            self.session.headers.update({"Authorization": f"Bearer {token}"})
+            logger.info("Successfully authenticated with Omnistrate API")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to authenticate with Omnistrate: {e}")
+            raise
+
+    def get_instances(
+        self, service_id: str, environment_id: str, product_tier: Optional[str] = None
+    ) -> List[Dict]:
+        """
+        Get all instances for a service/environment, optionally filtered by product tier.
+
+        Args:
+            service_id: Omnistrate service ID
+            environment_id: Omnistrate environment ID
+            product_tier: Optional product tier name to filter by
+
+        Returns:
+            List of instance dictionaries
+        """
+        logger.info(
+            f"Fetching instances for service {service_id}, environment {environment_id}"
+        )
+        try:
+            # First, get all subscriptions
+            response = self.session.get(
+                f"https://api.omnistrate.cloud/2022-09-01-00/fleet/service/{service_id}/environment/{environment_id}/subscription"
+            )
+            response.raise_for_status()
+            subscriptions = response.json().get("subscriptions", [])
+
+            logger.info(f"Found {len(subscriptions)} subscriptions")
+
+            # Filter by product tier if specified
+            if product_tier:
+                subscriptions = [
+                    sub
+                    for sub in subscriptions
+                    if sub.get("productTierName") == product_tier
+                ]
+                logger.info(
+                    f"Filtered to {len(subscriptions)} subscriptions with product tier '{product_tier}'"
+                )
+
+            # Get instances for each subscription
+            all_instances = []
+            for subscription in subscriptions:
+                subscription_id = subscription.get("id")
+                logger.debug(f"Fetching instances for subscription {subscription_id}")
+
+                response = self.session.get(
+                    f"https://api.omnistrate.cloud/2022-09-01-00/fleet/service/{service_id}/environment/{environment_id}/instances?SubscriptionId={subscription_id}"
+                )
+                response.raise_for_status()
+                instances = response.json().get("resourceInstances", [])
+                all_instances.extend(instances)
+
+            logger.info(f"Found {len(all_instances)} total instances")
+            return all_instances
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to fetch instances from Omnistrate: {e}")
+            raise
+
+    def get_instance_details(
+        self, service_id: str, environment_id: str, instance_id: str
+    ) -> Dict:
+        """
+        Get detailed information for a specific instance.
+
+        Args:
+            service_id: Omnistrate service ID
+            environment_id: Omnistrate environment ID
+            instance_id: Instance ID
+
+        Returns:
+            Instance details dictionary
+        """
+        logger.debug(f"Fetching details for instance {instance_id}")
+        try:
+            response = self.session.get(
+                f"https://api.omnistrate.cloud/2022-09-01-00/fleet/service/{service_id}/environment/{environment_id}/instance/{instance_id}"
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to fetch instance details for {instance_id}: {e}")
+            raise
 
 
 class LdapUserImporter:
@@ -37,7 +152,7 @@ class LdapUserImporter:
         Initialize the importer.
 
         Args:
-            api_base_url: Base URL of the customer-ldap API (e.g., https://customer-ldap.dev.falkordb.cloud)
+            api_base_url: Base URL of the customer-ldap API
             session_cookie: Session cookie for authentication
             dry_run: If True, only validate without creating users
         """
@@ -46,41 +161,15 @@ class LdapUserImporter:
         self.session = requests.Session()
 
         if session_cookie:
-            self.session.cookies.set("api.falkordb.cloud_customer-ldap-session", session_cookie)
+            self.session.cookies.set(
+                "api.falkordb.cloud_customer-ldap-session", session_cookie
+            )
 
         self.session.headers.update({"Content-Type": "application/json"})
 
-    def validate_user_data(self, user: Dict[str, str]) -> List[str]:
-        """
-        Validate user data.
-
-        Args:
-            user: Dictionary with instance_id, username, password, acl
-
-        Returns:
-            List of validation error messages (empty if valid)
-        """
-        errors = []
-
-        if not user.get("instance_id"):
-            errors.append("Missing instance_id")
-
-        if not user.get("username"):
-            errors.append("Missing username")
-        elif len(user["username"]) < 3:
-            errors.append("Username must be at least 3 characters")
-
-        if not user.get("password"):
-            errors.append("Missing password")
-        elif len(user["password"]) < 6:
-            errors.append("Password must be at least 6 characters")
-
-        if not user.get("acl"):
-            errors.append("Missing acl")
-
-        return errors
-
-    def create_user(self, instance_id: str, username: str, password: str, acl: str) -> bool:
+    def create_user(
+        self, instance_id: str, username: str, password: str, acl: str
+    ) -> bool:
         """
         Create a user in LDAP for the given instance.
 
@@ -103,7 +192,7 @@ class LdapUserImporter:
 
         if self.dry_run:
             logger.info(
-                f"[DRY RUN] Would create user '{username}' in instance '{instance_id}' with ACL: {acl}"
+                f"[DRY RUN] Would create user '{username}' in instance '{instance_id}'"
             )
             return True
 
@@ -111,10 +200,14 @@ class LdapUserImporter:
             response = self.session.post(url, json=payload)
 
             if response.status_code == 201:
-                logger.info(f"Successfully created user '{username}' in instance '{instance_id}'")
+                logger.info(
+                    f"Successfully created user '{username}' in instance '{instance_id}'"
+                )
                 return True
             elif response.status_code == 409:
-                logger.warning(f"User '{username}' already exists in instance '{instance_id}'")
+                logger.warning(
+                    f"User '{username}' already exists in instance '{instance_id}'"
+                )
                 return True
             else:
                 logger.error(
@@ -129,91 +222,64 @@ class LdapUserImporter:
             )
             return False
 
-    def import_users_from_csv(self, csv_file_path: str) -> Dict[str, int]:
-        """
-        Import users from a CSV file.
-
-        Args:
-            csv_file_path: Path to CSV file
-
-        Returns:
-            Dictionary with counts: {"success": N, "failed": M, "skipped": K}
-        """
-        stats = {"success": 0, "failed": 0, "skipped": 0}
-
-        try:
-            with open(csv_file_path, "r", encoding="utf-8") as csvfile:
-                reader = csv.DictReader(csvfile)
-
-                # Validate CSV headers
-                required_fields = {"instance_id", "username", "password", "acl"}
-                if not required_fields.issubset(set(reader.fieldnames or [])):
-                    logger.error(
-                        f"CSV file must contain columns: {', '.join(required_fields)}"
-                    )
-                    return stats
-
-                for row_num, row in enumerate(reader, start=2):
-                    # Strip whitespace from all fields
-                    user = {k: v.strip() for k, v in row.items()}
-
-                    # Validate user data
-                    validation_errors = self.validate_user_data(user)
-                    if validation_errors:
-                        logger.warning(
-                            f"Row {row_num}: Validation failed - {', '.join(validation_errors)}"
-                        )
-                        stats["skipped"] += 1
-                        continue
-
-                    # Create user
-                    success = self.create_user(
-                        instance_id=user["instance_id"],
-                        username=user["username"],
-                        password=user["password"],
-                        acl=user["acl"],
-                    )
-
-                    if success:
-                        stats["success"] += 1
-                    else:
-                        stats["failed"] += 1
-
-        except FileNotFoundError:
-            logger.error(f"CSV file not found: {csv_file_path}")
-        except Exception as e:
-            logger.error(f"Error reading CSV file: {e}")
-
-        return stats
-
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Import users into LDAP from CSV file",
+        description="Import users into LDAP from Omnistrate instances",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-CSV Format:
-  instance_id,username,password,acl
+This script fetches instances from Omnistrate and creates LDAP users
+using the credentials stored in each instance's result_params.
+
+Workflow:
+  1. Authenticate with Omnistrate API
+  2. Fetch instances for the specified service/environment/product-tier
+  3. Extract falkordbUsername and falkordbPassword from result_params
+  4. Create LDAP users via customer-ldap API with ALLOWED_ACL permissions
 
 Example:
-  my-instance-123,user1,password123,~* +@all
-  my-instance-456,user2,password456,~* +@read +@write
-
-ACL Examples:
-  - Full access: ~* +@all
-  - Read-only: ~* +@read
-  - Custom: ~* +graph.QUERY +graph.RO_QUERY +INFO +PING
+  python3 scripts/import_users_ldap.py \\
+    --omnistrate-email user@example.com \\
+    --omnistrate-password "password123" \\
+    --omnistrate-service-id "service-abc-123" \\
+    --omnistrate-environment-id "env-xyz-456" \\
+    --product-tier "FalkorDB Cloud" \\
+    --ldap-api-url https://customer-ldap.dev.falkordb.cloud \\
+    --session-cookie "eyJhbGc..."
         """,
     )
 
     parser.add_argument(
-        "--csv-file",
+        "--omnistrate-email",
         required=True,
-        help="Path to CSV file containing user data",
+        help="Omnistrate account email",
     )
 
     parser.add_argument(
-        "--api-url",
+        "--omnistrate-password",
+        required=True,
+        help="Omnistrate account password",
+    )
+
+    parser.add_argument(
+        "--omnistrate-service-id",
+        required=True,
+        help="Omnistrate service ID",
+    )
+
+    parser.add_argument(
+        "--omnistrate-environment-id",
+        required=True,
+        help="Omnistrate environment ID",
+    )
+
+    parser.add_argument(
+        "--product-tier",
+        help="Filter instances by product tier name (e.g., 'FalkorDB Cloud')",
+    )
+
+    parser.add_argument(
+        "--ldap-api-url",
         required=True,
         help="Base URL of the customer-ldap API (e.g., https://customer-ldap.dev.falkordb.cloud)",
     )
@@ -226,7 +292,7 @@ ACL Examples:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Validate CSV and show what would be done without creating users",
+        help="Show what would be done without creating users",
     )
 
     parser.add_argument(
@@ -240,19 +306,77 @@ ACL Examples:
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Initialize importer
+    # Initialize Omnistrate client
+    try:
+        omnistrate = OmnistrateClient(
+            email=args.omnistrate_email, password=args.omnistrate_password
+        )
+    except Exception as e:
+        logger.error(f"Failed to initialize Omnistrate client: {e}")
+        sys.exit(1)
+
+    # Initialize LDAP importer
     importer = LdapUserImporter(
-        api_base_url=args.api_url,
+        api_base_url=args.ldap_api_url,
         session_cookie=args.session_cookie,
         dry_run=args.dry_run,
     )
 
-    # Import users
-    logger.info(f"Starting import from {args.csv_file}")
+    # Fetch instances
+    logger.info("Starting import process")
     if args.dry_run:
         logger.info("DRY RUN MODE - No users will be created")
 
-    stats = importer.import_users_from_csv(args.csv_file)
+    try:
+        instances = omnistrate.get_instances(
+            service_id=args.omnistrate_service_id,
+            environment_id=args.omnistrate_environment_id,
+            product_tier=args.product_tier,
+        )
+    except Exception as e:
+        logger.error(f"Failed to fetch instances: {e}")
+        sys.exit(1)
+
+    # Import users
+    stats = {"success": 0, "failed": 0, "skipped": 0}
+
+    # Standard ACL from constants.ts
+    ALLOWED_ACL = "+INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +CLUSTER +COMMAND +GRAPH.MEMORY +MEMORY +BGREWRITEAOF +MODULE|LIST +MONITOR"
+
+    for instance in instances:
+        instance_result = instance.get("consumptionResourceInstanceResult", {})
+        instance_id = instance_result.get("id")
+
+        if not instance_id:
+            logger.warning("Instance missing ID, skipping")
+            stats["skipped"] += 1
+            continue
+
+        # Extract credentials from result_params
+        result_params = instance_result.get("result_params", {})
+        falkordb_username = result_params.get("falkordbUser")
+        falkordb_password = result_params.get("falkordbPassword")
+
+        if not falkordb_username or not falkordb_password:
+            logger.warning(
+                f"Instance {instance_id} missing falkordbUser or falkordbPassword in result_params, skipping"
+            )
+            stats["skipped"] += 1
+            continue
+
+        # Create user with standard ACL
+        acl = f"~* {ALLOWED_ACL}"
+        success = importer.create_user(
+            instance_id=instance_id,
+            username=falkordb_username,
+            password=falkordb_password,
+            acl=acl,
+        )
+
+        if success:
+            stats["success"] += 1
+        else:
+            stats["failed"] += 1
 
     # Print summary
     logger.info("-" * 50)

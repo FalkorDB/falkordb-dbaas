@@ -1,13 +1,26 @@
 # LDAP User Import Script
 
-This script imports users into LDAP for FalkorDB instances via the customer-ldap API.
+This script imports users into LDAP for FalkorDB instances by fetching instance data from the Omnistrate API.
+
+## Workflow
+
+1. **Authenticate with Omnistrate API** using email/password credentials
+2. **Retrieve all instances** for a specified service, environment, and optionally product tier
+3. **Extract credentials** from each instance's `result_params`:
+   - `falkordbUser` (username)
+   - `falkordbPassword` (password)
+4. **Create LDAP users** via the customer-ldap API with standard ALLOWED_ACL permissions
 
 ## Usage
 
 ```bash
 python3 scripts/import_users_ldap.py \
-  --csv-file users.csv \
-  --api-url https://customer-ldap.dev.falkordb.cloud \
+  --omnistrate-email user@example.com \
+  --omnistrate-password "password123" \
+  --omnistrate-service-id "service-abc-123" \
+  --omnistrate-environment-id "env-xyz-456" \
+  --product-tier "FalkorDB Cloud" \
+  --ldap-api-url https://customer-ldap.dev.falkordb.cloud \
   --session-cookie "your-session-cookie-value" \
   [--dry-run] \
   [--verbose]
@@ -15,108 +28,105 @@ python3 scripts/import_users_ldap.py \
 
 ## Arguments
 
-- `--csv-file` (required): Path to CSV file containing user data
-- `--api-url` (required): Base URL of the customer-ldap API
+### Required Arguments
+
+- `--omnistrate-email`: Omnistrate account email for API authentication
+- `--omnistrate-password`: Omnistrate account password
+- `--omnistrate-service-id`: Omnistrate service ID (identifies the FalkorDB service)
+- `--omnistrate-environment-id`: Omnistrate environment ID (e.g., dev, staging, prod)
+- `--ldap-api-url`: Base URL of the customer-ldap API
   - Dev: `https://customer-ldap.dev.falkordb.cloud`
   - Prod: `https://customer-ldap.falkordb.cloud`
-- `--session-cookie` (optional): Session cookie for authentication
+
+### Optional Arguments
+
+- `--product-tier`: Filter instances by product tier name (e.g., "FalkorDB Cloud", "FalkorDB Enterprise")
+  - If omitted, processes all instances regardless of tier
+- `--session-cookie`: Session cookie for customer-ldap API authentication
   - Cookie name: `api.falkordb.cloud_customer-ldap-session`
   - Obtain from browser after logging into FalkorDB Cloud
-- `--dry-run` (optional): Validate CSV without creating users
-- `--verbose` (optional): Enable debug logging
+- `--dry-run`: Validate and show what would be done without creating users
+- `--verbose`: Enable debug logging for troubleshooting
 
-## CSV Format
+## How It Works
 
-The CSV file must contain the following columns:
+### 1. Fetch Instances from Omnistrate
 
-| Column | Description | Requirements |
-|--------|-------------|--------------|
-| `instance_id` | FalkorDB instance ID (namespace) | Required |
-| `username` | Username to create | Required, min 3 characters |
-| `password` | User password | Required, min 6 characters |
-| `acl` | ACL permissions string | Required |
+The script connects to Omnistrate API and retrieves instances:
 
-### Example CSV
+```
+GET /2022-09-01-00/fleet/service/{serviceId}/environment/{environmentId}/subscription
+  → Returns list of subscriptions
 
-```csv
-instance_id,username,password,acl
-my-instance-123,testuser1,testpass123,~* +@all
-my-instance-123,testuser2,testpass456,~* +graph.QUERY +graph.RO_QUERY +INFO +PING
-my-instance-456,adminuser,adminpass789,~* +@all
-my-instance-456,readonly,readpass123,~* +graph.RO_QUERY +INFO +PING
+For each subscription:
+  GET /2022-09-01-00/fleet/service/{serviceId}/environment/{environmentId}/instances?SubscriptionId={subscriptionId}
+    → Returns instances for that subscription
 ```
 
-See `scripts/import_users_ldap.example.csv` for a full example.
+### 2. Extract Instance Credentials
+
+For each instance, the script extracts:
+
+```json
+{
+  "consumptionResourceInstanceResult": {
+    "id": "my-instance-123",
+    "result_params": {
+      "falkordbUser": "admin",
+      "falkordbPassword": "securepassword123"
+    }
+  }
+}
+```
+
+### 3. Create LDAP Users
+
+For each instance with valid credentials, creates an LDAP user:
+
+```
+POST /v1/instances/{instanceId}
+{
+  "username": "admin",
+  "password": "securepassword123",
+  "acl": "~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH ... +MONITOR"
+}
+```
+
+The ACL matches the `ALLOWED_ACL` constant from `backend/services/customer-ldap/src/constants.ts`.
 
 ## ACL Permissions
 
-The ACL (Access Control List) defines what commands a user can execute. Common patterns:
+All users are created with the standard `ALLOWED_ACL` permissions:
 
-### Standard Access (Recommended)
 ```
-~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +CLUSTER +COMMAND +GRAPH.MEMORY +MEMORY +BGREWRITEAOF +MODULE|LIST
-```
-This is the standard ACL used by the system (matches ALLOWED_ACL constant). Grants access to all keys and all whitelisted commands.
-
-You can also reference it with a placeholder in your code:
-```python
-from constants import ALLOWED_ACL
-acl = f"~* {ALLOWED_ACL}"
+~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +CLUSTER +COMMAND +GRAPH.MEMORY +MEMORY +BGREWRITEAOF +MODULE|LIST +MONITOR
 ```
 
-### Read-Only Access
-```
-~* +graph.RO_QUERY +graph.INFO +graph.LIST +INFO +PING
-```
-Grants access to all keys but only read-only graph queries and info commands.
-
-### Custom Access
-```
-~* +graph.QUERY +graph.RO_QUERY +graph.DELETE +INFO +PING
-```
-Grants access to specific graph commands.
-
-### Available Commands
-
-The allowed commands are defined in the customer-ldap service (`ALLOWED_ACL` constant). All created users will automatically have access to these commands:
-
-**Graph Commands:**
-- `+graph.QUERY` - Graph queries (read/write)
-- `+graph.RO_QUERY` - Graph read-only queries
-- `+graph.DELETE` - Delete graphs
-- `+graph.EXPLAIN` - Query execution plans
-- `+graph.PROFILE` - Query profiling
-- `+graph.CONSTRAINT` - Constraint management
-- `+graph.SLOWLOG` - Slow query log
-- `+graph.BULK` - Bulk operations
-- `+graph.CONFIG` - Configuration
-- `+graph.COPY` - Copy operations
-- `+graph.INFO` - Graph information
-- `+graph.LIST` - List graphs
-- `+graph.MEMORY` - Memory statistics
-
-**Redis Commands:**
-- `+INFO`, `+PING`, `+ECHO` - Server info and connectivity
-- `+CLIENT`, `+DBSIZE` - Client and database operations
-- `+AUTH`, `+HELLO` - Authentication
-- `+DEL`, `+EXISTS`, `+UNLINK`, `+TYPE` - Key operations
-- `+EXPIRE`, `+PEXPIREAT`, `+TTL`, `+PTTL`, `+EXPIRETIME` - Expiration
-- `+RENAME`, `+RENAMENX`, `+SCAN` - Key management
-- `+MULTI`, `+EXEC`, `+DISCARD`, `+WATCH`, `+UNWATCH` - Transactions
-- `+FLUSHALL`, `+TOUCH` - Database operations
-- `+RESTORE`, `+DUMP` - Persistence
-- `+SLOWLOG`, `+WAIT`, `+WAITAOF`, `+READONLY` - Monitoring and replication
-- `+CLUSTER`, `+COMMAND`, `+MEMORY`, `+MODULE|LIST` - Cluster and system
-- `+BGREWRITEAOF` - Background rewrite AOF
-- `+MONITOR` - Command monitoring (use with caution - can expose sensitive data)
-
-**Note:** The ACL prefix `~*` grants access to all key patterns. You can restrict key access by using different patterns like `~prefix:*` to only allow keys starting with "prefix:".
-
-For the complete list, see `backend/services/customer-ldap/src/constants.ts` (ALLOWED_ACL constant).
+This grants:
+- **Key access**: `~*` (all keys)
+- **Commands**: All whitelisted FalkorDB and Redis commands
+- **Graph operations**: Query, read-only query, delete, explain, profile, constraints, etc.
+- **Redis operations**: Info, client management, key operations, transactions, persistence, etc.
 
 ## Authentication
 
-The script requires authentication to the customer-ldap API. You can provide a session cookie:
+### Omnistrate API Authentication
+
+The script authenticates with Omnistrate using email/password:
+
+```
+POST https://api.omnistrate.cloud/2022-09-01-00/signin
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+Response includes a JWT token used for subsequent API calls.
+
+### Customer-LDAP API Authentication
+
+The customer-ldap API requires a session cookie. To obtain it:
 
 1. Log into FalkorDB Cloud in your browser
 2. Open browser DevTools → Application/Storage → Cookies
@@ -124,7 +134,7 @@ The script requires authentication to the customer-ldap API. You can provide a s
 4. Copy the cookie value
 5. Pass it to the script via `--session-cookie`
 
-**Note**: Session cookies expire after 15 minutes. You may need to refresh the cookie if the script runs for a long time.
+**Note**: Session cookies expire after 15 minutes. Refresh if needed.
 
 ## Examples
 
@@ -132,100 +142,132 @@ The script requires authentication to the customer-ldap API. You can provide a s
 
 ```bash
 python3 scripts/import_users_ldap.py \
-  --csv-file users.csv \
-  --api-url https://customer-ldap.dev.falkordb.cloud \
+  --omnistrate-email admin@falkordb.com \
+  --omnistrate-password "mypassword" \
+  --omnistrate-service-id "srv_12345" \
+  --omnistrate-environment-id "env_prod" \
+  --ldap-api-url https://customer-ldap.falkordb.cloud \
   --dry-run
 ```
 
-### Import Users to Dev Environment
+### Import Users for All Product Tiers
 
 ```bash
 python3 scripts/import_users_ldap.py \
-  --csv-file users.csv \
-  --api-url https://customer-ldap.dev.falkordb.cloud \
+  --omnistrate-email admin@falkordb.com \
+  --omnistrate-password "mypassword" \
+  --omnistrate-service-id "srv_12345" \
+  --omnistrate-environment-id "env_prod" \
+  --ldap-api-url https://customer-ldap.falkordb.cloud \
   --session-cookie "eyJhbGc..."
 ```
 
-### Import Users to Prod Environment
+### Import Users for Specific Product Tier
 
 ```bash
 python3 scripts/import_users_ldap.py \
-  --csv-file users.csv \
-  --api-url https://customer-ldap.falkordb.cloud \
+  --omnistrate-email admin@falkordb.com \
+  --omnistrate-password "mypassword" \
+  --omnistrate-service-id "srv_12345" \
+  --omnistrate-environment-id "env_prod" \
+  --product-tier "FalkorDB Cloud" \
+  --ldap-api-url https://customer-ldap.falkordb.cloud \
   --session-cookie "eyJhbGc..." \
   --verbose
+```
+
+### Import to Dev Environment
+
+```bash
+python3 scripts/import_users_ldap.py \
+  --omnistrate-email admin@falkordb.com \
+  --omnistrate-password "mypassword" \
+  --omnistrate-service-id "srv_12345" \
+  --omnistrate-environment-id "env_dev" \
+  --ldap-api-url https://customer-ldap.dev.falkordb.cloud \
+  --session-cookie "eyJhbGc..."
 ```
 
 ## Error Handling
 
 The script handles common scenarios:
 
-- **Validation Errors**: Skipped users are logged with details
+- **Missing Credentials**: Instances without `falkordbUser` or `falkordbPassword` are skipped
 - **Duplicate Users**: If a user already exists (HTTP 409), it's logged as a warning but counted as success
 - **Network Errors**: Connection failures are logged and counted as failures
-- **Authentication Errors**: HTTP 401/403 errors indicate invalid or expired session cookie
+- **Authentication Errors**: HTTP 401/403 errors indicate invalid credentials or expired session cookie
+- **Omnistrate API Errors**: Any API failures during instance fetching will abort the script
+
+## Output
+
+### Example Output
+
+```
+2026-02-23 08:00:00 - INFO - Authenticating with Omnistrate API
+2026-02-23 08:00:01 - INFO - Successfully authenticated with Omnistrate API
+2026-02-23 08:00:01 - INFO - Starting import process
+2026-02-23 08:00:01 - INFO - Fetching instances for service srv_12345, environment env_prod
+2026-02-23 08:00:02 - INFO - Found 5 subscriptions
+2026-02-23 08:00:03 - INFO - Found 12 total instances
+2026-02-23 08:00:04 - INFO - Successfully created user 'admin' in instance 'instance-001'
+2026-02-23 08:00:05 - WARNING - User 'admin' already exists in instance 'instance-002'
+2026-02-23 08:00:06 - INFO - Successfully created user 'dbuser' in instance 'instance-003'
+2026-02-23 08:00:07 - WARNING - Instance instance-004 missing falkordbUser or falkordbPassword in result_params, skipping
+2026-02-23 08:00:08 - INFO - Successfully created user 'admin' in instance 'instance-005'
+...
+2026-02-23 08:00:20 - INFO - --------------------------------------------------
+2026-02-23 08:00:20 - INFO - Import Summary:
+2026-02-23 08:00:20 - INFO -   Success: 10
+2026-02-23 08:00:20 - INFO -   Failed:  0
+2026-02-23 08:00:20 - INFO -   Skipped: 2
+2026-02-23 08:00:20 - INFO - --------------------------------------------------
+```
 
 ## Exit Codes
 
 - `0` - Success (all users created or already exist)
-- `1` - Failure (one or more users failed to create)
-
-## Output
-
-The script logs:
-- Each user creation attempt
-- Validation failures
-- Network errors
-- Final summary statistics
-
-Example output:
-
-```
-2026-02-22 16:30:00 - INFO - Starting import from users.csv
-2026-02-22 16:30:00 - INFO - Successfully created user 'testuser1' in instance 'my-instance-123'
-2026-02-22 16:30:01 - WARNING - User 'testuser2' already exists in instance 'my-instance-123'
-2026-02-22 16:30:02 - INFO - Successfully created user 'adminuser' in instance 'my-instance-456'
-2026-02-22 16:30:03 - INFO - Successfully created user 'readonly' in instance 'my-instance-456'
-2026-02-22 16:30:03 - INFO - --------------------------------------------------
-2026-02-22 16:30:03 - INFO - Import Summary:
-2026-02-22 16:30:03 - INFO -   Success: 4
-2026-02-22 16:30:03 - INFO -   Failed:  0
-2026-02-22 16:30:03 - INFO -   Skipped: 0
-2026-02-22 16:30:03 - INFO - --------------------------------------------------
-```
+- `1` - Failure (one or more users failed to create, or Omnistrate API error)
 
 ## Troubleshooting
 
-### "401 Unauthorized" or "403 Forbidden"
+### "Failed to authenticate with Omnistrate"
+
+Your Omnistrate credentials are invalid or the API is unreachable. Verify:
+- Email and password are correct
+- You have access to the Omnistrate account
+- Network connectivity to `api.omnistrate.cloud`
+
+### "401 Unauthorized" or "403 Forbidden" (LDAP API)
 
 Your session cookie has expired or is invalid. Obtain a fresh cookie from the browser.
 
-### "Failed to create user: HTTP 400"
+### "Instance missing falkordbUser or falkordbPassword"
 
-Check the CSV data for validation errors. Common issues:
-- Username too short (< 3 characters)
-- Password too short (< 6 characters)
-- Missing required fields
-- Invalid ACL syntax
+The instance's `result_params` doesn't contain the required credentials. This can happen for:
+- Newly created instances that haven't been fully provisioned
+- Instances in error state
+- Old instances from before credentials were added to result_params
 
-### "Connection refused" or "Network error"
+These instances are safely skipped.
 
-Verify the API URL is correct and accessible. Check your network connection.
+### "Failed to fetch instances from Omnistrate"
 
-### "Instance not found"
-
-The instance_id may be incorrect or the instance may not exist. Verify instance IDs with the Omnistrate API or FalkorDB Cloud dashboard.
+Check:
+- Service ID and Environment ID are correct
+- You have permission to access those resources in Omnistrate
+- Network connectivity is working
 
 ## Security Considerations
 
-- **Passwords**: The CSV file contains plaintext passwords. Store it securely and delete after import.
+- **Omnistrate Credentials**: Store securely, never commit to git
 - **Session Cookies**: Session cookies provide full API access. Keep them confidential.
-- **ACL Restrictions**: Always use the principle of least privilege. Grant only necessary permissions.
-- **Git**: Do NOT commit CSV files with real credentials to Git. Add `*.csv` to `.gitignore` if needed.
+- **Passwords**: Instance credentials are extracted from Omnistrate and sent to LDAP API over HTTPS
+- **ACL Restrictions**: All users get the same standard ACL. Customize if needed for different security profiles.
 
 ## Related Files
 
 - Script: `scripts/import_users_ldap.py`
-- Example CSV: `scripts/import_users_ldap.example.csv`
+- Example (deprecated): `scripts/import_users_ldap.example.csv` (CSV-based approach, no longer used)
 - Customer LDAP Service: `backend/services/customer-ldap/`
 - API Routes: `backend/services/customer-ldap/src/routes/v1/instances/`
+- Constants: `backend/services/customer-ldap/src/constants.ts` (ALLOWED_ACL)
