@@ -49,7 +49,7 @@ export function createAuthenticateHook(
       }
     }
 
-    // If no valid session, authenticate with Omnistrate or GCP service account
+    // If no valid session, authenticate based on auth mode
     if (!sessionData) {
       const authHeaderRaw = request.headers['authorization'];
       const authHeader = Array.isArray(authHeaderRaw) ? authHeaderRaw[0] : authHeaderRaw;
@@ -59,15 +59,23 @@ export function createAuthenticateHook(
 
       const token = authHeader.substring(7);
 
-      // First, try to validate as GCP service account token
-      const gcpValidator = new GcpServiceAccountValidator({
-        logger: request.log,
-        adminServiceAccountEmail: process.env.GCP_ADMIN_SERVICE_ACCOUNT_EMAIL,
-      });
+      // Check auth mode header (default is 'default', 'gcp-sa' for GCP service account)
+      const authModeHeaderRaw = request.headers['x-auth-mode'];
+      const authMode = (Array.isArray(authModeHeaderRaw) ? authModeHeaderRaw[0] : authModeHeaderRaw) || 'default';
 
-      const isGcpServiceAccount = await gcpValidator.validateServiceAccountToken(token);
+      if (authMode === 'gcp-sa') {
+        // Validate as GCP service account token
+        const gcpValidator = new GcpServiceAccountValidator({
+          logger: request.log,
+          adminServiceAccountEmail: process.env.GCP_ADMIN_SERVICE_ACCOUNT_EMAIL,
+        });
 
-      if (isGcpServiceAccount) {
+        const isGcpServiceAccount = await gcpValidator.validateServiceAccountToken(token);
+
+        if (!isGcpServiceAccount) {
+          throw request.server.httpErrors.unauthorized('Invalid GCP service account token');
+        }
+
         // GCP service account has root access to all instances
         request.log.info({ instanceId, subscriptionId }, 'Authenticated as GCP admin service account');
 
@@ -82,7 +90,7 @@ export function createAuthenticateHook(
           throw request.server.httpErrors.badRequest('Subscription ID does not match instance');
         }
 
-        // Create session data with root role for GCP service account
+        // Create session data with root role for GCP service account (no cookie)
         sessionData = {
           userId: gcpValidator.getAdminServiceAccountEmail() || 'gcp-admin',
           subscriptionId,
@@ -92,19 +100,8 @@ export function createAuthenticateHook(
           k8sClusterName: instance.clusterId,
           role: 'root',
         };
-
-        // Create and set session cookie
-        const session = sessionRepository.createSession(sessionData);
-        reply.setCookie(SESSION_COOKIE_NAME, session, {
-          httpOnly: true,
-          secure: true,
-          sameSite: 'strict',
-          maxAge: SESSION_EXPIRY_SECONDS,
-          path: '/',
-          signed: true,
-        });
       } else {
-        // Fall back to Omnistrate authentication
+        // Default authentication flow: Omnistrate bearer token
         const omnistrateRepository = request.diScope.resolve<IOmnistrateRepository>(
           IOmnistrateRepository.repositoryName,
         );

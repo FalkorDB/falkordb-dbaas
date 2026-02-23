@@ -86,12 +86,13 @@ describe('createAuthenticateHook with GCP service account', () => {
   });
 
   describe('GCP service account authentication', () => {
-    it('should authenticate with valid GCP service account token', async () => {
+    it('should authenticate with valid GCP service account token when x-auth-mode is gcp-sa', async () => {
       const hook = createAuthenticateHook('reader');
 
-      // Set up GCP service account token
+      // Set up GCP service account token with x-auth-mode header
       mockRequest.headers = {
         authorization: 'Bearer gcp-service-account-token',
+        'x-auth-mode': 'gcp-sa',
       };
 
       // Mock GCP validation to succeed
@@ -116,16 +117,18 @@ describe('createAuthenticateHook with GCP service account', () => {
         deploymentType: 'standalone',
       });
 
-      // Mock session creation
-      mockSessionRepository.createSession.mockReturnValue('session-token');
-
       await hook(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
       // Verify GCP validator was called
       expect(mockGcpValidator.validateServiceAccountToken).toHaveBeenCalledWith('gcp-service-account-token');
 
-      // Verify session was created with root role
-      expect(mockSessionRepository.createSession).toHaveBeenCalledWith(
+      // Verify NO session cookie was set for GCP SA
+      expect(mockReply.setCookie).not.toHaveBeenCalled();
+      expect(mockSessionRepository.createSession).not.toHaveBeenCalled();
+
+      // Verify session data was attached to request with root role
+      expect((mockRequest as FastifyRequest).sessionData).toBeDefined();
+      expect((mockRequest as FastifyRequest).sessionData).toEqual(
         expect.objectContaining({
           userId: 'admin@project.iam.gserviceaccount.com',
           subscriptionId: 'sub-456',
@@ -133,39 +136,16 @@ describe('createAuthenticateHook with GCP service account', () => {
           role: 'root',
         }),
       );
-
-      // Verify session cookie was set
-      expect(mockReply.setCookie).toHaveBeenCalledWith(
-        expect.any(String),
-        'session-token',
-        expect.objectContaining({
-          httpOnly: true,
-          secure: true,
-          sameSite: 'strict',
-          signed: true,
-        }),
-      );
-
-      // Verify session data was attached to request
-      expect((mockRequest as FastifyRequest).sessionData).toBeDefined();
-      expect((mockRequest as FastifyRequest).sessionData?.role).toBe('root');
     });
 
-    it('should fall back to Omnistrate authentication when GCP validation fails', async () => {
+    it('should use default Omnistrate authentication when x-auth-mode is default or missing', async () => {
       const hook = createAuthenticateHook('reader');
-
-      // Set up Omnistrate token
-      mockRequest.headers = {
-        authorization: 'Bearer omnistrate-token',
-      };
-
-      // Mock GCP validation to fail
-      mockGcpValidator.validateServiceAccountToken.mockResolvedValue(false);
 
       // Mock Omnistrate authentication
       const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySUQiOiJ1c2VyLTEyMyJ9.test';
       mockRequest.headers = {
         authorization: `Bearer ${mockToken}`,
+        // x-auth-mode not set, defaults to 'default'
       };
 
       mockOmnistrateRepository.validate.mockResolvedValue(true);
@@ -193,14 +173,27 @@ describe('createAuthenticateHook with GCP service account', () => {
 
       await hook(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
-      // Verify GCP validator was tried first
-      expect(mockGcpValidator.validateServiceAccountToken).toHaveBeenCalled();
+      // Verify GCP validator was NOT called
+      expect(mockGcpValidator.validateServiceAccountToken).not.toHaveBeenCalled();
 
       // Verify Omnistrate auth was used
       expect(mockOmnistrateRepository.validate).toHaveBeenCalledWith(mockToken);
 
+      // Verify session cookie was set for Omnistrate auth
+      expect(mockSessionRepository.createSession).toHaveBeenCalled();
+      expect(mockReply.setCookie).toHaveBeenCalledWith(
+        expect.any(String),
+        'omnistrate-session-token',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: true,
+          sameSite: 'strict',
+          signed: true,
+        }),
+      );
+
       // Verify session was created with writer role (not root)
-      expect(mockSessionRepository.createSession).toHaveBeenCalledWith(
+      expect((mockRequest as FastifyRequest).sessionData).toEqual(
         expect.objectContaining({
           userId: 'user-123',
           role: 'writer',
@@ -208,11 +201,31 @@ describe('createAuthenticateHook with GCP service account', () => {
       );
     });
 
+    it('should throw error when GCP token is invalid and x-auth-mode is gcp-sa', async () => {
+      const hook = createAuthenticateHook('reader');
+
+      mockRequest.headers = {
+        authorization: 'Bearer invalid-gcp-token',
+        'x-auth-mode': 'gcp-sa',
+      };
+
+      // Mock GCP validation to fail
+      mockGcpValidator.validateServiceAccountToken.mockResolvedValue(false);
+
+      await expect(hook(mockRequest as FastifyRequest, mockReply as FastifyReply)).rejects.toThrow(
+        'Invalid GCP service account token',
+      );
+
+      // Verify Omnistrate auth was NOT tried
+      expect(mockOmnistrateRepository.validate).not.toHaveBeenCalled();
+    });
+
     it('should throw error when subscription ID does not match instance for GCP token', async () => {
       const hook = createAuthenticateHook('reader');
 
       mockRequest.headers = {
         authorization: 'Bearer gcp-service-account-token',
+        'x-auth-mode': 'gcp-sa',
       };
       mockRequest.query = { subscriptionId: 'wrong-sub-id' };
 
@@ -248,6 +261,7 @@ describe('createAuthenticateHook with GCP service account', () => {
 
       mockRequest.headers = {
         authorization: 'Bearer gcp-service-account-token',
+        'x-auth-mode': 'gcp-sa',
       };
 
       // Mock GCP validation to succeed but no email
@@ -271,11 +285,9 @@ describe('createAuthenticateHook with GCP service account', () => {
         deploymentType: 'standalone',
       });
 
-      mockSessionRepository.createSession.mockReturnValue('session-token');
-
       await hook(mockRequest as FastifyRequest, mockReply as FastifyReply);
 
-      expect(mockSessionRepository.createSession).toHaveBeenCalledWith(
+      expect((mockRequest as FastifyRequest).sessionData).toEqual(
         expect.objectContaining({
           userId: 'gcp-admin',
         }),
