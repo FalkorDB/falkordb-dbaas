@@ -728,6 +728,9 @@ importers:
       fastify-user:
         specifier: ^1.4.0
         version: 1.4.0
+      google-auth-library:
+        specifier: ^9.15.0
+        version: 9.15.1
       ioredis:
         specifier: 5.9.2
         version: 5.9.2
