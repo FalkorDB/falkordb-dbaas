@@ -38,8 +38,11 @@ export class GcpServiceAccountValidator {
       const email = payload.email;
       if (email !== this._adminServiceAccountEmail) {
         this._options.logger.debug(
-          { tokenEmail: email, expectedEmail: this._adminServiceAccountEmail },
-          'Token email does not match admin service account',
+          {
+            tokenEmailPresent: Boolean(email),
+            expectedEmailConfigured: Boolean(this._adminServiceAccountEmail),
+          },
+          'Token email does not match configured admin service account email',
         );
         return false;
       }
