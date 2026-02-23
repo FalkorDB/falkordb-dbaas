@@ -80,6 +80,7 @@ module "gke" {
   project_id                           = var.project_id
   name                                 = "observability-stack-${random_string.cluster_suffix.result}"
   region                               = var.region
+  zones                                = var.zones
   network                              = module.vpc.network_name
   subnetwork                           = "observability-stack-subnet"
   ip_range_pods                        = "pods"
