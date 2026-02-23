@@ -83,11 +83,16 @@ For each instance, the script extracts:
 For each instance with valid credentials, creates an LDAP user:
 
 ```
-POST /v1/instances/{instanceId}
+POST /v1/instances/{instanceId}/users?subscriptionId={subscriptionId}
 {
   "username": "admin",
   "password": "securepassword123",
   "acl": "~* +INFO +CLIENT +DBSIZE +PING +HELLO +AUTH ... +MONITOR"
+}
+
+Response (HTTP 200):
+{
+  "message": "User created successfully"
 }
 ```
 
@@ -195,7 +200,8 @@ python3 scripts/import_users_ldap.py \
 The script handles common scenarios:
 
 - **Missing Credentials**: Instances without `falkordbUser` or `falkordbPassword` are skipped
-- **Duplicate Users**: If a user already exists (HTTP 409), it's logged as a warning but counted as success
+- **Missing Subscription ID**: Instances without `subscriptionId` are skipped with a clear reason
+- **Duplicate Users**: Any 2xx response is treated as success (duplicate users may return 200 with a message)
 - **Network Errors**: Connection failures are logged and counted as failures
 - **Authentication Errors**: HTTP 401/403 errors indicate invalid credentials or expired session cookie
 - **Omnistrate API Errors**: Any API failures during instance fetching will abort the script

@@ -195,13 +195,14 @@ class LdapUserImporter:
             raise
 
     def create_user(
-        self, instance_id: str, username: str, password: str, acl: str
+        self, instance_id: str, subscription_id: str, username: str, password: str, acl: str
     ) -> bool:
         """
         Create a user in LDAP for the given instance.
 
         Args:
             instance_id: Instance ID (namespace)
+            subscription_id: Subscription ID (required query param)
             username: Username to create
             password: User password
             acl: ACL permissions string
@@ -209,7 +210,7 @@ class LdapUserImporter:
         Returns:
             True if successful, False otherwise
         """
-        url = f"{self.api_base_url}/v1/instances/{instance_id}"
+        url = f"{self.api_base_url}/v1/instances/{instance_id}/users?subscriptionId={subscription_id}"
 
         payload = {
             "username": username,
@@ -226,14 +227,9 @@ class LdapUserImporter:
         try:
             response = self.session.post(url, json=payload)
 
-            if response.status_code == 201:
+            if response.ok:
                 logger.info(
                     f"Successfully created user '{username}' in instance '{instance_id}'"
-                )
-                return True
-            elif response.status_code == 409:
-                logger.warning(
-                    f"User '{username}' already exists in instance '{instance_id}'"
                 )
                 return True
             else:
@@ -386,6 +382,16 @@ Example:
             skipped_instances.append({"instance_id": "UNKNOWN", "reason": reason})
             continue
 
+        # Extract subscriptionId - try from top-level first, then from consumptionResourceInstanceResult
+        subscription_id = instance.get("subscriptionId") or instance_result.get("subscriptionId")
+
+        if not subscription_id:
+            reason = "Missing subscriptionId in instance payload"
+            logger.warning(f"Instance {instance_id}: {reason}, skipping")
+            stats["skipped"] += 1
+            skipped_instances.append({"instance_id": instance_id, "reason": reason})
+            continue
+
         # Extract credentials from result_params
         result_params = instance_result.get("result_params", {})
         falkordb_username = result_params.get("falkordbUser")
@@ -402,6 +408,7 @@ Example:
         acl = f"~* {ALLOWED_ACL}"
         success = importer.create_user(
             instance_id=instance_id,
+            subscription_id=subscription_id,
             username=falkordb_username,
             password=falkordb_password,
             acl=acl,
