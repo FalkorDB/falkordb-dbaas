@@ -73,40 +73,26 @@ class OmnistrateClient:
             f"Fetching instances for service {service_id}, environment {environment_id}"
         )
         try:
-            # First, get all subscriptions
+            # Fetch all instances directly (subscription ID can be extracted from each instance)
             response = self.session.get(
-                f"https://api.omnistrate.cloud/2022-09-01-00/fleet/service/{service_id}/environment/{environment_id}/subscription"
+                f"https://api.omnistrate.cloud/2022-09-01-00/fleet/service/{service_id}/environment/{environment_id}/instances"
             )
             response.raise_for_status()
-            subscriptions = response.json().get("subscriptions", [])
+            all_instances = response.json().get("resourceInstances", [])
 
-            logger.info(f"Found {len(subscriptions)} subscriptions")
+            logger.info(f"Found {len(all_instances)} total instances")
 
             # Filter by product tier if specified
             if product_tier:
-                subscriptions = [
-                    sub
-                    for sub in subscriptions
-                    if sub.get("productTierName") == product_tier
+                all_instances = [
+                    instance
+                    for instance in all_instances
+                    if instance.get("productTierName") == product_tier
                 ]
                 logger.info(
-                    f"Filtered to {len(subscriptions)} subscriptions with product tier '{product_tier}'"
+                    f"Filtered to {len(all_instances)} instances with product tier '{product_tier}'"
                 )
 
-            # Get instances for each subscription
-            all_instances = []
-            for subscription in subscriptions:
-                subscription_id = subscription.get("id")
-                logger.debug(f"Fetching instances for subscription {subscription_id}")
-
-                response = self.session.get(
-                    f"https://api.omnistrate.cloud/2022-09-01-00/fleet/service/{service_id}/environment/{environment_id}/instances?SubscriptionId={subscription_id}"
-                )
-                response.raise_for_status()
-                instances = response.json().get("resourceInstances", [])
-                all_instances.extend(instances)
-
-            logger.info(f"Found {len(all_instances)} total instances")
             return all_instances
 
         except requests.exceptions.RequestException as e:

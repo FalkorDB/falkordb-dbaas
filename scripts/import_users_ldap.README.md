@@ -53,15 +53,13 @@ python3 scripts/import_users_ldap.py \
 
 ### 1. Fetch Instances from Omnistrate
 
-The script connects to Omnistrate API and retrieves instances:
+The script connects to Omnistrate API and retrieves instances in a single call:
 
 ```
-GET /2022-09-01-00/fleet/service/{serviceId}/environment/{environmentId}/subscription
-  → Returns list of subscriptions
-
-For each subscription:
-  GET /2022-09-01-00/fleet/service/{serviceId}/environment/{environmentId}/instances?SubscriptionId={subscriptionId}
-    → Returns instances for that subscription
+GET /2022-09-01-00/fleet/service/{serviceId}/environment/{environmentId}/instances
+  → Returns all instances for the service/environment
+  → Subscription ID is included in each instance body
+  → Optionally filters by product tier in Python code
 ```
 
 ### 2. Extract Instance Credentials
