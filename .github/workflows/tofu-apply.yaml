@@ -72,13 +72,20 @@ jobs:
           TF_OMNISTRATE_SERVICE_ID: ${{ secrets.TF_OMNISTRATE_SERVICE_ID }}
           TF_OMNISTRATE_ENVIRONMENT_ID: ${{ secrets.TF_OMNISTRATE_ENVIRONMENT_ID }}
         run: |
-          json=$(echo '${{ toJson(matrix) }}' | envsubst)
-          # set the matrix values as environment variables
-          for key in $(echo $json | jq -r '.stack.variables | to_entries[] | "\(.key)=\(.value)"'); do
-            echo "$key" >> $GITHUB_ENV
-          done
+          json='${{ toJson(matrix) }}'
+          # Resolve $VARS from the environment without re-serializing JSON.
+          while IFS=$'\t' read -r key value; do
+            if [[ "$value" == \$* ]]; then
+              var_name="${value:1}"
+              resolved="${!var_name}"
+            else
+              resolved="$value"
+            fi
+            echo "${key}=${resolved}" >> "$GITHUB_ENV"
+          done < <(echo "$json" | jq -r '.stack.variables | to_entries[] | "\(.key)\t\(.value)"')
           # set init_param variable
-          echo "init_param=$(echo $json | jq -r '.stack.init_param')" >> $GITHUB_ENV
+          init_param_template=$(echo "$json" | jq -r '.stack.init_param')
+          echo "init_param=$(echo "$init_param_template" | envsubst)" >> "$GITHUB_ENV"
 
       - name: Checkout repository
         uses: actions/checkout@v4
