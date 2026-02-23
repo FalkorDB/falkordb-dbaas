@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { createAuthenticateHook } from '../../../src/routes/v1/instances/hooks/authenticate';
-import { ISessionRepository } from '../../../src/repositories/session/ISessionRepository';
-import { IOmnistrateRepository } from '../../../src/repositories/omnistrate/IOmnistrateRepository';
-import { GcpServiceAccountValidator } from '../../../src/services/GcpServiceAccountValidator';
+import { createAuthenticateHook } from '../../src/routes/v1/instances/hooks/authenticate';
+import { ISessionRepository } from '../../src/repositories/session/ISessionRepository';
+import { IOmnistrateRepository } from '../../src/repositories/omnistrate/IOmnistrateRepository';
+import { GcpServiceAccountValidator } from '../../src/services/GcpServiceAccountValidator';
 
 // Mock the GcpServiceAccountValidator
-jest.mock('../../../src/services/GcpServiceAccountValidator');
+jest.mock('../../src/services/GcpServiceAccountValidator');
 
 describe('createAuthenticateHook with GCP service account', () => {
   let mockRequest: Partial<FastifyRequest>;
