@@ -5,8 +5,7 @@ import { ISessionRepository } from '../../src/repositories/session/ISessionRepos
 import { IOmnistrateRepository } from '../../src/repositories/omnistrate/IOmnistrateRepository';
 import { GcpServiceAccountValidator } from '../../src/services/GcpServiceAccountValidator';
 
-// Mock the GcpServiceAccountValidator
-jest.mock('../../src/services/GcpServiceAccountValidator');
+// GcpServiceAccountValidator is resolved from diContainer - no module mock needed
 
 describe('createAuthenticateHook with GCP service account', () => {
   let mockRequest: Partial<FastifyRequest>;
@@ -36,11 +35,6 @@ describe('createAuthenticateHook with GCP service account', () => {
       getAdminServiceAccountEmail: jest.fn(),
     } as unknown as jest.Mocked<GcpServiceAccountValidator>;
 
-    // Mock the GcpServiceAccountValidator constructor
-    (GcpServiceAccountValidator as jest.MockedClass<typeof GcpServiceAccountValidator>).mockImplementation(
-      () => mockGcpValidator,
-    );
-
     // Create mock request and reply
     mockRequest = {
       params: { instanceId: 'instance-123' },
@@ -57,6 +51,14 @@ describe('createAuthenticateHook with GCP service account', () => {
           badRequest: (msg: string) => new Error(msg),
           unauthorized: (msg: string) => new Error(msg),
           forbidden: (msg: string) => new Error(msg),
+        },
+        diContainer: {
+          resolve: jest.fn((name: string) => {
+            if (name === GcpServiceAccountValidator.serviceName) {
+              return mockGcpValidator;
+            }
+            return null;
+          }),
         },
       } as unknown as FastifyRequest['server'],
       diScope: {
