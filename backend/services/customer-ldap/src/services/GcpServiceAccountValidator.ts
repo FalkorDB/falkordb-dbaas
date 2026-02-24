@@ -56,7 +56,7 @@ export class GcpServiceAccountValidator {
       this._options.logger.info({ email }, 'GCP service account token validated successfully');
       return true;
     } catch (error) {
-      this._options.logger.debug({ error }, 'Error validating GCP service account token');
+      this._options.logger.debug({ err: error }, 'Error validating GCP service account token');
       return false;
     }
   }
