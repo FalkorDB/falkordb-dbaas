@@ -5,15 +5,20 @@ import { ApiError } from '@falkordb/errors';
 export interface GcpServiceAccountValidatorOptions {
   logger: FastifyBaseLogger;
   adminServiceAccountEmail?: string;
+  audience: string;
 }
 
 export class GcpServiceAccountValidator {
+  static readonly serviceName = 'gcpServiceAccountValidator';
+
   private _oauth2Client: OAuth2Client;
   private _adminServiceAccountEmail?: string;
+  private _audience?: string;
 
   constructor(private _options: GcpServiceAccountValidatorOptions) {
     this._oauth2Client = new OAuth2Client();
     this._adminServiceAccountEmail = _options.adminServiceAccountEmail;
+    this._audience = _options.audience;
   }
 
   async validateServiceAccountToken(token: string): Promise<boolean> {
@@ -25,7 +30,7 @@ export class GcpServiceAccountValidator {
     try {
       const ticket = await this._oauth2Client.verifyIdToken({
         idToken: token,
-        audience: undefined, // We'll validate the email claim instead
+        audience: this._options.audience,
       });
 
       const payload = ticket.getPayload();

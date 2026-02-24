@@ -64,11 +64,10 @@ export function createAuthenticateHook(
       const authMode = (Array.isArray(authModeHeaderRaw) ? authModeHeaderRaw[0] : authModeHeaderRaw) || 'default';
 
       if (authMode === 'gcp-sa') {
-        // Validate as GCP service account token
-        const gcpValidator = new GcpServiceAccountValidator({
-          logger: request.log,
-          adminServiceAccountEmail: process.env.GCP_ADMIN_SERVICE_ACCOUNT_EMAIL,
-        });
+        // Resolve the singleton GCP validator from the DI container
+        const gcpValidator = request.server.diContainer.resolve<GcpServiceAccountValidator>(
+          GcpServiceAccountValidator.serviceName,
+        );
 
         const isGcpServiceAccount = await gcpValidator.validateServiceAccountToken(token);
 
@@ -98,6 +97,7 @@ export function createAuthenticateHook(
           cloudProvider: instance.cloudProvider,
           region: instance.region,
           k8sClusterName: instance.clusterId,
+          // For GCP service account, we can assume root access since it's an admin account
           role: 'root',
         };
       } else {

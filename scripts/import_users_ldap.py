@@ -87,7 +87,7 @@ class OmnistrateClient:
                 all_instances = [
                     instance
                     for instance in all_instances
-                    if instance.get("productTierName") == product_tier
+                    if instance.get("productTierId") == product_tier
                 ]
                 logger.info(
                     f"Filtered to {len(all_instances)} instances with product tier '{product_tier}'"
@@ -171,20 +171,30 @@ class LdapUserImporter:
             from google.auth import impersonated_credentials
 
             # Get default credentials
-            source_credentials, _ = google.auth.default()
+            source_credentials, _ = google.auth.default(
+                scopes=["https://www.googleapis.com/auth/cloud-platform"]
+            )
 
-            # Create impersonated credentials
+            # Refresh source credentials first
+            auth_request = google.auth.transport.requests.Request()
+            source_credentials.refresh(auth_request)
+
+            # Create impersonated credentials (access token, needed as source for ID token)
             target_credentials = impersonated_credentials.Credentials(
                 source_credentials=source_credentials,
                 target_principal=self.gcp_service_account_email,
                 target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
             )
 
-            # Refresh to get the token
-            auth_request = google.auth.transport.requests.Request()
-            target_credentials.refresh(auth_request)
+            # Obtain an ID token (JWT) for the impersonated SA — required by verifyIdToken on the server
+            id_token_credentials = impersonated_credentials.IDTokenCredentials(
+                target_credentials=target_credentials,
+                target_audience=self.api_base_url,
+                include_email=True,
+            )
+            id_token_credentials.refresh(auth_request)
 
-            return target_credentials.token
+            return id_token_credentials.token
         except ImportError:
             logger.error(
                 "google-auth library not installed. Install with: pip install google-auth"
@@ -210,7 +220,7 @@ class LdapUserImporter:
         Returns:
             True if successful, False otherwise
         """
-        url = f"{self.api_base_url}/v1/instances/{instance_id}/users?subscriptionId={subscription_id}"
+        url = f"{self.api_base_url}/v1/customer-ldap/instances/{instance_id}/users?subscriptionId={subscription_id}"
 
         payload = {
             "username": username,
