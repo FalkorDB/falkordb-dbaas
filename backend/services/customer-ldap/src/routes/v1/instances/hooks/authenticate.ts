@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply, preHandlerHookHandler } from 'fastify';
 import { ISessionRepository, SessionData } from '../../../../repositories/session/ISessionRepository';
 import { IOmnistrateRepository } from '../../../../repositories/omnistrate/IOmnistrateRepository';
 import { AuthService } from '../../../../services/AuthService';
+import { GcpServiceAccountValidator } from '../../../../services/GcpServiceAccountValidator';
 import { SESSION_COOKIE_NAME, SESSION_EXPIRY_SECONDS } from '../../../../constants';
 
 declare module 'fastify' {
@@ -48,7 +49,7 @@ export function createAuthenticateHook(
       }
     }
 
-    // If no valid session, authenticate with Omnistrate
+    // If no valid session, authenticate based on auth mode
     if (!sessionData) {
       const authHeaderRaw = request.headers['authorization'];
       const authHeader = Array.isArray(authHeaderRaw) ? authHeaderRaw[0] : authHeaderRaw;
@@ -57,31 +58,76 @@ export function createAuthenticateHook(
       }
 
       const token = authHeader.substring(7);
-      const omnistrateRepository = request.diScope.resolve<IOmnistrateRepository>(
-        IOmnistrateRepository.repositoryName,
-      );
 
-      const authService = new AuthService(opts, omnistrateRepository, sessionRepository);
+      // Check auth mode header (default is 'default', 'gcp-sa' for GCP service account)
+      const authModeHeaderRaw = request.headers['x-auth-mode'];
+      const authMode = (Array.isArray(authModeHeaderRaw) ? authModeHeaderRaw[0] : authModeHeaderRaw) || 'default';
 
-      const { session, sessionData: newSessionData } =
-        await authService.authenticateAndAuthorize(
-          token,
-          instanceId,
-          subscriptionId,
-          requiredPermission,
+      if (authMode === 'gcp-sa') {
+        // Resolve the singleton GCP validator from the DI container
+        const gcpValidator = request.server.diContainer.resolve<GcpServiceAccountValidator>(
+          GcpServiceAccountValidator.serviceName,
         );
 
-      sessionData = newSessionData;
+        const isGcpServiceAccount = await gcpValidator.validateServiceAccountToken(token);
 
-      // Set session cookie (15 minutes)
-      reply.setCookie(SESSION_COOKIE_NAME, session, {
-        httpOnly: true,
-        secure: true, // Always use secure flag for sensitive session cookies
-        sameSite: 'strict',
-        maxAge: SESSION_EXPIRY_SECONDS,
-        path: '/',
-        signed: true, // Sign the cookie to prevent tampering
-      });
+        if (!isGcpServiceAccount) {
+          throw request.server.httpErrors.unauthorized('Invalid GCP service account token');
+        }
+
+        // GCP service account has root access to all instances
+        request.log.info({ instanceId, subscriptionId }, 'Authenticated as GCP admin service account');
+
+        // Get instance details to populate session data
+        const omnistrateRepository = request.diScope.resolve<IOmnistrateRepository>(
+          IOmnistrateRepository.repositoryName,
+        );
+        const instance = await omnistrateRepository.getInstance(instanceId);
+
+        // Validate subscription ID matches
+        if (instance.subscriptionId !== subscriptionId) {
+          throw request.server.httpErrors.badRequest('Subscription ID does not match instance');
+        }
+
+        // Create session data with root role for GCP service account (no cookie)
+        sessionData = {
+          userId: gcpValidator.getAdminServiceAccountEmail() || 'gcp-admin',
+          subscriptionId,
+          instanceId,
+          cloudProvider: instance.cloudProvider,
+          region: instance.region,
+          k8sClusterName: instance.clusterId,
+          // For GCP service account, we can assume root access since it's an admin account
+          role: 'root',
+        };
+      } else {
+        // Default authentication flow: Omnistrate bearer token
+        const omnistrateRepository = request.diScope.resolve<IOmnistrateRepository>(
+          IOmnistrateRepository.repositoryName,
+        );
+
+        const authService = new AuthService(opts, omnistrateRepository, sessionRepository);
+
+        const { session, sessionData: newSessionData } =
+          await authService.authenticateAndAuthorize(
+            token,
+            instanceId,
+            subscriptionId,
+            requiredPermission,
+          );
+
+        sessionData = newSessionData;
+
+        // Set session cookie (15 minutes)
+        reply.setCookie(SESSION_COOKIE_NAME, session, {
+          httpOnly: true,
+          secure: true, // Always use secure flag for sensitive session cookies
+          sameSite: 'strict',
+          maxAge: SESSION_EXPIRY_SECONDS,
+          path: '/',
+          signed: true, // Sign the cookie to prevent tampering
+        });
+      }
     }
 
     // Attach sessionData to request for use in handler

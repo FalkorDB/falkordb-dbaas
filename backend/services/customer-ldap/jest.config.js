@@ -12,6 +12,7 @@ module.exports = {
         tsconfig: {
           esModuleInterop: true,
           downlevelIteration: true,
+          isolatedModules: true,
         },
       },
     ],

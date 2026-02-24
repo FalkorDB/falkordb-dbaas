@@ -14,6 +14,7 @@ import { ISessionRepository } from './repositories/session/ISessionRepository';
 import { SessionRepository } from './repositories/session/SessionRepository';
 import { IConnectionCacheRepository } from './repositories/connection-cache/IConnectionCacheRepository';
 import { ConnectionCacheRepository } from './repositories/connection-cache/ConnectionCacheRepository';
+import { GcpServiceAccountValidator } from './services/GcpServiceAccountValidator';
 
 export const setupGlobalContainer = (fastify: FastifyInstance) => {
   diContainer.register({
@@ -55,6 +56,14 @@ export const setupGlobalContainer = (fastify: FastifyInstance) => {
 
     [ILdapRepository.repositoryName]: asFunction(() => {
       return new LdapRepository({ logger: fastify.log });
+    }).singleton(),
+
+    [GcpServiceAccountValidator.serviceName]: asFunction(() => {
+      return new GcpServiceAccountValidator({
+        logger: fastify.log,
+        adminServiceAccountEmail: fastify.config.GCP_ADMIN_SERVICE_ACCOUNT_EMAIL,
+        audience: fastify.config.GCP_SERVICE_ACCOUNT_TOKEN_AUDIENCE,
+      });
     }).singleton(),
   });
 };

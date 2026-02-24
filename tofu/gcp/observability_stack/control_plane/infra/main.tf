@@ -80,6 +80,7 @@ module "gke" {
   project_id                           = var.project_id
   name                                 = "observability-stack-${random_string.cluster_suffix.result}"
   region                               = var.region
+  zones                                = var.zones
   network                              = module.vpc.network_name
   subnetwork                           = "observability-stack-subnet"
   ip_range_pods                        = "pods"
@@ -480,4 +481,10 @@ resource "google_project_iam_member" "invoker" {
   project = var.project_id
   role    = "roles/workflows.invoker"
   member  = "serviceAccount:${google_service_account.alert_reaction_actions.email}"
+}
+
+resource "google_service_account" "ldap_api_admin_sa" {
+  project = var.project_id
+  account_id = "ldap-api-admin"
+  display_name = "LDAP API Admin Service Account"
 }

@@ -81,7 +81,7 @@ spec:
       skip_org_role_sync: "false"
       hosted_domain: "falkordb.com"
       allow_assign_grafana_admin: "true"
-      allowed_groups: "devops@falkordb.com"
+      allowed_groups: "devops@falkordb.com,support@falkordb.com"
       auto_login: "false"
     server:
       root_url: "https://grafana.observability.internal.falkordb.cloud"
