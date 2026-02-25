@@ -28,8 +28,10 @@ spec:
           count: 2
         webhook:
           mode: queue
-          count: 1
+          count: 2
           url: https://n8n.falkordb.cloud
+          pdb:
+            enabled: true
         redis:
           enabled: true
           auth:
