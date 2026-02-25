@@ -22,7 +22,7 @@ spec:
             description: "[cluster={{ $labels.cluster }}] Service {{ $labels.name }} run by argo is currently not in sync.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
         - alert: ArgocdServiceNotSyncedCritical
-          expr: 'argocd_app_info{sync_status!="Synced",name!="fluentbit"} != 0'
+          expr: 'argocd_app_info{sync_status!="Synced",name!~".*fluentbit.*"} != 0'
           for: 1h
           labels:
             severity: critical
