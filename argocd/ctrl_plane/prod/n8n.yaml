@@ -30,6 +30,8 @@ spec:
           mode: queue
           count: 2
           url: https://n8n.falkordb.cloud
+          pdb:
+            enabled: true
         redis:
           enabled: true
           auth:
