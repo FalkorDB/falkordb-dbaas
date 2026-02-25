@@ -21,6 +21,16 @@ spec:
             summary: ArgoCD service not synced (instance {{ $labels.instance }})
             description: "[cluster={{ $labels.cluster }}] Service {{ $labels.name }} run by argo is currently not in sync.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
 
+        - alert: ArgocdServiceNotSyncedCritical
+          expr: 'argocd_app_info{sync_status!="Synced",name!="fluentbit"} != 0'
+          for: 1h
+          labels:
+            severity: critical
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: ArgoCD service not synced for 1h (instance {{ $labels.instance }})
+            description: "[cluster={{ $labels.cluster }}] Service {{ $labels.name }} run by argo is not in sync for over an hour.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
         - alert: ArgocdServiceUnhealthy
           expr: 'argocd_app_info{health_status!="Healthy"} != 0'
           for: 15m
