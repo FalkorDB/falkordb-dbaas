@@ -20,7 +20,7 @@
     "@repo/ui": "workspace:*",
     "@tailwindcss/postcss": "^4.1.18",
     "@tanstack/react-query": "^5.90.21",
-    "axios": "^1.13.5",
+    "axios": "^1.13.6",
     "axios-curlirize": "^2.0.0",
     "formik": "^2.4.9",
     "js-cookie": "^3.0.5",
