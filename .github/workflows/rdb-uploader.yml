@@ -88,8 +88,8 @@ jobs:
       - name: Install omnistrate-ctl
         if: ${{ inputs.sign_only != 'true' }}
         run: |
-          curl -fsSL https://raw.githubusercontent.com/omnistrate/ctl/main/install.sh | sh
-          omnistrate-ctl version || true
+          curl -fsSL https://raw.githubusercontent.com/omnistrate-oss/omnistrate-ctl/main/install-ctl.sh | sh
+          echo "$HOME/.omnistrate/bin" >> $GITHUB_PATH
 
       # ------------------------------------------------------------------ #
       # 2. Install kubectl (skipped in sign-only mode)
