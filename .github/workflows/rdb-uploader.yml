@@ -80,6 +80,7 @@ env:
 jobs:
   upload-rdb:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
 
     steps:
       # ------------------------------------------------------------------ #
