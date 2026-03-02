@@ -80,7 +80,7 @@ env:
 jobs:
   upload-rdb:
     runs-on: ubuntu-latest
-
+    environment: ${{ inputs.environment }}
     steps:
       # ------------------------------------------------------------------ #
       # 1. Install omnistrate-ctl (skipped in sign-only mode)
