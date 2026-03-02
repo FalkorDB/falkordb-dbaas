@@ -6,6 +6,7 @@ name: Redis Crash Handler
 permissions:
   contents: read
   issues: write
+  id-token: write
 
 on:
   workflow_dispatch:
