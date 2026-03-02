@@ -133,12 +133,12 @@ jobs:
       - name: Update kubeconfig via omnistrate-ctl
         if: ${{ inputs.sign_only != 'true' }}
         env:
-          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
+          OMNISTRATE_EMAIL: ${{ secrets.OMNISTRATE_EMAIL }}
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
           CLUSTER: ${{ inputs.cluster }}
         run: |
           omnistrate-ctl login \
-            --username "$OMNISTRATE_USERNAME" \
+            --email "$OMNISTRATE_EMAIL" \
             --password "$OMNISTRATE_PASSWORD"
 
           omnistrate-ctl deployment-cell update-kubeconfig "$CLUSTER" \
