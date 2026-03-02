@@ -96,7 +96,7 @@ jobs:
       # ------------------------------------------------------------------ #
       - name: Install kubectl
         if: ${{ inputs.sign_only != 'true' }}
-        uses: azure/setup-kubectl@3e0aec4d80787158d308d7b364cb1381784a5cf4 # v4
+        uses: azure/setup-kubectl@v4
 
       # ------------------------------------------------------------------ #
       # 3. Set up Python
