@@ -88,9 +88,6 @@ jobs:
       - name: Setup omnistrate-ctl
         if: ${{ inputs.sign_only != 'true' }}
         uses: omnistrate-oss/setup-omnistrate-ctl@v1
-        with:
-          email: ${{ secrets.OMNISTRATE_EMAIL }}
-          password: ${{ secrets.OMNISTRATE_PASSWORD }}
 
       # ------------------------------------------------------------------ #
       # 2. Install kubectl (skipped in sign-only mode)
@@ -134,12 +131,16 @@ jobs:
       - name: Update kubeconfig via omnistrate-ctl
         if: ${{ inputs.sign_only != 'true' }}
         env:
+          OMNISTRATE_EMAIL: ${{ secrets.OMNISTRATE_EMAIL }}
+          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
           CLUSTER: ${{ inputs.cluster }}
-          NO_COLOR: "1"
         run: |
-          script -q -c \
-            "omnistrate-ctl deployment-cell update-kubeconfig \"$CLUSTER\" --role cluster-admin --kubeconfig /tmp/kubeconfig" \
-            /dev/null
+          cat > /tmp/omnistrate_setup.sh << 'EOF'
+          omnistrate-ctl login --email "$OMNISTRATE_EMAIL" --password "$OMNISTRATE_PASSWORD"
+          omnistrate-ctl deployment-cell update-kubeconfig "$CLUSTER" --role cluster-admin --kubeconfig /tmp/kubeconfig
+          EOF
+          chmod +x /tmp/omnistrate_setup.sh
+          script -q -c /tmp/omnistrate_setup.sh /dev/null
 
           echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
 
