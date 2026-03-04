@@ -11,7 +11,6 @@ name: RDB Uploader
 permissions:
   contents: read
   issues: write
-  id-token: write
 
 on:
   workflow_dispatch:
@@ -104,7 +103,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        run: pip install google-cloud-storage google-auth
+        run: pip install google-cloud-storage
 
       # ------------------------------------------------------------------ #
       # 4. Checkout (for scripts/rdb_uploader.py)
@@ -113,18 +112,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
       # ------------------------------------------------------------------ #
-      # 5. Authenticate to GCP (Workload Identity)
-      #    Sets up Application Default Credentials used by rdb_uploader.py
-      # ------------------------------------------------------------------ #
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v3
-        with:
-          create_credentials_file: true
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-      # ------------------------------------------------------------------ #
-      # 6. Update kubeconfig via omnistrate-ctl (skipped in sign-only mode)
+      # 5. Update kubeconfig via omnistrate-ctl (skipped in sign-only mode)
       #    cluster name == deployment cell ID
       # ------------------------------------------------------------------ #
       - name: Update kubeconfig via omnistrate-ctl
@@ -147,7 +135,7 @@ jobs:
           echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
 
       # ------------------------------------------------------------------ #
-      # 7. Run rdb_uploader.py — handles signing, kubectl exec, and outputs
+      # 6. Run rdb_uploader.py — handles signing, kubectl exec, and outputs
       # ------------------------------------------------------------------ #
       - name: Upload RDB (and AOF) from pod to GCS
         id: upload_gcs
@@ -157,18 +145,17 @@ jobs:
           CONTAINER: ${{ inputs.container }}
           SIGN_ONLY: ${{ inputs.sign_only }}
           GCS_BUCKET: ${{ env.GCS_BUCKET }}
-          GCS_SA: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GCS_SA_KEY: ${{ secrets.GCP_BUCKET_SA_KEY }}
         run: |
           python scripts/rdb_uploader.py \
             --namespace   "$NAMESPACE" \
             --pod         "$POD" \
             --container   "$CONTAINER" \
             --bucket      "$GCS_BUCKET" \
-            --sa          "$GCS_SA" \
             $( [[ "${SIGN_ONLY,,}" == "true" ]] && echo "--sign-only" )
 
       # ------------------------------------------------------------------ #
-      # 8. Comment download links on the GitHub issue
+      # 7. Comment download links on the GitHub issue
       # ------------------------------------------------------------------ #
       - name: Comment download links on issue
         if: ${{ inputs.issue_number != '' }}

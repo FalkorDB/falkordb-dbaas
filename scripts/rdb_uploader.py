@@ -10,57 +10,38 @@ Mirrors the logic of upload_to_gcp.sh.
 
 import os
 import sys
+import json
 import subprocess
 import argparse
 import datetime
 
-import google.auth
-from google.auth import impersonated_credentials
+from google.oauth2 import service_account
 from google.cloud import storage
 
 
+def _load_credentials() -> service_account.Credentials:
+    """Parse GCS_SA_KEY once and return SA credentials."""
+    key_json = os.environ.get("GCS_SA_KEY")
+    if not key_json:
+        raise EnvironmentError("GCS_SA_KEY env var is not set")
+    return service_account.Credentials.from_service_account_info(
+        json.loads(key_json),
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
+
+
 def get_signed_url(
-    bucket_name: str,
-    object_path: str,
+    blob: storage.Blob,
+    credentials: service_account.Credentials,
     expiration_minutes: int,
     method: str = "GET",
-    sa_email: str | None = None,
 ) -> str:
-    """
-    Generate a signed URL for a GCS object.
-
-    Uses google.auth.impersonated_credentials so the WIF federated token
-    impersonates the SA (via IAM generateAccessToken), which then signs
-    the URL locally. Requires:
-      - create_credentials_file: true in the google-github-actions/auth step
-        (writes a credentials JSON that google.auth.default() can read)
-      - roles/iam.serviceAccountTokenCreator granted on the SA to itself
-    """
-    _sa_email = sa_email or os.environ.get("GCS_SA")
-    if not _sa_email:
-        raise EnvironmentError("GCS_SA env var (or --sa) is not set")
-
-    # Read WIF credentials from the file written by google-github-actions/auth
-    source_credentials, project = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
-
-    # Impersonate the SA — the WIF token calls IAM generateAccessToken on its
-    # behalf, yielding real SA credentials that can sign bytes locally.
-    signing_credentials = impersonated_credentials.Credentials(
-        source_credentials=source_credentials,
-        target_principal=_sa_email,
-        target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
-    )
-
-    client = storage.Client(credentials=signing_credentials, project=project)
-    blob = client.bucket(bucket_name).blob(object_path)
-
+    """Generate a v4 signed URL for a GCS blob."""
     return blob.generate_signed_url(
         version="v4",
         expiration=datetime.timedelta(minutes=expiration_minutes),
         method=method,
-        credentials=signing_credentials,  # must be explicit, not just on the client
+        credentials=credentials,
     )
 
 
@@ -95,7 +76,6 @@ def main() -> None:
     parser.add_argument("--pod",        required=True,  help="Pod name")
     parser.add_argument("--container",  required=False, help="Container name (not needed for --sign-only)")
     parser.add_argument("--bucket",     required=True,  help="GCS bucket name")
-    parser.add_argument("--sa",         required=False, help="Service-account email for signing (overrides GCS_SA env var)")
     parser.add_argument("--sign-only",  action="store_true",
                         help="Skip pod access; regenerate a signed GET URL for the existing GCS object")
     args = parser.parse_args()
@@ -114,17 +94,21 @@ def main() -> None:
     rdb_object = f"{args.namespace}/dump.rdb"
     aof_object = f"{args.namespace}/appendonlydir.tar.gz"
 
+    # Load credentials and GCS client once
+    creds = _load_credentials()
+    client = storage.Client(credentials=creds)
+    rdb_blob = client.bucket(args.bucket).blob(rdb_object)
+    aof_blob = client.bucket(args.bucket).blob(aof_object)
+
     if args.sign_only:
         # ------------------------------------------------------------------
         # Sign-only: just regenerate GET URLs — no pod access whatsoever
         # ------------------------------------------------------------------
         print("[1/1] Regenerating signed download URLs (72h)...")
-        rdb_url = get_signed_url(args.bucket, rdb_object, expiration_minutes=72 * 60, sa_email=args.sa)
-        write_github_output("rdb_url", rdb_url)
+        write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
 
         if aof_enabled:
-            aof_url = get_signed_url(args.bucket, aof_object, expiration_minutes=72 * 60, sa_email=args.sa)
-            write_github_output("aof_url", aof_url)
+            write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
 
     else:
         # ------------------------------------------------------------------
@@ -136,12 +120,12 @@ def main() -> None:
 
         # 1. Generate signed PUT URLs (1h)
         print("[1/3] Generating signed PUT URLs (1h)...")
-        rdb_put_url = get_signed_url(args.bucket, rdb_object, expiration_minutes=60, method="PUT", sa_email=args.sa)
+        rdb_put_url = get_signed_url(rdb_blob, creds, 60, method="PUT")
         print("  RDB PUT URL generated.")
 
         aof_put_url = None
         if aof_enabled:
-            aof_put_url = get_signed_url(args.bucket, aof_object, expiration_minutes=60, method="PUT", sa_email=args.sa)
+            aof_put_url = get_signed_url(aof_blob, creds, 60, method="PUT")
             print("  AOF PUT URL generated.")
 
         # 2. Pod uploads directly to GCS via curl
@@ -172,12 +156,10 @@ def main() -> None:
 
         # 3. Generate signed GET/download URLs (72h)
         print("\n[3/3] Generating signed download URLs (72h)...")
-        rdb_url = get_signed_url(args.bucket, rdb_object, expiration_minutes=72 * 60, sa_email=args.sa)
-        write_github_output("rdb_url", rdb_url)
+        write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
 
         if aof_enabled:
-            aof_url = get_signed_url(args.bucket, aof_object, expiration_minutes=72 * 60, sa_email=args.sa)
-            write_github_output("aof_url", aof_url)
+            write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
 
     print(f"\n{'='*60}")
     print("✅ Done!")
