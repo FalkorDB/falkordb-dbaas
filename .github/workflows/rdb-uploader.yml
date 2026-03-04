@@ -131,7 +131,7 @@ jobs:
       - name: Update kubeconfig via omnistrate-ctl
         if: ${{ inputs.sign_only != 'true' }}
         env:
-          OMNISTRATE_EMAIL: ${{ secrets.OMNISTRATE_EMAIL }}
+          OMNISTRATE_EMAIL: ${{ secrets.OMNISTRATE_USERNAME }}
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
           CLUSTER: ${{ inputs.cluster }}
         run: |
