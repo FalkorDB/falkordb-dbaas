@@ -14,10 +14,8 @@ import subprocess
 import argparse
 import datetime
 
-from google.auth import iam
-from google.auth.transport.requests import Request as GoogleAuthRequest
-from google.oauth2.credentials import Credentials as OAuth2Credentials
-from google.oauth2 import service_account
+import google.auth
+from google.auth import impersonated_credentials
 from google.cloud import storage
 
 
@@ -31,38 +29,38 @@ def get_signed_url(
     """
     Generate a signed URL for a GCS object.
 
-    Uses the IAM signBlob REST API with the GCP_ACCESS_TOKEN access token
-    (output of google-github-actions/auth) so that no ADC sign_bytes is needed.
-    The SA identified by GCS_SA (or `sa_email`) must have
-    roles/iam.serviceAccountTokenCreator on *itself* in GCP IAM.
+    Uses google.auth.impersonated_credentials so the WIF federated token
+    impersonates the SA (via IAM generateAccessToken), which then signs
+    the URL locally. Requires:
+      - create_credentials_file: true in the google-github-actions/auth step
+        (writes a credentials JSON that google.auth.default() can read)
+      - roles/iam.serviceAccountTokenCreator granted on the SA to itself
     """
-    access_token = os.environ.get("GCP_ACCESS_TOKEN")
     _sa_email = sa_email or os.environ.get("GCS_SA")
-
-    if not access_token:
-        raise EnvironmentError("GCP_ACCESS_TOKEN env var is not set")
     if not _sa_email:
         raise EnvironmentError("GCS_SA env var (or --sa) is not set")
 
-    # Build a Signer that delegates to the IAM signBlob API.
-    token_creds = OAuth2Credentials(token=access_token)
-    request = GoogleAuthRequest()
-    signer = iam.Signer(request, token_creds, _sa_email)
-
-    signing_creds = service_account.Credentials(
-        signer=signer,
-        service_account_email=_sa_email,
-        token_uri="https://oauth2.googleapis.com/token",
-        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    # Read WIF credentials from the file written by google-github-actions/auth
+    source_credentials, project = google.auth.default(
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
 
-    client = storage.Client(credentials=signing_creds)
+    # Impersonate the SA — the WIF token calls IAM generateAccessToken on its
+    # behalf, yielding real SA credentials that can sign bytes locally.
+    signing_credentials = impersonated_credentials.Credentials(
+        source_credentials=source_credentials,
+        target_principal=_sa_email,
+        target_scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
+
+    client = storage.Client(credentials=signing_credentials, project=project)
     blob = client.bucket(bucket_name).blob(object_path)
 
     return blob.generate_signed_url(
         version="v4",
         expiration=datetime.timedelta(minutes=expiration_minutes),
         method=method,
+        credentials=signing_credentials,  # must be explicit, not just on the client
     )
 
 
