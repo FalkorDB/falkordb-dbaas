@@ -137,9 +137,9 @@ jobs:
           CLUSTER: ${{ inputs.cluster }}
           NO_COLOR: "1"
         run: |
-          omnistrate-ctl deployment-cell update-kubeconfig "$CLUSTER" \
-            --role cluster-admin \
-            --kubeconfig /tmp/kubeconfig
+          script -q -c \
+            "omnistrate-ctl deployment-cell update-kubeconfig \"$CLUSTER\" --role cluster-admin --kubeconfig /tmp/kubeconfig" \
+            /dev/null
 
           echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
 
