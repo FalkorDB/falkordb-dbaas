@@ -25,7 +25,7 @@ export async function createObservabilityNodePool(cluster: Cluster): Promise<voi
     }
 
     const subnetIds = awsCluster.resourcesVpcConfig.subnetIds;
-    const nodeRole = awsCluster.computeConfig.nodeRoleArn;
+    const nodeRole = process.env.OMNISTRATE_AWS_NODE_ROLE_ARN;
 
     // Create the observability node group
     await eksClient.send(

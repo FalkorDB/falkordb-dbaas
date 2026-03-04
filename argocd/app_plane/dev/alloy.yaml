@@ -233,7 +233,7 @@ spec:
                     rule {
                       source_labels     = ["__meta_kubernetes_pod_container_name"]
                       action            = "keep"
-                      regex             = "fluentbit"
+                      regex             = "fluent-bit"
                     }
 
                     rule {
@@ -241,6 +241,27 @@ spec:
                       regex         = "(.+)"
                       replacement   = "$1:2020"
                       target_label  = "__address__"
+                    }
+
+                    rule {
+                      source_labels = ["__meta_kubernetes_namespace"]
+                      regex         = "(.+)"
+                      replacement   = "$1"
+                      target_label  = "namespace"
+                    }
+
+                    rule {
+                      source_labels = ["__meta_kubernetes_pod_node_name"]
+                      regex         = "(.+)"
+                      replacement   = "$1"
+                      target_label  = "instance"
+                    }
+
+                    rule {
+                      source_labels = ["__meta_kubernetes_pod_name"]
+                      regex         = "(.+)"
+                      replacement   = "$1"
+                      target_label  = "pod"
                     }
                   }
 

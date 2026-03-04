@@ -97,8 +97,11 @@
           "options": {
             "excludeByName": {
               "Time": true,
+              "Value": true,
               "__name__": true,
               "cluster": true,
+              "container": true,
+              "environment": true,
               "instance": true,
               "job": true,
               "master_replid": true,
