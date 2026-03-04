@@ -135,6 +135,7 @@ jobs:
         if: ${{ inputs.sign_only != 'true' }}
         env:
           CLUSTER: ${{ inputs.cluster }}
+          NO_COLOR: "1"
         run: |
           omnistrate-ctl deployment-cell update-kubeconfig "$CLUSTER" \
             --role cluster-admin \
