@@ -195,7 +195,7 @@ spec:
                       source_labels = ["__meta_kubernetes_pod_node_name"]
                       regex         = "(.+)"
                       replacement   = "$1"
-                      target_label  = "node"
+                      target_label  = "instance"
                     }
 
                     rule {
