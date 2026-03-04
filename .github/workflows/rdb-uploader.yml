@@ -75,7 +75,6 @@ on:
 env:
   ISSUE_REPO: 'FalkorDB/private'
   GCS_BUCKET: 'falkordb_rdbs_test_eu'
-  GCS_SA: 'falkordb-rdb-storage-reader@pipelines-development-f7a2434f.iam.gserviceaccount.com'
 
 jobs:
   upload-rdb:
@@ -159,7 +158,7 @@ jobs:
           CONTAINER: ${{ inputs.container }}
           SIGN_ONLY: ${{ inputs.sign_only }}
           GCS_BUCKET: ${{ env.GCS_BUCKET }}
-          GCS_SA: ${{ env.GCS_SA }}
+          GCS_SA: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           GCP_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: |
           python scripts/rdb_uploader.py \
