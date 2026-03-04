@@ -45,6 +45,17 @@ def get_signed_url(
     )
 
 
+def kubectl_check_path(namespace: str, pod: str, container: str, path: str, is_dir: bool = False) -> bool:
+    """Return True if path exists on the pod (file or directory)."""
+    flag = "-d" if is_dir else "-f"
+    result = subprocess.run(
+        ["kubectl", "exec", "-n", namespace, "-c", container, pod, "--",
+         "test", flag, path],
+        check=False,
+    )
+    return result.returncode == 0
+
+
 def kubectl_exec(namespace: str, pod: str, container: str, command: list[str]) -> None:
     """Run a command inside a pod via kubectl exec. Raises on failure."""
     cmd = [
@@ -119,7 +130,7 @@ def main() -> None:
             sys.exit(1)
 
         # 1. Generate signed PUT URLs (1h)
-        print("[1/3] Generating signed PUT URLs (1h)...")
+        print("[1/4] Generating signed PUT URLs (1h)...")
         rdb_put_url = get_signed_url(rdb_blob, creds, 60, method="PUT")
         print("  RDB PUT URL generated.")
 
@@ -128,8 +139,19 @@ def main() -> None:
             aof_put_url = get_signed_url(aof_blob, creds, 60, method="PUT")
             print("  AOF PUT URL generated.")
 
-        # 2. Pod uploads directly to GCS via curl
-        print("\n[2/3] Uploading from pod to GCS...")
+        # 2. Verify files exist on the pod before uploading
+        print("\n[2/4] Checking files exist on pod...")
+        if not kubectl_check_path(args.namespace, args.pod, args.container, "/data/dump.rdb"):
+            raise RuntimeError("/data/dump.rdb not found on pod. Redis may not have persisted to disk.")
+        print("  /data/dump.rdb — found.")
+
+        if aof_enabled:
+            if not kubectl_check_path(args.namespace, args.pod, args.container, "/data/appendonlydir", is_dir=True):
+                raise RuntimeError("/data/appendonlydir not found on pod.")
+            print("  /data/appendonlydir — found.")
+
+        # 3. Pod uploads directly to GCS via curl
+        print("\n[3/4] Uploading from pod to GCS...")
         print("  Uploading dump.rdb...")
         kubectl_exec(args.namespace, args.pod, args.container, [
             "curl", "-X", "PUT", "--fail", "--silent", "--show-error",
@@ -154,8 +176,8 @@ def main() -> None:
             ])
             print("  appendonlydir.tar.gz uploaded successfully.")
 
-        # 3. Generate signed GET/download URLs (72h)
-        print("\n[3/3] Generating signed download URLs (72h)...")
+        # 4. Generate signed GET/download URLs (72h)
+        print("\n[4/4] Generating signed download URLs (72h)...")
         write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
 
         if aof_enabled:
