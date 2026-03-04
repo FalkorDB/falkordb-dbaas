@@ -14,42 +14,56 @@ import subprocess
 import argparse
 import datetime
 
+from google.auth import iam
+from google.auth.transport.requests import Request as GoogleAuthRequest
+from google.oauth2.credentials import Credentials as OAuth2Credentials
+from google.oauth2 import service_account
 from google.cloud import storage
-from google.auth import impersonated_credentials
-import google.auth
 
 
 def get_signed_url(
     bucket_name: str,
     object_path: str,
-    sa_email: str,
     expiration_minutes: int,
     method: str = "GET",
+    sa_email: str | None = None,
 ) -> str:
-    """Generate a signed URL for a GCS object using service account impersonation."""
-    # Base credentials come from the environment (Workload Identity on GHA)
-    base_credentials, _ = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    """
+    Generate a signed URL for a GCS object.
+
+    Uses the IAM signBlob REST API with the GCP_ACCESS_TOKEN access token
+    (output of google-github-actions/auth) so that no ADC sign_bytes is needed.
+    The SA identified by GCS_SA (or `sa_email`) must have
+    roles/iam.serviceAccountTokenCreator on *itself* in GCP IAM.
+    """
+    access_token = os.environ.get("GCP_ACCESS_TOKEN")
+    _sa_email = sa_email or os.environ.get("GCS_SA")
+
+    if not access_token:
+        raise EnvironmentError("GCP_ACCESS_TOKEN env var is not set")
+    if not _sa_email:
+        raise EnvironmentError("GCS_SA env var (or --sa) is not set")
+
+    # Build a Signer that delegates to the IAM signBlob API.
+    token_creds = OAuth2Credentials(token=access_token)
+    request = GoogleAuthRequest()
+    signer = iam.Signer(request, token_creds, _sa_email)
+
+    signing_creds = service_account.Credentials(
+        signer=signer,
+        service_account_email=_sa_email,
+        token_uri="https://oauth2.googleapis.com/token",
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
     )
 
-    target_credentials = impersonated_credentials.Credentials(
-        source_credentials=base_credentials,
-        target_principal=sa_email,
-        target_scopes=["https://www.googleapis.com/auth/devstorage.read_write"],
-        lifetime=300,
-    )
+    client = storage.Client(credentials=signing_creds)
+    blob = client.bucket(bucket_name).blob(object_path)
 
-    client = storage.Client(credentials=target_credentials)
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(object_path)
-
-    url = blob.generate_signed_url(
+    return blob.generate_signed_url(
         version="v4",
         expiration=datetime.timedelta(minutes=expiration_minutes),
         method=method,
-        credentials=target_credentials,
     )
-    return url
 
 
 def kubectl_exec(namespace: str, pod: str, container: str, command: list[str]) -> None:
@@ -83,7 +97,7 @@ def main() -> None:
     parser.add_argument("--pod",        required=True,  help="Pod name")
     parser.add_argument("--container",  required=False, help="Container name (not needed for --sign-only)")
     parser.add_argument("--bucket",     required=True,  help="GCS bucket name")
-    parser.add_argument("--sa",         required=True,  help="Service account email to impersonate")
+    parser.add_argument("--sa",         required=False, help="Service-account email for signing (overrides GCS_SA env var)")
     parser.add_argument("--sign-only",  action="store_true",
                         help="Skip pod access; regenerate a signed GET URL for the existing GCS object")
     args = parser.parse_args()
@@ -107,11 +121,11 @@ def main() -> None:
         # Sign-only: just regenerate GET URLs — no pod access whatsoever
         # ------------------------------------------------------------------
         print("[1/1] Regenerating signed download URLs (72h)...")
-        rdb_url = get_signed_url(args.bucket, rdb_object, args.sa, expiration_minutes=72 * 60)
+        rdb_url = get_signed_url(args.bucket, rdb_object, expiration_minutes=72 * 60, sa_email=args.sa)
         write_github_output("rdb_url", rdb_url)
 
         if aof_enabled:
-            aof_url = get_signed_url(args.bucket, aof_object, args.sa, expiration_minutes=72 * 60)
+            aof_url = get_signed_url(args.bucket, aof_object, expiration_minutes=72 * 60, sa_email=args.sa)
             write_github_output("aof_url", aof_url)
 
     else:
@@ -124,12 +138,12 @@ def main() -> None:
 
         # 1. Generate signed PUT URLs (1h)
         print("[1/3] Generating signed PUT URLs (1h)...")
-        rdb_put_url = get_signed_url(args.bucket, rdb_object, args.sa, expiration_minutes=60, method="PUT")
+        rdb_put_url = get_signed_url(args.bucket, rdb_object, expiration_minutes=60, method="PUT", sa_email=args.sa)
         print("  RDB PUT URL generated.")
 
         aof_put_url = None
         if aof_enabled:
-            aof_put_url = get_signed_url(args.bucket, aof_object, args.sa, expiration_minutes=60, method="PUT")
+            aof_put_url = get_signed_url(args.bucket, aof_object, expiration_minutes=60, method="PUT", sa_email=args.sa)
             print("  AOF PUT URL generated.")
 
         # 2. Pod uploads directly to GCS via curl
@@ -160,11 +174,11 @@ def main() -> None:
 
         # 3. Generate signed GET/download URLs (72h)
         print("\n[3/3] Generating signed download URLs (72h)...")
-        rdb_url = get_signed_url(args.bucket, rdb_object, args.sa, expiration_minutes=72 * 60)
+        rdb_url = get_signed_url(args.bucket, rdb_object, expiration_minutes=72 * 60, sa_email=args.sa)
         write_github_output("rdb_url", rdb_url)
 
         if aof_enabled:
-            aof_url = get_signed_url(args.bucket, aof_object, args.sa, expiration_minutes=72 * 60)
+            aof_url = get_signed_url(args.bucket, aof_object, expiration_minutes=72 * 60, sa_email=args.sa)
             write_github_output("aof_url", aof_url)
 
     print(f"\n{'='*60}")

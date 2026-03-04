@@ -25,8 +25,8 @@ on:
         required: true
         type: string
       container:
-        description: 'Container name'
-        required: true
+        description: 'Container name (not required in sign-only mode)'
+        required: false
         type: string
       cluster:
         description: 'Cluster name (= Omnistrate deployment cell ID, e.g. hc-xxxx)'
@@ -118,6 +118,7 @@ jobs:
       #    Sets up Application Default Credentials used by rdb_uploader.py
       # ------------------------------------------------------------------ #
       - name: Authenticate to GCP
+        id: auth
         uses: google-github-actions/auth@v3
         with:
           token_format: access_token
@@ -159,6 +160,7 @@ jobs:
           SIGN_ONLY: ${{ inputs.sign_only }}
           GCS_BUCKET: ${{ env.GCS_BUCKET }}
           GCS_SA: ${{ env.GCS_SA }}
+          GCP_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: |
           python scripts/rdb_uploader.py \
             --namespace   "$NAMESPACE" \
