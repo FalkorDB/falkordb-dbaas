@@ -25,15 +25,7 @@ export async function createObservabilityNodePool(cluster: Cluster): Promise<voi
     }
 
     const subnetIds = awsCluster.resourcesVpcConfig.subnetIds;
-    const envNodeRole = process.env.OMNISTRATE_AWS_NODE_ROLE_ARN;
-    const clusterNodeRole = awsCluster.computeConfig?.nodeRoleArn;
-    const nodeRole = (envNodeRole && envNodeRole.trim() !== '') ? envNodeRole : clusterNodeRole;
-
-    if (!nodeRole) {
-      const message = 'AWS node role ARN is not configured. Set OMNISTRATE_AWS_NODE_ROLE_ARN or ensure awsCluster.computeConfig.nodeRoleArn is set.';
-      logger.error({ cluster: cluster.name }, message);
-      throw new Error(message);
-    }
+    const nodeRole = process.env.OMNISTRATE_AWS_NODE_ROLE_ARN;
 
     // Create the observability node group
     await eksClient.send(
