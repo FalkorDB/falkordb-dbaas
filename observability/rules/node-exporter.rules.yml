@@ -95,8 +95,8 @@ spec:
           expr: up{job="node-exporter"} == 0
           for: 2m
           labels:
-          severity: critical
-          cluster: '{{ $labels.cluster }}'
+            severity: critical
+            cluster: '{{ $labels.cluster }}'
         - alert: NodeFilesystemSpaceFillingUp
           annotations:
             description: Filesystem on {{ $labels.device }}, mounted on {{ $labels.mountpoint }}, at {{ $labels.instance }} has only {{ printf "%.2f" $value }}% available space left and is filling up.
