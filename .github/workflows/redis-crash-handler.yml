@@ -35,11 +35,6 @@ on:
         description: 'Grafana URL for log viewing'
         required: true
         type: string
-      aof_enabled:
-        description: 'Is AOF enabled for this instance? (passed to rdb-uploader)'
-        required: false
-        type: string
-        default: 'false'
       environment:
         description: 'Environment (dev or prod)'
         required: true

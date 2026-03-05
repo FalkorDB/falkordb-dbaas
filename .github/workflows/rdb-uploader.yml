@@ -54,8 +54,9 @@ on:
         required: true
         type: string
       container:
-        required: true
+        required: false
         type: string
+        default: ''
       cluster:
         required: true
         type: string
@@ -147,12 +148,14 @@ jobs:
           GCS_BUCKET: ${{ env.GCS_BUCKET }}
           GCS_SA_KEY: ${{ secrets.GCP_BUCKET_SA_KEY }}
         run: |
+          EXTRA_ARGS=()
+          [[ "${SIGN_ONLY,,}" == "true" ]] && EXTRA_ARGS+=("--sign-only")
           python scripts/rdb_uploader.py \
             --namespace   "$NAMESPACE" \
             --pod         "$POD" \
             --container   "$CONTAINER" \
             --bucket      "$GCS_BUCKET" \
-            $( [[ "${SIGN_ONLY,,}" == "true" ]] && echo "--sign-only" )
+            "${EXTRA_ARGS[@]}"
 
       # ------------------------------------------------------------------ #
       # 7. Comment download links on the GitHub issue
