@@ -28,7 +28,7 @@ jobs:
     environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Read stacks.json
         id: set-matrix
@@ -96,7 +96,7 @@ jobs:
           echo "init_param=$(echo "$init_param_template" | envsubst)" >> "$GITHUB_ENV"
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install OpenTofu
         uses: opentofu/setup-opentofu@v1
