@@ -1,0 +1,221 @@
+name: RDB Uploader
+
+# Triggered automatically by redis-crash-handler.yml (workflow_call)
+# or manually via GitHub Actions UI / gh CLI (workflow_dispatch).
+#
+# Replicates upload_to_gcp.sh logic:
+#   1. Runner generates a signed PUT URL (1h)
+#   2. Pod uploads directly to GCS via kubectl exec + curl (no runner disk used)
+#   3. Runner generates a signed GET URL (72h) and comments it on the issue
+
+permissions:
+  contents: read
+  issues: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      pod:
+        description: 'Pod name (e.g. node-f-0)'
+        required: true
+        type: string
+      namespace:
+        description: 'Kubernetes namespace / instance ID (e.g. instance-ljsr6b3gz)'
+        required: true
+        type: string
+      container:
+        description: 'Container name (not required in sign-only mode)'
+        required: false
+        type: string
+      cluster:
+        description: 'Cluster name (= Omnistrate deployment cell ID, e.g. hc-xxxx)'
+        required: true
+        type: string
+      sign_only:
+        description: 'Regenerate download link only — skip pod access (use when link expired, data already in GCS)'
+        required: false
+        default: 'false'
+        type: string
+      issue_number:
+        description: 'GitHub issue number to post download links on'
+        required: false
+        type: string
+      environment:
+        description: 'Environment (dev or prod)'
+        required: true
+        type: string
+
+  workflow_call:
+    inputs:
+      pod:
+        required: true
+        type: string
+      namespace:
+        required: true
+        type: string
+      container:
+        required: false
+        type: string
+        default: ''
+      cluster:
+        required: true
+        type: string
+      sign_only:
+        required: false
+        default: 'false'
+        type: string
+      issue_number:
+        required: false
+        default: ''
+        type: string
+      environment:
+        required: true
+        type: string
+
+env:
+  ISSUE_REPO: 'FalkorDB/private'
+
+jobs:
+  upload-rdb:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      # ------------------------------------------------------------------ #
+      # 1. Install + authenticate omnistrate-ctl (skipped in sign-only mode)
+      # ------------------------------------------------------------------ #
+      - name: Setup omnistrate-ctl
+        if: ${{ inputs.sign_only != 'true' }}
+        uses: omnistrate-oss/setup-omnistrate-ctl@v1
+
+      # ------------------------------------------------------------------ #
+      # 2. Install kubectl (skipped in sign-only mode)
+      # ------------------------------------------------------------------ #
+      - name: Install kubectl
+        if: ${{ inputs.sign_only != 'true' }}
+        uses: azure/setup-kubectl@v4
+
+      # ------------------------------------------------------------------ #
+      # 3. Set up Python
+      # ------------------------------------------------------------------ #
+      - name: Set up Python
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install google-cloud-storage
+
+      # ------------------------------------------------------------------ #
+      # 4. Checkout (for scripts/rdb_uploader.py)
+      # ------------------------------------------------------------------ #
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      # ------------------------------------------------------------------ #
+      # 5. Update kubeconfig via omnistrate-ctl (skipped in sign-only mode)
+      #    cluster name == deployment cell ID
+      # ------------------------------------------------------------------ #
+      - name: Update kubeconfig via omnistrate-ctl
+        if: ${{ inputs.sign_only != 'true' }}
+        env:
+          OMNISTRATE_EMAIL: ${{ secrets.OMNISTRATE_USERNAME }}
+          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
+          CLUSTER: ${{ inputs.cluster }}
+        run: |
+          # Login does not use a spinner, so no PTY needed
+          echo "$OMNISTRATE_PASSWORD" | omnistrate-ctl login \
+            --email "$OMNISTRATE_EMAIL" \
+            --password-stdin
+
+          # update-kubeconfig uses a spinner that requires /dev/tty — wrap in script
+          script -q -c \
+            "omnistrate-ctl deployment-cell update-kubeconfig \"$CLUSTER\" --role cluster-admin --kubeconfig /tmp/kubeconfig" \
+            /dev/null
+
+          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+
+      # ------------------------------------------------------------------ #
+      # 6. Run rdb_uploader.py — handles signing, kubectl exec, and outputs
+      # ------------------------------------------------------------------ #
+      - name: Upload RDB (and AOF) from pod to GCS
+        id: upload_gcs
+        env:
+          NAMESPACE: ${{ inputs.namespace }}
+          POD: ${{ inputs.pod }}
+          CONTAINER: ${{ inputs.container }}
+          SIGN_ONLY: ${{ inputs.sign_only }}
+          GCS_BUCKET: ${{ vars.GCS_BUCKET }}
+          GCS_SA_KEY: ${{ secrets.GCP_BUCKET_SA_KEY }}
+        run: |
+          EXTRA_ARGS=()
+          [[ "${SIGN_ONLY,,}" == "true" ]] && EXTRA_ARGS+=("--sign-only")
+          python scripts/rdb_uploader.py \
+            --namespace   "$NAMESPACE" \
+            --pod         "$POD" \
+            --container   "$CONTAINER" \
+            --bucket      "$GCS_BUCKET" \
+            "${EXTRA_ARGS[@]}"
+
+      # ------------------------------------------------------------------ #
+      # 7. Comment download links on the GitHub issue
+      # ------------------------------------------------------------------ #
+      - name: Comment download links on issue
+        if: ${{ inputs.issue_number != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          ISSUE_REPO: ${{ env.ISSUE_REPO }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          NAMESPACE: ${{ inputs.namespace }}
+          POD: ${{ inputs.pod }}
+          RDB_URL: ${{ steps.upload_gcs.outputs.rdb_url }}
+          AOF_URL: ${{ steps.upload_gcs.outputs.aof_url }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SIGN_ONLY: ${{ inputs.sign_only }}
+        run: |
+          if [[ "${SIGN_ONLY,,}" == "true" ]]; then
+            HEADER="## 🔗 RDB Download Link Refreshed"
+            SUBTEXT="Signed download links have been regenerated from the existing GCS snapshot."
+          else
+            HEADER="## 📦 RDB Export Available"
+            SUBTEXT="Snapshot uploaded to GCS."
+          fi
+
+          COMMENT="$HEADER
+
+          ${SUBTEXT} Download links expire in **72 hours**.
+
+          | File | Download |
+          |------|----------|
+          | \`dump.rdb\` | [Download]($RDB_URL) |"
+
+          if [[ -n "$AOF_URL" ]]; then
+            COMMENT+="
+          | \`appendonlydir.tar.gz\` | [Download]($AOF_URL) |"
+          fi
+
+          COMMENT+="
+
+          **Pod:** \`$POD\` &nbsp; **Namespace:** \`$NAMESPACE\`
+
+          > [View workflow run]($RUN_URL)
+
+          ---
+          <details>
+          <summary>🔄 Regenerate download link</summary>
+
+          \`\`\`bash
+          gh workflow run rdb-uploader.yml \\
+            -R FalkorDB/falkordb-dbaas \\
+            --field pod=\"$POD\" \\
+            --field namespace=\"$NAMESPACE\" \\
+            --field container=\"${{ inputs.container }}\" \\
+            --field cluster=\"${{ inputs.cluster }}\" \\
+            --field sign_only=\"true\" \\
+            --field issue_number=\"$ISSUE_NUMBER\" \\
+            --field environment=\"${{ inputs.environment }}\"
+          \`\`\`
+          </details>"
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$ISSUE_REPO" \
+            --body "$COMMENT"

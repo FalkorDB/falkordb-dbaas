@@ -124,3 +124,15 @@ jobs:
             --container "$CONTAINER" \
             --vmauth-url "$VMAUTH_URL" \
             --grafana-url "$GRAFANA_URL"
+
+  upload-rdb:
+    needs: analyze-crash
+    uses: ./.github/workflows/rdb-uploader.yml
+    secrets: inherit
+    with:
+      pod: ${{ needs.analyze-crash.outputs.pod }}
+      namespace: ${{ needs.analyze-crash.outputs.namespace }}
+      container: ${{ inputs.container }}
+      cluster: ${{ needs.analyze-crash.outputs.cluster }}
+      issue_number: ${{ needs.analyze-crash.outputs.issue_number }}
+      environment: ${{ inputs.environment }}
