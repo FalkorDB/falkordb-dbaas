@@ -45,6 +45,10 @@ def get_signed_url(
     )
 
 
+# Timeout in seconds for kubectl subprocess calls to prevent indefinite hangs
+_KUBECTL_TIMEOUT = 300  # 5 minutes
+
+
 def kubectl_check_path(namespace: str, pod: str, container: str, path: str, is_dir: bool = False) -> bool:
     """Return True if path exists on the pod (file or directory)."""
     flag = "-d" if is_dir else "-f"
@@ -52,12 +56,23 @@ def kubectl_check_path(namespace: str, pod: str, container: str, path: str, is_d
         ["kubectl", "exec", "-n", namespace, "-c", container, pod, "--",
          "test", flag, path],
         check=False,
+        timeout=_KUBECTL_TIMEOUT,
     )
     return result.returncode == 0
 
 
-def kubectl_exec(namespace: str, pod: str, container: str, command: list[str]) -> None:
-    """Run a command inside a pod via kubectl exec. Raises on failure."""
+def kubectl_exec(
+    namespace: str,
+    pod: str,
+    container: str,
+    command: list[str],
+    redact_args: list[str] | None = None,
+) -> None:
+    """Run a command inside a pod via kubectl exec. Raises on failure.
+
+    Args:
+        redact_args: List of argument values to redact in log output (e.g. signed URLs).
+    """
     cmd = [
         "kubectl", "exec",
         "-n", namespace,
@@ -65,8 +80,10 @@ def kubectl_exec(namespace: str, pod: str, container: str, command: list[str]) -
         pod, "--",
     ] + command
 
-    print(f"  $ {' '.join(cmd)}")
-    result = subprocess.run(cmd, check=False)
+    redact_set = set(redact_args or [])
+    log_cmd = ["<redacted>" if arg in redact_set else arg for arg in cmd]
+    print(f"  $ {' '.join(log_cmd)}")
+    result = subprocess.run(cmd, check=False, timeout=_KUBECTL_TIMEOUT)
     if result.returncode != 0:
         raise RuntimeError(
             f"kubectl exec failed with exit code {result.returncode}: {' '.join(command)}"
@@ -76,9 +93,11 @@ def kubectl_exec(namespace: str, pod: str, container: str, command: list[str]) -
 def write_github_output(key: str, value: str) -> None:
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:
+        # Mask the value in Actions logs before writing to GITHUB_OUTPUT
+        print(f"::add-mask::{value}")
         with open(github_output, "a") as f:
             f.write(f"{key}={value}\n")
-    print(f"  Output: {key}={value}")
+    print(f"  Output: {key}=<redacted>")
 
 
 def main() -> None:
@@ -153,12 +172,16 @@ def main() -> None:
         # 3. Pod uploads directly to GCS via curl
         print("\n[3/4] Uploading from pod to GCS...")
         print("  Uploading dump.rdb...")
-        kubectl_exec(args.namespace, args.pod, args.container, [
-            "curl", "-X", "PUT", "--fail", "--silent", "--show-error",
-            "-H", "Content-Type: application/octet-stream",
-            "--upload-file", "/data/dump.rdb",
-            rdb_put_url,
-        ])
+        kubectl_exec(
+            args.namespace, args.pod, args.container,
+            [
+                "curl", "-X", "PUT", "--fail", "--silent", "--show-error",
+                "-H", "Content-Type: application/octet-stream",
+                "--upload-file", "/data/dump.rdb",
+                rdb_put_url,
+            ],
+            redact_args=[rdb_put_url],
+        )
         print("  dump.rdb uploaded successfully.")
 
         if aof_enabled:
@@ -168,13 +191,22 @@ def main() -> None:
                 "-C", "/data/appendonlydir", ".",
             ])
             print("  Uploading appendonlydir.tar.gz...")
-            kubectl_exec(args.namespace, args.pod, args.container, [
-                "curl", "-X", "PUT", "--fail", "--silent", "--show-error",
-                "-H", "Content-Type: application/octet-stream",
-                "--upload-file", "/data/appendonlydir.tar.gz",
-                aof_put_url,
-            ])
+            kubectl_exec(
+                args.namespace, args.pod, args.container,
+                [
+                    "curl", "-X", "PUT", "--fail", "--silent", "--show-error",
+                    "-H", "Content-Type: application/octet-stream",
+                    "--upload-file", "/data/appendonlydir.tar.gz",
+                    aof_put_url,
+                ],
+                redact_args=[aof_put_url],
+            )
             print("  appendonlydir.tar.gz uploaded successfully.")
+            print("  Cleaning up temporary archive on pod...")
+            kubectl_exec(args.namespace, args.pod, args.container, [
+                "rm", "-f", "/data/appendonlydir.tar.gz",
+            ])
+            print("  Cleanup complete.")
 
         # 4. Generate signed GET/download URLs (72h)
         print("\n[4/4] Generating signed download URLs (72h)...")
