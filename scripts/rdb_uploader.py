@@ -86,7 +86,7 @@ def kubectl_exec(
     result = subprocess.run(cmd, check=False, timeout=_KUBECTL_TIMEOUT)
     if result.returncode != 0:
         raise RuntimeError(
-            f"kubectl exec failed with exit code {result.returncode}: {' '.join(command)}"
+            f"kubectl exec failed with exit code {result.returncode}: {' '.join(log_cmd)}"
         )
 
 
@@ -98,6 +98,12 @@ def write_github_output(key: str, value: str) -> None:
         with open(github_output, "a") as f:
             f.write(f"{key}={value}\n")
     print(f"  Output: {key}=<redacted>")
+
+
+def mask_in_actions(value: str) -> None:
+    """Register a value to be redacted in all subsequent GitHub Actions log output."""
+    if os.environ.get("GITHUB_OUTPUT"):  # presence of GITHUB_OUTPUT indicates Actions runtime
+        print(f"::add-mask::{value}")
 
 
 def main() -> None:
@@ -151,11 +157,13 @@ def main() -> None:
         # 1. Generate signed PUT URLs (1h)
         print("[1/4] Generating signed PUT URLs (1h)...")
         rdb_put_url = get_signed_url(rdb_blob, creds, 60, method="PUT")
+        mask_in_actions(rdb_put_url)
         print("  RDB PUT URL generated.")
 
         aof_put_url = None
         if aof_enabled:
             aof_put_url = get_signed_url(aof_blob, creds, 60, method="PUT")
+            mask_in_actions(aof_put_url)
             print("  AOF PUT URL generated.")
 
         # 2. Verify files exist on the pod before uploading
@@ -225,6 +233,4 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print(f"\n❌ Error: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
         sys.exit(1)

@@ -74,7 +74,6 @@ on:
 
 env:
   ISSUE_REPO: 'FalkorDB/private'
-  GCS_BUCKET: 'falkordb_rdbs_test_eu'
 
 jobs:
   upload-rdb:
@@ -145,7 +144,7 @@ jobs:
           POD: ${{ inputs.pod }}
           CONTAINER: ${{ inputs.container }}
           SIGN_ONLY: ${{ inputs.sign_only }}
-          GCS_BUCKET: ${{ env.GCS_BUCKET }}
+          GCS_BUCKET: ${{ vars.GCS_BUCKET }}
           GCS_SA_KEY: ${{ secrets.GCP_BUCKET_SA_KEY }}
         run: |
           EXTRA_ARGS=()
