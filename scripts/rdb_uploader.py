@@ -86,7 +86,7 @@ def kubectl_exec(
     result = subprocess.run(cmd, check=False, timeout=_KUBECTL_TIMEOUT)
     if result.returncode != 0:
         raise RuntimeError(
-            f"kubectl exec failed with exit code {result.returncode}: {' '.join(command)}"
+            f"kubectl exec failed with exit code {result.returncode}: {' '.join(log_cmd)}"
         )
 
 
@@ -225,6 +225,4 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print(f"\n❌ Error: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
         sys.exit(1)
