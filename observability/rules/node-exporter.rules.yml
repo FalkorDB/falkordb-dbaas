@@ -90,8 +90,8 @@ spec:
       rules:
         - alert: NodeDown
           annotations:
-          description: Node {{ $labels.instance }} has been down for more than 2 minutes.
-          summary: Node is down.
+            description: Node {{ $labels.instance }} has been down for more than 2 minutes.
+            summary: Node is down.
           expr: up{job="node-exporter"} == 0
           for: 2m
           labels:
