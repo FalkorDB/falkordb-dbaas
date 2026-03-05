@@ -10,46 +10,50 @@ Mirrors the logic of upload_to_gcp.sh.
 
 import os
 import sys
+import json
 import subprocess
 import argparse
 import datetime
 
+from google.oauth2 import service_account
 from google.cloud import storage
-from google.auth import impersonated_credentials
-import google.auth
+
+
+def _load_credentials() -> service_account.Credentials:
+    """Parse GCS_SA_KEY once and return SA credentials."""
+    key_json = os.environ.get("GCS_SA_KEY")
+    if not key_json:
+        raise EnvironmentError("GCS_SA_KEY env var is not set")
+    return service_account.Credentials.from_service_account_info(
+        json.loads(key_json),
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
 
 
 def get_signed_url(
-    bucket_name: str,
-    object_path: str,
-    sa_email: str,
+    blob: storage.Blob,
+    credentials: service_account.Credentials,
     expiration_minutes: int,
     method: str = "GET",
 ) -> str:
-    """Generate a signed URL for a GCS object using service account impersonation."""
-    # Base credentials come from the environment (Workload Identity on GHA)
-    base_credentials, _ = google.auth.default(
-        scopes=["https://www.googleapis.com/auth/cloud-platform"]
-    )
-
-    target_credentials = impersonated_credentials.Credentials(
-        source_credentials=base_credentials,
-        target_principal=sa_email,
-        target_scopes=["https://www.googleapis.com/auth/devstorage.read_write"],
-        lifetime=300,
-    )
-
-    client = storage.Client(credentials=target_credentials)
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(object_path)
-
-    url = blob.generate_signed_url(
+    """Generate a v4 signed URL for a GCS blob."""
+    return blob.generate_signed_url(
         version="v4",
         expiration=datetime.timedelta(minutes=expiration_minutes),
         method=method,
-        credentials=target_credentials,
+        credentials=credentials,
     )
-    return url
+
+
+def kubectl_check_path(namespace: str, pod: str, container: str, path: str, is_dir: bool = False) -> bool:
+    """Return True if path exists on the pod (file or directory)."""
+    flag = "-d" if is_dir else "-f"
+    result = subprocess.run(
+        ["kubectl", "exec", "-n", namespace, "-c", container, pod, "--",
+         "test", flag, path],
+        check=False,
+    )
+    return result.returncode == 0
 
 
 def kubectl_exec(namespace: str, pod: str, container: str, command: list[str]) -> None:
@@ -83,7 +87,6 @@ def main() -> None:
     parser.add_argument("--pod",        required=True,  help="Pod name")
     parser.add_argument("--container",  required=False, help="Container name (not needed for --sign-only)")
     parser.add_argument("--bucket",     required=True,  help="GCS bucket name")
-    parser.add_argument("--sa",         required=True,  help="Service account email to impersonate")
     parser.add_argument("--sign-only",  action="store_true",
                         help="Skip pod access; regenerate a signed GET URL for the existing GCS object")
     args = parser.parse_args()
@@ -102,17 +105,21 @@ def main() -> None:
     rdb_object = f"{args.namespace}/dump.rdb"
     aof_object = f"{args.namespace}/appendonlydir.tar.gz"
 
+    # Load credentials and GCS client once
+    creds = _load_credentials()
+    client = storage.Client(credentials=creds)
+    rdb_blob = client.bucket(args.bucket).blob(rdb_object)
+    aof_blob = client.bucket(args.bucket).blob(aof_object)
+
     if args.sign_only:
         # ------------------------------------------------------------------
         # Sign-only: just regenerate GET URLs — no pod access whatsoever
         # ------------------------------------------------------------------
         print("[1/1] Regenerating signed download URLs (72h)...")
-        rdb_url = get_signed_url(args.bucket, rdb_object, args.sa, expiration_minutes=72 * 60)
-        write_github_output("rdb_url", rdb_url)
+        write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
 
         if aof_enabled:
-            aof_url = get_signed_url(args.bucket, aof_object, args.sa, expiration_minutes=72 * 60)
-            write_github_output("aof_url", aof_url)
+            write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
 
     else:
         # ------------------------------------------------------------------
@@ -123,17 +130,28 @@ def main() -> None:
             sys.exit(1)
 
         # 1. Generate signed PUT URLs (1h)
-        print("[1/3] Generating signed PUT URLs (1h)...")
-        rdb_put_url = get_signed_url(args.bucket, rdb_object, args.sa, expiration_minutes=60, method="PUT")
+        print("[1/4] Generating signed PUT URLs (1h)...")
+        rdb_put_url = get_signed_url(rdb_blob, creds, 60, method="PUT")
         print("  RDB PUT URL generated.")
 
         aof_put_url = None
         if aof_enabled:
-            aof_put_url = get_signed_url(args.bucket, aof_object, args.sa, expiration_minutes=60, method="PUT")
+            aof_put_url = get_signed_url(aof_blob, creds, 60, method="PUT")
             print("  AOF PUT URL generated.")
 
-        # 2. Pod uploads directly to GCS via curl
-        print("\n[2/3] Uploading from pod to GCS...")
+        # 2. Verify files exist on the pod before uploading
+        print("\n[2/4] Checking files exist on pod...")
+        if not kubectl_check_path(args.namespace, args.pod, args.container, "/data/dump.rdb"):
+            raise RuntimeError("/data/dump.rdb not found on pod. Redis may not have persisted to disk.")
+        print("  /data/dump.rdb — found.")
+
+        if aof_enabled:
+            if not kubectl_check_path(args.namespace, args.pod, args.container, "/data/appendonlydir", is_dir=True):
+                raise RuntimeError("/data/appendonlydir not found on pod.")
+            print("  /data/appendonlydir — found.")
+
+        # 3. Pod uploads directly to GCS via curl
+        print("\n[3/4] Uploading from pod to GCS...")
         print("  Uploading dump.rdb...")
         kubectl_exec(args.namespace, args.pod, args.container, [
             "curl", "-X", "PUT", "--fail", "--silent", "--show-error",
@@ -158,14 +176,12 @@ def main() -> None:
             ])
             print("  appendonlydir.tar.gz uploaded successfully.")
 
-        # 3. Generate signed GET/download URLs (72h)
-        print("\n[3/3] Generating signed download URLs (72h)...")
-        rdb_url = get_signed_url(args.bucket, rdb_object, args.sa, expiration_minutes=72 * 60)
-        write_github_output("rdb_url", rdb_url)
+        # 4. Generate signed GET/download URLs (72h)
+        print("\n[4/4] Generating signed download URLs (72h)...")
+        write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
 
         if aof_enabled:
-            aof_url = get_signed_url(args.bucket, aof_object, args.sa, expiration_minutes=72 * 60)
-            write_github_output("aof_url", aof_url)
+            write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
 
     print(f"\n{'='*60}")
     print("✅ Done!")

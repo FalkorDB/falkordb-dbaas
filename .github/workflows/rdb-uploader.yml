@@ -11,7 +11,6 @@ name: RDB Uploader
 permissions:
   contents: read
   issues: write
-  id-token: write
 
 on:
   workflow_dispatch:
@@ -25,8 +24,8 @@ on:
         required: true
         type: string
       container:
-        description: 'Container name'
-        required: true
+        description: 'Container name (not required in sign-only mode)'
+        required: false
         type: string
       cluster:
         description: 'Cluster name (= Omnistrate deployment cell ID, e.g. hc-xxxx)'
@@ -75,21 +74,18 @@ on:
 env:
   ISSUE_REPO: 'FalkorDB/private'
   GCS_BUCKET: 'falkordb_rdbs_test_eu'
-  GCS_SA: 'falkordb-rdb-storage-reader@pipelines-development-f7a2434f.iam.gserviceaccount.com'
 
 jobs:
   upload-rdb:
     runs-on: ubuntu-latest
-
+    environment: ${{ inputs.environment }}
     steps:
       # ------------------------------------------------------------------ #
-      # 1. Install omnistrate-ctl (skipped in sign-only mode)
+      # 1. Install + authenticate omnistrate-ctl (skipped in sign-only mode)
       # ------------------------------------------------------------------ #
-      - name: Install omnistrate-ctl
+      - name: Setup omnistrate-ctl
         if: ${{ inputs.sign_only != 'true' }}
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/omnistrate/ctl/main/install.sh | sh
-          omnistrate-ctl version || true
+        uses: omnistrate-oss/setup-omnistrate-ctl@v1
 
       # ------------------------------------------------------------------ #
       # 2. Install kubectl (skipped in sign-only mode)
@@ -107,7 +103,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        run: pip install google-cloud-storage google-auth
+        run: pip install google-cloud-storage
 
       # ------------------------------------------------------------------ #
       # 4. Checkout (for scripts/rdb_uploader.py)
@@ -116,38 +112,30 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
       # ------------------------------------------------------------------ #
-      # 5. Authenticate to GCP (Workload Identity)
-      #    Sets up Application Default Credentials used by rdb_uploader.py
-      # ------------------------------------------------------------------ #
-      - name: Authenticate to GCP
-        uses: google-github-actions/auth@v3
-        with:
-          token_format: access_token
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-      # ------------------------------------------------------------------ #
-      # 6. Update kubeconfig via omnistrate-ctl (skipped in sign-only mode)
+      # 5. Update kubeconfig via omnistrate-ctl (skipped in sign-only mode)
       #    cluster name == deployment cell ID
       # ------------------------------------------------------------------ #
       - name: Update kubeconfig via omnistrate-ctl
         if: ${{ inputs.sign_only != 'true' }}
         env:
-          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
+          OMNISTRATE_EMAIL: ${{ secrets.OMNISTRATE_USERNAME }}
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
           CLUSTER: ${{ inputs.cluster }}
         run: |
-          omnistrate-ctl login \
-            --username "$OMNISTRATE_USERNAME" \
-            --password "$OMNISTRATE_PASSWORD"
+          # Login does not use a spinner, so no PTY needed
+          echo "$OMNISTRATE_PASSWORD" | omnistrate-ctl login \
+            --email "$OMNISTRATE_EMAIL" \
+            --password-stdin
 
-          omnistrate-ctl deployment-cell update-kubeconfig "$CLUSTER" \
-            --kubeconfig /tmp/kubeconfig
+          # update-kubeconfig uses a spinner that requires /dev/tty — wrap in script
+          script -q -c \
+            "omnistrate-ctl deployment-cell update-kubeconfig \"$CLUSTER\" --role cluster-admin --kubeconfig /tmp/kubeconfig" \
+            /dev/null
 
           echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
 
       # ------------------------------------------------------------------ #
-      # 7. Run rdb_uploader.py — handles signing, kubectl exec, and outputs
+      # 6. Run rdb_uploader.py — handles signing, kubectl exec, and outputs
       # ------------------------------------------------------------------ #
       - name: Upload RDB (and AOF) from pod to GCS
         id: upload_gcs
@@ -157,18 +145,17 @@ jobs:
           CONTAINER: ${{ inputs.container }}
           SIGN_ONLY: ${{ inputs.sign_only }}
           GCS_BUCKET: ${{ env.GCS_BUCKET }}
-          GCS_SA: ${{ env.GCS_SA }}
+          GCS_SA_KEY: ${{ secrets.GCP_BUCKET_SA_KEY }}
         run: |
           python scripts/rdb_uploader.py \
             --namespace   "$NAMESPACE" \
             --pod         "$POD" \
             --container   "$CONTAINER" \
             --bucket      "$GCS_BUCKET" \
-            --sa          "$GCS_SA" \
             $( [[ "${SIGN_ONLY,,}" == "true" ]] && echo "--sign-only" )
 
       # ------------------------------------------------------------------ #
-      # 8. Comment download links on the GitHub issue
+      # 7. Comment download links on the GitHub issue
       # ------------------------------------------------------------------ #
       - name: Comment download links on issue
         if: ${{ inputs.issue_number != '' }}
