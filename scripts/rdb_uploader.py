@@ -100,6 +100,12 @@ def write_github_output(key: str, value: str) -> None:
     print(f"  Output: {key}=<redacted>")
 
 
+def mask_in_actions(value: str) -> None:
+    """Register a value to be redacted in all subsequent GitHub Actions log output."""
+    if os.environ.get("GITHUB_OUTPUT"):  # presence of GITHUB_OUTPUT indicates Actions runtime
+        print(f"::add-mask::{value}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Upload Redis RDB (and AOF) to GCS")
     parser.add_argument("--namespace",  required=True,  help="Kubernetes namespace")
@@ -151,11 +157,13 @@ def main() -> None:
         # 1. Generate signed PUT URLs (1h)
         print("[1/4] Generating signed PUT URLs (1h)...")
         rdb_put_url = get_signed_url(rdb_blob, creds, 60, method="PUT")
+        mask_in_actions(rdb_put_url)
         print("  RDB PUT URL generated.")
 
         aof_put_url = None
         if aof_enabled:
             aof_put_url = get_signed_url(aof_blob, creds, 60, method="PUT")
+            mask_in_actions(aof_put_url)
             print("  AOF PUT URL generated.")
 
         # 2. Verify files exist on the pod before uploading
