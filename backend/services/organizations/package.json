@@ -39,7 +39,7 @@
     "@sinclair/typebox": "^0.34.48",
     "awilix": "^10.0.2",
     "dotenv": "^16.6.1",
-    "fastify": "^4.29.1",
+    "fastify": "^5.7.3",
     "fastify-plugin": "^4.5.1",
     "mongodb": "^6.21.0",
     "short-unique-id": "^5.3.2",
