@@ -114,6 +114,8 @@ jobs:
       # ------------------------------------------------------------------ #
       # 5. Update kubeconfig via omnistrate-ctl (skipped in sign-only mode)
       #    cluster name == deployment cell ID
+      #    GCP quirk: k8s cluster name is "c-hc20vidasdi" but deployment cell ID is "hc-20vidasdi"
+      #    Normalize by stripping the "c-hc" prefix and replacing with "hc-"
       # ------------------------------------------------------------------ #
       - name: Update kubeconfig via omnistrate-ctl
         if: ${{ inputs.sign_only != 'true' }}
@@ -122,6 +124,15 @@ jobs:
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
           CLUSTER: ${{ inputs.cluster }}
         run: |
+          # Normalize GCP cluster name to deployment cell ID
+          # GCP passes "c-hc<id>" but omnistrate-ctl expects "hc-<id>"
+          if [[ "$CLUSTER" =~ ^c-hc ]]; then
+            DEPLOYMENT_CELL="hc-${CLUSTER#c-hc}"
+            echo "Normalized GCP cluster name: $CLUSTER -> $DEPLOYMENT_CELL"
+          else
+            DEPLOYMENT_CELL="$CLUSTER"
+          fi
+
           # Login does not use a spinner, so no PTY needed
           echo "$OMNISTRATE_PASSWORD" | omnistrate-ctl login \
             --email "$OMNISTRATE_EMAIL" \
@@ -129,7 +140,7 @@ jobs:
 
           # update-kubeconfig uses a spinner that requires /dev/tty — wrap in script
           script -q -c \
-            "omnistrate-ctl deployment-cell update-kubeconfig \"$CLUSTER\" --role cluster-admin --kubeconfig /tmp/kubeconfig" \
+            "omnistrate-ctl deployment-cell update-kubeconfig \"$DEPLOYMENT_CELL\" --role cluster-admin --kubeconfig /tmp/kubeconfig" \
             /dev/null
 
           echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
