@@ -360,8 +360,8 @@ spec:
                     }
 
                     rule {
-                      source_labels     = ["__meta_kubernetes_pod_container_name"]
-                      target_label      = "container"
+                      target_label  = "container"
+                      replacement   = "sentinel"
                     }
                   }
 
