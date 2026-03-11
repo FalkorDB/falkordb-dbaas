@@ -361,7 +361,7 @@ spec:
 
                     rule {
                       target_label  = "container"
-                      replacement   = "sentinel"            
+                      replacement   = "sentinel"
                     }
                   }
 
