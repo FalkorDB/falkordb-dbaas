@@ -73,21 +73,7 @@ spec:
           expr: |-
             count by (cluster) (
               max by (cluster,kubernetes_io_hostname) (
-                up{job="cadvisor", eks_amazonaws_com_nodegroup=~"omnistrate-ec2-node-group-hc-hmmypzjo0-132-ap-south-1(a|b|c)"} == 1
-              )
-            ) > 2
-          for: 10m
-          labels:
-            severity: info
-            cluster: '{{ $labels.cluster }}'
-        - alert: KubeEksObservabilityNodePoolAboveTarget
-          annotations:
-            description: '[cluster={{ $labels.cluster }}] EKS observability node pool has {{ $value }} ready nodes, above target of 2.'
-            summary: EKS observability node pool is above target node count.
-          expr: |-
-            count by (cluster) (
-              max by (cluster,kubernetes_io_hostname) (
-                up{job="cadvisor", eks_amazonaws_com_nodegroup="observability"} == 1
+                up{job="cadvisor", eks_amazonaws_com_nodegroup=~"omnistrate-ec2-node-group-hc-.*"} == 1
               )
             ) > 2
           for: 10m
