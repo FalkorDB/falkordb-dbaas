@@ -10,7 +10,7 @@ data "aws_iam_policy_document" "cluster_user_policy" {
   statement {
     effect = "Allow"
 
-    actions   = ["eks:ListClusters", "eks:DescribeCluster"]
+    actions   = ["eks:ListClusters", "eks:DescribeCluster", "eks:ListNodegroups", "eks:DescribeNodegroup", "eks:CreateNodegroup", "eks:DeleteNodegroup"]
     resources = ["*"]
   }
 
