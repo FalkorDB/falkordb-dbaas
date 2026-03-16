@@ -1428,7 +1428,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "redis_slowlog_history_last_ten{namespace=\"$namespace\", pod=\"$pod\", container=~\"$container\"}",
+          "expr": "redis_slowlog_history_last_ten{namespace=~\"$namespace\", pod=~\"$pod\", container=~\"$container\"}",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
