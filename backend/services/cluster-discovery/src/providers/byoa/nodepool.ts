@@ -2,7 +2,9 @@ import { Cluster } from '../../types';
 import logger from '../../logger';
 import { EKSClient, DescribeClusterCommand, CreateNodegroupCommand } from '@aws-sdk/client-eks';
 import { ClusterManagerClient } from '@google-cloud/container';
-import { getAWSBYOACredentials, getGCPBYOACredentials } from './credentials';
+import { ContainerServiceClient } from '@azure/arm-containerservice';
+import { getAWSBYOACredentials, getAzureBYOACredentials, getGCPBYOACredentials } from './credentials';
+import { findAzureBYOAResourceGroup } from './azure-utils';
 
 export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Promise<void> {
   try {
@@ -161,6 +163,72 @@ export async function createObservabilityNodePoolAWSBYOA(cluster: Cluster): Prom
         errorDetails: error,
       },
       'Failed to create observability node pool for BYOA AWS cluster',
+    );
+  }
+}
+
+const OBSERVABILITY_POOL_NAME = 'observability';
+
+export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Promise<void> {
+  try {
+    if (!cluster.destinationAccountID) {
+      logger.error({ cluster: cluster.name }, 'Missing destinationAccountID for BYOA Azure cluster');
+      return;
+    }
+
+    const { subscriptionId, credential } = await getAzureBYOACredentials(cluster).catch((error) => {
+      logger.error(
+        {
+          cluster: cluster.name,
+          errorName: error?.name,
+          errorMessage: error?.message,
+          errorStack: error?.stack,
+          errorDetails: error,
+        },
+        'Failed to get Azure BYOA credentials',
+      );
+      throw error;
+    });
+
+    const client = new ContainerServiceClient(credential, subscriptionId);
+
+    const resourceGroup = await findAzureBYOAResourceGroup(client, subscriptionId, cluster.name);
+
+    // Check if the observability agent pool already exists
+    try {
+      await client.agentPools.get(resourceGroup, cluster.name, OBSERVABILITY_POOL_NAME);
+      logger.info({ cluster: cluster.name }, 'Observability node pool already exists.');
+      return;
+    } catch (error: any) {
+      if (error.statusCode !== 404 && error.code !== 'ResourceNotFound' && error.code !== 'AgentPoolNotFound') {
+        throw error;
+      }
+      // 404 / ResourceNotFound means the pool does not exist – proceed to create it
+    }
+
+    await client.agentPools.beginCreateOrUpdateAndWait(resourceGroup, cluster.name, OBSERVABILITY_POOL_NAME, {
+      count: 1,
+      vmSize: 'Standard_D2s_v3',
+      osDiskSizeGB: 50,
+      enableAutoScaling: true,
+      minCount: 1,
+      maxCount: 10,
+      mode: 'User',
+      nodeLabels: { node_pool: OBSERVABILITY_POOL_NAME },
+      type: 'VirtualMachineScaleSets',
+    });
+
+    logger.info({ cluster: cluster.name }, 'Observability node pool created for BYOA Azure cluster.');
+  } catch (error) {
+    logger.error(
+      {
+        cluster: cluster.name,
+        errorName: (error as any)?.name,
+        errorMessage: (error as any)?.message,
+        errorStack: (error as any)?.stack,
+        errorDetails: error,
+      },
+      'Failed to create observability node pool for BYOA Azure cluster',
     );
   }
 }
