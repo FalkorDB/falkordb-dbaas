@@ -18,7 +18,7 @@ spec:
             node_pool: observability-resources-large
           persistentVolume:
             enabled: true
-            size: 500Gi
+            size: 1Ti
           resources:
             requests:
               memory: "6Gi"
