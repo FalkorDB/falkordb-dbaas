@@ -38,6 +38,48 @@ spec:
           labels:
             severity: warning
             cluster: '{{ $labels.cluster }}'
+        - alert: KubeDefaultNodePoolAboveTarget
+          annotations:
+            description: '[cluster={{ $labels.cluster }}] Default app-plane node pool has {{ $value }} ready nodes, above target of 2.'
+            summary: Default node pool is above target node count.
+          expr: |-
+            count by (cluster) (
+              max by (cluster,kubernetes_io_hostname) (
+                up{job="cadvisor", kubernetes_io_hostname=~"gke-.*-default-.*"} == 1
+              )
+            ) > 2
+          for: 10m
+          labels:
+            severity: info
+            cluster: '{{ $labels.cluster }}'
+        - alert: KubeObservabilityNodePoolAboveTarget
+          annotations:
+            description: '[cluster={{ $labels.cluster }}] Observability node pool has {{ $value }} ready nodes, above target of 2.'
+            summary: Observability node pool is above target node count.
+          expr: |-
+            count by (cluster) (
+              max by (cluster,kubernetes_io_hostname) (
+                up{job="cadvisor", node_pool="observability"} == 1
+              )
+            ) > 2
+          for: 10m
+          labels:
+            severity: info
+            cluster: '{{ $labels.cluster }}'
+        - alert: KubeEksDefaultNodePoolAboveTarget
+          annotations:
+            description: '[cluster={{ $labels.cluster }}] EKS default node pool (omnistrate-ec2-node-group) has {{ $value }} ready nodes, above target of 2.'
+            summary: EKS default node pool is above target node count.
+          expr: |-
+            count by (cluster) (
+              max by (cluster,kubernetes_io_hostname) (
+                up{job="cadvisor", eks_amazonaws_com_nodegroup=~"omnistrate-ec2-node-group-hc-.*"} == 1
+              )
+            ) > 2
+          for: 10m
+          labels:
+            severity: info
+            cluster: '{{ $labels.cluster }}'
         - alert: KubeCPUQuotaOvercommit
           annotations:
             description: Cluster {{ $labels.cluster }}  has overcommitted CPU resource requests for Namespaces.
