@@ -1,8 +1,10 @@
 import { Cluster } from '../types';
 import { createObservabilityNodePool as createObservabilityNodePoolGCP } from './gcp/nodepool';
 import { createObservabilityNodePool as createObservabilityNodePoolAWS } from './aws/nodepool';
+import { createObservabilityNodePool as createObservabilityNodePoolAzure } from './azure/nodepool';
 import { deleteObservabilityNodePool as deleteObservabilityNodePoolGCP } from './gcp/nodepool-delete';
 import { deleteObservabilityNodePool as deleteObservabilityNodePoolAWS } from './aws/nodepool-delete';
+import { deleteObservabilityNodePool as deleteObservabilityNodePoolAzure } from './azure/nodepool-delete';
 import logger from '../logger';
 import { createObservabilityNodePoolAWSBYOA, createObservabilityNodePoolGCPBYOA } from './byoa/nodepool';
 import { deleteObservabilityNodePoolAWSBYOA, deleteObservabilityNodePoolGCPBYOA } from './byoa/nodepool-delete';
@@ -32,6 +34,8 @@ export function createObservabilityNodePool(cluster: Cluster) {
       return createObservabilityNodePoolGCP(cluster);
     case 'aws':
       return createObservabilityNodePoolAWS(cluster);
+    case 'azure':
+      return createObservabilityNodePoolAzure(cluster);
     default:
       logger.warn(`Skip node pool creation for cloud provider ${cluster.cloud}`);
   }
@@ -62,13 +66,15 @@ export function deleteObservabilityNodePool(cluster: Cluster) {
       return deleteObservabilityNodePoolGCP(cluster);
     case 'aws':
       return deleteObservabilityNodePoolAWS(cluster);
+    case 'azure':
+      return deleteObservabilityNodePoolAzure(cluster);
     default:
       logger.warn(`Skip node pool deletion for cloud provider ${cluster.cloud}`);
   }
 }
 
 // Re-export individual provider functions if needed
-export { createObservabilityNodePoolGCP, createObservabilityNodePoolAWS };
+export { createObservabilityNodePoolGCP, createObservabilityNodePoolAWS, createObservabilityNodePoolAzure };
 export { createObservabilityNodePoolAWSBYOA, createObservabilityNodePoolGCPBYOA };
-export { deleteObservabilityNodePoolGCP, deleteObservabilityNodePoolAWS };
+export { deleteObservabilityNodePoolGCP, deleteObservabilityNodePoolAWS, deleteObservabilityNodePoolAzure };
 export { deleteObservabilityNodePoolAWSBYOA, deleteObservabilityNodePoolGCPBYOA };
