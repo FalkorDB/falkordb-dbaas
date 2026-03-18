@@ -12,14 +12,6 @@ data "azurerm_subscription" "current" {
   subscription_id = var.subscription_id
 }
 
-data "azuread_directory_roles" "all" {}
-
-locals {
-  cloud_app_admin_role_id = [for role in data.azuread_directory_roles.all.roles :
-    role.object_id if role.display_name == "Cloud Application Administrator"
-  ][0]
-}
-
 locals {
   base_name        = lower(replace("${var.name_prefix}-${var.environment}", "/[^0-9a-z-]/", "-"))
   aad_display_name = coalesce(var.argocd_aad_application_name, "${local.base_name}-argocd-aks-access")
@@ -184,6 +176,8 @@ resource "azurerm_role_assignment" "github_actions_user_access_administrator" {
 resource "azuread_directory_role_assignment" "github_actions_application_administrator" {
   count = var.create_github_actions_identity && var.grant_github_actions_application_administrator_role ? 1 : 0
 
-  role_id             = local.cloud_app_admin_role_id
+  # Well-known template ID for "Cloud Application Administrator" — stable across all tenants.
+  # Using a hardcoded template ID prevents unnecessary replacements from data source object_id drift.
+  role_id             = "158c047a-c907-4556-b7ef-446551a6b5f7"
   principal_object_id = azuread_service_principal.github_actions[0].object_id
 }
