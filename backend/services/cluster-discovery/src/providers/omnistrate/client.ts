@@ -76,6 +76,7 @@ async function getClusters(): Promise<Cluster[]> {
         hostMode: 'byoa',
         destinationAccountNumber: account?.cloudAccountNumber,
         organizationId: account?.organizationId,
+        azureResourceGroupName: cell.azureResourceGroupName,
       });
       logger.info(`Discovered BYOA cluster ${cell.id} in region ${cell.region}`);
     } catch (error) {
@@ -156,6 +157,7 @@ export class OmnistrateClient {
       customer_email?: string;
       intermediaryAccountID?: string;
       destinationAccountID: string;
+      azureResourceGroupName?: string;
     }[]
   > {
     const response = await OmnistrateClient._client.get(`/2022-09-01-00/fleet/host-clusters`);
@@ -169,6 +171,8 @@ export class OmnistrateClient {
         customer_email: hc.customer_email,
         intermediaryAccountID: hc.intermediaryAccountDetail?.intermediaryAccountID,
         destinationAccountID: hc.accountID,
+        azureResourceGroupName: hc.cloudProvider === 'azure' ? `rg-${hc.region}-${hc.id}` : undefined,
+
       })) || []
     ).filter(
       (hc: any) =>

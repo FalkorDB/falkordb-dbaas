@@ -55,7 +55,7 @@ export async function discoverAzureClusters(): Promise<{ clusters: Cluster[] }> 
     clusters.push({
       name: cluster.name,
       endpoint: `https://${cluster.fqdn}`,
-      labels: cluster.tags,
+      labels: { ...cluster.tags, 'azure-resource-group': resourceGroup },
       cloud: 'azure',
       region: cluster.location,
       secretConfig: {

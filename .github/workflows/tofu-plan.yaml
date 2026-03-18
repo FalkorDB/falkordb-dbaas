@@ -79,6 +79,8 @@ jobs:
           TF_ARGOCD_SA_ID: ${{ secrets.TF_ARGOCD_SA_ID }}
           TF_OMNISTRATE_SERVICE_ID: ${{ secrets.TF_OMNISTRATE_SERVICE_ID }}
           TF_OMNISTRATE_ENVIRONMENT_ID: ${{ secrets.TF_OMNISTRATE_ENVIRONMENT_ID }}
+          TF_AZURE_SUBSCRIPTION_ID: ${{ secrets.TF_AZURE_SUBSCRIPTION_ID }}
+          TF_AZURE_TENANT_ID: ${{ secrets.TF_AZURE_TENANT_ID }}
         run: |
           json='${{ toJson(matrix) }}'
           # Resolve $VARS from the environment without re-serializing JSON.
@@ -111,6 +113,14 @@ jobs:
         uses: "google-github-actions/setup-gcloud@v3.0.1"
         with:
           version: ">= 363.0.0"
+
+      - name: Setup Azure Login
+        if: startsWith(matrix.stack.path, 'tofu/azure/')
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.TF_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.TF_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.TF_AZURE_SUBSCRIPTION_ID }}
 
       - name: Setup Tofu workspace
         run: |

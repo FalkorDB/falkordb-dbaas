@@ -4,6 +4,7 @@ import * as k8s from '@kubernetes/client-node';
 import { getK8sConfig } from '../../utils/k8s';
 import { getBastionCluster } from '../../integrations/bastion';
 import { GoogleAuth, OAuth2Client, Impersonated } from 'google-auth-library';
+import type { TokenCredential, AccessToken, GetTokenOptions } from '@azure/core-auth';
 
 export interface AWSCredentials {
   accessKeyId: string;
@@ -15,6 +16,11 @@ export interface AWSCredentials {
 export interface GCPCredentials {
   token: string;
   authClient: any; // Custom auth client wrapper
+}
+
+export interface AzureCredentials {
+  subscriptionId: string;
+  credential: TokenCredential;
 }
 
 /**
@@ -273,4 +279,60 @@ gcloud auth application-default print-access-token 2>&1
     token: impersonatedToken.trim(),
     authClient: wrappedAuthClient as any
   };
+}
+
+/**
+ * Retrieves Azure credentials for a BYOA cluster using Azure Workload Identity
+ * in the bastion cluster. Exchanges the workload identity token for an access token
+ * scoped to the customer's Azure subscription.
+ * @param cluster - Target cluster (destinationAccountID = customer subscription ID)
+ * @returns Azure credentials for the customer's subscription
+ */
+export async function getAzureBYOACredentials(cluster: Cluster): Promise<AzureCredentials> {
+  const subscriptionId = cluster.destinationAccountID;
+
+  // Get an access token and its expiry for the customer's Azure subscription from the bastion cluster.
+  // The bastion pod uses Azure Workload Identity to federate with Azure AD and can
+  // retrieve tokens scoped to the customer's subscription.
+  // Output format: "<accessToken>\t<expiresOn ISO8601>" using a multi-value JMESPath query.
+  const command = [
+    'sh',
+    '-c',
+    `az account get-access-token --subscription ${subscriptionId} --query "[accessToken,expiresOn]" -o tsv`,
+  ];
+
+  const output = await executePodCommandInBastion(command).catch((error) => {
+    logger.error(
+      {
+        cluster: cluster.name,
+        subscriptionId,
+        errorName: error?.name,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        errorDetails: error,
+      },
+      'Failed to get Azure access token from bastion for BYOA cluster',
+    );
+    throw error;
+  });
+
+  const [accessToken, expiresOnRaw] = output.trim().split('\t');
+
+  if (!accessToken) {
+    throw new Error(`Empty Azure access token received for subscription '${subscriptionId}'`);
+  }
+
+  // Parse the expiry returned by the Azure CLI (ISO 8601 string), falling back to 1 hour.
+  const parsedExpiry = expiresOnRaw ? Date.parse(expiresOnRaw) : NaN;
+  const expiresOnTimestamp = Number.isNaN(parsedExpiry) ? Date.now() + 3600 * 1000 : parsedExpiry;
+
+  // Wrap the static token in a TokenCredential compatible with the Azure SDK.
+  const credential: TokenCredential = {
+    getToken: async (_scopes: string | string[], _options?: GetTokenOptions): Promise<AccessToken> => ({
+      token: accessToken,
+      expiresOnTimestamp,
+    }),
+  };
+
+  return { subscriptionId, credential };
 }
