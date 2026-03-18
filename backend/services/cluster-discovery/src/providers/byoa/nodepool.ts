@@ -4,7 +4,6 @@ import { EKSClient, DescribeClusterCommand, CreateNodegroupCommand } from '@aws-
 import { ClusterManagerClient } from '@google-cloud/container';
 import { ContainerServiceClient } from '@azure/arm-containerservice';
 import { getAWSBYOACredentials, getAzureBYOACredentials, getGCPBYOACredentials } from './credentials';
-import { findAzureBYOAResourceGroup } from './azure-utils';
 
 export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Promise<void> {
   try {
@@ -192,11 +191,9 @@ export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
 
     const client = new ContainerServiceClient(credential, subscriptionId);
 
-    const resourceGroup = await findAzureBYOAResourceGroup(client, subscriptionId, cluster.name);
-
     // Check if the observability agent pool already exists
     try {
-      await client.agentPools.get(resourceGroup, cluster.name, OBSERVABILITY_POOL_NAME);
+      await client.agentPools.get(cluster.azureResourceGroupName, cluster.name, OBSERVABILITY_POOL_NAME);
       logger.info({ cluster: cluster.name }, 'Observability node pool already exists.');
       return;
     } catch (error: any) {
@@ -206,7 +203,7 @@ export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
       // 404 / ResourceNotFound means the pool does not exist – proceed to create it
     }
 
-    await client.agentPools.beginCreateOrUpdateAndWait(resourceGroup, cluster.name, OBSERVABILITY_POOL_NAME, {
+    await client.agentPools.beginCreateOrUpdateAndWait(cluster.azureResourceGroupName, cluster.name, OBSERVABILITY_POOL_NAME, {
       count: 1,
       vmSize: 'Standard_D2s_v3',
       osDiskSizeGB: 50,

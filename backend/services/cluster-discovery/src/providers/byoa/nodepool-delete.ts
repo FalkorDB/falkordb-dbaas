@@ -4,7 +4,6 @@ import { EKSClient, DeleteNodegroupCommand, DescribeNodegroupCommand } from '@aw
 import { ClusterManagerClient } from '@google-cloud/container';
 import { ContainerServiceClient } from '@azure/arm-containerservice';
 import { getAWSBYOACredentials, getAzureBYOACredentials, getGCPBYOACredentials } from './credentials';
-import { findAzureBYOAResourceGroup } from './azure-utils';
 
 export async function deleteObservabilityNodePoolGCPBYOA(cluster: Cluster): Promise<void> {
   try {
@@ -164,11 +163,9 @@ export async function deleteObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
 
     const client = new ContainerServiceClient(credential, subscriptionId);
 
-    const resourceGroup = await findAzureBYOAResourceGroup(client, subscriptionId, cluster.name);
-
     // Check if the observability agent pool exists before attempting deletion
     try {
-      await client.agentPools.get(resourceGroup, cluster.name, OBSERVABILITY_POOL_NAME);
+      await client.agentPools.get(cluster.azureResourceGroupName, cluster.name, OBSERVABILITY_POOL_NAME);
     } catch (error: any) {
       if (error.statusCode === 404 || error.code === 'ResourceNotFound' || error.code === 'AgentPoolNotFound') {
         logger.info({ cluster: cluster.name }, 'Observability node pool does not exist, nothing to delete.');
@@ -177,7 +174,7 @@ export async function deleteObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
       throw error;
     }
 
-    await client.agentPools.beginDeleteAndWait(resourceGroup, cluster.name, OBSERVABILITY_POOL_NAME);
+    await client.agentPools.beginDeleteAndWait(cluster.azureResourceGroupName, cluster.name, OBSERVABILITY_POOL_NAME);
 
     logger.info({ cluster: cluster.name }, 'Observability node pool deleted for BYOA Azure cluster.');
   } catch (error) {
