@@ -96,14 +96,12 @@ jobs:
         uses: opentofu/setup-opentofu@v1
 
       - name: Setup GCloud
-        if: startsWith(matrix.stack.path, 'tofu/gcp/')
         uses: "google-github-actions/auth@v3"
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
-        if: startsWith(matrix.stack.path, 'tofu/gcp/')
         uses: "google-github-actions/setup-gcloud@v3.0.1"
         with:
           version: ">= 363.0.0"
