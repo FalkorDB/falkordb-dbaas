@@ -2,7 +2,7 @@ import { Cluster } from '../../types';
 import logger from '../../logger';
 import { createContainerServiceClient, getResourceGroupForCluster } from './client';
 
-const OBSERVABILITY_POOL_NAME = 'observability';
+const OBSERVABILITY_POOL_NAME = 'observpool';
 
 export async function createObservabilityNodePool(cluster: Cluster): Promise<void> {
   try {
