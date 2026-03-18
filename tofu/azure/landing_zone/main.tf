@@ -140,6 +140,17 @@ resource "azurerm_role_assignment" "aks_rbac_cluster_admin" {
   skip_service_principal_aad_check = true
 }
 
+resource "azurerm_role_assignment" "aks_contributor_subscription" {
+  count = var.grant_aks_contributor_role_at_subscription ? 1 : 0
+
+  scope                = data.azurerm_subscription.current.id
+  role_definition_name = "Azure Kubernetes Service Contributor Role"
+  principal_id         = azuread_service_principal.argocd.object_id
+  principal_type       = "ServicePrincipal"
+
+  skip_service_principal_aad_check = true
+}
+
 resource "azurerm_role_assignment" "aks_contributor" {
   for_each = var.grant_aks_contributor_role ? local.aks_cluster_scopes : toset([])
 

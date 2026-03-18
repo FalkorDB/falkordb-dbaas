@@ -79,6 +79,12 @@ variable "grant_aks_rbac_cluster_admin_role" {
   default     = true
 }
 
+variable "grant_aks_contributor_role_at_subscription" {
+  description = "Grant Azure Kubernetes Service Contributor Role at subscription scope (required for cluster-discovery to provision node pools)."
+  type        = bool
+  default     = true
+}
+
 variable "grant_aks_contributor_role" {
   description = "Grant Azure Kubernetes Service Contributor Role on AKS clusters."
   type        = bool

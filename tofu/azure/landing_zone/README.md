@@ -7,7 +7,7 @@ The same Terraform files are used for all environments. Environment-specific val
 ## What This Creates
 
 1. Azure AD application, service principal, and client secret for ArgoCD/cluster-discovery Azure auth.
-2. Role assignments needed for discovery and AKS access (based on configured cluster scopes).
+2. Role assignments needed for discovery and AKS access by default (Reader, Cluster User, Cluster Admin, RBAC Cluster Admin, Contributor at subscription scope).
 3. A dedicated Azure AD application/service principal for GitHub Actions OIDC.
 4. Federated identity credentials for this repository (dev/prod environments, main/dev branches, pull requests).
 5. Subscription-level permissions and directory roles for GitHub Actions Terraform applies (Contributor, User Access Administrator, Cloud Application Administrator).
@@ -36,11 +36,13 @@ By default:
 
 1. Reader is granted at subscription scope to allow discovery operations.
 2. Azure Kubernetes Service Cluster User Role is granted at subscription scope.
-3. Azure Kubernetes Service RBAC Cluster Admin is granted at subscription scope.
+3. Azure Kubernetes Service Cluster Admin Role is granted at subscription scope (required for cluster admin credential access).
+4. Azure Kubernetes Service RBAC Cluster Admin is granted at subscription scope.
+5. Azure Kubernetes Service Contributor Role is granted at subscription scope (required for cluster-discovery to provision node pools).
 
 Optional toggles:
 
-1. grant_aks_contributor_role
+1. grant_aks_contributor_role (cluster-scoped, for granular per-cluster permissions)
 2. extra_cluster_role_definition_names
 
 ## GitHub Actions OIDC
