@@ -64,7 +64,7 @@ export async function executePodCommandInBastion(command: string[]): Promise<str
   let stderr = '';
 
   const { PassThrough } = require('stream');
-  
+
   const stdoutStream = new PassThrough();
   stdoutStream.on('data', (chunk) => {
     stdout += chunk.toString();
@@ -86,26 +86,26 @@ export async function executePodCommandInBastion(command: string[]): Promise<str
       null, // stdin
       false, // tty
     );
-    
+
     // Wait for streams to finish
     await new Promise((resolve) => {
       let stdoutEnded = false;
       let stderrEnded = false;
-      
+
       const checkBothEnded = () => {
         if (stdoutEnded && stderrEnded) resolve(undefined);
       };
-      
+
       stdoutStream.on('end', () => {
         stdoutEnded = true;
         checkBothEnded();
       });
-      
+
       stderrStream.on('end', () => {
         stderrEnded = true;
         checkBothEnded();
       });
-      
+
       // Timeout after 5 seconds
       setTimeout(() => resolve(undefined), 5000);
     });
@@ -222,7 +222,10 @@ gcloud auth application-default print-access-token 2>&1
   }
 
   if (!token.startsWith('ya29.')) {
-    logger.error({ cluster: cluster.name, output: token.substring(0, 200) }, 'Invalid GCP access token format received');
+    logger.error(
+      { cluster: cluster.name, output: token.substring(0, 200) },
+      'Invalid GCP access token format received',
+    );
     throw new Error('Invalid GCP access token format received');
   }
 
@@ -250,24 +253,24 @@ gcloud auth application-default print-access-token 2>&1
     async getRequestHeaders(url?: string) {
       // Create a plain object with headers
       const headers: any = {
-        'Authorization': `Bearer ${impersonatedToken.trim()}`
+        Authorization: `Bearer ${impersonatedToken.trim()}`,
       };
-      
-      // Add forEach method as a non-enumerable property so it won't be 
+
+      // Add forEach method as a non-enumerable property so it won't be
       // included when gRPC iterates over the headers object
       Object.defineProperty(headers, 'forEach', {
-        value: function(callback: (value: string, key: string) => void) {
+        value: function (callback: (value: string, key: string) => void) {
           Object.entries(headers).forEach(([key, value]) => {
             if (key !== 'forEach') {
               callback(value as string, key);
             }
           });
         },
-        enumerable: false,  // Critical: prevents forEach from being enumerated as a header
+        enumerable: false, // Critical: prevents forEach from being enumerated as a header
         writable: false,
-        configurable: false
+        configurable: false,
       });
-      
+
       return headers;
     },
     async getAccessToken() {
@@ -275,9 +278,9 @@ gcloud auth application-default print-access-token 2>&1
     },
   };
 
-  return { 
+  return {
     token: impersonatedToken.trim(),
-    authClient: wrappedAuthClient as any
+    authClient: wrappedAuthClient as any,
   };
 }
 
@@ -291,14 +294,18 @@ gcloud auth application-default print-access-token 2>&1
 export async function getAzureBYOACredentials(cluster: Cluster): Promise<AzureCredentials> {
   const subscriptionId = cluster.destinationAccountID;
 
-  // Get an access token and its expiry for the customer's Azure subscription from the bastion cluster.
-  // The bastion pod uses Azure Workload Identity to federate with Azure AD and can
-  // retrieve tokens scoped to the customer's subscription.
-  // Output format: "<accessToken>\t<expiresOn ISO8601>" using a multi-value JMESPath query.
+  // Get an access token by exchanging the federated token with Azure AD directly.
+  // The bastion pod uses Azure Workload Identity and exposes AZURE_FEDERATED_TOKEN_FILE.
   const command = [
     'sh',
     '-c',
-    `az account get-access-token --subscription ${subscriptionId} --query "[accessToken,expiresOn]" -o tsv`,
+    `FEDERATED_TOKEN=$(cat $AZURE_FEDERATED_TOKEN_FILE)
+  curl -X POST https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token \
+  -d "grant_type=client_credentials" \
+  -d "client_id=${cluster.azureClientId}" \
+  -d "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
+  -d "client_assertion=$FEDERATED_TOKEN" \
+  -d "scope=https://management.azure.com/.default"`,
   ];
 
   const output = await executePodCommandInBastion(command).catch((error) => {
@@ -316,15 +323,39 @@ export async function getAzureBYOACredentials(cluster: Cluster): Promise<AzureCr
     throw error;
   });
 
-  const [accessToken, expiresOnRaw] = output.trim().split('\t');
+  let tokenResponse: {
+    access_token?: string;
+    expires_in?: number | string;
+    error?: string;
+    error_description?: string;
+  };
+
+  try {
+    tokenResponse = JSON.parse(output.trim());
+  } catch (error) {
+    throw new Error(`Invalid Azure token response received: ${output.trim().slice(0, 300)}`);
+  }
+
+  if (tokenResponse.error) {
+    throw new Error(
+      `Azure token exchange failed: ${tokenResponse.error}${
+        tokenResponse.error_description ? ` - ${tokenResponse.error_description}` : ''
+      }`,
+    );
+  }
+
+  const accessToken = tokenResponse.access_token?.trim();
 
   if (!accessToken) {
     throw new Error(`Empty Azure access token received for subscription '${subscriptionId}'`);
   }
 
-  // Parse the expiry returned by the Azure CLI (ISO 8601 string), falling back to 1 hour.
-  const parsedExpiry = expiresOnRaw ? Date.parse(expiresOnRaw) : NaN;
-  const expiresOnTimestamp = Number.isNaN(parsedExpiry) ? Date.now() + 3600 * 1000 : parsedExpiry;
+  // Parse expiry from OAuth response (seconds), falling back to 1 hour.
+  const expiresInSeconds = Number(tokenResponse.expires_in);
+  const expiresOnTimestamp =
+    Number.isFinite(expiresInSeconds) && expiresInSeconds > 0
+      ? Date.now() + expiresInSeconds * 1000
+      : Date.now() + 3600 * 1000;
 
   // Wrap the static token in a TokenCredential compatible with the Azure SDK.
   const credential: TokenCredential = {

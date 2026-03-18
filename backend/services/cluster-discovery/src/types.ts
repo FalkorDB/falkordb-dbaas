@@ -13,6 +13,7 @@ export const ClusterSchema = yup.object({
   destinationAccountNumber: yup.string().optional(),
   organizationId: yup.string().optional(),
   azureResourceGroupName: yup.string().optional(),
+  azureClientId: yup.string().optional(),
 });
 
 // TypeScript type inferred from the schema

@@ -31,7 +31,7 @@ export async function createObservabilityNodePool(cluster: Cluster): Promise<voi
       minCount: 1,
       maxCount: 10,
       mode: 'User',
-      nodeLabels: { node_pool: OBSERVABILITY_POOL_NAME },
+      nodeLabels: { node_pool: "observability" },
       type: 'VirtualMachineScaleSets',
     });
 
