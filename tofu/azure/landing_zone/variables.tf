@@ -132,3 +132,9 @@ variable "grant_github_actions_user_access_administrator" {
   type        = bool
   default     = true
 }
+
+variable "grant_github_actions_application_administrator_role" {
+  description = "Grant Cloud Application Administrator Azure AD directory role to the GitHub Actions identity (required for managing Azure AD applications)."
+  type        = bool
+  default     = true
+}

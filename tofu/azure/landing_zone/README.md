@@ -10,7 +10,7 @@ The same Terraform files are used for all environments. Environment-specific val
 2. Role assignments needed for discovery and AKS access (based on configured cluster scopes).
 3. A dedicated Azure AD application/service principal for GitHub Actions OIDC.
 4. Federated identity credentials for this repository (dev/prod environments, main/dev branches, pull requests).
-5. Subscription-level permissions for GitHub Actions Terraform applies.
+5. Subscription-level permissions and directory roles for GitHub Actions Terraform applies (Contributor, User Access Administrator, Cloud Application Administrator).
 
 ## Authentication Model
 
@@ -49,8 +49,9 @@ When create_github_actions_identity is true (default), this stack creates a GitH
 
 1. Contributor at subscription scope.
 2. User Access Administrator at subscription scope.
+3. Cloud Application Administrator Azure AD directory role (for managing this stack's Azure AD applications).
 
-These permissions allow pipeline jobs to apply Terraform and manage role assignments.
+These permissions allow pipeline jobs to apply Terraform, manage role assignments, and update Azure AD applications for cluster auth bootstrapping.
 
 Use output github_actions_workflow_auth to populate the workflow secrets:
 
