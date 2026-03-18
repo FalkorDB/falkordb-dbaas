@@ -118,6 +118,17 @@ resource "azurerm_role_assignment" "aks_cluster_user" {
   skip_service_principal_aad_check = true
 }
 
+resource "azurerm_role_assignment" "aks_cluster_admin" {
+  count = var.grant_aks_cluster_admin_role ? 1 : 0
+
+  scope                = data.azurerm_subscription.current.id
+  role_definition_name = "Azure Kubernetes Service Cluster Admin Role"
+  principal_id         = azuread_service_principal.argocd.object_id
+  principal_type       = "ServicePrincipal"
+
+  skip_service_principal_aad_check = true
+}
+
 resource "azurerm_role_assignment" "aks_rbac_cluster_admin" {
   count = var.grant_aks_rbac_cluster_admin_role ? 1 : 0
 

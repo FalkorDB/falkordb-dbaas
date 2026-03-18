@@ -67,6 +67,12 @@ variable "grant_aks_cluster_user_role" {
   default     = true
 }
 
+variable "grant_aks_cluster_admin_role" {
+  description = "Grant Azure Kubernetes Service Cluster Admin Role at subscription scope (required for listClusterAdminCredential used by cluster-discovery)."
+  type        = bool
+  default     = true
+}
+
 variable "grant_aks_rbac_cluster_admin_role" {
   description = "Grant Azure Kubernetes Service RBAC Cluster Admin at subscription scope."
   type        = bool
