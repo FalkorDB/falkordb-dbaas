@@ -2,7 +2,7 @@ import { Cluster } from '../../types';
 import logger from '../../logger';
 import { createContainerServiceClient, getResourceGroupForCluster } from './client';
 
-const OBSERVABILITY_POOL_NAME = 'observpool';
+const OBSERVABILITY_POOL_NAME = 'obsrv';
 
 export async function deleteObservabilityNodePool(cluster: Cluster): Promise<void> {
   try {
