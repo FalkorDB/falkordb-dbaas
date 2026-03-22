@@ -25,7 +25,7 @@ export async function createObservabilityNodePool(cluster: Cluster): Promise<voi
 
     await client.agentPools.beginCreateOrUpdateAndWait(resourceGroup, cluster.name, OBSERVABILITY_POOL_NAME, {
       count: 1,
-      vmSize: 'Standard_B2as_v2',
+      vmSize: 'Standard_B2ms',
       osDiskSizeGB: 50,
       enableAutoScaling: true,
       minCount: 1,
