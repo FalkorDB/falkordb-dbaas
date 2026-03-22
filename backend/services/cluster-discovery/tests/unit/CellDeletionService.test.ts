@@ -14,7 +14,7 @@ describe('CellDeletionService', () => {
     mockOmnistrateClient = {
       getDeploymentCell: jest.fn(),
       getBYOCCloudAccounts: jest.fn(),
-      getAccountConfigs: jest.fn(),
+      getBYOAAccountConfigs: jest.fn(),
       getDeploymentCellCredentials: jest.fn(),
     } as any;
 
@@ -58,7 +58,7 @@ describe('CellDeletionService', () => {
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
-        mockOmnistrateClient.getAccountConfigs.mockResolvedValue([
+        mockOmnistrateClient.getBYOAAccountConfigs.mockResolvedValue([
           {
             id: 'cfg-test',
             azureTenantID: '',
@@ -74,7 +74,7 @@ describe('CellDeletionService', () => {
 
         // Assert
         expect(mockOmnistrateClient.getDeploymentCell).toHaveBeenCalledWith(deploymentCellId);
-        expect(mockOmnistrateClient.getAccountConfigs).toHaveBeenCalled();
+        expect(mockOmnistrateClient.getBYOAAccountConfigs).toHaveBeenCalled();
         expect(mockOmnistrateClient.getDeploymentCellCredentials).toHaveBeenCalledWith(deploymentCellId);
         expect(deleteObservabilityNodePool).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -120,7 +120,7 @@ describe('CellDeletionService', () => {
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
-        mockOmnistrateClient.getAccountConfigs.mockResolvedValue([
+        mockOmnistrateClient.getBYOAAccountConfigs.mockResolvedValue([
           {
             id: 'cfg-test',
             azureTenantID: '',
@@ -170,7 +170,7 @@ describe('CellDeletionService', () => {
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
-        mockOmnistrateClient.getAccountConfigs.mockResolvedValue([]);
+        mockOmnistrateClient.getBYOAAccountConfigs.mockResolvedValue([]);
         mockOmnistrateClient.getDeploymentCellCredentials.mockResolvedValue(mockCredentials);
         (deleteObservabilityNodePool as jest.Mock).mockResolvedValue(undefined);
 
@@ -208,7 +208,7 @@ describe('CellDeletionService', () => {
         await handleCellDeletion(deploymentCellId);
 
         // Assert
-        expect(mockOmnistrateClient.getAccountConfigs).not.toHaveBeenCalled();
+        expect(mockOmnistrateClient.getBYOAAccountConfigs).not.toHaveBeenCalled();
         expect(mockOmnistrateClient.getDeploymentCellCredentials).not.toHaveBeenCalled();
         expect(deleteObservabilityNodePool).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -299,7 +299,7 @@ describe('CellDeletionService', () => {
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
-        mockOmnistrateClient.getAccountConfigs.mockRejectedValue(new Error('API error'));
+        mockOmnistrateClient.getBYOAAccountConfigs.mockRejectedValue(new Error('API error'));
 
         // Act & Assert
         await expect(handleCellDeletion(deploymentCellId)).rejects.toThrow('API error');
@@ -320,7 +320,7 @@ describe('CellDeletionService', () => {
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
-        mockOmnistrateClient.getAccountConfigs.mockResolvedValue([]);
+        mockOmnistrateClient.getBYOAAccountConfigs.mockResolvedValue([]);
         mockOmnistrateClient.getDeploymentCellCredentials.mockRejectedValue(
           new Error('Credentials not available')
         );
