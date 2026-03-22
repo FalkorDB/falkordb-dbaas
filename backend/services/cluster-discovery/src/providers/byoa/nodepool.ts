@@ -166,7 +166,8 @@ export async function createObservabilityNodePoolAWSBYOA(cluster: Cluster): Prom
   }
 }
 
-const OBSERVABILITY_POOL_NAME = 'observability';
+// AKS agent pool names must be 1-12 chars, lowercase alphanumeric.
+const OBSERVABILITY_POOL_NAME = 'obsrv';
 
 export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Promise<void> {
   try {
