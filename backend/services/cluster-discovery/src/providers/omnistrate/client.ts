@@ -44,9 +44,7 @@ async function getClusters(): Promise<Cluster[]> {
 
   logger.info({ cellCount: deploymentCells.length }, `Found ${deploymentCells.length} BYOA deployment cells.`);
 
-  const byocCloudAccounts = await omnistrateClient.getBYOCCloudAccounts();
-
-  logger.info({ accountCount: byocCloudAccounts.length }, `Found ${byocCloudAccounts.length} BYOC cloud accounts.`);
+  const accountConfigs = await omnistrateClient.getAccountConfigs();
 
   const clusters: Cluster[] = [];
 
@@ -54,10 +52,9 @@ async function getClusters(): Promise<Cluster[]> {
     try {
       const credentials = await omnistrateClient.getDeploymentCellCredentials(cell.id);
       const clusterName = cell.cloudProvider === 'gcp' ? `c-${cell.id.replace(/-/g, '')}` : cell.id;
-      const account = byocCloudAccounts.find(
-        (account) =>
-          account.cloudProvider === cell.cloudProvider && account.cloudAccountId === cell.destinationAccountID,
-      );
+
+      const cloudAccountConfig = accountConfigs.find((acc) => acc.id === cell.accountConfigId);
+
       clusters.push({
         name: clusterName,
         cloud: cell.cloudProvider,
@@ -74,9 +71,10 @@ async function getClusters(): Promise<Cluster[]> {
           bearerToken: credentials.serviceAccountToken,
         },
         hostMode: 'byoa',
-        destinationAccountNumber: account?.cloudAccountNumber,
-        organizationId: account?.organizationId,
         azureResourceGroupName: cell.azureResourceGroupName,
+        destinationAccountNumber: cloudAccountConfig?.awsAccountID || cloudAccountConfig?.gcpProjectNumber,
+        azureClientId: cloudAccountConfig?.azureBootstrapUserClientID,
+        gcpServiceAccountEmail: cloudAccountConfig?.gcpServiceAccountEmail,
       });
       logger.info(`Discovered BYOA cluster ${cell.id} in region ${cell.region}`);
     } catch (error) {
@@ -149,11 +147,12 @@ export class OmnistrateClient {
     intermediaryAccountId?: string,
   ): Promise<
     {
-      cloudProvider: 'gcp' | 'aws' | 'azure';
+      cloudProvider: 'gcp' | 'aws' | 'azure' | 'azure';
       region: string;
       id: string;
       status: string;
       modelType: string;
+      accountConfigId: string;
       customer_email?: string;
       intermediaryAccountID?: string;
       destinationAccountID: string;
@@ -168,11 +167,11 @@ export class OmnistrateClient {
         id: hc.id,
         status: hc.status,
         modelType: hc.modelType,
+        accountConfigId: hc.accountConfigId,
         customer_email: hc.customer_email,
         intermediaryAccountID: hc.intermediaryAccountDetail?.intermediaryAccountID,
         destinationAccountID: hc.accountID,
         azureResourceGroupName: hc.cloudProvider === 'azure' ? `rg-${hc.region}-${hc.id}` : undefined,
-
       })) || []
     ).filter(
       (hc: any) =>
@@ -183,7 +182,7 @@ export class OmnistrateClient {
   }
 
   async getDeploymentCell(deploymentCellId: string): Promise<{
-    cloudProvider: 'gcp' | 'aws' | 'azure';
+    cloudProvider: 'gcp' | 'aws' | 'azure' | 'azure';
     region: string;
     id: string;
     status: string;
@@ -191,6 +190,7 @@ export class OmnistrateClient {
     customer_email?: string;
     intermediaryAccountID?: string;
     destinationAccountID: string;
+    accountConfigId: string;
   } | null> {
     return this.getDeploymentCells().then((cells) => {
       const cell = cells.find((c) => c.id === deploymentCellId);
@@ -230,7 +230,7 @@ export class OmnistrateClient {
 
   async getBYOCCloudAccounts(): Promise<
     {
-      cloudProvider: 'gcp' | 'aws';
+      cloudProvider: 'gcp' | 'aws' | 'azure';
       id: string;
       cloudAccountId: string;
       cloudAccountNumber: string;
@@ -256,5 +256,49 @@ export class OmnistrateClient {
       cloudAccountNumber: d.input_params.gcp_project_number ?? d.input_params.aws_account_id,
       organizationId: d.organizationId,
     }));
+  }
+
+  async getAccountConfig(id: string): Promise<{
+    id: string;
+    azureTenantID: string;
+    azureSubscriptionID: string;
+    azureBootstrapUserClientID?: string;
+    awsAccountID?: string;
+    awsBootstrapRoleARN?: string;
+    gcpProjectNumber?: string;
+    gcpProjectID?: string;
+    gcpServiceAccountEmail?: string;
+  }> {
+    const response = await OmnistrateClient._client.get(`/2022-09-01-00/fleet/account-configs/${id}`);
+    const data = response.data;
+    return {
+      id: data.id,
+      azureTenantID: data.azureTenantID,
+      azureSubscriptionID: data.azureSubscriptionID,
+      azureBootstrapUserClientID: data.azureBootstrapUserClientID,
+      awsAccountID: data.awsAccountID,
+      awsBootstrapRoleARN: data.awsBootstrapRoleARN,
+      gcpProjectNumber: data.gcpProjectNumber,
+      gcpProjectID: data.gcpProjectID,
+      gcpServiceAccountEmail: data.gcpServiceAccountEmail,
+    };
+  }
+
+  async getAccountConfigs(): Promise<
+    {
+      id: string;
+      azureTenantID: string;
+      azureSubscriptionID: string;
+      azureBootstrapUserClientID?: string;
+      awsAccountID?: string;
+      awsBootstrapRoleARN?: string;
+      gcpProjectNumber?: string;
+      gcpProjectID?: string;
+      gcpServiceAccountEmail?: string;
+    }[]
+  > {
+    const response = await OmnistrateClient._client.get(`/2022-09-01-00/accountconfig/cloudprovider/all'`);
+    const data = response.data.ids;
+    return await Promise.all(data.map((id: string) => this.getAccountConfig(id)));
   }
 }

@@ -233,7 +233,7 @@ gcloud auth application-default print-access-token 2>&1
   const oauthClient = new OAuth2Client();
   oauthClient.setCredentials({ access_token: token });
 
-  const serviceAccountEmail = `bootstrap-${cluster.organizationId}@${cluster.destinationAccountID}.iam.gserviceaccount.com`;
+  const serviceAccountEmail = cluster.gcpServiceAccountEmail;
 
   const impersonatedClient = new Impersonated({
     sourceClient: oauthClient,

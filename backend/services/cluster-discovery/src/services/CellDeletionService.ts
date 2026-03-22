@@ -10,6 +10,7 @@ interface DeploymentCell {
   status: string;
   modelType: string;
   destinationAccountID: string;
+  accountConfigId: string;
 }
 
 export async function handleCellDeletion(deploymentCellId: string): Promise<void> {
@@ -77,15 +78,12 @@ async function buildBYOAClusterConfig(
   deploymentCell: DeploymentCell,
   clusterName: string,
 ): Promise<Partial<Cluster>> {
-  const [cloudAccounts, credentials] = await Promise.all([
-    client.getBYOCCloudAccounts(),
+  const [accountConfigs, credentials] = await Promise.all([
+    client.getAccountConfigs(),
     client.getDeploymentCellCredentials(deploymentCell.id),
   ]);
 
-  const account = cloudAccounts.find(
-    (acc) =>
-      acc.cloudProvider === deploymentCell.cloudProvider && acc.cloudAccountId === deploymentCell.destinationAccountID,
-  );
+  const account = accountConfigs.find((acc) => acc.id === deploymentCell.accountConfigId);
 
   if (!account) {
     logger.warn(
@@ -113,8 +111,9 @@ async function buildBYOAClusterConfig(
       bearerToken: credentials.serviceAccountToken,
     },
     hostMode: 'byoa' as const,
-    destinationAccountNumber: account?.cloudAccountNumber,
-    organizationId: account?.organizationId,
+    destinationAccountNumber: account?.awsAccountID || account?.gcpProjectNumber,
+    azureClientId: account?.azureBootstrapUserClientID,
+    gcpServiceAccountEmail: account?.gcpServiceAccountEmail,
   };
 }
 

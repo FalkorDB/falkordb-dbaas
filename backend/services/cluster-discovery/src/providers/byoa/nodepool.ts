@@ -205,7 +205,7 @@ export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
 
     await client.agentPools.beginCreateOrUpdateAndWait(cluster.azureResourceGroupName, cluster.name, OBSERVABILITY_POOL_NAME, {
       count: 1,
-      vmSize: 'Standard_D2s_v3',
+      vmSize: 'Standard_D2ps_v6',
       osDiskSizeGB: 50,
       enableAutoScaling: true,
       minCount: 1,
