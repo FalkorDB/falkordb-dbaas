@@ -269,7 +269,7 @@ export class OmnistrateClient {
     gcpProjectID?: string;
     gcpServiceAccountEmail?: string;
   }> {
-    const response = await OmnistrateClient._client.get(`/2022-09-01-00/fleet/account-configs/${id}`);
+    const response = await OmnistrateClient._client.get(`/2022-09-01-00/fleet/account-config/${id}`);
     const data = response.data;
     return {
       id: data.id,
