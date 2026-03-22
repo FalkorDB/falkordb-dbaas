@@ -300,7 +300,7 @@ export async function getAzureBYOACredentials(cluster: Cluster): Promise<AzureCr
     'sh',
     '-c',
     `FEDERATED_TOKEN=$(cat $AZURE_FEDERATED_TOKEN_FILE)
-  curl -X POST https://login.microsoftonline.com/$AZURE_TENANT_ID/oauth2/v2.0/token \
+  curl -X POST https://login.microsoftonline.com/${cluster.azureTenantId}/oauth2/v2.0/token \
   -d "grant_type=client_credentials" \
   -d "client_id=${cluster.azureClientId}" \
   -d "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \

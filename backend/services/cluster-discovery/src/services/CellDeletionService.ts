@@ -79,7 +79,7 @@ async function buildBYOAClusterConfig(
   clusterName: string,
 ): Promise<Partial<Cluster>> {
   const [accountConfigs, credentials] = await Promise.all([
-    client.getAccountConfigs(),
+    client.getBYOAAccountConfigs(),
     client.getDeploymentCellCredentials(deploymentCell.id),
   ]);
 
@@ -91,7 +91,7 @@ async function buildBYOAClusterConfig(
         deploymentCellId: deploymentCell.id,
         destinationAccountID: deploymentCell.destinationAccountID,
       },
-      'Could not find BYOC cloud account for deployment cell',
+      'Could not find BYOA cloud account for deployment cell',
     );
   }
 

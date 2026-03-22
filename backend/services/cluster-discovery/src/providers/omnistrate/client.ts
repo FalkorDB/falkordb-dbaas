@@ -44,7 +44,7 @@ async function getClusters(): Promise<Cluster[]> {
 
   logger.info({ cellCount: deploymentCells.length }, `Found ${deploymentCells.length} BYOA deployment cells.`);
 
-  const accountConfigs = await omnistrateClient.getAccountConfigs();
+  const accountConfigs = await omnistrateClient.getBYOAAccountConfigs();
 
   const clusters: Cluster[] = [];
 
@@ -74,6 +74,7 @@ async function getClusters(): Promise<Cluster[]> {
         azureResourceGroupName: cell.azureResourceGroupName,
         destinationAccountNumber: cloudAccountConfig?.awsAccountID || cloudAccountConfig?.gcpProjectNumber,
         azureClientId: cloudAccountConfig?.azureBootstrapUserClientID,
+        azureTenantId: cloudAccountConfig?.azureTenantID,
         gcpServiceAccountEmail: cloudAccountConfig?.gcpServiceAccountEmail,
       });
       logger.info(`Discovered BYOA cluster ${cell.id} in region ${cell.region}`);
@@ -284,7 +285,7 @@ export class OmnistrateClient {
     };
   }
 
-  async getAccountConfigs(): Promise<
+  async getBYOAAccountConfigs(): Promise<
     {
       id: string;
       azureTenantID: string;
@@ -297,8 +298,8 @@ export class OmnistrateClient {
       gcpServiceAccountEmail?: string;
     }[]
   > {
-    const response = await OmnistrateClient._client.get(`/2022-09-01-00/accountconfig/cloudprovider/all`);
-    const data = response.data.ids;
-    return await Promise.all(data.map((id: string) => this.getAccountConfig(id)));
+    const byoa = await this.getBYOCCloudAccounts();
+    const accIds = byoa.map((acc) => acc.id);
+    return await Promise.all(accIds.map((id: string) => this.getAccountConfig(id)));
   }
 }
