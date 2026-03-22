@@ -297,7 +297,7 @@ export class OmnistrateClient {
       gcpServiceAccountEmail?: string;
     }[]
   > {
-    const response = await OmnistrateClient._client.get(`/2022-09-01-00/accountconfig/cloudprovider/all'`);
+    const response = await OmnistrateClient._client.get(`/2022-09-01-00/accountconfig/cloudprovider/all`);
     const data = response.data.ids;
     return await Promise.all(data.map((id: string) => this.getAccountConfig(id)));
   }
