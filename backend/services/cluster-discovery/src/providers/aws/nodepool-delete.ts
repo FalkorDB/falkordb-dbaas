@@ -19,7 +19,7 @@ export async function deleteObservabilityNodePool(cluster: Cluster): Promise<voi
     } catch (error: any) {
       if (error.name === 'ResourceNotFoundException') {
         logger.info({ cluster: cluster.name }, 'Observability node pool does not exist, nothing to delete.');
-        return;
+      return;
       }
       throw error;
     }

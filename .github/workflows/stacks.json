@@ -37,5 +37,15 @@
       "TF_VAR_argocd_sa_id": "TF_ARGOCD_SA_ID"
     },
     "init_param": "-backend-config=bucket=TF_STATE_BUCKET" 
+  },
+  {
+    "name": "azure_landing_zone",
+    "path": "tofu/azure/landing_zone",
+    "variables": {
+      "TF_VAR_subscription_id": "TF_AZURE_SUBSCRIPTION_ID",
+      "TF_VAR_tenant_id": "TF_AZURE_TENANT_ID",
+      "TF_VAR_environment": "TF_ENVIRONMENT"
+    },
+    "init_param": "-backend-config=bucket=TF_STATE_BUCKET"
   }
 ]
