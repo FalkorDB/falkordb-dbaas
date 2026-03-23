@@ -19,7 +19,6 @@ export interface GCPCredentials {
 }
 
 export interface AzureCredentials {
-  subscriptionId: string;
   credential: TokenCredential;
 }
 
@@ -291,8 +290,6 @@ gcloud auth application-default print-access-token 2>&1
  * @returns Azure credentials for the customer's subscription
  */
 export async function getAzureBYOACredentials(cluster: Cluster): Promise<AzureCredentials> {
-  const subscriptionId = cluster.azureTenantId;
-
   // Get an access token by exchanging the federated token with Azure AD directly.
   // The bastion pod uses Azure Workload Identity and exposes AZURE_FEDERATED_TOKEN_FILE.
   const command = [
@@ -311,7 +308,6 @@ export async function getAzureBYOACredentials(cluster: Cluster): Promise<AzureCr
     logger.error(
       {
         cluster: cluster.name,
-        subscriptionId,
         errorName: error?.name,
         errorMessage: error?.message,
         errorStack: error?.stack,
@@ -346,7 +342,7 @@ export async function getAzureBYOACredentials(cluster: Cluster): Promise<AzureCr
   const accessToken = tokenResponse.access_token?.trim();
 
   if (!accessToken) {
-    throw new Error(`Empty Azure access token received for subscription '${subscriptionId}'`);
+    throw new Error(`Empty Azure access token received for subscription '${cluster.azureSubscriptionId}'`);
   }
 
   // Parse expiry from OAuth response (seconds), falling back to 1 hour.
@@ -364,5 +360,5 @@ export async function getAzureBYOACredentials(cluster: Cluster): Promise<AzureCr
     }),
   };
 
-  return { subscriptionId, credential };
+  return { credential };
 }

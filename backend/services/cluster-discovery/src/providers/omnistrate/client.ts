@@ -73,6 +73,7 @@ async function getClusters(): Promise<Cluster[]> {
         azureResourceGroupName: cell.azureResourceGroupName,
         azureClientId: cloudAccountConfig?.azureBootstrapUserClientID,
         azureTenantId: cloudAccountConfig?.azureTenantID,
+        azureSubscriptionId: cloudAccountConfig?.azureSubscriptionID,
         gcpServiceAccountEmail: cloudAccountConfig?.gcpServiceAccountEmail,
         awsAccountID: cloudAccountConfig?.awsAccountID,
         awsRoleARN: cloudAccountConfig?.awsBootstrapRoleARN,

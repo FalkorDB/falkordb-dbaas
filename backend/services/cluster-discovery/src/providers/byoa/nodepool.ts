@@ -176,7 +176,7 @@ export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
       return;
     }
 
-    const { subscriptionId, credential } = await getAzureBYOACredentials(cluster).catch((error) => {
+    const { credential } = await getAzureBYOACredentials(cluster).catch((error) => {
       logger.error(
         {
           cluster: cluster.name,
@@ -190,7 +190,7 @@ export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
       throw error;
     });
 
-    const client = new ContainerServiceClient(credential, subscriptionId);
+    const client = new ContainerServiceClient(credential, cluster.azureSubscriptionId);
 
     // Check if the observability agent pool already exists
     try {

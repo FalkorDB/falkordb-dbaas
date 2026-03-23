@@ -145,7 +145,7 @@ export async function deleteObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
       return;
     }
 
-    const { subscriptionId, credential } = await getAzureBYOACredentials(cluster).catch((error) => {
+    const { credential } = await getAzureBYOACredentials(cluster).catch((error) => {
       logger.error(
         {
           cluster: cluster.name,
@@ -159,7 +159,7 @@ export async function deleteObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
       throw error;
     });
 
-    const client = new ContainerServiceClient(credential, subscriptionId);
+    const client = new ContainerServiceClient(credential, cluster.azureSubscriptionId);
 
     // Check if the observability agent pool exists before attempting deletion
     try {

@@ -12,6 +12,7 @@ export const ClusterSchema = yup.object({
   azureResourceGroupName: yup.string().optional(),
   azureClientId: yup.string().optional(),
   azureTenantId: yup.string().optional(),
+  azureSubscriptionId: yup.string().optional(),
   gcpServiceAccountEmail: yup.string().optional(),
   gcpAccountNumber: yup.string().optional(),
   gcpAccountID: yup.string().optional(),
