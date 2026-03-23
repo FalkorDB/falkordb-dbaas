@@ -9,7 +9,8 @@ interface DeploymentCell {
   id: string;
   status: string;
   modelType: string;
-  destinationAccountID: string;
+  destinationAccountID?: string;
+  accountConfigId: string;
 }
 
 export async function handleCellDeletion(deploymentCellId: string): Promise<void> {
@@ -77,15 +78,12 @@ async function buildBYOAClusterConfig(
   deploymentCell: DeploymentCell,
   clusterName: string,
 ): Promise<Partial<Cluster>> {
-  const [cloudAccounts, credentials] = await Promise.all([
-    client.getBYOCCloudAccounts(),
+  const [accountConfigs, credentials] = await Promise.all([
+    client.getBYOAAccountConfigs(),
     client.getDeploymentCellCredentials(deploymentCell.id),
   ]);
 
-  const account = cloudAccounts.find(
-    (acc) =>
-      acc.cloudProvider === deploymentCell.cloudProvider && acc.cloudAccountId === deploymentCell.destinationAccountID,
-  );
+  const account = accountConfigs.find((acc) => acc.id === deploymentCell.accountConfigId);
 
   if (!account) {
     logger.warn(
@@ -93,7 +91,7 @@ async function buildBYOAClusterConfig(
         deploymentCellId: deploymentCell.id,
         destinationAccountID: deploymentCell.destinationAccountID,
       },
-      'Could not find BYOC cloud account for deployment cell',
+      'Could not find BYOA cloud account for deployment cell',
     );
   }
 
@@ -102,7 +100,6 @@ async function buildBYOAClusterConfig(
     cloud: deploymentCell.cloudProvider,
     region: deploymentCell.region,
     endpoint: credentials.apiServerEndpoint,
-    destinationAccountID: deploymentCell.destinationAccountID,
     secretConfig: {
       tlsClientConfig: {
         insecure: false,
@@ -113,8 +110,15 @@ async function buildBYOAClusterConfig(
       bearerToken: credentials.serviceAccountToken,
     },
     hostMode: 'byoa' as const,
-    destinationAccountNumber: account?.cloudAccountNumber,
-    organizationId: account?.organizationId,
+    azureClientId: account?.azureBootstrapUserClientID,
+    gcpServiceAccountEmail: account?.gcpServiceAccountEmail,
+    azureResourceGroupName:
+      deploymentCell.cloudProvider === 'azure' ? `rg-${deploymentCell.region}-${deploymentCell.id}` : undefined,
+    azureTenantId: account?.azureTenantID,
+    awsAccountID: account?.awsAccountID,
+    awsRoleARN: account?.awsBootstrapRoleARN,
+    gcpAccountID: account?.gcpProjectID,
+    gcpAccountNumber: account?.gcpProjectNumber,
   };
 }
 
