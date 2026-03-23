@@ -4,6 +4,7 @@ import * as k8s from '@kubernetes/client-node';
 import { getK8sConfig } from '../../utils/k8s';
 import { getBastionCluster } from '../../integrations/bastion';
 import { GoogleAuth, OAuth2Client, Impersonated } from 'google-auth-library';
+import type { TokenCredential, AccessToken, GetTokenOptions } from '@azure/core-auth';
 
 export interface AWSCredentials {
   accessKeyId: string;
@@ -15,6 +16,10 @@ export interface AWSCredentials {
 export interface GCPCredentials {
   token: string;
   authClient: any; // Custom auth client wrapper
+}
+
+export interface AzureCredentials {
+  credential: TokenCredential;
 }
 
 /**
@@ -58,7 +63,7 @@ export async function executePodCommandInBastion(command: string[]): Promise<str
   let stderr = '';
 
   const { PassThrough } = require('stream');
-  
+
   const stdoutStream = new PassThrough();
   stdoutStream.on('data', (chunk) => {
     stdout += chunk.toString();
@@ -80,26 +85,26 @@ export async function executePodCommandInBastion(command: string[]): Promise<str
       null, // stdin
       false, // tty
     );
-    
+
     // Wait for streams to finish
     await new Promise((resolve) => {
       let stdoutEnded = false;
       let stderrEnded = false;
-      
+
       const checkBothEnded = () => {
         if (stdoutEnded && stderrEnded) resolve(undefined);
       };
-      
+
       stdoutStream.on('end', () => {
         stdoutEnded = true;
         checkBothEnded();
       });
-      
+
       stderrStream.on('end', () => {
         stderrEnded = true;
         checkBothEnded();
       });
-      
+
       // Timeout after 5 seconds
       setTimeout(() => resolve(undefined), 5000);
     });
@@ -140,14 +145,13 @@ export async function executePodCommandInBastion(command: string[]): Promise<str
  * @returns AWS credentials
  */
 export async function getAWSBYOACredentials(cluster: Cluster): Promise<AWSCredentials> {
-  const roleArn = `arn:aws:iam::${cluster.destinationAccountID}:role/omnistrate-bootstrap-role`;
-  const roleSessionName = `bootstrap-session-org-${cluster.destinationAccountID}`;
+  const roleSessionName = `bootstrap-session-org-${cluster.awsAccountID}`;
 
   const command = [
     'sh',
     '-c',
     `aws sts assume-role-with-web-identity \
-      --role-arn ${roleArn} \
+      --role-arn ${cluster.awsRoleARN} \
       --role-session-name ${roleSessionName} \
       --web-identity-token file://\$AWS_WEB_IDENTITY_TOKEN_FILE`,
   ];
@@ -170,7 +174,7 @@ export async function getAWSBYOACredentials(cluster: Cluster): Promise<AWSCreden
  * @returns GCP credentials with impersonated access token
  */
 export async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> {
-  const gcpProjectNumber = cluster.destinationAccountNumber; // GCP project number
+  const gcpProjectNumber = cluster.gcpAccountNumber; // GCP project number
   const audience = `//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov`;
 
   // Exchange AWS EKS service account token for GCP access token using Workload Identity Federation
@@ -216,7 +220,10 @@ gcloud auth application-default print-access-token 2>&1
   }
 
   if (!token.startsWith('ya29.')) {
-    logger.error({ cluster: cluster.name, output: token.substring(0, 200) }, 'Invalid GCP access token format received');
+    logger.error(
+      { cluster: cluster.name, output: token.substring(0, 200) },
+      'Invalid GCP access token format received',
+    );
     throw new Error('Invalid GCP access token format received');
   }
 
@@ -224,7 +231,7 @@ gcloud auth application-default print-access-token 2>&1
   const oauthClient = new OAuth2Client();
   oauthClient.setCredentials({ access_token: token });
 
-  const serviceAccountEmail = `bootstrap-${cluster.organizationId}@${cluster.destinationAccountID}.iam.gserviceaccount.com`;
+  const serviceAccountEmail = cluster.gcpServiceAccountEmail;
 
   const impersonatedClient = new Impersonated({
     sourceClient: oauthClient,
@@ -244,24 +251,24 @@ gcloud auth application-default print-access-token 2>&1
     async getRequestHeaders(url?: string) {
       // Create a plain object with headers
       const headers: any = {
-        'Authorization': `Bearer ${impersonatedToken.trim()}`
+        Authorization: `Bearer ${impersonatedToken.trim()}`,
       };
-      
-      // Add forEach method as a non-enumerable property so it won't be 
+
+      // Add forEach method as a non-enumerable property so it won't be
       // included when gRPC iterates over the headers object
       Object.defineProperty(headers, 'forEach', {
-        value: function(callback: (value: string, key: string) => void) {
+        value: function (callback: (value: string, key: string) => void) {
           Object.entries(headers).forEach(([key, value]) => {
             if (key !== 'forEach') {
               callback(value as string, key);
             }
           });
         },
-        enumerable: false,  // Critical: prevents forEach from being enumerated as a header
+        enumerable: false, // Critical: prevents forEach from being enumerated as a header
         writable: false,
-        configurable: false
+        configurable: false,
       });
-      
+
       return headers;
     },
     async getAccessToken() {
@@ -269,8 +276,89 @@ gcloud auth application-default print-access-token 2>&1
     },
   };
 
-  return { 
+  return {
     token: impersonatedToken.trim(),
-    authClient: wrappedAuthClient as any
+    authClient: wrappedAuthClient as any,
   };
+}
+
+/**
+ * Retrieves Azure credentials for a BYOA cluster using Azure Workload Identity
+ * in the bastion cluster. Exchanges the workload identity token for an access token
+ * scoped to the customer's Azure subscription.
+ * @param cluster - Target cluster (destinationAccountID = customer subscription ID)
+ * @returns Azure credentials for the customer's subscription
+ */
+export async function getAzureBYOACredentials(cluster: Cluster): Promise<AzureCredentials> {
+  // Get an access token by exchanging the federated token with Azure AD directly.
+  // The bastion pod uses Azure Workload Identity and exposes AZURE_FEDERATED_TOKEN_FILE.
+  const command = [
+    'sh',
+    '-c',
+    `FEDERATED_TOKEN=$(cat $AZURE_FEDERATED_TOKEN_FILE)
+  curl -X POST https://login.microsoftonline.com/${cluster.azureTenantId}/oauth2/v2.0/token \
+  -d "grant_type=client_credentials" \
+  -d "client_id=${cluster.azureClientId}" \
+  -d "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
+  -d "client_assertion=$FEDERATED_TOKEN" \
+  -d "scope=https://management.azure.com/.default"`,
+  ];
+
+  const output = await executePodCommandInBastion(command).catch((error) => {
+    logger.error(
+      {
+        cluster: cluster.name,
+        errorName: error?.name,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+        errorDetails: error,
+      },
+      'Failed to get Azure access token from bastion for BYOA cluster',
+    );
+    throw error;
+  });
+
+  let tokenResponse: {
+    access_token?: string;
+    expires_in?: number | string;
+    error?: string;
+    error_description?: string;
+  };
+
+  try {
+    tokenResponse = JSON.parse(output.trim());
+  } catch (error) {
+    throw new Error(`Invalid Azure token response received: ${output.trim().slice(0, 300)}`);
+  }
+
+  if (tokenResponse.error) {
+    throw new Error(
+      `Azure token exchange failed: ${tokenResponse.error}${
+        tokenResponse.error_description ? ` - ${tokenResponse.error_description}` : ''
+      }`,
+    );
+  }
+
+  const accessToken = tokenResponse.access_token?.trim();
+
+  if (!accessToken) {
+    throw new Error(`Empty Azure access token received for subscription '${cluster.azureSubscriptionId}'`);
+  }
+
+  // Parse expiry from OAuth response (seconds), falling back to 1 hour.
+  const expiresInSeconds = Number(tokenResponse.expires_in);
+  const expiresOnTimestamp =
+    Number.isFinite(expiresInSeconds) && expiresInSeconds > 0
+      ? Date.now() + expiresInSeconds * 1000
+      : Date.now() + 3600 * 1000;
+
+  // Wrap the static token in a TokenCredential compatible with the Azure SDK.
+  const credential: TokenCredential = {
+    getToken: async (_scopes: string | string[], _options?: GetTokenOptions): Promise<AccessToken> => ({
+      token: accessToken,
+      expiresOnTimestamp,
+    }),
+  };
+
+  return { credential };
 }

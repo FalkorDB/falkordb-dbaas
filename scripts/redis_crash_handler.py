@@ -1029,7 +1029,7 @@ class GrafanaLinkGenerator:
         encoded_query = quote(query)
         
         # Construct Grafana explore URL
-        grafana_url = f"{self.base_url}/explore?left=%5B%22{from_ms}%22,%22{to_ms}%22,%22Loki%22,%7B%22expr%22:%22{encoded_query}%22%7D%5D"
+        grafana_url = f"{self.base_url}/explore?left=%5B%22{from_ms}%22,%22{to_ms}%22,%22VictoriaLogs%22,%7B%22expr%22:%22{encoded_query}%22%7D%5D"
         
         return grafana_url
 
