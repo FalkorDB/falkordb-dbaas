@@ -56,11 +56,12 @@ class DiagnosisResult:
     container: str
 
     # Scenario A
-    scenario_a_confirmed: bool = False      # spike visible in metrics
-    scenario_a_suspected: bool = False      # no metrics but no other cause found
+    scenario_a_confirmed: bool = False      # spike visible in pre-OOM metrics window
+    scenario_a_suspected: bool = False      # no metrics captured; no other cause found
     spike_ratio: Optional[float] = None
     memory_max_bytes: Optional[float] = None
     memory_min_bytes: Optional[float] = None
+    seconds_since_oom: Optional[int] = None  # offset used for pre-restart spike query
 
     # Scenario B
     scenario_b: bool = False
@@ -268,24 +269,40 @@ def diagnose(vm: VictoriaMetricsClient, namespace: str, pod: str,
             result.scenario_d = True
             return result
 
-    # --- Scenario A: spike detection (10-minute window) ---
-    # Always diagnose against the service container (even if the alert fired on a sidecar)
+    # --- Scenario A: spike detection using pre-OOM offset window ---
+    # Always diagnose against the service container (even if the alert fired on a sidecar).
+    # Strategy: fetch the exact timestamp when the container was last OOMKilled,
+    # then query max/min RSS in the 3 minutes *before* that timestamp using an offset.
+    # This avoids the near-zero post-restart RSS polluting min_over_time.
     rss_labels = f'namespace="{namespace}", pod="{pod}", container="service"'
-    mem_max = vm.instant_query(
-        f'max_over_time(container_memory_rss{{{rss_labels}}}[10m])'
-    )
-    mem_min = vm.instant_query(
-        f'min_over_time(container_memory_rss{{{rss_labels}}}[10m])'
+    term_ts_labels = f'namespace="{namespace}", pod="{pod}", container="service"'
+    oom_timestamp = vm.instant_query(
+        f'kube_pod_container_status_last_terminated_timestamp{{{term_ts_labels}}}'
     )
 
-    result.memory_max_bytes = mem_max
-    result.memory_min_bytes = mem_min
+    if oom_timestamp is not None:
+        now_ts = datetime.now(timezone.utc).timestamp()
+        seconds_since_oom = max(0, int(now_ts - oom_timestamp))
+        result.seconds_since_oom = seconds_since_oom
+        offset_str = f"{seconds_since_oom}s"
+        # Query the 3-minute window ending at the OOM timestamp (pre-restart)
+        mem_max = vm.instant_query(
+            f'max_over_time(container_memory_rss{{{rss_labels}}}[3m] offset {offset_str})'
+        )
+        mem_min = vm.instant_query(
+            f'min_over_time(container_memory_rss{{{rss_labels}}}[3m] offset {offset_str})'
+        )
+        result.memory_max_bytes = mem_max
+        result.memory_min_bytes = mem_min
 
-    if mem_max is not None and mem_min is not None and mem_min > 0:
-        ratio = mem_max / mem_min
-        result.spike_ratio = ratio
-        if ratio > 1.3:
-            result.scenario_a_confirmed = True
+        if mem_max is not None and mem_min is not None and mem_min > 0:
+            ratio = mem_max / mem_min
+            result.spike_ratio = ratio
+            if ratio > 1.3:
+                result.scenario_a_confirmed = True
+    else:
+        print("   ⚠️  Could not fetch OOM timestamp; skipping spike detection.",
+              file=sys.stderr)
 
     # --- Scenario C: legitimate growth (30-day comparison) ---
     recent_avg = vm.instant_query(
@@ -318,10 +335,10 @@ def diagnose(vm: VictoriaMetricsClient, namespace: str, pod: str,
         if result.scenario_a_confirmed:
             result.scenario_b_is_side_effect = True
 
-    # --- Scenario A suspected: no metric data captures the spike ---
-    # If no spike visible, no growth, no fragmentation → OOM was too fast to scrape.
-    # A ratio of 7.79 after the crash is still fragmentation from the spike,
-    # so treat B as a side effect of suspected A as well.
+    # --- Scenario A suspected ---
+    # If no confirmed spike, no growth, and no independent fragmentation
+    # → OOM was too fast to capture (or OOM timestamp unavailable).
+    # If only B triggered without C → fragmentation was caused by the spike.
     if (not result.scenario_a_confirmed and
             not result.scenario_b and
             not result.scenario_c):
@@ -329,8 +346,6 @@ def diagnose(vm: VictoriaMetricsClient, namespace: str, pod: str,
     elif (not result.scenario_a_confirmed and
           not result.scenario_c and
           result.scenario_b):
-        # Only B triggered — OOM too fast to see spike in metrics but fragmentation
-        # peaked during the crash window. Likely Scenario A side effect.
         result.scenario_a_suspected = True
         result.scenario_b_is_side_effect = True
 
@@ -371,7 +386,7 @@ class GoogleChatNotifier:
             mem_max_str = bytes_to_mb(diag.memory_max_bytes) if diag.memory_max_bytes else "N/A"
             lines.append(
                 f"🔴 <b>Scenario A — Large Query Spike (confirmed)</b><br>"
-                f"Memory spiked <b>{spike_pct}</b> within 10 minutes "
+                f"Memory spiked <b>{spike_pct}</b> in the 3 minutes before the OOM "
                 f"(peak: <b>{mem_max_str}</b>). "
                 "A large query likely caused the OOM. Contact the customer to identify the query."
             )
@@ -613,6 +628,7 @@ def main(args):
     diag = diagnose(vm, args.namespace, args.pod, args.container)
 
     print(f"   Container: {diag.container}")
+    print(f"   OOM timestamp offset: {diag.seconds_since_oom}s ago")
     print(f"   Scenario A confirmed: {diag.scenario_a_confirmed} (spike ratio: {diag.spike_ratio})")
     print(f"   Scenario A suspected: {diag.scenario_a_suspected}")
     print(f"   Scenario B: {diag.scenario_b} (fragmentation ratio: {diag.fragmentation_ratio})")
