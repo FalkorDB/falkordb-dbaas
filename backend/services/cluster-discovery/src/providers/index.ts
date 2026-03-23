@@ -15,10 +15,6 @@ import { deleteObservabilityNodePoolAWSBYOA, deleteObservabilityNodePoolAzureBYO
  */
 export function createObservabilityNodePool(cluster: Cluster) {
   if (cluster.hostMode === 'byoa') {
-    if (!cluster.destinationAccountID) {
-      logger.warn(`Skip node pool creation for BYOA cluster ${cluster.name} without destinationAccountID`);
-      return;
-    }
     switch (cluster.cloud) {
       case 'gcp':
         return createObservabilityNodePoolGCPBYOA(cluster);
@@ -49,10 +45,6 @@ export function createObservabilityNodePool(cluster: Cluster) {
  */
 export function deleteObservabilityNodePool(cluster: Cluster) {
   if (cluster.hostMode === 'byoa') {
-    if (!cluster.destinationAccountID) {
-      logger.warn(`Skip node pool deletion for BYOA cluster ${cluster.name} without destinationAccountID`);
-      return;
-    }
     switch (cluster.cloud) {
       case 'gcp':
         return deleteObservabilityNodePoolGCPBYOA(cluster);

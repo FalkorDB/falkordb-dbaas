@@ -7,10 +7,10 @@ import { getAWSBYOACredentials, getAzureBYOACredentials, getGCPBYOACredentials }
 
 export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Promise<void> {
   try {
-    if (!cluster.destinationAccountID || !cluster.destinationAccountNumber) {
+    if (!cluster.gcpAccountID || !cluster.gcpAccountNumber) {
       logger.error(
         { cluster: cluster.name },
-        'Missing destinationAccountID or destinationAccountNumber for BYOA cluster',
+        'Missing gcpAccountID or gcpAccountNumber for BYOA cluster',
       );
       return;
     }
@@ -37,7 +37,7 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
 
     const [nodePools] = await client
       .listNodePools({
-        parent: `projects/${cluster.destinationAccountID}/locations/${cluster.region}/clusters/${cluster.name}`,
+        parent: `projects/${cluster.gcpAccountID}/locations/${cluster.region}/clusters/${cluster.name}`,
       })
       .catch((error) => {
         logger.error(
@@ -61,7 +61,7 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
     }
 
     await client.createNodePool({
-      parent: `projects/${cluster.destinationAccountID}/locations/${cluster.region}/clusters/${cluster.name}`,
+      parent: `projects/${cluster.gcpAccountID}/locations/${cluster.region}/clusters/${cluster.name}`,
       nodePool: {
         name: 'observability',
         initialNodeCount: 1,
@@ -98,8 +98,8 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
 
 export async function createObservabilityNodePoolAWSBYOA(cluster: Cluster): Promise<void> {
   try {
-    if (!cluster.destinationAccountID) {
-      logger.error({ cluster: cluster.name }, 'Missing destinationAccountID for BYOA cluster');
+    if (!cluster.awsAccountID) {
+      logger.error({ cluster: cluster.name }, 'Missing awsAccountID for BYOA cluster');
       return;
     }
 
@@ -171,8 +171,8 @@ const OBSERVABILITY_POOL_NAME = 'obsrv';
 
 export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Promise<void> {
   try {
-    if (!cluster.destinationAccountID) {
-      logger.error({ cluster: cluster.name }, 'Missing destinationAccountID for BYOA Azure cluster');
+    if (!cluster.azureClientId || !cluster.azureTenantId || !cluster.azureResourceGroupName) {
+      logger.error({ cluster: cluster.name }, 'Missing Azure credentials for BYOA Azure cluster');
       return;
     }
 

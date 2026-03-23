@@ -100,7 +100,6 @@ async function buildBYOAClusterConfig(
     cloud: deploymentCell.cloudProvider,
     region: deploymentCell.region,
     endpoint: credentials.apiServerEndpoint,
-    destinationAccountID: deploymentCell.destinationAccountID,
     secretConfig: {
       tlsClientConfig: {
         insecure: false,
@@ -111,9 +110,15 @@ async function buildBYOAClusterConfig(
       bearerToken: credentials.serviceAccountToken,
     },
     hostMode: 'byoa' as const,
-    destinationAccountNumber: account?.awsAccountID || account?.gcpProjectNumber,
     azureClientId: account?.azureBootstrapUserClientID,
     gcpServiceAccountEmail: account?.gcpServiceAccountEmail,
+    azureResourceGroupName:
+      deploymentCell.cloudProvider === 'azure' ? `rg-${deploymentCell.region}-${deploymentCell.id}` : undefined,
+    azureTenantId: account?.azureTenantID,
+    awsAccountID: account?.awsAccountID,
+    awsRoleARN: account?.awsBootstrapRoleARN,
+    gcpAccountID: account?.gcpProjectID,
+    gcpAccountNumber: account?.gcpProjectNumber,
   };
 }
 

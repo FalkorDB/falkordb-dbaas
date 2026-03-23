@@ -60,7 +60,6 @@ async function getClusters(): Promise<Cluster[]> {
         cloud: cell.cloudProvider,
         region: cell.region,
         endpoint: credentials.apiServerEndpoint,
-        destinationAccountID: cell.destinationAccountID,
         secretConfig: {
           tlsClientConfig: {
             insecure: false,
@@ -72,10 +71,13 @@ async function getClusters(): Promise<Cluster[]> {
         },
         hostMode: 'byoa',
         azureResourceGroupName: cell.azureResourceGroupName,
-        destinationAccountNumber: cloudAccountConfig?.awsAccountID || cloudAccountConfig?.gcpProjectNumber,
         azureClientId: cloudAccountConfig?.azureBootstrapUserClientID,
         azureTenantId: cloudAccountConfig?.azureTenantID,
         gcpServiceAccountEmail: cloudAccountConfig?.gcpServiceAccountEmail,
+        awsAccountID: cloudAccountConfig?.awsAccountID,
+        awsRoleARN: cloudAccountConfig?.awsBootstrapRoleARN,
+        gcpAccountID: cloudAccountConfig?.gcpProjectID,
+        gcpAccountNumber: cloudAccountConfig?.gcpProjectNumber,
       });
       logger.info(`Discovered BYOA cluster ${cell.id} in region ${cell.region}`);
     } catch (error) {
@@ -148,7 +150,7 @@ export class OmnistrateClient {
     intermediaryAccountId?: string,
   ): Promise<
     {
-      cloudProvider: 'gcp' | 'aws' | 'azure' | 'azure';
+      cloudProvider: 'gcp' | 'aws' | 'azure';
       region: string;
       id: string;
       status: string;

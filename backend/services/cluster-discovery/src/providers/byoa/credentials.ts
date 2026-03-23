@@ -146,14 +146,13 @@ export async function executePodCommandInBastion(command: string[]): Promise<str
  * @returns AWS credentials
  */
 export async function getAWSBYOACredentials(cluster: Cluster): Promise<AWSCredentials> {
-  const roleArn = `arn:aws:iam::${cluster.destinationAccountID}:role/omnistrate-bootstrap-role`;
-  const roleSessionName = `bootstrap-session-org-${cluster.destinationAccountID}`;
+  const roleSessionName = `bootstrap-session-org-${cluster.awsAccountID}`;
 
   const command = [
     'sh',
     '-c',
     `aws sts assume-role-with-web-identity \
-      --role-arn ${roleArn} \
+      --role-arn ${cluster.awsRoleARN} \
       --role-session-name ${roleSessionName} \
       --web-identity-token file://\$AWS_WEB_IDENTITY_TOKEN_FILE`,
   ];
@@ -176,7 +175,7 @@ export async function getAWSBYOACredentials(cluster: Cluster): Promise<AWSCreden
  * @returns GCP credentials with impersonated access token
  */
 export async function getGCPBYOACredentials(cluster: Cluster): Promise<GCPCredentials> {
-  const gcpProjectNumber = cluster.destinationAccountNumber; // GCP project number
+  const gcpProjectNumber = cluster.gcpAccountNumber; // GCP project number
   const audience = `//iam.googleapis.com/projects/${gcpProjectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov`;
 
   // Exchange AWS EKS service account token for GCP access token using Workload Identity Federation
@@ -292,7 +291,7 @@ gcloud auth application-default print-access-token 2>&1
  * @returns Azure credentials for the customer's subscription
  */
 export async function getAzureBYOACredentials(cluster: Cluster): Promise<AzureCredentials> {
-  const subscriptionId = cluster.destinationAccountID;
+  const subscriptionId = cluster.azureTenantId;
 
   // Get an access token by exchanging the federated token with Azure AD directly.
   // The bastion pod uses Azure Workload Identity and exposes AZURE_FEDERATED_TOKEN_FILE.

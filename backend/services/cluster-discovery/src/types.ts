@@ -9,12 +9,14 @@ export const ClusterSchema = yup.object({
   region: yup.string().required(),
   secretConfig: yup.object().optional(),
   hostMode: yup.string().oneOf(['managed', 'byoa']).required(),
-  destinationAccountID: yup.string().optional(),
-  destinationAccountNumber: yup.string().optional(),
   azureResourceGroupName: yup.string().optional(),
   azureClientId: yup.string().optional(),
   azureTenantId: yup.string().optional(),
   gcpServiceAccountEmail: yup.string().optional(),
+  gcpAccountNumber: yup.string().optional(),
+  gcpAccountID: yup.string().optional(),
+  awsAccountID: yup.string().optional(),
+  awsRoleARN: yup.string().optional(),
 });
 
 // TypeScript type inferred from the schema
