@@ -25,7 +25,6 @@ locals {
     "repo:${var.github_repository}:environment:prod",
     "repo:${var.github_repository}:ref:refs/heads/dev",
     "repo:${var.github_repository}:ref:refs/heads/main",
-    "repo:${var.github_repository}:pull_request",
   ]
 
   aks_cluster_scopes = toset(distinct(var.aks_cluster_resource_ids))
