@@ -75,6 +75,9 @@ class DiagnosisResult:
 
     # Scenario D (non-service container)
     scenario_d: bool = False
+    # Set when the alert fired on a sidecar but service was the real OOM victim
+    false_positive_sidecar: bool = False
+    actual_container: str = "service"
 
     @property
     def any_scenario_triggered(self) -> bool:
@@ -243,12 +246,30 @@ def diagnose(vm: VictoriaMetricsClient, namespace: str, pod: str,
              container: str) -> DiagnosisResult:
     result = DiagnosisResult(container=container)
 
-    # Non-FalkorDB containers → Scenario D only
+    # Non-service containers: check if the service container in the same pod
+    # was the real OOM victim (stale last_terminated_reason on the sidecar
+    # can cause a false-positive alert when the pod restarts due to service OOM).
     if container not in ("service", "falkordb"):
-        result.scenario_d = True
-        return result
+        service_oom_labels = f'namespace="{namespace}", pod="{pod}", container="service", reason="OOMKilled"'
+        service_was_oom = vm.instant_query(
+            f'kube_pod_container_status_last_terminated_reason{{{service_oom_labels}}}'
+        )
+        if service_was_oom and service_was_oom == 1.0:
+            # The service container was also OOMKilled — sidecar alert is a
+            # false positive caused by stale last_terminated_reason.
+            # Re-run full diagnosis for the service container.
+            print(f"   ⚠️  Sidecar alert is a false positive — service container "
+                  f"was the real OOM victim. Re-diagnosing for 'service'...",
+                  file=sys.stderr)
+            result.false_positive_sidecar = True
+            result.actual_container = "service"
+            # Fall through to full A/B/C diagnosis below using 'service'
+        else:
+            result.scenario_d = True
+            return result
 
     # --- Scenario A: spike detection (10-minute window) ---
+    # Always diagnose against the service container (even if the alert fired on a sidecar)
     rss_labels = f'namespace="{namespace}", pod="{pod}", container="service"'
     mem_max = vm.instant_query(
         f'max_over_time(container_memory_rss{{{rss_labels}}}[10m])'
@@ -328,6 +349,14 @@ class GoogleChatNotifier:
 
     def _build_diagnosis_text(self, diag: DiagnosisResult) -> str:
         lines = []
+
+        if diag.false_positive_sidecar:
+            lines.append(
+                f"⚠️ <b>Note: Alert fired on <code>{diag.container}</code> (sidecar) but "
+                f"the <code>service</code> container was the real OOM victim.</b><br>"
+                "The sidecar's <code>last_terminated_reason=OOMKilled</code> was stale from a previous event. "
+                "Full diagnosis below is for the <code>service</code> container."
+            )
 
         if diag.scenario_d:
             lines.append(
@@ -415,7 +444,8 @@ class GoogleChatNotifier:
                             {"keyValue": {"topLabel": "Cluster", "content": cluster}},
                             {"keyValue": {"topLabel": "Namespace", "content": namespace}},
                             {"keyValue": {"topLabel": "Pod", "content": pod}},
-                            {"keyValue": {"topLabel": "Container", "content": container}},
+                            {"keyValue": {"topLabel": "Alert Container", "content": container}},
+                            {"keyValue": {"topLabel": "Actual OOM Container", "content": diag.actual_container if diag.false_positive_sidecar else container}},
                             {"keyValue": {"topLabel": "Time (Israel)", "content": timestamp}},
                         ]
                     },
