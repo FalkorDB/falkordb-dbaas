@@ -185,15 +185,16 @@ export class OmnistrateClient {
   }
 
   async getDeploymentCell(deploymentCellId: string): Promise<{
-    cloudProvider: 'gcp' | 'aws' | 'azure' | 'azure';
+    cloudProvider: 'gcp' | 'aws' | 'azure';
     region: string;
     id: string;
     status: string;
     modelType: string;
     customer_email?: string;
     intermediaryAccountID?: string;
-    destinationAccountID: string;
+    destinationAccountID?: string;
     accountConfigId: string;
+    azureResourceGroupName?: string;
   } | null> {
     return this.getDeploymentCells().then((cells) => {
       const cell = cells.find((c) => c.id === deploymentCellId);

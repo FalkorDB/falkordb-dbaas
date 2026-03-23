@@ -36,8 +36,6 @@ export const mockBYOACluster: Cluster = {
   cloud: 'gcp',
   region: 'us-west1',
   hostMode: 'byoa',
-  destinationAccountID: 'customer-project-123',
-  destinationAccountNumber: '123456789012',
   secretConfig: {
     server: 'https://byoa-cluster-endpoint.com',
     'certificate-authority-data': 'mock-ca-data',

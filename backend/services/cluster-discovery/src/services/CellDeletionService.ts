@@ -9,7 +9,7 @@ interface DeploymentCell {
   id: string;
   status: string;
   modelType: string;
-  destinationAccountID: string;
+  destinationAccountID?: string;
   accountConfigId: string;
 }
 

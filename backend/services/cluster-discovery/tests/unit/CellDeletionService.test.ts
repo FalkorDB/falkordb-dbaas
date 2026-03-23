@@ -35,7 +35,6 @@ describe('CellDeletionService', () => {
           region: 'us-central1',
           modelType: 'BYOA',
           status: 'RUNNING',
-          destinationAccountID: 'gcp-project-123',
           accountConfigId: 'cfg-test',
         };
 
@@ -82,7 +81,6 @@ describe('CellDeletionService', () => {
             cloud: 'gcp',
             region: 'us-central1',
             hostMode: 'byoa',
-            destinationAccountID: 'gcp-project-123',
             endpoint: 'https://k8s.example.com',
           })
         );
@@ -97,7 +95,6 @@ describe('CellDeletionService', () => {
           region: 'us-east-1',
           modelType: 'BYOA',
           status: 'RUNNING',
-          destinationAccountID: '123456789012',
           accountConfigId: 'cfg-test',
         };
 
@@ -141,7 +138,6 @@ describe('CellDeletionService', () => {
             cloud: 'aws',
             region: 'us-east-1',
             hostMode: 'byoa',
-            destinationAccountID: '123456789012',
           })
         );
       });
@@ -155,7 +151,6 @@ describe('CellDeletionService', () => {
           region: 'us-west1',
           modelType: 'BYOA',
           status: 'RUNNING',
-          destinationAccountID: 'unknown-project',
           accountConfigId: 'cfg-test',
         };
 
@@ -181,7 +176,6 @@ describe('CellDeletionService', () => {
         expect(deleteObservabilityNodePool).toHaveBeenCalledWith(
           expect.objectContaining({
             name: 'c-cellnoaccount',
-            destinationAccountNumber: undefined,
           })
         );
       });
@@ -197,7 +191,6 @@ describe('CellDeletionService', () => {
           region: 'europe-west1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'managed-project',
           accountConfigId: 'cfg-test',
         };
 
@@ -229,7 +222,6 @@ describe('CellDeletionService', () => {
           region: 'ap-southeast-1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'managed-account',
           accountConfigId: 'cfg-test',
         };
 
@@ -273,7 +265,6 @@ describe('CellDeletionService', () => {
           region: 'us-central1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'project-123',
           accountConfigId: 'cfg-test',
         };
 
@@ -294,7 +285,6 @@ describe('CellDeletionService', () => {
           region: 'us-west-2',
           modelType: 'BYOA',
           status: 'RUNNING',
-          destinationAccountID: 'account-123',
           accountConfigId: 'cfg-test',
         };
 
@@ -315,7 +305,6 @@ describe('CellDeletionService', () => {
           region: 'asia-east1',
           modelType: 'BYOA',
           status: 'RUNNING',
-          destinationAccountID: 'project-456',
           accountConfigId: 'cfg-test',
         };
 
@@ -341,7 +330,6 @@ describe('CellDeletionService', () => {
           region: 'us-central1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'project-123',
           accountConfigId: 'cfg-test',
         };
 
@@ -368,7 +356,6 @@ describe('CellDeletionService', () => {
           region: 'us-central1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'project-123',
           accountConfigId: 'cfg-test',
         };
 
@@ -395,7 +382,6 @@ describe('CellDeletionService', () => {
           region: 'us-east-1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'account-123',
           accountConfigId: 'cfg-test',
         };
 
