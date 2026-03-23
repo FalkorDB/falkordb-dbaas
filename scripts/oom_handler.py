@@ -439,7 +439,7 @@ class GoogleChatNotifier:
                 "sections": [
                     {
                         "widgets": [
-                            {"keyValue": {"topLabel": "Customer", "content": f"{customer.name} ({mask_email(customer.email)})"}},
+                            {"keyValue": {"topLabel": "Customer", "content": f"{customer.name} ({customer.email})"}},
                             {"keyValue": {"topLabel": "Subscription ID", "content": customer.subscription_id}},
                             {"keyValue": {"topLabel": "Cluster", "content": cluster}},
                             {"keyValue": {"topLabel": "Namespace", "content": namespace}},
