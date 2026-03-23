@@ -111,6 +111,7 @@ async function buildBYOAClusterConfig(
     },
     hostMode: 'byoa' as const,
     azureClientId: account?.azureBootstrapUserClientID,
+    azureSubscriptionId: account?.azureSubscriptionID,
     gcpServiceAccountEmail: account?.gcpServiceAccountEmail,
     azureResourceGroupName:
       deploymentCell.cloudProvider === 'azure' ? `rg-${deploymentCell.region}-${deploymentCell.id}` : undefined,
