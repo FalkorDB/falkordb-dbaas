@@ -14,6 +14,7 @@ import requests
 import argparse
 import urllib3
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from zoneinfo import ZoneInfo
 from typing import Optional
 from dataclasses import dataclass, field
@@ -50,41 +51,52 @@ class CustomerInfo:
     subscription_id: str
 
 
+class OOMCause(str, Enum):
+    LEGITIMATE_GROWTH = "LEGITIMATE_GROWTH"
+    FRAGMENTATION = "FRAGMENTATION"
+    SPIKE = "SPIKE"
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclass
 class DiagnosisResult:
     """Holds all diagnostic findings for an OOMKilled event."""
     container: str
 
-    # Scenario A
-    scenario_a_confirmed: bool = False      # spike visible in pre-OOM metrics window
-    scenario_a_suspected: bool = False      # no metrics captured; no other cause found
-    spike_ratio: Optional[float] = None
-    memory_max_bytes: Optional[float] = None
-    memory_min_bytes: Optional[float] = None
-    seconds_since_oom: Optional[int] = None  # offset used for pre-restart spike query
+    # Primary conclusion — exactly one
+    cause: OOMCause = OOMCause.UNKNOWN
 
-    # Scenario B
-    scenario_b: bool = False
-    scenario_b_is_side_effect: bool = False  # True when B is caused by a large query (Scenario A)
-    fragmentation_ratio: Optional[float] = None          # 3h average (baseline signal)
-    fragmentation_ratio_at_oom: Optional[float] = None   # 5min window anchored at OOM time
-
-    # Scenario C
-    scenario_c: bool = False
-    growth_pct: Optional[float] = None
-    recent_avg_bytes: Optional[float] = None
-    baseline_avg_bytes: Optional[float] = None
-
-    # Scenario D (non-service container)
+    # Sidecar / false-positive handling (unchanged)
     scenario_d: bool = False
-    # Set when the alert fired on a sidecar but service was the real OOM victim
     false_positive_sidecar: bool = False
     actual_container: str = "service"
 
-    @property
-    def any_scenario_triggered(self) -> bool:
-        return (self.scenario_a_confirmed or self.scenario_a_suspected or
-                self.scenario_b or self.scenario_c or self.scenario_d)
+    # OOM anchor
+    seconds_since_oom: Optional[int] = None
+
+    # Memory context
+    container_limit_bytes: Optional[float] = None
+    memory_at_oom_bytes: Optional[float] = None    # 5m avg at OOM time
+    memory_pct_of_limit: Optional[float] = None    # 0–100
+
+    # Growth signals: 5m avg at OOM and at 1h / 4h / 12h before OOM
+    rss_1h_ago: Optional[float] = None
+    rss_4h_ago: Optional[float] = None
+    rss_12h_ago: Optional[float] = None
+    # Growth rate expressed as % of the container limit per hour
+    growth_rate_1h: Optional[float] = None
+    growth_rate_4h: Optional[float] = None
+    growth_rate_12h: Optional[float] = None
+
+    # Fragmentation signals: point values at ~20m, ~10m, and at OOM
+    frag_at_20m: Optional[float] = None
+    frag_at_10m: Optional[float] = None
+    frag_at_oom: Optional[float] = None
+
+    # Spike signals: max/min in 2m window anchored at OOM time
+    spike_ratio: Optional[float] = None
+    memory_max_bytes: Optional[float] = None
+    memory_min_bytes: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------
@@ -244,113 +256,161 @@ class VictoriaMetricsClient:
 # Diagnosis engine
 # ---------------------------------------------------------------------------
 
+# Thresholds
+_NEAR_LIMIT_PCT = 80           # memory must be >= this % of limit for growth/frag to apply
+_GROWTH_RATE_THRESHOLD = 3     # % of container limit per hour — minimum to count as growth
+_GROWTH_CONSISTENCY_RATIO = 3  # max/min rate ratio — above this the increase is a spike, not growth
+_FRAG_THRESHOLD = 1.5          # fragmentation ratio threshold
+_SPIKE_RATIO_THRESHOLD = 1.10  # max/min RSS in 2 min window; >= 10% jump signals a spike
+
+
+def _fmt(v: Optional[float]) -> str:
+    return f"{v:.2f}" if v is not None else "N/A"
+
+
 def diagnose(vm: VictoriaMetricsClient, namespace: str, pod: str,
              container: str) -> DiagnosisResult:
     result = DiagnosisResult(container=container)
 
-    # Non-service containers: check if the service container in the same pod
-    # was the real OOM victim (stale last_terminated_reason on the sidecar
-    # can cause a false-positive alert when the pod restarts due to service OOM).
+    # -----------------------------------------------------------------------
+    # Non-service containers: check if the service container was the real OOM
+    # victim (stale last_terminated_reason fires the alert on sidecars too).
+    # -----------------------------------------------------------------------
     if container not in ("service", "falkordb"):
         service_oom_labels = f'namespace="{namespace}", pod="{pod}", container="service", reason="OOMKilled"'
         service_was_oom = vm.instant_query(
             f'kube_pod_container_status_last_terminated_reason{{{service_oom_labels}}}'
         )
         if service_was_oom and service_was_oom == 1.0:
-            # The service container was also OOMKilled — sidecar alert is a
-            # false positive caused by stale last_terminated_reason.
-            # Re-run full diagnosis for the service container.
-            print(f"   ⚠️  Sidecar alert is a false positive — service container "
-                  f"was the real OOM victim. Re-diagnosing for 'service'...",
+            print(f"   ⚠️  Sidecar alert is a false positive — service was the real OOM victim.",
                   file=sys.stderr)
             result.false_positive_sidecar = True
             result.actual_container = "service"
-            # Fall through to full A/B/C diagnosis below using 'service'
+            # Fall through to full diagnosis for the service container
         else:
             result.scenario_d = True
             return result
 
-    # --- Scenario C: legitimate growth (30-day comparison) ---
-    # Checked first — most reliable signal, uses long windows immune to restart noise.
-    rss_labels = f'namespace="{namespace}", pod="{pod}", container="service"'
-    recent_avg = vm.instant_query(
-        f'avg_over_time(container_memory_rss{{{rss_labels}}}[7d])'
-    )
-    baseline_avg = vm.instant_query(
-        f'avg_over_time(container_memory_rss{{{rss_labels}}}[7d] offset 23d)'
-    )
-
-    result.recent_avg_bytes = recent_avg
-    result.baseline_avg_bytes = baseline_avg
-
-    if recent_avg is not None and baseline_avg is not None and baseline_avg > 0:
-        growth_pct = ((recent_avg - baseline_avg) / baseline_avg) * 100
-        result.growth_pct = growth_pct
-        if growth_pct > 20:
-            result.scenario_c = True
-
-    # --- Scenario B: memory fragmentation (1-hour average) ---
-    # Checked second — avg over 3h gives a stable reading of sustained fragmentation,
-    # less susceptible to transient spikes caused by large queries.
-    frag_labels = f'namespace="{namespace}", pod="{pod}"'
-    frag_ratio = vm.instant_query(
-        f'avg_over_time(redis_mem_fragmentation_ratio{{{frag_labels}}}[6h])'
-    )
-    result.fragmentation_ratio = frag_ratio
-    if frag_ratio is not None and frag_ratio > 1.5:
-        result.scenario_b = True
-
-    # --- Scenario A: spike detection using pre-OOM offset window ---
-    # Checked last — least reliable since fast spikes may not be scraped.
-    # Strategy: fetch the exact OOM timestamp, then query max/min RSS in the
-    # 3 minutes *before* that timestamp to avoid post-restart near-zero pollution.
+    rss_labels   = f'namespace="{namespace}", pod="{pod}", container="service"'
+    frag_labels  = f'namespace="{namespace}", pod="{pod}"'
+    limit_labels = f'namespace="{namespace}", pod="{pod}", container="service", resource="memory"'
     term_ts_labels = f'namespace="{namespace}", pod="{pod}", container="service"'
+
+    # -----------------------------------------------------------------------
+    # Step 1: OOM timestamp — required to anchor all queries before restart
+    # -----------------------------------------------------------------------
     oom_timestamp = vm.instant_query(
         f'kube_pod_container_status_last_terminated_timestamp{{{term_ts_labels}}}'
     )
+    if oom_timestamp is None:
+        print("   ⚠️  Could not fetch OOM timestamp; returning UNKNOWN.", file=sys.stderr)
+        return result  # cause stays UNKNOWN
 
-    if oom_timestamp is not None:
-        now_ts = datetime.now(timezone.utc).timestamp()
-        seconds_since_oom = max(0, int(now_ts - oom_timestamp))
-        result.seconds_since_oom = seconds_since_oom
-        offset_str = f"{seconds_since_oom}s"
-        mem_max = vm.instant_query(
-            f'max_over_time(container_memory_rss{{{rss_labels}}}[3m] offset {offset_str})'
-        )
-        mem_min = vm.instant_query(
-            f'min_over_time(container_memory_rss{{{rss_labels}}}[3m] offset {offset_str})'
-        )
-        result.memory_max_bytes = mem_max
-        result.memory_min_bytes = mem_min
+    now_ts = datetime.now(timezone.utc).timestamp()
+    N = max(0, int(now_ts - oom_timestamp))   # seconds since OOM
+    result.seconds_since_oom = N
 
-        # Also capture fragmentation ratio at the moment of OOM (5-min window before restart)
-        frag_at_oom = vm.instant_query(
-            f'avg_over_time(redis_mem_fragmentation_ratio{{{frag_labels}}}[5m] offset {offset_str})'
-        )
-        result.fragmentation_ratio_at_oom = frag_at_oom
+    # -----------------------------------------------------------------------
+    # Step 2: Container limit and memory at OOM time
+    # -----------------------------------------------------------------------
+    limit = vm.instant_query(f'kube_pod_container_resource_limits{{{limit_labels}}}')
+    result.container_limit_bytes = limit
 
-        if mem_max is not None and mem_min is not None and mem_min > 0:
-            ratio = mem_max / mem_min
-            result.spike_ratio = ratio
-            if ratio > 1.3:
-                result.scenario_a_confirmed = True
+    # 5-min avg anchored at OOM time — representative value without restart noise
+    rss_at_oom = vm.instant_query(
+        f'avg_over_time(container_memory_rss{{{rss_labels}}}[5m] offset {N}s)'
+    )
+    result.memory_at_oom_bytes = rss_at_oom
+
+    near_limit = False
+    if limit and limit > 0 and rss_at_oom is not None:
+        result.memory_pct_of_limit = rss_at_oom / limit * 100
+        near_limit = result.memory_pct_of_limit >= _NEAR_LIMIT_PCT
+
+    # -----------------------------------------------------------------------
+    # Step 3: Growth signals
+    # 5-min avg snapshots at 1h, 4h, 12h before OOM, all anchored pre-restart.
+    # Growth rate = (rss_at_oom - rss_Xh_ago) / X / limit * 100  [%/h of limit]
+    # Consistent gradual growth across all windows → LEGITIMATE_GROWTH.
+    # -----------------------------------------------------------------------
+    rss_1h_ago  = vm.instant_query(f'avg_over_time(container_memory_rss{{{rss_labels}}}[5m] offset {N + 3600}s)')
+    rss_4h_ago  = vm.instant_query(f'avg_over_time(container_memory_rss{{{rss_labels}}}[5m] offset {N + 4*3600}s)')
+    rss_12h_ago = vm.instant_query(f'avg_over_time(container_memory_rss{{{rss_labels}}}[5m] offset {N + 12*3600}s)')
+    result.rss_1h_ago  = rss_1h_ago
+    result.rss_4h_ago  = rss_4h_ago
+    result.rss_12h_ago = rss_12h_ago
+
+    growth_rates: list[float] = []
+    if limit and limit > 0 and rss_at_oom is not None:
+        for hours, rss_ago in [(1, rss_1h_ago), (4, rss_4h_ago), (12, rss_12h_ago)]:
+            if rss_ago is not None:
+                rate = (rss_at_oom - rss_ago) / hours / limit * 100
+                growth_rates.append(rate)
+                if hours == 1:
+                    result.growth_rate_1h = rate
+                elif hours == 4:
+                    result.growth_rate_4h = rate
+                else:
+                    result.growth_rate_12h = rate
+
+    # "Consistent" means:
+    #   1) at least 2 windows have data
+    #   2) every rate is above the minimum threshold (avoiding negative/oscillating memory)
+    #   3) the highest rate is within _GROWTH_CONSISTENCY_RATIO × the lowest rate.
+    #      Gradual growth → rates are similar across windows (ratio ≈ 1–2).
+    #      A spike at OOM → rate_1h >> rate_12h (ratio easily 10–15×) and would be
+    #      misclassified as growth without this guard.
+    consistent_growth = (
+        len(growth_rates) >= 2
+        and all(r >= _GROWTH_RATE_THRESHOLD for r in growth_rates)
+        and max(growth_rates) / min(growth_rates) <= _GROWTH_CONSISTENCY_RATIO
+    )
+
+    # -----------------------------------------------------------------------
+    # Step 4: Fragmentation signals — point values at ~20m, ~10m, at OOM
+    # Using instant values (no range aggregation) to see the timeline clearly.
+    # Only meaningful when memory is near the container limit.
+    # -----------------------------------------------------------------------
+    frag_20m = vm.instant_query(f'redis_mem_fragmentation_ratio{{{frag_labels}}} offset {N + 20*60}s')
+    frag_10m = vm.instant_query(f'redis_mem_fragmentation_ratio{{{frag_labels}}} offset {N + 10*60}s')
+    frag_oom = vm.instant_query(f'redis_mem_fragmentation_ratio{{{frag_labels}}} offset {N}s')
+    result.frag_at_20m = frag_20m
+    result.frag_at_10m = frag_10m
+    result.frag_at_oom = frag_oom
+
+    frag_values = [f for f in [frag_20m, frag_10m, frag_oom] if f is not None]
+    frag_high      = any(f > _FRAG_THRESHOLD for f in frag_values)
+    # Increasing: last available value is higher than first (upward trend)
+    frag_increasing = len(frag_values) >= 2 and frag_values[-1] > frag_values[0]
+    sustained_fragmentation = near_limit and frag_high and (frag_increasing or all(f > _FRAG_THRESHOLD for f in frag_values))
+
+    # -----------------------------------------------------------------------
+    # Step 5: Spike signal — max/min in a 2-minute window anchored at OOM time
+    # A ratio ≥ 1.10 (10% jump) within that window strongly suggests a spike.
+    # May be missed when the OOM happens between two scrape intervals.
+    # -----------------------------------------------------------------------
+    mem_max = vm.instant_query(f'max_over_time(container_memory_rss{{{rss_labels}}}[2m] offset {N}s)')
+    mem_min = vm.instant_query(f'min_over_time(container_memory_rss{{{rss_labels}}}[2m] offset {N}s)')
+    result.memory_max_bytes = mem_max
+    result.memory_min_bytes = mem_min
+
+    spike_detected = False
+    if mem_max is not None and mem_min is not None and mem_min > 0:
+        result.spike_ratio = mem_max / mem_min
+        spike_detected = result.spike_ratio >= _SPIKE_RATIO_THRESHOLD
+
+    # -----------------------------------------------------------------------
+    # Step 6: Decision — pick exactly one cause, most reliable signal wins
+    # Priority: LEGITIMATE_GROWTH > FRAGMENTATION > SPIKE > UNKNOWN
+    # -----------------------------------------------------------------------
+    if near_limit and consistent_growth:
+        result.cause = OOMCause.LEGITIMATE_GROWTH
+    elif sustained_fragmentation:
+        result.cause = OOMCause.FRAGMENTATION
+    elif spike_detected:
+        result.cause = OOMCause.SPIKE
     else:
-        print("   ⚠️  Could not fetch OOM timestamp; skipping spike detection.",
-              file=sys.stderr)
-
-    # --- Final classification ---
-    # C and B are reliable metric signals; A is the fallback.
-    # B is a side effect (not independent) only when C or A confirmed is also present —
-    # in those cases the fragmentation was driven by growth pressure or a large query spike.
-    # If B triggers alone (without C or A confirmed), it is the primary cause.
-    if result.scenario_c and result.scenario_b:
-        result.scenario_b_is_side_effect = True
-    if result.scenario_a_confirmed and result.scenario_b:
-        result.scenario_b_is_side_effect = True
-
-    # A suspected only when neither C nor B explains the OOM
-    if not result.scenario_c and not result.scenario_b and not result.scenario_a_confirmed:
-        result.scenario_a_suspected = True
+        result.cause = OOMCause.UNKNOWN
 
     return result
 
@@ -378,62 +438,80 @@ class GoogleChatNotifier:
 
         if diag.scenario_d:
             lines.append(
-                "🔶 <b>Scenario D — Undersized Sidecar Container</b><br>"
+                "🔶 <b>Undersized Sidecar Container</b><br>"
                 f"Container <code>{diag.container}</code> hit its memory limit. "
                 "Review resource limits for this sidecar and open a PR to increase them."
             )
             return "<br><br>".join(lines)
 
-        if diag.scenario_a_confirmed:
-            spike_pct = f"{(diag.spike_ratio - 1) * 100:.0f}%" if diag.spike_ratio else "N/A"
-            mem_max_str = bytes_to_mb(diag.memory_max_bytes) if diag.memory_max_bytes else "N/A"
+        # --- Memory context header (always shown) ---
+        limit_str  = bytes_to_mb(diag.container_limit_bytes) if diag.container_limit_bytes else "N/A"
+        rss_str    = bytes_to_mb(diag.memory_at_oom_bytes)   if diag.memory_at_oom_bytes   else "N/A"
+        pct_str    = f"{diag.memory_pct_of_limit:.1f}%"      if diag.memory_pct_of_limit is not None else "N/A"
+        lines.append(
+            f"<b>Memory at OOM:</b> {rss_str} / {limit_str} ({pct_str} of limit)"
+        )
+
+        if diag.cause == OOMCause.LEGITIMATE_GROWTH:
+            r1  = bytes_to_mb(diag.rss_1h_ago)  if diag.rss_1h_ago  else "N/A"
+            r4  = bytes_to_mb(diag.rss_4h_ago)  if diag.rss_4h_ago  else "N/A"
+            r12 = bytes_to_mb(diag.rss_12h_ago) if diag.rss_12h_ago else "N/A"
+            g1  = f"{diag.growth_rate_1h:.1f}%/h"  if diag.growth_rate_1h  is not None else "N/A"
+            g4  = f"{diag.growth_rate_4h:.1f}%/h"  if diag.growth_rate_4h  is not None else "N/A"
+            g12 = f"{diag.growth_rate_12h:.1f}%/h" if diag.growth_rate_12h is not None else "N/A"
             lines.append(
-                f"🔴 <b>Scenario A — Large Query Spike (confirmed)</b><br>"
-                f"Memory spiked <b>{spike_pct}</b> in the 3 minutes before the OOM "
-                f"(peak: <b>{mem_max_str}</b>). "
-                "A large query likely caused the OOM. Contact the customer to identify the query."
+                "📈 <b>Cause: LEGITIMATE GROWTH</b><br>"
+                "Memory has been growing steadily across multiple time windows beforehand. "
+                "The container simply ran out of room. Instance size increase via Omnistrate UI is required (manual action).<br><br>"
+                f"<b>Growth evidence (% of container limit per hour):</b><br>"
+                f"• 1 h before OOM:  {r1}  → growth rate {g1}<br>"
+                f"• 4 h before OOM:  {r4}  → growth rate {g4}<br>"
+                f"• 12 h before OOM: {r12} → growth rate {g12}"
             )
 
-        if diag.scenario_a_suspected:
+        elif diag.cause == OOMCause.FRAGMENTATION:
+            f20 = _fmt(diag.frag_at_20m)
+            f10 = _fmt(diag.frag_at_10m)
+            fom = _fmt(diag.frag_at_oom)
             lines.append(
-                "🔴 <b>Scenario A — Large Query Spike (suspected)</b><br>"
-                "No memory spike was captured in metrics — the OOM happened too fast "
-                "to be scraped (between two 30s scrape intervals). "
-                "A single large query is the most likely cause. "
+                "🟠 <b>Cause: MEMORY FRAGMENTATION</b><br>"
+                "Fragmentation ratio was abnormally high and rising in the period leading up to the OOM. "
+                "Restart the underlying VM from Omnistrate UI (manual action). "
+                "Refer to the ContainerMemoryHighRSSCritical runbook.<br><br>"
+                f"<b>Fragmentation timeline (threshold: {_FRAG_THRESHOLD}):</b><br>"
+                f"• ~20 min before OOM: {f20}<br>"
+                f"• ~10 min before OOM: {f10}<br>"
+                f"• At OOM:            {fom}"
+            )
+
+        elif diag.cause == OOMCause.SPIKE:
+            spike_pct = f"{(diag.spike_ratio - 1) * 100:.0f}%" if diag.spike_ratio else "N/A"
+            mem_max_str = bytes_to_mb(diag.memory_max_bytes) if diag.memory_max_bytes else "N/A"
+            mem_min_str = bytes_to_mb(diag.memory_min_bytes) if diag.memory_min_bytes else "N/A"
+            lines.append(
+                "🔴 <b>Cause: SPIKE (large query)</b><br>"
+                f"Memory jumped <b>{spike_pct}</b> in the 2 minutes before the OOM "
+                f"(low: <b>{mem_min_str}</b> → peak: <b>{mem_max_str}</b>). "
+                "A single large query likely caused the OOM. "
                 "Contact the customer to identify queries running at the time of the alert."
             )
 
-        if diag.scenario_c:
-            growth_str = f"{diag.growth_pct:.1f}%" if diag.growth_pct is not None else "N/A"
-            recent_str = bytes_to_mb(diag.recent_avg_bytes) if diag.recent_avg_bytes else "N/A"
-            baseline_str = bytes_to_mb(diag.baseline_avg_bytes) if diag.baseline_avg_bytes else "N/A"
+        else:  # UNKNOWN
+            f20 = _fmt(diag.frag_at_20m)
+            f10 = _fmt(diag.frag_at_10m)
+            fom = _fmt(diag.frag_at_oom)
             lines.append(
-                f"📈 <b>Scenario C — Legitimate Memory Growth</b><br>"
-                f"Memory grew <b>{growth_str}</b> over 30 days "
-                f"(recent 7-day avg: <b>{recent_str}</b> vs baseline: <b>{baseline_str}</b>). "
-                "Instance size increase via Omnistrate UI is required (manual action)."
+                "⚪ <b>Cause: UNKNOWN</b><br>"
+                "No single signal was strong enough to determine the root cause. "
+                "Manual investigation is required.<br><br>"
+                "<b>Available signals:</b><br>"
+                f"• Spike ratio (2 min window): {_fmt(diag.spike_ratio)} (threshold: {_SPIKE_RATIO_THRESHOLD})<br>"
+                f"• Fragmentation at ~20 min / ~10 min / at OOM: {f20} / {f10} / {fom}<br>"
+                f"• Growth rate 1h / 4h / 12h: "
+                f"{_fmt(diag.growth_rate_1h)} / {_fmt(diag.growth_rate_4h)} / {_fmt(diag.growth_rate_12h)} %/h of limit"
             )
 
-        if diag.scenario_b:
-            frag_str = f"{diag.fragmentation_ratio:.2f}" if diag.fragmentation_ratio is not None else "N/A"
-            frag_at_oom_str = f"{diag.fragmentation_ratio_at_oom:.2f}" if diag.fragmentation_ratio_at_oom is not None else "N/A"
-            if diag.scenario_b_is_side_effect:
-                lines.append(
-                    f"🟡 <b>High Fragmentation Detected (side effect of large query)</b><br>"
-                    f"Fragmentation ratio — 3h average: <b>{frag_str}</b> | at time of OOM: <b>{frag_at_oom_str}</b>. "
-                    "This is expected after a massive allocation spike — jemalloc fragments under rapid memory pressure. "
-                    "<b>Do NOT restart the VM for this alone.</b> "
-                    "Once the instance recovers, fragmentation will normalise naturally."
-                )
-            else:
-                lines.append(
-                    f"🟠 <b>Scenario B — Memory Fragmentation</b><br>"
-                    f"Fragmentation ratio — 3h average: <b>{frag_str}</b> | at time of OOM: <b>{frag_at_oom_str}</b> (threshold: 1.5). "
-                    "Restart the underlying VM from Omnistrate UI (manual action). "
-                    "Refer to ContainerMemoryHighRSSCritical runbook."
-                )
-
-        return "<br><br>".join(lines) if lines else "⚪ No scenario triggered."
+        return "<br><br>".join(lines)
 
     def send_notification(
         self,
@@ -633,11 +711,12 @@ def main(args):
 
     print(f"   Container: {diag.container}")
     print(f"   OOM timestamp offset: {diag.seconds_since_oom}s ago")
-    print(f"   Scenario A confirmed: {diag.scenario_a_confirmed} (spike ratio: {diag.spike_ratio})")
-    print(f"   Scenario A suspected: {diag.scenario_a_suspected}")
-    print(f"   Scenario B: {diag.scenario_b} (fragmentation ratio: {diag.fragmentation_ratio})")
-    print(f"   Scenario C: {diag.scenario_c} (growth: {diag.growth_pct}%)")
-    print(f"   Scenario D: {diag.scenario_d}")
+    print(f"   Memory at OOM: {diag.memory_at_oom_bytes} / limit: {diag.container_limit_bytes} ({diag.memory_pct_of_limit:.1f}% of limit)" if diag.memory_pct_of_limit is not None else f"   Memory at OOM: {diag.memory_at_oom_bytes}")
+    print(f"   Growth rates (%/h of limit): 1h={diag.growth_rate_1h}, 4h={diag.growth_rate_4h}, 12h={diag.growth_rate_12h}")
+    print(f"   Fragmentation: 20m={diag.frag_at_20m}, 10m={diag.frag_at_10m}, at_oom={diag.frag_at_oom}")
+    print(f"   Spike ratio: {diag.spike_ratio}")
+    print(f"   ➜ Cause: {diag.cause}")
+    print(f"   Sidecar D: {diag.scenario_d} | False-positive sidecar: {diag.false_positive_sidecar}")
 
     # Step 3: Build Grafana link
     print("[3/4] Building Grafana link...")
