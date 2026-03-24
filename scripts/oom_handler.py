@@ -294,7 +294,7 @@ def diagnose(vm: VictoriaMetricsClient, namespace: str, pod: str,
     # less susceptible to transient spikes caused by large queries.
     frag_labels = f'namespace="{namespace}", pod="{pod}"'
     frag_ratio = vm.instant_query(
-        f'avg_over_time(redis_mem_fragmentation_ratio{{{frag_labels}}}[3h])'
+        f'avg_over_time(redis_mem_fragmentation_ratio{{{frag_labels}}}[6h])'
     )
     result.fragmentation_ratio = frag_ratio
     if frag_ratio is not None and frag_ratio > 1.5:
