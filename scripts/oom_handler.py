@@ -66,7 +66,8 @@ class DiagnosisResult:
     # Scenario B
     scenario_b: bool = False
     scenario_b_is_side_effect: bool = False  # True when B is caused by a large query (Scenario A)
-    fragmentation_ratio: Optional[float] = None
+    fragmentation_ratio: Optional[float] = None          # 3h average (baseline signal)
+    fragmentation_ratio_at_oom: Optional[float] = None   # 5min window anchored at OOM time
 
     # Scenario C
     scenario_c: bool = False
@@ -269,42 +270,9 @@ def diagnose(vm: VictoriaMetricsClient, namespace: str, pod: str,
             result.scenario_d = True
             return result
 
-    # --- Scenario A: spike detection using pre-OOM offset window ---
-    # Always diagnose against the service container (even if the alert fired on a sidecar).
-    # Strategy: fetch the exact timestamp when the container was last OOMKilled,
-    # then query max/min RSS in the 3 minutes *before* that timestamp using an offset.
-    # This avoids the near-zero post-restart RSS polluting min_over_time.
-    rss_labels = f'namespace="{namespace}", pod="{pod}", container="service"'
-    term_ts_labels = f'namespace="{namespace}", pod="{pod}", container="service"'
-    oom_timestamp = vm.instant_query(
-        f'kube_pod_container_status_last_terminated_timestamp{{{term_ts_labels}}}'
-    )
-
-    if oom_timestamp is not None:
-        now_ts = datetime.now(timezone.utc).timestamp()
-        seconds_since_oom = max(0, int(now_ts - oom_timestamp))
-        result.seconds_since_oom = seconds_since_oom
-        offset_str = f"{seconds_since_oom}s"
-        # Query the 3-minute window ending at the OOM timestamp (pre-restart)
-        mem_max = vm.instant_query(
-            f'max_over_time(container_memory_rss{{{rss_labels}}}[3m] offset {offset_str})'
-        )
-        mem_min = vm.instant_query(
-            f'min_over_time(container_memory_rss{{{rss_labels}}}[3m] offset {offset_str})'
-        )
-        result.memory_max_bytes = mem_max
-        result.memory_min_bytes = mem_min
-
-        if mem_max is not None and mem_min is not None and mem_min > 0:
-            ratio = mem_max / mem_min
-            result.spike_ratio = ratio
-            if ratio > 1.3:
-                result.scenario_a_confirmed = True
-    else:
-        print("   ⚠️  Could not fetch OOM timestamp; skipping spike detection.",
-              file=sys.stderr)
-
     # --- Scenario C: legitimate growth (30-day comparison) ---
+    # Checked first — most reliable signal, uses long windows immune to restart noise.
+    rss_labels = f'namespace="{namespace}", pod="{pod}", container="service"'
     recent_avg = vm.instant_query(
         f'avg_over_time(container_memory_rss{{{rss_labels}}}[7d])'
     )
@@ -321,33 +289,68 @@ def diagnose(vm: VictoriaMetricsClient, namespace: str, pod: str,
         if growth_pct > 20:
             result.scenario_c = True
 
-    # --- Scenario B: memory fragmentation (60-minute window) ---
+    # --- Scenario B: memory fragmentation (1-hour average) ---
+    # Checked second — avg over 3h gives a stable reading of sustained fragmentation,
+    # less susceptible to transient spikes caused by large queries.
     frag_labels = f'namespace="{namespace}", pod="{pod}"'
     frag_ratio = vm.instant_query(
-        f'max_over_time(redis_mem_fragmentation_ratio{{{frag_labels}}}[60m])'
+        f'avg_over_time(redis_mem_fragmentation_ratio{{{frag_labels}}}[3h])'
     )
     result.fragmentation_ratio = frag_ratio
     if frag_ratio is not None and frag_ratio > 1.5:
         result.scenario_b = True
-        # High fragmentation alongside a confirmed/suspected spike is a side effect
-        # of the large query — jemalloc fragments under rapid allocation pressure.
-        # It does NOT independently indicate a need to restart the VM.
-        if result.scenario_a_confirmed:
-            result.scenario_b_is_side_effect = True
 
-    # --- Scenario A suspected ---
-    # If no confirmed spike, no growth, and no independent fragmentation
-    # → OOM was too fast to capture (or OOM timestamp unavailable).
-    # If only B triggered without C → fragmentation was caused by the spike.
-    if (not result.scenario_a_confirmed and
-            not result.scenario_b and
-            not result.scenario_c):
-        result.scenario_a_suspected = True
-    elif (not result.scenario_a_confirmed and
-          not result.scenario_c and
-          result.scenario_b):
-        result.scenario_a_suspected = True
+    # --- Scenario A: spike detection using pre-OOM offset window ---
+    # Checked last — least reliable since fast spikes may not be scraped.
+    # Strategy: fetch the exact OOM timestamp, then query max/min RSS in the
+    # 3 minutes *before* that timestamp to avoid post-restart near-zero pollution.
+    term_ts_labels = f'namespace="{namespace}", pod="{pod}", container="service"'
+    oom_timestamp = vm.instant_query(
+        f'kube_pod_container_status_last_terminated_timestamp{{{term_ts_labels}}}'
+    )
+
+    if oom_timestamp is not None:
+        now_ts = datetime.now(timezone.utc).timestamp()
+        seconds_since_oom = max(0, int(now_ts - oom_timestamp))
+        result.seconds_since_oom = seconds_since_oom
+        offset_str = f"{seconds_since_oom}s"
+        mem_max = vm.instant_query(
+            f'max_over_time(container_memory_rss{{{rss_labels}}}[3m] offset {offset_str})'
+        )
+        mem_min = vm.instant_query(
+            f'min_over_time(container_memory_rss{{{rss_labels}}}[3m] offset {offset_str})'
+        )
+        result.memory_max_bytes = mem_max
+        result.memory_min_bytes = mem_min
+
+        # Also capture fragmentation ratio at the moment of OOM (5-min window before restart)
+        frag_at_oom = vm.instant_query(
+            f'avg_over_time(redis_mem_fragmentation_ratio{{{frag_labels}}}[5m] offset {offset_str})'
+        )
+        result.fragmentation_ratio_at_oom = frag_at_oom
+
+        if mem_max is not None and mem_min is not None and mem_min > 0:
+            ratio = mem_max / mem_min
+            result.spike_ratio = ratio
+            if ratio > 1.3:
+                result.scenario_a_confirmed = True
+    else:
+        print("   ⚠️  Could not fetch OOM timestamp; skipping spike detection.",
+              file=sys.stderr)
+
+    # --- Final classification ---
+    # C and B are reliable metric signals; A is the fallback.
+    # B is a side effect (not independent) only when C or A confirmed is also present —
+    # in those cases the fragmentation was driven by growth pressure or a large query spike.
+    # If B triggers alone (without C or A confirmed), it is the primary cause.
+    if result.scenario_c and result.scenario_b:
         result.scenario_b_is_side_effect = True
+    if result.scenario_a_confirmed and result.scenario_b:
+        result.scenario_b_is_side_effect = True
+
+    # A suspected only when neither C nor B explains the OOM
+    if not result.scenario_c and not result.scenario_b and not result.scenario_a_confirmed:
+        result.scenario_a_suspected = True
 
     return result
 
@@ -412,11 +415,12 @@ class GoogleChatNotifier:
             )
 
         if diag.scenario_b:
-            frag_str = f"{diag.fragmentation_ratio:.2f}" if diag.fragmentation_ratio else "N/A"
+            frag_str = f"{diag.fragmentation_ratio:.2f}" if diag.fragmentation_ratio is not None else "N/A"
+            frag_at_oom_str = f"{diag.fragmentation_ratio_at_oom:.2f}" if diag.fragmentation_ratio_at_oom is not None else "N/A"
             if diag.scenario_b_is_side_effect:
                 lines.append(
                     f"🟡 <b>High Fragmentation Detected (side effect of large query)</b><br>"
-                    f"Fragmentation ratio: <b>{frag_str}</b>. "
+                    f"Fragmentation ratio — 3h average: <b>{frag_str}</b> | at time of OOM: <b>{frag_at_oom_str}</b>. "
                     "This is expected after a massive allocation spike — jemalloc fragments under rapid memory pressure. "
                     "<b>Do NOT restart the VM for this alone.</b> "
                     "Once the instance recovers, fragmentation will normalise naturally."
@@ -424,7 +428,7 @@ class GoogleChatNotifier:
             else:
                 lines.append(
                     f"🟠 <b>Scenario B — Memory Fragmentation</b><br>"
-                    f"Fragmentation ratio: <b>{frag_str}</b> (threshold: 1.5). "
+                    f"Fragmentation ratio — 3h average: <b>{frag_str}</b> | at time of OOM: <b>{frag_at_oom_str}</b> (threshold: 1.5). "
                     "Restart the underlying VM from Omnistrate UI (manual action). "
                     "Refer to ContainerMemoryHighRSSCritical runbook."
                 )
