@@ -1,10 +1,22 @@
 import { ClusterSchema, Cluster } from '../../types';
 import logger from '../../logger';
-import { AccountClient, ListRegionsCommand } from "@aws-sdk/client-account";
-import { EKSClient, DescribeClusterCommand, ListClustersCommand, ListAccessEntriesCommand, CreateAccessEntryCommand, AssociateAccessPolicyCommand, AccessScopeType, CreateAccessEntryCommandOutput, DescribeAccessEntryCommand, InvalidRequestException, UpdateClusterConfigCommand } from '@aws-sdk/client-eks';
+import { AccountClient, ListRegionsCommand } from '@aws-sdk/client-account';
+import {
+  EKSClient,
+  DescribeClusterCommand,
+  ListClustersCommand,
+  ListAccessEntriesCommand,
+  CreateAccessEntryCommand,
+  AssociateAccessPolicyCommand,
+  AccessScopeType,
+  CreateAccessEntryCommandOutput,
+  DescribeAccessEntryCommand,
+  InvalidRequestException,
+  UpdateClusterConfigCommand,
+} from '@aws-sdk/client-eks';
 import { AWSCredentials, getAWSCredentials } from './client';
 
-export async function discoverAWSClusters(): Promise<{ clusters: Cluster[], credentials: AWSCredentials }> {
+export async function discoverAWSClusters(): Promise<{ clusters: Cluster[]; credentials: AWSCredentials }> {
   logger.info('Discovering AWS clusters...');
 
   const credentials = await getAWSCredentials();
@@ -14,9 +26,7 @@ export async function discoverAWSClusters(): Promise<{ clusters: Cluster[], cred
   const clusters: Cluster[] = [];
 
   for await (const region of regions) {
-    clusters.push(
-      ...(await getRegionClusters(credentials, region))
-    )
+    clusters.push(...(await getRegionClusters(credentials, region)));
   }
 
   const validClusters = clusters.filter((c): c is Cluster => c !== null);
@@ -24,7 +34,7 @@ export async function discoverAWSClusters(): Promise<{ clusters: Cluster[], cred
   logger.info({ clusterCount: validClusters.length }, `Found ${validClusters.length} AWS clusters.`);
 
   // Validate clusters
-  return { clusters: validClusters.map((cluster) => ClusterSchema.validateSync(cluster)), credentials }
+  return { clusters: validClusters.map((cluster) => ClusterSchema.validateSync(cluster)), credentials };
 }
 
 async function getAWSRegions(credentials: AWSCredentials) {
@@ -40,9 +50,9 @@ async function getAWSRegions(credentials: AWSCredentials) {
     });
     const response = await client.send(command);
 
-    return response.Regions.map(r => r.RegionName)
+    return response.Regions.map((r) => r.RegionName);
   } catch (error) {
-    logger.error(error, 'Failed to get AWS regions')
+    logger.error(error, 'Failed to get AWS regions');
     return [];
   }
 }
@@ -51,22 +61,23 @@ async function getRegionClusters(credentials: AWSCredentials, region: string): P
   const client = new EKSClient({
     credentials,
     region,
-  })
+  });
 
   try {
     const { clusters: clusterNames } = await client.send(new ListClustersCommand());
 
-    logger.info(`Found ${clusterNames.length} clusters in aws region ${region}`)
+    logger.info(`Found ${clusterNames.length} clusters in aws region ${region}`);
 
     const clusters: Cluster[] = [];
     for await (const clusterName of clusterNames) {
-
-      const { cluster } = await client.send(new DescribeClusterCommand({
-        name: clusterName,
-      }))
+      const { cluster } = await client.send(
+        new DescribeClusterCommand({
+          name: clusterName,
+        }),
+      );
 
       if (!cluster.certificateAuthority.data) {
-        logger.info(`Skipping cluster ${clusterName} in region ${region} due to missing certificate authority`)
+        logger.info(`Skipping cluster ${clusterName} in region ${region} due to missing certificate authority`);
         continue;
       }
 
@@ -82,110 +93,136 @@ async function getRegionClusters(credentials: AWSCredentials, region: string): P
             awsAuthConfig: {
               clusterName: cluster.name,
               roleARN: process.env.AWS_ROLE_ARN,
-              profile: 'default'
+              profile: 'default',
             },
             tlsClientConfig: {
               insecure: false,
               caData: cluster.certificateAuthority.data,
-            }
+            },
           },
           hostMode: 'managed',
-        })
+          createdAt: cluster.createdAt ? new Date(cluster.createdAt) : undefined,
+        });
       } else {
-        logger.warn(`Skipping cluster ${clusterName} in region ${region} due to missing access entries`)
+        logger.warn(`Skipping cluster ${clusterName} in region ${region} due to missing access entries`);
       }
     }
 
     return clusters;
   } catch (error) {
-    logger.error(error, 'Failed to get clusters from region ' + region)
+    logger.error(error, 'Failed to get clusters from region ' + region);
     return [];
   }
 }
 
 async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): Promise<boolean> {
-
   let hasAccessEntries = false;
   try {
-    const accessEntries = await client.send(new ListAccessEntriesCommand({
-      clusterName: cluster.name,
-      associatedPolicyArn: 'arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy',
-    }))
-    hasAccessEntries = accessEntries.accessEntries.length > 0 && (
-      await Promise.all(
-        accessEntries.accessEntries.map(a =>
-          client.send(new DescribeAccessEntryCommand({
-            clusterName: cluster.name,
-            principalArn: a,
-          })).then(e => e.accessEntry.principalArn === process.env.AWS_ROLE_ARN)
+    const accessEntries = await client.send(
+      new ListAccessEntriesCommand({
+        clusterName: cluster.name,
+        associatedPolicyArn: 'arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy',
+      }),
+    );
+    hasAccessEntries =
+      accessEntries.accessEntries.length > 0 &&
+      (
+        await Promise.all(
+          accessEntries.accessEntries.map((a) =>
+            client
+              .send(
+                new DescribeAccessEntryCommand({
+                  clusterName: cluster.name,
+                  principalArn: a,
+                }),
+              )
+              .then((e) => e.accessEntry.principalArn === process.env.AWS_ROLE_ARN),
+          ),
         )
-      )
-    ).some(a => !!a)
+      ).some((a) => !!a);
   } catch (error) {
-    if (error instanceof InvalidRequestException && error.message.includes("Cluster is currently not in Active State, so it cannot be updated")) {
+    if (
+      error instanceof InvalidRequestException &&
+      error.message.includes('Cluster is currently not in Active State, so it cannot be updated')
+    ) {
       return false;
     }
-    if (error instanceof InvalidRequestException && error.message === "The cluster's authentication mode must be set to one of [API, API_AND_CONFIG_MAP] to perform this operation.") {
+    if (
+      error instanceof InvalidRequestException &&
+      error.message ===
+        "The cluster's authentication mode must be set to one of [API, API_AND_CONFIG_MAP] to perform this operation."
+    ) {
       const wasAdded = await addApiAuthMode(client, cluster);
       if (!wasAdded) return false;
       return resolveClusterAccessEntry(client, cluster);
     }
-    if (error instanceof InvalidRequestException && error.message.includes(`Cannot AccessConfigUpdate because cluster ${cluster.name} currently has update`)) {
-      await (new Promise((res) => {
-        setTimeout(res, 3000)
-      }))
+    if (
+      error instanceof InvalidRequestException &&
+      error.message.includes(`Cannot AccessConfigUpdate because cluster ${cluster.name} currently has update`)
+    ) {
+      await new Promise((res) => {
+        setTimeout(res, 3000);
+      });
       return resolveClusterAccessEntry(client, cluster);
     }
-    logger.error(error, "Failed to get access entries for cluster " + cluster.name)
+    logger.error(error, 'Failed to get access entries for cluster ' + cluster.name);
     return false;
   }
 
   if (!hasAccessEntries) {
     let accessEntry: CreateAccessEntryCommandOutput;
     try {
-      accessEntry = await client.send(new CreateAccessEntryCommand({
-        clusterName: cluster.name,
-        principalArn: process.env.AWS_ROLE_ARN,
-        type: 'STANDARD',
-      }))
+      accessEntry = await client.send(
+        new CreateAccessEntryCommand({
+          clusterName: cluster.name,
+          principalArn: process.env.AWS_ROLE_ARN,
+          type: 'STANDARD',
+        }),
+      );
     } catch (error) {
-      logger.error(error, "Failed to create access entries for cluster " + cluster.name)
+      logger.error(error, 'Failed to create access entries for cluster ' + cluster.name);
       return false;
     }
 
     try {
-      await client.send(new AssociateAccessPolicyCommand({
-        clusterName: cluster.name,
-        accessScope: { type: AccessScopeType.cluster, },
-        policyArn: 'arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy',
-        principalArn: accessEntry.accessEntry.principalArn,
-      }))
+      await client.send(
+        new AssociateAccessPolicyCommand({
+          clusterName: cluster.name,
+          accessScope: { type: AccessScopeType.cluster },
+          policyArn: 'arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy',
+          principalArn: accessEntry.accessEntry.principalArn,
+        }),
+      );
     } catch (error) {
-      logger.error(error, "Failed to create access policy for cluster " + cluster.name)
+      logger.error(error, 'Failed to create access policy for cluster ' + cluster.name);
       return false;
     }
 
     if (process.env.AWS_SSO_ROLE_ARN) {
       try {
-        accessEntry = await client.send(new CreateAccessEntryCommand({
-          clusterName: cluster.name,
-          principalArn: process.env.AWS_SSO_ROLE_ARN,
-          type: 'STANDARD',
-        }))
+        accessEntry = await client.send(
+          new CreateAccessEntryCommand({
+            clusterName: cluster.name,
+            principalArn: process.env.AWS_SSO_ROLE_ARN,
+            type: 'STANDARD',
+          }),
+        );
       } catch (error) {
-        logger.error(error, "Failed to create access entries for cluster " + cluster.name)
+        logger.error(error, 'Failed to create access entries for cluster ' + cluster.name);
         return false;
       }
 
       try {
-        await client.send(new AssociateAccessPolicyCommand({
-          clusterName: cluster.name,
-          accessScope: { type: AccessScopeType.cluster, },
-          policyArn: 'arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy',
-          principalArn: accessEntry.accessEntry.principalArn,
-        }))
+        await client.send(
+          new AssociateAccessPolicyCommand({
+            clusterName: cluster.name,
+            accessScope: { type: AccessScopeType.cluster },
+            policyArn: 'arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminPolicy',
+            principalArn: accessEntry.accessEntry.principalArn,
+          }),
+        );
       } catch (error) {
-        logger.error(error, "Failed to create access policy for cluster " + cluster.name)
+        logger.error(error, 'Failed to create access policy for cluster ' + cluster.name);
         return false;
       }
     }
@@ -196,14 +233,19 @@ async function resolveClusterAccessEntry(client: EKSClient, cluster: Cluster): P
 async function addApiAuthMode(client: EKSClient, cluster: Cluster): Promise<boolean> {
   try {
     logger.info(`Requesting API authentication mode for cluster ${cluster.name}`);
-    await client.send(new UpdateClusterConfigCommand({
-      name: cluster.name,
-      accessConfig: {
-        authenticationMode: "API_AND_CONFIG_MAP",
-      }
-    }));
+    await client.send(
+      new UpdateClusterConfigCommand({
+        name: cluster.name,
+        accessConfig: {
+          authenticationMode: 'API_AND_CONFIG_MAP',
+        },
+      }),
+    );
   } catch (error) {
-    if (error instanceof InvalidRequestException && error.message.includes("Cluster is currently not in Active State, so it cannot be updated")) {
+    if (
+      error instanceof InvalidRequestException &&
+      error.message.includes('Cluster is currently not in Active State, so it cannot be updated')
+    ) {
       return false;
     }
     logger.error(error, `Failed to set API authentication mode for cluster ${cluster.name}`);
