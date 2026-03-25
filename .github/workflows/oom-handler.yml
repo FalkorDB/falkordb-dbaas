@@ -22,10 +22,6 @@ on:
         description: 'Container that was OOMKilled'
         required: true
         type: string
-      vmmetrics_url:
-        description: 'VMAuth URL for VictoriaMetrics query API'
-        required: true
-        type: string
       grafana_url:
         description: 'Grafana base URL'
         required: true
@@ -72,15 +68,11 @@ jobs:
           ENVIRONMENT: ${{ inputs.environment }}
           OMNISTRATE_DEV_ENV: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
           OMNISTRATE_PROD_ENV: ${{ vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}
-          VMMETRICS_PASS_DEV: ${{ secrets.VMMETRICS_PASSWORD_DEV }}
-          VMMETRICS_PASS_PROD: ${{ secrets.VMMETRICS_PASSWORD_PROD }}
         run: |
           if [ "$ENVIRONMENT" = "dev" ]; then
             echo "OMNISTRATE_ENVIRONMENT_ID=$OMNISTRATE_DEV_ENV" >> $GITHUB_ENV
-            echo "VMMETRICS_PASSWORD=$VMMETRICS_PASS_DEV" >> $GITHUB_ENV
           else
             echo "OMNISTRATE_ENVIRONMENT_ID=$OMNISTRATE_PROD_ENV" >> $GITHUB_ENV
-            echo "VMMETRICS_PASSWORD=$VMMETRICS_PASS_PROD" >> $GITHUB_ENV
           fi
 
       - name: Run OOM handler
@@ -91,14 +83,11 @@ jobs:
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
           OMNISTRATE_SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
           OMNISTRATE_ENVIRONMENT_ID: ${{ env.OMNISTRATE_ENVIRONMENT_ID }}
-          VMMETRICS_USERNAME: ${{ vars.VMMETRICS_USERNAME }}
-          VMMETRICS_PASSWORD: ${{ env.VMMETRICS_PASSWORD }}
           GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL_PRODUCTION_CHAT }}
           POD: ${{ inputs.pod }}
           NAMESPACE: ${{ inputs.namespace }}
           CLUSTER: ${{ inputs.cluster }}
           CONTAINER: ${{ inputs.container }}
-          VMMETRICS_URL: ${{ inputs.vmmetrics_url }}
           GRAFANA_URL: ${{ inputs.grafana_url }}
         run: |
           python ./scripts/oom_handler.py \
@@ -106,5 +95,4 @@ jobs:
             --namespace "$NAMESPACE" \
             --cluster "$CLUSTER" \
             --container "$CONTAINER" \
-            --vmmetrics-url "$VMMETRICS_URL" \
             --grafana-url "$GRAFANA_URL"
