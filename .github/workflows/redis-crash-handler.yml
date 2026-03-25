@@ -75,7 +75,7 @@ jobs:
         env:
           ACTOR: ${{ github.actor }}
         run: |
-          ALLOWED_USERS=("swilly22" "MuhammadQadora" "dudizimber" "AviAvni")
+          ALLOWED_USERS=("swilly22" "MuhammadQadora" "dudizimber" "AviAvni" "barakb")
           for user in "${ALLOWED_USERS[@]}"; do
             if [[ "$ACTOR" == "$user" ]]; then
               echo "Actor '$ACTOR' is authorised. Proceeding."
