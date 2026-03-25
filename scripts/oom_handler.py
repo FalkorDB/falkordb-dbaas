@@ -367,8 +367,8 @@ def main(args):
     # Step 2: Build Grafana links (±10 min window centred on OOM time)
     print("[2/3] Building Grafana links...")
     oom_ts_ms = int(oom_dt.timestamp() * 1000)
-    from_ms   = oom_ts_ms - 10_601_000
-    to_ms     = oom_ts_ms + 10_601_000
+    from_ms   = oom_ts_ms - 10 * 60 * 1000
+    to_ms     = oom_ts_ms + 10 * 60 * 1000
     grafana_memory_url = build_grafana_memory_url(args.grafana_url, args.namespace, args.pod, from_ms, to_ms)
     grafana_pods_url   = build_grafana_pods_url(args.grafana_url, args.namespace, args.pod, args.cluster, from_ms, to_ms)
     print(f"   Memory: {grafana_memory_url}")
