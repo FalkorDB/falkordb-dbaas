@@ -39,7 +39,6 @@ spec:
             --arg namespace "${NAMESPACE}" \
             --arg cluster "${CLUSTER}" \
             --arg container "${CONTAINER}" \
-            --arg vmmetrics_url "https://vmauth.observability.internal.falkordb.cloud" \
             --arg grafana_url "${GRAFANA_URL}" \
             --arg env "prod" \
             '{
@@ -49,7 +48,6 @@ spec:
                 namespace: $namespace,
                 cluster: $cluster,
                 container: $container,
-                vmmetrics_url: $vmmetrics_url,
                 grafana_url: $grafana_url,
                 environment: $env
               }

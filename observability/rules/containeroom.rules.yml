@@ -16,10 +16,25 @@ spec:
             group by (pod, cluster, namespace, container) (kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1)
           for: 0m
           labels:
-            severity: critical
+            severity: warning
             cluster: '{{ $labels.cluster }}'
             environment: '{{ $labels.environment }}'
           annotations:
             summary: "Container OOMKilled"
             description: "Container {{ $labels.container }} in pod {{ $labels.pod }} in namespace {{ $labels.namespace }} was terminated due to OOMKilled."
+            view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
+
+        - alert: ContainerOOMKilledLoop
+          expr: |
+            group by (pod, cluster, namespace, container) (changes(kube_pod_container_status_restarts_total[15m]) > 2)
+            and
+            group by (pod, cluster, namespace, container) (kube_pod_container_status_last_terminated_reason{reason="OOMKilled"} == 1)
+          for: 0m
+          labels:
+            severity: critical
+            cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
+          annotations:
+            summary: "Container OOMKilled in a loop"
+            description: "Container {{ $labels.container }} in pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has OOMKilled more than twice in the last 15 minutes."
             view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
