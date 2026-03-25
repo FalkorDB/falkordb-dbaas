@@ -88,7 +88,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   const isDevOrTest = fastify.config.NODE_ENV === 'development' || fastify.config.NODE_ENV === 'test';
 
   if (!queueDashToken && !isDevOrTest) {
-    fastify.log.warn('QUEUE_DASHBOARD_TOKEN is not set – QueueDash UI is disabled in production. Set QUEUE_DASHBOARD_TOKEN to enable it.');
+    fastify.log.warn('QUEUE_DASHBOARD_TOKEN is not set - QueueDash UI is disabled in production. Set QUEUE_DASHBOARD_TOKEN to enable it.');
   } else {
     try {
       const ctx: QueueDashContext = {
@@ -101,17 +101,16 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
       await fastify.register(
         (instance, opts, done) => {
-          // Protect with Bearer token when QUEUE_DASHBOARD_TOKEN is configured
+          // Protect QueueDash with query param token when QUEUE_DASHBOARD_TOKEN is configured
           if (queueDashToken) {
-            const expectedHeader = `Bearer ${queueDashToken}`;
             instance.addHook('preHandler', async (request, reply) => {
-              const authHeader = request.headers.authorization;
+              const tokenParamRaw = (request.query as Record<string, unknown> | undefined)?.token;
+              const tokenParam = Array.isArray(tokenParamRaw) ? tokenParamRaw[0] : tokenParamRaw;
               const isValid =
-                authHeader &&
-                authHeader.length === expectedHeader.length &&
-                timingSafeEqual(Buffer.from(authHeader) as Uint8Array, Buffer.from(expectedHeader) as Uint8Array);
+                typeof tokenParam === 'string' &&
+                tokenParam.length === queueDashToken.length &&
+                timingSafeEqual(Buffer.from(tokenParam) as Uint8Array, Buffer.from(queueDashToken) as Uint8Array);
               if (!isValid) {
-                reply.header('WWW-Authenticate', 'Bearer realm="QueueDash"');
                 return reply.code(401).send({ error: 'Unauthorized' });
               }
             });
@@ -120,7 +119,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
         },
         { prefix: '/queues' },
       );
-      fastify.log.info('QueueDash UI available at /queues');
+      fastify.log.info('QueueDash UI available at /queues (use ?token=QUEUE_DASHBOARD_TOKEN when configured)');
     } catch (error) {
       fastify.log.warn({ error }, 'Failed to register QueueDash UI');
     }

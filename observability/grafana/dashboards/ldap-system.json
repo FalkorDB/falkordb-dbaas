@@ -507,12 +507,12 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum by (cluster) (rate(ldap_auth_requests_total{job=\"ldap-auth\", cluster=~\"$cluster\"}[5m]))",
+          "expr": "sum by (cluster) (rate(ldap_auth_attempts_total{job=\"ldap-auth\", cluster=~\"$cluster\"}[5m]))",
           "legendFormat": "{{cluster}}",
           "refId": "A"
         }
       ],
-      "title": "Request Rate by Cluster",
+      "title": "Auth Attempts Rate by Cluster",
       "type": "timeseries"
     },
     {
@@ -566,7 +566,7 @@
               }
             ]
           },
-          "unit": "s"
+          "unit": "reqps"
         },
         "overrides": []
       },
@@ -596,12 +596,30 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (cluster, le) (rate(ldap_auth_request_duration_seconds_bucket{job=\"ldap-auth\", cluster=~\"$cluster\"}[5m])))",
-          "legendFormat": "{{cluster}}",
+          "expr": "sum by (cluster) (rate(ldap_bind_operations_total{job=\"ldap-auth\", cluster=~\"$cluster\"}[5m]))",
+          "legendFormat": "{{cluster}} bind",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum by (cluster) (rate(ldap_user_operations_total{job=\"ldap-auth\", cluster=~\"$cluster\"}[5m]))",
+          "legendFormat": "{{cluster}} user",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum by (cluster) (rate(ldap_group_operations_total{job=\"ldap-auth\", cluster=~\"$cluster\"}[5m]))",
+          "legendFormat": "{{cluster}} group",
+          "refId": "C"
         }
       ],
-      "title": "P95 Request Duration by Cluster",
+      "title": "LDAP Operations Rate by Cluster",
       "type": "timeseries"
     },
     {
@@ -691,6 +709,180 @@
       ],
       "title": "LDAP Auth Instances Up",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 18
+      },
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(ldap_organizations_count{job=\"ldap-auth\", cluster=~\"$cluster\"})",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Organizations",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 18
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(ldap_groups_count{job=\"ldap-auth\", cluster=~\"$cluster\"})",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Groups",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 18
+      },
+      "id": 11,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(ldap_users_count{job=\"ldap-auth\", cluster=~\"$cluster\"})",
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ],
+      "title": "Users",
+      "type": "stat"
     }
   ],
   "preload": false,
@@ -741,6 +933,6 @@
   "timezone": "browser",
   "title": "LDAP System",
   "uid": "ldap-system-dashboard",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
