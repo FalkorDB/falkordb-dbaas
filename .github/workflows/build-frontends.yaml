@@ -41,7 +41,7 @@ jobs:
 
       - name: Docker Build
         id: build-push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
@@ -105,7 +105,7 @@ jobs:
 
       - name: Docker Build and Push
         id: build-push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
