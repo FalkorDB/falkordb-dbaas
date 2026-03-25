@@ -64,6 +64,7 @@ class DiagnosisResult:
 
     # Scenario B
     scenario_b: bool = False
+    scenario_b_is_side_effect: bool = False  # True when B is caused by a large query (Scenario A)
     fragmentation_ratio: Optional[float] = None
 
     # Scenario C
@@ -290,13 +291,27 @@ def diagnose(vm: VictoriaMetricsClient, namespace: str, pod: str,
     result.fragmentation_ratio = frag_ratio
     if frag_ratio is not None and frag_ratio > 1.5:
         result.scenario_b = True
+        # High fragmentation alongside a confirmed/suspected spike is a side effect
+        # of the large query — jemalloc fragments under rapid allocation pressure.
+        # It does NOT independently indicate a need to restart the VM.
+        if result.scenario_a_confirmed:
+            result.scenario_b_is_side_effect = True
 
     # --- Scenario A suspected: no metric data captures the spike ---
-    # If no spike visible, no growth, no fragmentation → OOM was too fast to scrape
+    # If no spike visible, no growth, no fragmentation → OOM was too fast to scrape.
+    # A ratio of 7.79 after the crash is still fragmentation from the spike,
+    # so treat B as a side effect of suspected A as well.
     if (not result.scenario_a_confirmed and
             not result.scenario_b and
             not result.scenario_c):
         result.scenario_a_suspected = True
+    elif (not result.scenario_a_confirmed and
+          not result.scenario_c and
+          result.scenario_b):
+        # Only B triggered — OOM too fast to see spike in metrics but fragmentation
+        # peaked during the crash window. Likely Scenario A side effect.
+        result.scenario_a_suspected = True
+        result.scenario_b_is_side_effect = True
 
     return result
 
@@ -354,12 +369,21 @@ class GoogleChatNotifier:
 
         if diag.scenario_b:
             frag_str = f"{diag.fragmentation_ratio:.2f}" if diag.fragmentation_ratio else "N/A"
-            lines.append(
-                f"🟠 <b>Scenario B — Memory Fragmentation</b><br>"
-                f"Fragmentation ratio: <b>{frag_str}</b> (threshold: 1.5). "
-                "Restart the underlying VM from Omnistrate UI (manual action). "
-                "Refer to ContainerMemoryHighRSSCritical runbook."
-            )
+            if diag.scenario_b_is_side_effect:
+                lines.append(
+                    f"🟡 <b>High Fragmentation Detected (side effect of large query)</b><br>"
+                    f"Fragmentation ratio: <b>{frag_str}</b>. "
+                    "This is expected after a massive allocation spike — jemalloc fragments under rapid memory pressure. "
+                    "<b>Do NOT restart the VM for this alone.</b> "
+                    "Once the instance recovers, fragmentation will normalise naturally."
+                )
+            else:
+                lines.append(
+                    f"🟠 <b>Scenario B — Memory Fragmentation</b><br>"
+                    f"Fragmentation ratio: <b>{frag_str}</b> (threshold: 1.5). "
+                    "Restart the underlying VM from Omnistrate UI (manual action). "
+                    "Refer to ContainerMemoryHighRSSCritical runbook."
+                )
 
         return "<br><br>".join(lines) if lines else "⚪ No scenario triggered."
 

@@ -1,25 +1,27 @@
 import fp from 'fastify-plugin';
-import { ListRDBTasksRequestQuerySchema, ListRDBTasksResponseSchema } from '@falkordb/schemas/services/import-export-rdb/v1';
+import {
+  ListRDBTasksRequestQuerySchema,
+  ListRDBTasksResponseSchema,
+} from '@falkordb/schemas/services/import-export-rdb/v1';
 import { listTasksHandler } from './handlers/listTasksHandler';
 
 export default fp(
   async function handler(fastify, opts) {
-    fastify.addHook('preHandler', async (request) => {
-      await fastify.authenticateOmnistrate(request);
-    });
-
     fastify.get(
       '/tasks',
       {
+        preHandler: async (request) => {
+          await fastify.authenticateOmnistrate(request);
+        },
         schema: {
           tags: ['tasks'],
           querystring: ListRDBTasksRequestQuerySchema,
           response: { 200: ListRDBTasksResponseSchema },
           security: [
             {
-              "bearerAuth": []
-            }
-          ]
+              bearerAuth: [],
+            },
+          ],
         },
       },
       listTasksHandler,

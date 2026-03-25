@@ -81,6 +81,23 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
       # ------------------------------------------------------------------ #
+      # 0. Check that the actor is an authorised user
+      # ------------------------------------------------------------------ #
+      - name: Check authorised actor
+        env:
+          ACTOR: ${{ github.actor }}
+        run: |
+          ALLOWED_USERS=("swilly22" "MuhammadQadora" "dudizimber" "AviAvni")
+          for user in "${ALLOWED_USERS[@]}"; do
+            if [[ "$ACTOR" == "$user" ]]; then
+              echo "Actor '$ACTOR' is authorised. Proceeding."
+              exit 0
+            fi
+          done
+          echo "Actor '$ACTOR' is not authorised to run this workflow."
+          exit 1
+
+      # ------------------------------------------------------------------ #
       # 1. Install + authenticate omnistrate-ctl (skipped in sign-only mode)
       # ------------------------------------------------------------------ #
       - name: Setup omnistrate-ctl
