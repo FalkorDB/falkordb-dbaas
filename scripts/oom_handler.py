@@ -270,8 +270,9 @@ class GoogleChatNotifier:
 # Grafana link generators
 # ---------------------------------------------------------------------------
 
-def build_grafana_memory_url(grafana_base: str, namespace: str, pod: str) -> str:
-    """Grafana Explore URL showing container_memory_rss for the pod."""
+def build_grafana_memory_url(grafana_base: str, namespace: str, pod: str,
+                             from_ms: int, to_ms: int) -> str:
+    """Grafana Explore URL showing container_memory_rss centred on the OOM time."""
     from urllib.parse import urlencode
     expr = f'container_memory_rss{{namespace="{namespace}", pod="{pod}"}}'
     params = {
@@ -279,17 +280,20 @@ def build_grafana_memory_url(grafana_base: str, namespace: str, pod: str) -> str
         "left": json.dumps({
             "datasource": "VictoriaMetrics",
             "queries": [{"expr": expr, "refId": "A"}],
-            "range": {"from": "now-1h", "to": "now"},
+            "range": {"from": str(from_ms), "to": str(to_ms)},
         }),
     }
     return f"{grafana_base.rstrip('/')}/explore?{urlencode(params)}"
 
 
-def build_grafana_pods_url(grafana_base: str, namespace: str, pod: str, cluster: str) -> str:
-    """Direct link to the Kubernetes / Views / Pods dashboard filtered to this pod."""
+def build_grafana_pods_url(grafana_base: str, namespace: str, pod: str,
+                          cluster: str, from_ms: int, to_ms: int) -> str:
+    """Direct link to the Kubernetes / Views / Pods dashboard centred on the OOM time."""
     from urllib.parse import urlencode
     params = {
         "orgId": "1",
+        "from": str(from_ms),
+        "to": str(to_ms),
         "var-cluster": cluster,
         "var-namespace": namespace,
         "var-pod": pod,
@@ -359,10 +363,13 @@ def main(args):
     customer = omnistrate.get_customer_info(args.namespace)
     print(f"   Customer: {customer.name} ({mask_email(customer.email)})")
 
-    # Step 2: Build Grafana links
+    # Step 2: Build Grafana links (±10 min window centred on OOM time)
     print("[2/3] Building Grafana links...")
-    grafana_memory_url = build_grafana_memory_url(args.grafana_url, args.namespace, args.pod)
-    grafana_pods_url   = build_grafana_pods_url(args.grafana_url, args.namespace, args.pod, args.cluster)
+    now_ms  = int(datetime.now().timestamp() * 1000)
+    from_ms = now_ms - 10 * 60 * 1000
+    to_ms   = now_ms + 10 * 60 * 1000
+    grafana_memory_url = build_grafana_memory_url(args.grafana_url, args.namespace, args.pod, from_ms, to_ms)
+    grafana_pods_url   = build_grafana_pods_url(args.grafana_url, args.namespace, args.pod, args.cluster, from_ms, to_ms)
     print(f"   Memory: {grafana_memory_url}")
     print(f"   Pods:   {grafana_pods_url}")
 
