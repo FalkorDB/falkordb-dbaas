@@ -21,6 +21,7 @@ export const EnvSchema = Type.Object({
   REDIS_USERNAME: Type.Optional(Type.String()),
   REDIS_PASSWORD: Type.Optional(Type.String()),
   REDIS_DB: Type.Number({ default: 0 }),
+  QUEUEDASH_TOKEN: Type.Optional(Type.String()),
 });
 
 export type EnvSchemaType = Static<typeof EnvSchema>;

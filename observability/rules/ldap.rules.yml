@@ -1,0 +1,50 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  namespace: observability
+  name: ldap.rules
+  labels:
+    is_logs: "false"
+spec:
+  groups:
+    - name: ldap.rules
+      rules:
+        - alert: LdapAuthAttemptsHigh
+          expr: sum(rate(ldap_auth_attempts_total[5m])) by (cluster, job) > 100
+          for: 5m
+          labels:
+            severity: warning
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: "High LDAP auth attempt rate (cluster={{ $labels.cluster }}, job={{ $labels.job }})"
+            description: "[cluster={{ $labels.cluster }}] LDAP auth attempt rate is high: {{ $value | printf \"%.2f\" }} ops/s\n  LABELS = {{ $labels }}"
+
+        - alert: LdapNoOrganizations
+          expr: sum(ldap_organizations_count) by (cluster, job) == 0
+          for: 5m
+          labels:
+            severity: critical
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: "No LDAP organizations found (cluster={{ $labels.cluster }}, job={{ $labels.job }})"
+            description: "[cluster={{ $labels.cluster }}] LDAP reports 0 organizations in job {{ $labels.job }}.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+        - alert: LdapNoUsers
+          expr: sum(ldap_users_count) by (cluster, job) == 0
+          for: 5m
+          labels:
+            severity: warning
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: "No LDAP users found (cluster={{ $labels.cluster }}, job={{ $labels.job }})"
+            description: "[cluster={{ $labels.cluster }}] LDAP reports 0 users in job {{ $labels.job }}.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+        - alert: LdapBindOperationsDown
+          expr: sum(rate(ldap_bind_operations_total[5m])) by (cluster, job) == 0
+          for: 15m
+          labels:
+            severity: warning
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: "No LDAP bind operations (cluster={{ $labels.cluster }}, job={{ $labels.job }})"
+            description: "[cluster={{ $labels.cluster }}] No LDAP bind operations have been recorded for 15 minutes in job {{ $labels.job }}.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"

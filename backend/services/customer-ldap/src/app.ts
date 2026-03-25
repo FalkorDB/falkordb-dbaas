@@ -82,7 +82,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   fastify.queueManager = queueManager;
 
   // Register QueueDash UI for queue monitoring
-  if (fastify.config.NODE_ENV === 'development' || fastify.config.NODE_ENV === 'test') {
+  if (fastify.config.QUEUEDASH_TOKEN) {
     try {
       const ctx: QueueDashContext = {
         queues: queueManager.getQueues().map((queue) => ({
@@ -92,8 +92,18 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
         })),
       };
 
+      const queuedashToken = fastify.config.QUEUEDASH_TOKEN;
+
       await fastify.register(
         (fastify, opts, done) => {
+          fastify.addHook('preHandler', (request, reply, done) => {
+            const { token } = request.query as { token?: string };
+            if (!token || token !== queuedashToken) {
+              reply.status(401).send({ error: 'Unauthorized' });
+              return;
+            }
+            done();
+          });
           fastifyQueueDashPlugin(fastify, { ctx, baseUrl: '/queues' }, done);
         },
         { prefix: '/queues' },
