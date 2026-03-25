@@ -2,6 +2,7 @@ import * as k8s from '@kubernetes/client-node';
 import { DescribeClusterCommand, EKSClient } from '@aws-sdk/client-eks';
 import { getEKSCredentials } from '../providers/aws/client';
 import { getGKECredentials } from '../providers/gcp/client';
+import { getAKSCredentials } from '../providers/azure/client';
 import { Cluster } from '../types';
 import logger from '../logger';
 
@@ -19,7 +20,9 @@ export async function getK8sConfig(
     ? getBYOACredentials(cluster)
     : cloudProvider === 'gcp'
       ? await getGKECredentials(cluster, opts)
-      : await getEKSCredentials(cluster);
+      : cloudProvider === 'azure'
+        ? await getAKSCredentials(cluster)
+        : await getEKSCredentials(cluster);
 
   if (isBYOA) {
     const certData = (cluster.secretConfig as any)?.tlsClientConfig?.certData;

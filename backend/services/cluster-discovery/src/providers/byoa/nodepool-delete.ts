@@ -2,15 +2,13 @@ import { Cluster } from '../../types';
 import logger from '../../logger';
 import { EKSClient, DeleteNodegroupCommand, DescribeNodegroupCommand } from '@aws-sdk/client-eks';
 import { ClusterManagerClient } from '@google-cloud/container';
-import { getAWSBYOACredentials, getGCPBYOACredentials } from './credentials';
+import { ContainerServiceClient } from '@azure/arm-containerservice';
+import { getAWSBYOACredentials, getAzureBYOACredentials, getGCPBYOACredentials } from './credentials';
 
 export async function deleteObservabilityNodePoolGCPBYOA(cluster: Cluster): Promise<void> {
   try {
-    if (!cluster.destinationAccountID || !cluster.destinationAccountNumber) {
-      logger.error(
-        { cluster: cluster.name },
-        'Missing destinationAccountID or destinationAccountNumber for BYOA cluster',
-      );
+    if (!cluster.gcpAccountID || !cluster.gcpAccountNumber) {
+      logger.error({ cluster: cluster.name }, 'Missing gcpAccountID or gcpAccountNumber for BYOA cluster');
       return;
     }
 
@@ -36,7 +34,7 @@ export async function deleteObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
 
     const [nodePools] = await client
       .listNodePools({
-        parent: `projects/${cluster.destinationAccountID}/locations/${cluster.region}/clusters/${cluster.name}`,
+        parent: `projects/${cluster.gcpAccountID}/locations/${cluster.region}/clusters/${cluster.name}`,
       })
       .catch((error) => {
         logger.error(
@@ -60,7 +58,7 @@ export async function deleteObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
     }
 
     await client.deleteNodePool({
-      name: `projects/${cluster.destinationAccountID}/locations/${cluster.region}/clusters/${cluster.name}/nodePools/observability`,
+      name: `projects/${cluster.gcpAccountID}/locations/${cluster.region}/clusters/${cluster.name}/nodePools/observability`,
     });
 
     logger.info({ cluster: cluster.name }, 'Observability node pool deleted for BYOA GCP cluster.');
@@ -81,8 +79,8 @@ export async function deleteObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
 
 export async function deleteObservabilityNodePoolAWSBYOA(cluster: Cluster): Promise<void> {
   try {
-    if (!cluster.destinationAccountID) {
-      logger.error({ cluster: cluster.name }, 'Missing destinationAccountID for BYOA cluster');
+    if (!cluster.awsAccountID || !cluster.awsRoleARN) {
+      logger.error({ cluster: cluster.name }, 'Missing AWS credentials for BYOA cluster');
       return;
     }
 
@@ -103,7 +101,7 @@ export async function deleteObservabilityNodePoolAWSBYOA(cluster: Cluster): Prom
         new DescribeNodegroupCommand({
           clusterName: cluster.name,
           nodegroupName: 'observability',
-        })
+        }),
       );
     } catch (error: any) {
       if (error.name === 'ResourceNotFoundException') {
@@ -118,7 +116,7 @@ export async function deleteObservabilityNodePoolAWSBYOA(cluster: Cluster): Prom
       new DeleteNodegroupCommand({
         clusterName: cluster.name,
         nodegroupName: 'observability',
-      })
+      }),
     );
 
     logger.info({ cluster: cluster.name }, 'Observability node pool deletion initiated for BYOA AWS cluster.');
@@ -132,6 +130,61 @@ export async function deleteObservabilityNodePoolAWSBYOA(cluster: Cluster): Prom
         errorDetails: error,
       },
       'Failed to delete observability node pool for BYOA AWS cluster',
+    );
+    throw error;
+  }
+}
+
+// AKS agent pool names must be 1-12 chars, lowercase alphanumeric.
+const OBSERVABILITY_POOL_NAME = 'obsrv';
+
+export async function deleteObservabilityNodePoolAzureBYOA(cluster: Cluster): Promise<void> {
+  try {
+    if (!cluster.azureClientId || !cluster.azureTenantId || !cluster.azureResourceGroupName) {
+      logger.error({ cluster: cluster.name }, 'Missing Azure credentials for BYOA Azure cluster');
+      return;
+    }
+
+    const { credential } = await getAzureBYOACredentials(cluster).catch((error) => {
+      logger.error(
+        {
+          cluster: cluster.name,
+          errorName: error?.name,
+          errorMessage: error?.message,
+          errorStack: error?.stack,
+          errorDetails: error,
+        },
+        'Failed to get Azure BYOA credentials',
+      );
+      throw error;
+    });
+
+    const client = new ContainerServiceClient(credential, cluster.azureSubscriptionId);
+
+    // Check if the observability agent pool exists before attempting deletion
+    try {
+      await client.agentPools.get(cluster.azureResourceGroupName, cluster.name, OBSERVABILITY_POOL_NAME);
+    } catch (error: any) {
+      if (error.statusCode === 404 || error.code === 'ResourceNotFound' || error.code === 'AgentPoolNotFound') {
+        logger.info({ cluster: cluster.name }, 'Observability node pool does not exist, nothing to delete.');
+        return;
+      }
+      throw error;
+    }
+
+    await client.agentPools.beginDeleteAndWait(cluster.azureResourceGroupName, cluster.name, OBSERVABILITY_POOL_NAME);
+
+    logger.info({ cluster: cluster.name }, 'Observability node pool deleted for BYOA Azure cluster.');
+  } catch (error) {
+    logger.error(
+      {
+        cluster: cluster.name,
+        errorName: (error as any)?.name,
+        errorMessage: (error as any)?.message,
+        errorStack: (error as any)?.stack,
+        errorDetails: error,
+      },
+      'Failed to delete observability node pool for BYOA Azure cluster',
     );
     throw error;
   }

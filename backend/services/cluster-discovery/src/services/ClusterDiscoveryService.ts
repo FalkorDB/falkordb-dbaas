@@ -32,11 +32,11 @@ export class ClusterDiscoveryService {
 
     try {
       // Step 1: Discover all clusters
-      const { gcpClusters, awsClusters, byoaClusters, awsCredentials } =
+      const { gcpClusters, awsClusters, azureClusters, byoaClusters, awsCredentials } =
         await this.discoveryService.discoverAllClusters();
 
       // Step 2: Combine and filter clusters
-      const allClusters = [...gcpClusters, ...awsClusters, ...byoaClusters];
+      const allClusters = [...gcpClusters, ...awsClusters, ...azureClusters, ...byoaClusters];
       const discoveredClusters = this.discoveryService.applyFilters(
         allClusters,
         this.config.whitelist,

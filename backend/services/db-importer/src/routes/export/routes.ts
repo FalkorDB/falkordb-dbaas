@@ -5,9 +5,7 @@ import { exportRDBHandler } from './handlers/exportRDBHandler';
 export default fp(
   async function handler(fastify, opts) {
     fastify.addHook('preHandler', async (request) => {
-      if (request.routerPath.startsWith('/export')) {
-        await fastify.authenticateOmnistrate(request);
-      }
+      await fastify.authenticateOmnistrate(request);
     });
 
 
