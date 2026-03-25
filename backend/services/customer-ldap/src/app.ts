@@ -20,7 +20,7 @@ import openTelemetryPlugin from '@autotelic/fastify-opentelemetry';
 import { IOmnistrateRepository } from './repositories/omnistrate/IOmnistrateRepository';
 import { QueueManager } from './queues/QueueManager';
 import type { Context as QueueDashContext } from '@queuedash/api';
-import { fastifyQueueDashPlugin } from '@queuedash/api';
+import { fastifyQueueDashPlugin, type FastifyQueueDashHooksOptions } from '@queuedash/api';
 
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   await fastify.register(Env, {
@@ -92,9 +92,21 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
         })),
       };
 
+      const queueDashToken = fastify.config.QUEUEDASH_TOKEN;
+      const uiHooks: FastifyQueueDashHooksOptions = {
+        preHandler: async (request, reply) => {
+          if (queueDashToken) {
+            const token = (request.query as Record<string, string>)['token'];
+            if (token !== queueDashToken) {
+              reply.code(401).send({ error: 'Unauthorized' });
+            }
+          }
+        },
+      };
+
       await fastify.register(
         (fastify, opts, done) => {
-          fastifyQueueDashPlugin(fastify, { ctx, baseUrl: '/queues' }, done);
+          fastifyQueueDashPlugin(fastify, { ctx, baseUrl: '/queues', uiHooks }, done);
         },
         { prefix: '/queues' },
       );

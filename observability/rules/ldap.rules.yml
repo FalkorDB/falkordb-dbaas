@@ -1,0 +1,59 @@
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  namespace: observability
+  name: ldap.rules
+  labels:
+    is_logs: "false"
+spec:
+  groups:
+    - name: ldap.rules.auth
+      rules:
+        - alert: LdapAuthAttemptsHigh
+          expr: sum(rate(ldap_auth_attempts_total[5m])) by (cluster, namespace) > 100
+          for: 5m
+          labels:
+            severity: warning
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: "High LDAP auth attempt rate in {{ $labels.namespace }}"
+            description: "[cluster={{ $labels.cluster }}] LDAP authentication attempts in '{{ $labels.namespace }}' are unusually high ({{ $value | humanize }} req/s). This may indicate a brute force attack or misconfigured clients.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+        - alert: LdapBindOperationsHigh
+          expr: sum(rate(ldap_bind_operations_total[5m])) by (cluster, namespace) > 100
+          for: 5m
+          labels:
+            severity: warning
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: "High LDAP bind operation rate in {{ $labels.namespace }}"
+            description: "[cluster={{ $labels.cluster }}] LDAP bind operations in '{{ $labels.namespace }}' are unusually high ({{ $value | humanize }} req/s).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+
+    - name: ldap.rules.inventory
+      rules:
+        - alert: LdapOrganizationsCountMissing
+          expr: absent(ldap_organizations_count) == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "LDAP organizations count metric is missing"
+            description: "The ldap_organizations_count metric has not been reported for more than 10 minutes. The LDAP auth service may be down or unreachable."
+
+        - alert: LdapUsersCountMissing
+          expr: absent(ldap_users_count) == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "LDAP users count metric is missing"
+            description: "The ldap_users_count metric has not been reported for more than 10 minutes. The LDAP auth service may be down or unreachable."
+
+        - alert: LdapGroupsCountMissing
+          expr: absent(ldap_groups_count) == 1
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "LDAP groups count metric is missing"
+            description: "The ldap_groups_count metric has not been reported for more than 10 minutes. The LDAP auth service may be down or unreachable."

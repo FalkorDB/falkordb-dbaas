@@ -6,8 +6,17 @@ import logger from "./logger";
 const app = express();
 
 export const setupApp = () => {
+  const queueDashToken = process.env.QUEUEDASH_TOKEN;
+
   app.use(
     "/queuedash",
+    (req, res, next) => {
+      if (queueDashToken && req.query["token"] !== queueDashToken) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      next();
+    },
     createQueueDashExpressMiddleware({
       ctx: {
         queues: getQueues().map(q => ({
