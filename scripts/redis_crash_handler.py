@@ -1051,7 +1051,7 @@ class GoogleChatNotifier:
     ):
         """Send error notification to Google Chat"""
         payload = {
-            "text": "❌ Redis Crash Handler Failed",
+            "text": "❌ Redis Crash Handler Failed @Roi Lipman @Avi Avni",
             "cards": [{
                 "header": {
                     "title": "❌ Redis Crash Handler Failed",
@@ -1113,7 +1113,7 @@ class GoogleChatNotifier:
             subtitle = f"Customer: {customer_email}"
         
         payload = {
-            "text": crash_type,
+            "text": f"{crash_type} @Roi Lipman @Avi Avni",
             "cards": [{
                 "header": {
                     "title": crash_type,
