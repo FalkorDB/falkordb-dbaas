@@ -81,27 +81,25 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   await queueManager.startWorkers();
   fastify.queueManager = queueManager;
 
-  // Register QueueDash UI for queue monitoring
-  if (fastify.config.NODE_ENV === 'development' || fastify.config.NODE_ENV === 'test') {
-    try {
-      const ctx: QueueDashContext = {
-        queues: queueManager.getQueues().map((queue) => ({
-          type: 'bullmq',
-          queue,
-          displayName: queue.name,
-        })),
-      };
+  // Register QueueDash UI for queue monitoring and management
+  try {
+    const ctx: QueueDashContext = {
+      queues: queueManager.getQueues().map((queue) => ({
+        type: 'bullmq',
+        queue,
+        displayName: queue.name,
+      })),
+    };
 
-      await fastify.register(
-        (fastify, opts, done) => {
-          fastifyQueueDashPlugin(fastify, { ctx, baseUrl: '/queues' }, done);
-        },
-        { prefix: '/queues' },
-      );
-      fastify.log.info('QueueDash UI available at /queues');
-    } catch (error) {
-      fastify.log.warn({ error }, 'Failed to register QueueDash UI');
-    }
+    await fastify.register(
+      (fastify, opts, done) => {
+        fastifyQueueDashPlugin(fastify, { ctx, baseUrl: '/queues' }, done);
+      },
+      { prefix: '/queues' },
+    );
+    fastify.log.info('QueueDash UI available at /queues');
+  } catch (error) {
+    fastify.log.warn({ error }, 'Failed to register QueueDash UI');
   }
 
   // 

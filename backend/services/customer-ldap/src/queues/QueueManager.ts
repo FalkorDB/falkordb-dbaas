@@ -146,6 +146,35 @@ export class QueueManager {
   }
 
   /**
+   * Get job counts for all queues (waiting, active, completed, failed, delayed)
+   */
+  async getJobCounts(): Promise<
+    Array<{
+      name: string;
+      waiting: number;
+      active: number;
+      completed: number;
+      failed: number;
+      delayed: number;
+    }>
+  > {
+    const queues = this.getQueues();
+    return Promise.all(
+      queues.map(async (queue) => {
+        const counts = await queue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
+        return {
+          name: queue.name,
+          waiting: counts.waiting ?? 0,
+          active: counts.active ?? 0,
+          completed: counts.completed ?? 0,
+          failed: counts.failed ?? 0,
+          delayed: counts.delayed ?? 0,
+        };
+      }),
+    );
+  }
+
+  /**
    * Get Redis connection for monitoring (e.g., QueueDash)
    */
   getConnection(): ConnectionOptions {
