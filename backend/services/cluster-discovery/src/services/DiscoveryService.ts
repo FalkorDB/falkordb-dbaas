@@ -1,12 +1,14 @@
 import { discoverGCPClusters } from '../providers/gcp/discovery';
 import { discoverAWSClusters } from '../providers/aws/discovery';
 import { discoverBYOAClusters } from '../providers/omnistrate/client';
+import { discoverAzureClusters } from '../providers/azure/discovery';
 import logger from '../logger';
 import { Cluster } from '../types';
 
 export interface DiscoveryResult {
   gcpClusters: Cluster[];
   awsClusters: Cluster[];
+  azureClusters: Cluster[];
   byoaClusters: Cluster[];
   awsCredentials?: any;
 }
@@ -15,9 +17,10 @@ export class DiscoveryService {
   async discoverAllClusters(): Promise<DiscoveryResult> {
     logger.info('Starting cluster discovery across all providers...');
 
-    const [gcpResult, awsResult, byoaResult] = await Promise.allSettled([
+    const [gcpResult, awsResult, azureResult, byoaResult] = await Promise.allSettled([
       discoverGCPClusters(),
       discoverAWSClusters(),
+      discoverAzureClusters(),
       discoverBYOAClusters(),
     ]);
 
@@ -27,12 +30,15 @@ export class DiscoveryService {
       awsResult.status === 'fulfilled'
         ? awsResult.value
         : { clusters: this.handleError('AWS', awsResult.reason), credentials: undefined };
+    const azureClusters =
+      azureResult.status === 'fulfilled' ? azureResult.value.clusters : this.handleError('Azure', azureResult.reason);
     const byoaClusters =
       byoaResult.status === 'fulfilled' ? byoaResult.value.clusters : this.handleError('BYOA', byoaResult.reason);
 
     return {
       gcpClusters,
       awsClusters,
+      azureClusters,
       byoaClusters,
       awsCredentials,
     };
