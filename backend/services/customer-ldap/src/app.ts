@@ -99,27 +99,42 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
         })),
       };
 
-      await fastify.register(
-        (instance, opts, done) => {
-          // Protect QueueDash with query param token when QUEUE_DASHBOARD_TOKEN is configured
-          if (queueDashToken) {
-            instance.addHook('preHandler', async (request, reply) => {
-              const tokenParamRaw = (request.query as Record<string, unknown> | undefined)?.token;
-              const tokenParam = Array.isArray(tokenParamRaw) ? tokenParamRaw[0] : tokenParamRaw;
-              const isValid =
-                typeof tokenParam === 'string' &&
-                tokenParam.length === queueDashToken.length &&
-                timingSafeEqual(Buffer.from(tokenParam) as Uint8Array, Buffer.from(queueDashToken) as Uint8Array);
-              if (!isValid) {
-                return reply.code(401).send({ error: 'Unauthorized' });
-              }
-            });
-          }
-          fastifyQueueDashPlugin(instance, { ctx, baseUrl: '/queues' }, done);
-        },
-        { prefix: '/queues' },
-      );
-      fastify.log.info('QueueDash UI available at /queues (use ?token=QUEUE_DASHBOARD_TOKEN when configured)');
+      // Register QueueDash in a scope (no Fastify prefix — baseUrl handles mounting at /queues).
+      // Auth: first request must supply ?token=; a signed session cookie is then set so the
+      // SPA's internal tRPC calls pass without re-supplying the token on every request.
+      await fastify.register(async (instance) => {
+        if (queueDashToken) {
+          instance.addHook('onRequest', async (request, reply) => {
+            // Accept a valid ?token= query param (sets session cookie) OR a live session cookie.
+            const tokenParamRaw = (request.query as Record<string, unknown> | undefined)?.token;
+            const tokenParam = Array.isArray(tokenParamRaw) ? tokenParamRaw[0] : tokenParamRaw;
+
+            const validParam =
+              typeof tokenParam === 'string' &&
+              tokenParam.length === queueDashToken.length &&
+              timingSafeEqual(Buffer.from(tokenParam) as Uint8Array, Buffer.from(queueDashToken) as Uint8Array);
+
+            if (validParam) {
+              // Issue a signed session cookie so subsequent SPA API calls pass through.
+              reply.setCookie('queuedash_session', 'authenticated', {
+                httpOnly: true,
+                signed: true,
+                path: '/queues',
+                sameSite: 'strict',
+              });
+              return;
+            }
+
+            const cookieResult = request.unsignCookie(request.cookies?.queuedash_session ?? '');
+            if (!cookieResult.valid) {
+              return reply.code(401).send({ error: 'Unauthorized' });
+            }
+          });
+        }
+
+        await instance.register(fastifyQueueDashPlugin, { ctx, baseUrl: '/queues' });
+      });
+      fastify.log.info('QueueDash UI available at /queues (access with ?token=QUEUE_DASHBOARD_TOKEN)');
     } catch (error) {
       fastify.log.warn({ error }, 'Failed to register QueueDash UI');
     }
