@@ -5,6 +5,7 @@ import { init } from '@falkordb/configs';
 init(process.env.SERVICE_NAME, process.env.NODE_ENV);
 
 import { type FastifyInstance, type FastifyPluginOptions } from 'fastify';
+import { timingSafeEqual } from 'crypto';
 import AutoLoad from '@fastify/autoload';
 import Sensible from '@fastify/sensible';
 import Env from '@fastify/env';
@@ -81,8 +82,14 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   await queueManager.startWorkers();
   fastify.queueManager = queueManager;
 
-  // Register QueueDash UI for queue monitoring
-  if (fastify.config.NODE_ENV === 'development' || fastify.config.NODE_ENV === 'test') {
+  // Register QueueDash UI for queue monitoring and management
+  // Requires QUEUE_DASHBOARD_TOKEN env var when running outside dev/test
+  const queueDashToken = fastify.config.QUEUE_DASHBOARD_TOKEN;
+  const isDevOrTest = fastify.config.NODE_ENV === 'development' || fastify.config.NODE_ENV === 'test';
+
+  if (!queueDashToken && !isDevOrTest) {
+    fastify.log.warn('QUEUE_DASHBOARD_TOKEN is not set – QueueDash UI is disabled in production. Set QUEUE_DASHBOARD_TOKEN to enable it.');
+  } else {
     try {
       const ctx: QueueDashContext = {
         queues: queueManager.getQueues().map((queue) => ({
@@ -93,8 +100,23 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
       };
 
       await fastify.register(
-        (fastify, opts, done) => {
-          fastifyQueueDashPlugin(fastify, { ctx, baseUrl: '/queues' }, done);
+        (instance, opts, done) => {
+          // Protect with Bearer token when QUEUE_DASHBOARD_TOKEN is configured
+          if (queueDashToken) {
+            const expectedHeader = `Bearer ${queueDashToken}`;
+            instance.addHook('preHandler', async (request, reply) => {
+              const authHeader = request.headers.authorization;
+              const isValid =
+                authHeader &&
+                authHeader.length === expectedHeader.length &&
+                timingSafeEqual(Buffer.from(authHeader) as Uint8Array, Buffer.from(expectedHeader) as Uint8Array);
+              if (!isValid) {
+                reply.header('WWW-Authenticate', 'Bearer realm="QueueDash"');
+                return reply.code(401).send({ error: 'Unauthorized' });
+              }
+            });
+          }
+          fastifyQueueDashPlugin(instance, { ctx, baseUrl: '/queues' }, done);
         },
         { prefix: '/queues' },
       );
