@@ -53,3 +53,8 @@ This folder contains OpenTofu templates to deploy FalkorDB.
   - [org](./tofu/gcp/org/README.md): Contain the files for creating the Organization hierarchy and projects required for the system. It also activates required APIs and setup Service Accounts and permissions
   - [tenant_group](./tofu/gcp/tenant_group/README.md): Contain the files to provision a Tenant Group in GCP, including infrastructure and setting up the cluster resources
   - [tenant](./tofu/gcp/tenant/README.md): Contain the files to provision a Tenant inside a Tenant Group in GCP, including infrastructure and setting up the cluster resources
+
+## Azure
+
+- tofu/azure/landing_zone: Basic Azure landing zone and ArgoCD-to-AKS authentication resources
+  - [README](./tofu/azure/landing_zone/README.md): Usage and tfvars-driven environment setup

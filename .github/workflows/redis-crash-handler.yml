@@ -68,11 +68,28 @@ jobs:
       cluster: ${{ steps.process_crash.outputs.cluster }}
     
     steps:
+      # ------------------------------------------------------------------ #
+      # 0. Check that the actor is an authorised user
+      # ------------------------------------------------------------------ #
+      - name: Check authorised actor
+        env:
+          ACTOR: ${{ github.actor }}
+        run: |
+          ALLOWED_USERS=("swilly22" "MuhammadQadora" "dudizimber" "AviAvni" "barakb")
+          for user in "${ALLOWED_USERS[@]}"; do
+            if [[ "$ACTOR" == "$user" ]]; then
+              echo "Actor '$ACTOR' is authorised. Proceeding."
+              exit 0
+            fi
+          done
+          echo "Actor '$ACTOR' is not authorised to run this workflow."
+          exit 1
+
       - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       
       - name: Set up Python
-        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
         with:
           python-version: '3.11'
       

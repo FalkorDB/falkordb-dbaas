@@ -5,16 +5,12 @@ import { importRDBConfirmUploadHandler } from './handlers/importRDBConfirmUpload
 
 export default fp(
     async function handler(fastify, opts) {
-        fastify.addHook('preHandler', async (request) => {
-            if (request.routerPath.startsWith('/import')) {
-                await fastify.authenticateOmnistrate(request);
-            }
-        });
-
-
         fastify.post(
             '/import/request-url',
             {
+                preHandler: async (request) => {
+                    await fastify.authenticateOmnistrate(request);
+                },
                 schema: {
                     tags: ['import'],
                     body: ImportRDBRequestUploadURLRequestBodySchema,
@@ -35,6 +31,9 @@ export default fp(
         fastify.post(
             '/import/confirm-upload',
             {
+                preHandler: async (request) => {
+                    await fastify.authenticateOmnistrate(request);
+                },
                 schema: {
                     tags: ['import'],
                     body: ImportRDBConfirmUploadRequestBodySchema,
