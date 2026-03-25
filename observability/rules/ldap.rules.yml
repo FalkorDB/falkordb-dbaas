@@ -23,7 +23,7 @@ spec:
             summary: "Customer LDAP queue backlog is building up"
             description: "[cluster={{ $labels.cluster }}] The customer-ldap queue has {{ $value }} waiting jobs. Processing may be falling behind demand."
             dashboard: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/d/ldap-system-dashboard/ldap-system'
-            queue_dashboard: 'http://customer-ldap-api.api.svc.cluster.local:3013/queues (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
+            queue_dashboard: 'http://customer-ldap-api.api.svc.cluster.local:3013/queues?token=<QUEUE_DASHBOARD_TOKEN> (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
 
         - alert: CustomerLDAPQueueBacklogCritical
           expr: bullmq_queue_jobs_waiting{job="customer-ldap"} > 200
@@ -35,7 +35,7 @@ spec:
             summary: "Customer LDAP queue has a critical backlog"
             description: "[cluster={{ $labels.cluster }}] The customer-ldap queue has {{ $value }} waiting jobs. Processing is significantly behind — check worker health and Redis connectivity."
             dashboard: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/d/ldap-system-dashboard/ldap-system'
-            queue_dashboard: 'http://customer-ldap-api.api.svc.cluster.local:3013/queues (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
+            queue_dashboard: 'http://customer-ldap-api.api.svc.cluster.local:3013/queues?token=<QUEUE_DASHBOARD_TOKEN> (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
 
         - alert: CustomerLDAPQueueHasFailedJobs
           expr: bullmq_queue_jobs_failed{job="customer-ldap"} > 0
@@ -47,7 +47,7 @@ spec:
             summary: "Customer LDAP queue has failed jobs"
             description: "[cluster={{ $labels.cluster }}] The customer-ldap queue has {{ $value }} failed jobs. Inspect failed jobs for errors and retry or discard as appropriate."
             dashboard: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/d/ldap-system-dashboard/ldap-system'
-            queue_dashboard: 'http://customer-ldap-api.api.svc.cluster.local:3013/queues (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
+            queue_dashboard: 'http://customer-ldap-api.api.svc.cluster.local:3013/queues?token=<QUEUE_DASHBOARD_TOKEN> (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
 
         - alert: CustomerLDAPQueueHighFailuresCritical
           expr: bullmq_queue_jobs_failed{job="customer-ldap"} > 20
@@ -59,7 +59,7 @@ spec:
             summary: "Customer LDAP queue has a high number of failed jobs"
             description: "[cluster={{ $labels.cluster }}] The customer-ldap queue has {{ $value }} failed jobs. This may indicate a systemic failure in LDAP processing. Immediate investigation required."
             dashboard: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/d/ldap-system-dashboard/ldap-system'
-            queue_dashboard: 'http://customer-ldap-api.api.svc.cluster.local:3013/queues (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
+            queue_dashboard: 'http://customer-ldap-api.api.svc.cluster.local:3013/queues?token=<QUEUE_DASHBOARD_TOKEN> (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
 
         - alert: CustomerLDAPQueueDelayedJobsHigh
           expr: bullmq_queue_jobs_delayed{job="customer-ldap"} > 100
@@ -71,7 +71,7 @@ spec:
             summary: "Customer LDAP queue has a high number of delayed jobs"
             description: "[cluster={{ $labels.cluster }}] The customer-ldap queue has {{ $value }} delayed jobs. A large delayed backlog may indicate rate-limiting or scheduling issues."
             dashboard: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/d/ldap-system-dashboard/ldap-system'
-            queue_dashboard: 'http://customer-ldap-api.api.svc.cluster.local:3013/queues (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
+            queue_dashboard: 'http://customer-ldap-api.api.svc.cluster.local:3013/queues?token=<QUEUE_DASHBOARD_TOKEN> (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
 
     # -----------------------------------------------------------------------
     # ldap-auth service alerts — metrics scraped from ldap-auth-rs pods
@@ -102,4 +102,16 @@ spec:
           annotations:
             summary: "No LDAP auth pods running (cluster={{ $labels.cluster }})"
             description: "[cluster={{ $labels.cluster }}] No ldap-auth-rs pods are running or reachable. All LDAP authentication will fail for tenants on this cluster."
+            dashboard: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/d/ldap-system-dashboard/ldap-system'
+
+        - alert: LDAPAuthNoAttemptsWhileUp
+          expr: sum by (cluster) (up{job="ldap-auth"}) > 0 and sum by (cluster) (increase(ldap_auth_attempts_total{job="ldap-auth"}[15m])) == 0
+          for: 15m
+          labels:
+            severity: warning
+            cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
+          annotations:
+            summary: "LDAP auth has no attempts while service is up (cluster={{ $labels.cluster }})"
+            description: "[cluster={{ $labels.cluster }}] ldap-auth is up but no authentication attempts were recorded in the last 15 minutes. Verify ingress traffic and auth flows."
             dashboard: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/d/ldap-system-dashboard/ldap-system'
