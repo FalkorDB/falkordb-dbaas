@@ -18,6 +18,7 @@ export const ClusterSchema = yup.object({
   gcpAccountID: yup.string().optional(),
   awsAccountID: yup.string().optional(),
   awsRoleARN: yup.string().optional(),
+  createdAt: yup.date().optional(),
 });
 
 // TypeScript type inferred from the schema
