@@ -92,12 +92,12 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "bullmq_queue_jobs_waiting{job=\"customer-ldap\", queue=\"customer-ldap\"}",
+          "expr": "sum(bullmq_queue_jobs_waiting{job=\"customer-ldap\"})",
           "legendFormat": "__auto",
           "refId": "A"
         }
       ],
-      "title": "Waiting Jobs",
+      "title": "Waiting Jobs (all queues)",
       "type": "stat"
     },
     {
@@ -158,12 +158,12 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "bullmq_queue_jobs_active{job=\"customer-ldap\", queue=\"customer-ldap\"}",
+          "expr": "sum(bullmq_queue_jobs_active{job=\"customer-ldap\"})",
           "legendFormat": "__auto",
           "refId": "A"
         }
       ],
-      "title": "Active Jobs",
+      "title": "Active Jobs (all queues)",
       "type": "stat"
     },
     {
@@ -220,12 +220,12 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "bullmq_queue_jobs_failed{job=\"customer-ldap\", queue=\"customer-ldap\"}",
+          "expr": "sum(bullmq_queue_jobs_failed{job=\"customer-ldap\"})",
           "legendFormat": "__auto",
           "refId": "A"
         }
       ],
-      "title": "Failed Jobs",
+      "title": "Failed Jobs (all queues)",
       "type": "stat"
     },
     {
@@ -282,12 +282,12 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "bullmq_queue_jobs_delayed{job=\"customer-ldap\", queue=\"customer-ldap\"}",
+          "expr": "sum(bullmq_queue_jobs_delayed{job=\"customer-ldap\"})",
           "legendFormat": "__auto",
           "refId": "A"
         }
       ],
-      "title": "Delayed Jobs",
+      "title": "Delayed Jobs (all queues)",
       "type": "stat"
     },
     {
@@ -370,8 +370,8 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "bullmq_queue_jobs_waiting{job=\"customer-ldap\"}",
-          "legendFormat": "waiting",
+          "expr": "sum by (queue) (bullmq_queue_jobs_waiting{job=\"customer-ldap\"})",
+          "legendFormat": "{{queue}} waiting",
           "refId": "A"
         },
         {
@@ -379,8 +379,8 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "bullmq_queue_jobs_active{job=\"customer-ldap\"}",
-          "legendFormat": "active",
+          "expr": "sum by (queue) (bullmq_queue_jobs_active{job=\"customer-ldap\"})",
+          "legendFormat": "{{queue}} active",
           "refId": "B"
         },
         {
@@ -388,8 +388,8 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "bullmq_queue_jobs_completed{job=\"customer-ldap\"}",
-          "legendFormat": "completed",
+          "expr": "sum by (queue) (bullmq_queue_jobs_completed{job=\"customer-ldap\"})",
+          "legendFormat": "{{queue}} completed",
           "refId": "C"
         },
         {
@@ -397,8 +397,8 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "bullmq_queue_jobs_failed{job=\"customer-ldap\"}",
-          "legendFormat": "failed",
+          "expr": "sum by (queue) (bullmq_queue_jobs_failed{job=\"customer-ldap\"})",
+          "legendFormat": "{{queue}} failed",
           "refId": "D"
         },
         {
@@ -406,12 +406,12 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "bullmq_queue_jobs_delayed{job=\"customer-ldap\"}",
-          "legendFormat": "delayed",
+          "expr": "sum by (queue) (bullmq_queue_jobs_delayed{job=\"customer-ldap\"})",
+          "legendFormat": "{{queue}} delayed",
           "refId": "E"
         }
       ],
-      "title": "Queue Job Counts Over Time",
+      "title": "Job Counts Over Time (per queue)",
       "type": "timeseries"
     },
     {
@@ -933,6 +933,6 @@
   "timezone": "browser",
   "title": "LDAP System",
   "uid": "ldap-system-dashboard",
-  "version": 2,
+  "version": 3,
   "weekStart": ""
 }
