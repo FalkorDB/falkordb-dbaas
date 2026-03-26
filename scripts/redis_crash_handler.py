@@ -1181,6 +1181,90 @@ class GoogleChatNotifier:
         except Exception as e:
             print(f"⚠️  Unexpected error sending crash notification to Google Chat: {e}", file=sys.stderr)
 
+    def send_recurring_crash_notification(
+        self,
+        customer_email: str,
+        cluster: str,
+        pod: str,
+        namespace: str,
+        crash: CrashSummary,
+        issue_number: int,
+        issue_repo: str,
+        log_url: str,
+    ):
+        """Send a recurring-crash warning card to Google Chat.
+
+        Called when the exact same crash signature is seen again for an existing
+        issue. Uses a distinct card style (🔁) to differentiate from first-time
+        crash notifications.
+        """
+        payload = {
+            "text": "🔁 Recurring Redis Crash @Roi Lipman @Avi Avni",
+            "cards": [{
+                "header": {
+                    "title": "🔁 Recurring Redis Crash",
+                    "subtitle": f"Same crash seen again for {customer_email}"
+                },
+                "sections": [
+                    {
+                        "widgets": [
+                            {"keyValue": {"topLabel": "Customer", "content": customer_email}},
+                            {"keyValue": {"topLabel": "Cluster", "content": cluster}},
+                            {"keyValue": {"topLabel": "Pod", "content": pod}},
+                            {"keyValue": {"topLabel": "Namespace", "content": namespace}},
+                            {"keyValue": {"topLabel": "Exit Code", "content": crash.exit_code}}
+                        ]
+                    },
+                    {
+                        "widgets": [{
+                            "textParagraph": {
+                                "text": f"<b>Stack Trace:</b><br><code>{self._format_stack_traces_html(crash.stack_traces)}</code>"
+                            }
+                        }]
+                    },
+                    {
+                        "widgets": [{
+                            "buttons": [
+                                {
+                                    "textButton": {
+                                        "text": f"View Issue #{issue_number}",
+                                        "onClick": {
+                                            "openLink": {
+                                                "url": f"https://github.com/{issue_repo}/issues/{issue_number}"
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    "textButton": {
+                                        "text": "View Logs in Grafana",
+                                        "onClick": {
+                                            "openLink": {
+                                                "url": log_url
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }]
+                    }
+                ]
+            }]
+        }
+
+        try:
+            response = requests.post(self.webhook_url, json=payload, timeout=30, verify=self.verify_ssl)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            from urllib.parse import urlparse
+            parsed = urlparse(self.webhook_url)
+            redacted_url = f"{parsed.scheme}://{parsed.netloc}/..." if parsed.scheme and parsed.netloc else "[REDACTED]"
+            print(f"⚠️  Failed to send recurring crash notification to Google Chat: {e}", file=sys.stderr)
+            print(f"   Webhook URL: {redacted_url}", file=sys.stderr)
+            print(f"   Payload summary: Issue #{issue_number} for {namespace}", file=sys.stderr)
+        except Exception as e:
+            print(f"⚠️  Unexpected error sending recurring crash notification to Google Chat: {e}", file=sys.stderr)
+
 
 def _build_parser():
     """Build argument parser"""
@@ -1330,17 +1414,21 @@ def main(args):
         is_duplicate = False
         is_new_crash_type = False
     
-    # Step 6: Send notification (only for new issues or new crash types, not same crashes)
+    # Step 6: Send notification
     print("\n[6/6] Sending notification...")
-    if not is_same_crash:
-        notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
+    notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
+    if is_same_crash:
+        notifier.send_recurring_crash_notification(
+            customer.email, args.cluster, args.pod, args.namespace,
+            crash, issue_number, issue_repo, log_url
+        )
+        print("Recurring crash notification sent!")
+    else:
         notifier.send_notification(
             customer.email, args.cluster, args.pod, args.namespace,
             crash, issue_number, issue_repo, log_url, is_new_crash_type
         )
         print("Notification sent!")
-    else:
-        print("Skipping Google Chat notification for duplicate crash")
     
     # Output for GitHub Actions
     github_output = os.environ.get('GITHUB_OUTPUT')
