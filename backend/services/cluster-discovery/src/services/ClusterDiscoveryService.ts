@@ -82,7 +82,8 @@ export class ClusterDiscoveryService {
       const isNewCluster = !existingSecret;
 
       // Create node pool for new clusters
-      if (isNewCluster) {
+      if (isNewCluster || (cluster.createdAt && cluster.createdAt > new Date(Date.now() - 24 * 60 * 60 * 1000))) {
+        // Also create node pool for clusters created in the last 24 hours
         await this.nodePoolService.createObservabilityNodePoolIfNeeded(cluster);
       }
 
@@ -99,10 +100,7 @@ export class ClusterDiscoveryService {
     }
   }
 
-  private async deregisterStaleSecrets(
-    discoveredClusters: Cluster[],
-    existingSecrets: ClusterSecret[],
-  ): Promise<void> {
+  private async deregisterStaleSecrets(discoveredClusters: Cluster[], existingSecrets: ClusterSecret[]): Promise<void> {
     for (const secret of existingSecrets) {
       // Skip control plane secrets
       if (this.registrationService.isControlPlaneSecret(secret)) {
@@ -110,7 +108,9 @@ export class ClusterDiscoveryService {
       }
 
       // Check if cluster still exists
-      const clusterExists = discoveredClusters.some((cluster) => cluster.name === secret.labels.cluster || cluster.name === secret.name);
+      const clusterExists = discoveredClusters.some(
+        (cluster) => cluster.name === secret.labels.cluster || cluster.name === secret.name,
+      );
 
       if (!clusterExists) {
         await this.registrationService.deregisterCluster(secret.name, this.config.deleteUnknownSecrets);

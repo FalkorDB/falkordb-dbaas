@@ -79,6 +79,7 @@ export async function discoverAzureClusters(): Promise<{ clusters: Cluster[] }> 
         },
       },
       hostMode: 'managed',
+      createdAt: cluster.systemData?.createdAt ? new Date(cluster.systemData.createdAt) : undefined,
     });
   }
 
