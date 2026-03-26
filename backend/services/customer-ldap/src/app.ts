@@ -119,7 +119,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
               reply.setCookie('queuedash_session', 'authenticated', {
                 httpOnly: true,
                 signed: true,
-                path: '/queues',
+                path: '/v1/queues',
                 sameSite: 'strict',
               });
               return;
@@ -132,9 +132,9 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
           });
         }
 
-        await instance.register(fastifyQueueDashPlugin, { ctx, baseUrl: '/queues' });
+        await instance.register(fastifyQueueDashPlugin, { ctx, baseUrl: '/v1/queues' });
       });
-      fastify.log.info('QueueDash UI available at /queues (access with ?token=QUEUE_DASHBOARD_TOKEN)');
+      fastify.log.info('QueueDash UI available at /v1/queues (access with ?token=QUEUE_DASHBOARD_TOKEN)');
     } catch (error) {
       fastify.log.warn({ error }, 'Failed to register QueueDash UI');
     }

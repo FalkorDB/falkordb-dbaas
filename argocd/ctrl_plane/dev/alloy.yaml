@@ -315,7 +315,7 @@ spec:
 
                   prometheus.scrape "customer_ldap" {
                     targets = [
-                      {__address__ = "customer-ldap-api.api.svc.cluster.local:3013"},
+                      {__address__ = "customer-ldap-api.api.svc.cluster.local:80"},
                     ]
                     metrics_path      = "/metrics"
                     scrape_interval   = "30s"
