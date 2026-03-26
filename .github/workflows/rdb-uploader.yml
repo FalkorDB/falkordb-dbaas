@@ -102,14 +102,14 @@ jobs:
       # ------------------------------------------------------------------ #
       - name: Setup omnistrate-ctl
         if: ${{ inputs.sign_only != 'true' }}
-        uses: omnistrate-oss/setup-omnistrate-ctl@v1
+        uses: omnistrate-oss/setup-omnistrate-ctl@0ac9e5945eb7019952b098c7d155b0c1b77b5c7a # v1
 
       # ------------------------------------------------------------------ #
       # 2. Install kubectl (skipped in sign-only mode)
       # ------------------------------------------------------------------ #
       - name: Install kubectl
         if: ${{ inputs.sign_only != 'true' }}
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
 
       # ------------------------------------------------------------------ #
       # 3. Set up Python
