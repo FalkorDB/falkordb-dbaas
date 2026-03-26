@@ -482,6 +482,10 @@ spec:
                   prometheus.scrape "ldap_auth" {
                     targets         = discovery.relabel.ldap_auth_pods.output
                     metrics_path    = "/metrics"
+                    scheme          = "https"
+                    tls_config {
+                      insecure_skip_verify = true
+                    }
                     scrape_interval = "30s"
                     forward_to      = [prometheus.relabel.drop_unwanted_metrics.receiver]
 
