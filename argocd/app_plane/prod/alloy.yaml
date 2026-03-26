@@ -452,7 +452,7 @@ spec:
 
                     selectors {
                       role  = "pod"
-                      label = "app=ldap-auth-rs"
+                      label = "app.kubernetes.io/part-of=ldap-auth"
                     }
                   }
 
