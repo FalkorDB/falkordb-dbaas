@@ -36,6 +36,7 @@ describe('CellDeletionService', () => {
           modelType: 'BYOA',
           status: 'RUNNING',
           accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         const mockCloudAccount = {
@@ -96,6 +97,7 @@ describe('CellDeletionService', () => {
           modelType: 'BYOA',
           status: 'RUNNING',
           accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         const mockCloudAccount = {
@@ -152,6 +154,7 @@ describe('CellDeletionService', () => {
           modelType: 'BYOA',
           status: 'RUNNING',
           accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         const mockCredentials = {
@@ -192,6 +195,7 @@ describe('CellDeletionService', () => {
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
           accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
@@ -223,6 +227,7 @@ describe('CellDeletionService', () => {
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
           accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
@@ -266,6 +271,7 @@ describe('CellDeletionService', () => {
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
           accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         const deletionError = new Error('Failed to delete node pool');
@@ -286,6 +292,7 @@ describe('CellDeletionService', () => {
           modelType: 'BYOA',
           status: 'RUNNING',
           accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
@@ -306,6 +313,7 @@ describe('CellDeletionService', () => {
           modelType: 'BYOA',
           status: 'RUNNING',
           accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
@@ -331,6 +339,7 @@ describe('CellDeletionService', () => {
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
           accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
@@ -357,6 +366,7 @@ describe('CellDeletionService', () => {
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
           accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
@@ -383,6 +393,7 @@ describe('CellDeletionService', () => {
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
           accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
