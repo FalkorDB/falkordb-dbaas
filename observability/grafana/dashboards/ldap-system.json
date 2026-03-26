@@ -19,7 +19,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 58,
   "links": [],
   "panels": [
     {
@@ -31,6 +31,7 @@
         "y": 0
       },
       "id": 100,
+      "panels": [],
       "title": "Customer LDAP Queue (BullMQ)",
       "type": "row"
     },
@@ -66,7 +67,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
+        "w": 6,
         "x": 0,
         "y": 1
       },
@@ -76,6 +77,7 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -83,7 +85,9 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "pluginVersion": "11.3.0",
       "targets": [
@@ -132,8 +136,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 4,
+        "w": 6,
+        "x": 6,
         "y": 1
       },
       "id": 2,
@@ -142,6 +146,7 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -149,7 +154,9 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "pluginVersion": "11.3.0",
       "targets": [
@@ -194,8 +201,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 8,
+        "w": 6,
+        "x": 12,
         "y": 1
       },
       "id": 3,
@@ -204,6 +211,7 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -211,7 +219,9 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "pluginVersion": "11.3.0",
       "targets": [
@@ -256,8 +266,8 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
-        "x": 12,
+        "w": 6,
+        "x": 18,
         "y": 1
       },
       "id": 4,
@@ -266,6 +276,7 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -273,7 +284,9 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "pluginVersion": "11.3.0",
       "targets": [
@@ -300,12 +313,111 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "unit": "jobs"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "id": 13,
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent",
+          "value"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "percent",
+            "value"
+          ]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(bullmq_queue_jobs_waiting{job=\"customer-ldap\"}) + sum(bullmq_queue_jobs_delayed{job=\"customer-ldap\"})",
+          "legendFormat": "Waiting + Delayed",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(bullmq_queue_jobs_active{job=\"customer-ldap\"})",
+          "legendFormat": "Active",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(bullmq_queue_jobs_failed{job=\"customer-ldap\"})",
+          "legendFormat": "Failed",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(bullmq_queue_jobs_completed{job=\"customer-ldap\"})",
+          "legendFormat": "Completed",
+          "refId": "D"
+        }
+      ],
+      "title": "Current Queue State Distribution",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -346,9 +458,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 1
+        "w": 12,
+        "x": 12,
+        "y": 5
       },
       "id": 5,
       "options": {
@@ -438,109 +550,23 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 7,
+        "w": 24,
         "x": 0,
-        "y": 9
-      },
-      "id": 13,
-      "options": {
-        "displayLabels": [
-          "name",
-          "percent",
-          "value"
-        ],
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "values": [
-            "percent",
-            "value"
-          ]
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      },
-      "pluginVersion": "11.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(bullmq_queue_jobs_waiting{job=\"customer-ldap\"}) + sum(bullmq_queue_jobs_delayed{job=\"customer-ldap\"})",
-          "legendFormat": "Waiting + Delayed",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(bullmq_queue_jobs_active{job=\"customer-ldap\"})",
-          "legendFormat": "Active",
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(bullmq_queue_jobs_failed{job=\"customer-ldap\"})",
-          "legendFormat": "Failed",
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "uid": "${datasource}"
-          },
-          "editorMode": "code",
-          "expr": "sum(bullmq_queue_jobs_completed{job=\"customer-ldap\"})",
-          "legendFormat": "Completed",
-          "refId": "D"
-        }
-      ],
-      "title": "Current Queue State Distribution",
-      "type": "piechart"
-    },
-    {
-      "datasource": {
-        "uid": "${datasource}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "jobs"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 9
+        "y": 13
       },
       "id": 14,
       "options": {
         "displayMode": "gradient",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
         "namePlacement": "left",
         "orientation": "horizontal",
         "reduceOptions": {
@@ -551,7 +577,11 @@
           "values": false
         },
         "showUnfilled": true,
-        "sizing": "auto"
+        "sizing": "auto",
+        "text": {
+          "titleSize": 20
+        },
+        "valueMode": "color"
       },
       "pluginVersion": "11.3.0",
       "targets": [
@@ -574,9 +604,10 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 20
       },
       "id": 101,
+      "panels": [],
       "title": "LDAP Auth Service (per cluster)",
       "type": "row"
     },
@@ -596,6 +627,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -639,7 +671,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 18
+        "y": 21
       },
       "id": 6,
       "options": {
@@ -685,6 +717,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -728,7 +761,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 18
+        "y": 21
       },
       "id": 7,
       "options": {
@@ -792,6 +825,7 @@
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
+            "barWidthFactor": 0.6,
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
@@ -834,7 +868,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 18
+        "y": 21
       },
       "id": 8,
       "options": {
@@ -890,7 +924,7 @@
         "h": 4,
         "w": 8,
         "x": 0,
-        "y": 26
+        "y": 29
       },
       "id": 9,
       "options": {
@@ -898,6 +932,7 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -905,7 +940,9 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "pluginVersion": "11.3.0",
       "targets": [
@@ -948,7 +985,7 @@
         "h": 4,
         "w": 8,
         "x": 8,
-        "y": 26
+        "y": 29
       },
       "id": 10,
       "options": {
@@ -956,6 +993,7 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -963,7 +1001,9 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "pluginVersion": "11.3.0",
       "targets": [
@@ -1006,7 +1046,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 26
+        "y": 29
       },
       "id": 11,
       "options": {
@@ -1014,6 +1054,7 @@
         "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -1021,7 +1062,9 @@
           "fields": "",
           "values": false
         },
-        "textMode": "auto"
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "pluginVersion": "11.3.0",
       "targets": [
@@ -1039,16 +1082,22 @@
       "type": "stat"
     },
     {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "gridPos": {
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 33
       },
       "id": 12,
       "options": {
         "code": {
-          "language": "plaintext"
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
         },
         "content": "### Customer LDAP Queue UI\nUse one of the links below and replace `<QUEUE_DASHBOARD_TOKEN>`:\n\n- Dev: [https://api.dev.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>](https://api.dev.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>)\n- Prod: [https://api.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>](https://api.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>)",
         "mode": "markdown"
@@ -1060,7 +1109,7 @@
   ],
   "preload": false,
   "refresh": "1m",
-  "schemaVersion": 39,
+  "schemaVersion": 40,
   "tags": [
     "ldap",
     "falkordb"
@@ -1068,18 +1117,28 @@
   "templating": {
     "list": [
       {
-        "current": {},
+        "current": {
+          "text": "VictoriaMetrics",
+          "value": "f3a88fe0-7ba6-4674-ad85-088e7ec9d712"
+        },
         "includeAll": false,
+        "label": "Datasource",
         "name": "datasource",
         "options": [],
         "query": "prometheus",
         "refresh": 1,
         "regex": "",
-        "label": "Datasource",
         "type": "datasource"
       },
       {
-        "current": {},
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
         "datasource": {
           "type": "prometheus",
           "uid": "${datasource}"
@@ -1099,7 +1158,7 @@
     ]
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-5m",
     "to": "now"
   },
   "timepicker": {},
