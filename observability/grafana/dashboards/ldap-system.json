@@ -883,6 +883,22 @@
       ],
       "title": "Users",
       "type": "stat"
+    },
+    {
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 12,
+      "options": {
+        "content": "### Customer LDAP Queue UI\\n\\nUse one of the links below and replace `<QUEUE_DASHBOARD_TOKEN>`:\\n\\n- Dev: [https://api.dev.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>](https://api.dev.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>)\\n- Prod: [https://api.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>](https://api.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>)",
+        "mode": "markdown"
+      },
+      "pluginVersion": "11.3.0",
+      "title": "Queue UI Link",
+      "type": "text"
     }
   ],
   "preload": false,
@@ -933,6 +949,6 @@
   "timezone": "browser",
   "title": "LDAP System",
   "uid": "ldap-system-dashboard",
-  "version": 3,
+  "version": 4,
   "weekStart": ""
 }
