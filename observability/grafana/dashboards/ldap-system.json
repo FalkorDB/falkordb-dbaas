@@ -415,12 +415,166 @@
       "type": "timeseries"
     },
     {
+      "datasource": {
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "jobs"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 13,
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent",
+          "value"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "percent",
+            "value"
+          ]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(bullmq_queue_jobs_waiting{job=\"customer-ldap\"}) + sum(bullmq_queue_jobs_delayed{job=\"customer-ldap\"})",
+          "legendFormat": "Waiting + Delayed",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(bullmq_queue_jobs_active{job=\"customer-ldap\"})",
+          "legendFormat": "Active",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(bullmq_queue_jobs_failed{job=\"customer-ldap\"})",
+          "legendFormat": "Failed",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum(bullmq_queue_jobs_completed{job=\"customer-ldap\"})",
+          "legendFormat": "Completed",
+          "refId": "D"
+        }
+      ],
+      "title": "Current Queue State Distribution",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "jobs"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 14,
+      "options": {
+        "displayMode": "gradient",
+        "namePlacement": "left",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "11.3.0",
+      "targets": [
+        {
+          "datasource": {
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum by (queue) (bullmq_queue_jobs_waiting{job=\"customer-ldap\"} + bullmq_queue_jobs_delayed{job=\"customer-ldap\"})",
+          "legendFormat": "{{queue}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Backlog By Queue (Waiting + Delayed)",
+      "type": "bargauge"
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 17
       },
       "id": 101,
       "title": "LDAP Auth Service (per cluster)",
@@ -485,7 +639,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 10
+        "y": 18
       },
       "id": 6,
       "options": {
@@ -574,7 +728,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 10
+        "y": 18
       },
       "id": 7,
       "options": {
@@ -680,7 +834,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 10
+        "y": 18
       },
       "id": 8,
       "options": {
@@ -736,7 +890,7 @@
         "h": 4,
         "w": 8,
         "x": 0,
-        "y": 18
+        "y": 26
       },
       "id": 9,
       "options": {
@@ -794,7 +948,7 @@
         "h": 4,
         "w": 8,
         "x": 8,
-        "y": 18
+        "y": 26
       },
       "id": 10,
       "options": {
@@ -852,7 +1006,7 @@
         "h": 4,
         "w": 8,
         "x": 16,
-        "y": 18
+        "y": 26
       },
       "id": 11,
       "options": {
@@ -889,11 +1043,14 @@
         "h": 4,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 30
       },
       "id": 12,
       "options": {
-        "content": "### Customer LDAP Queue UI\\n\\nUse one of the links below and replace `<QUEUE_DASHBOARD_TOKEN>`:\\n\\n- Dev: [https://api.dev.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>](https://api.dev.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>)\\n- Prod: [https://api.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>](https://api.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>)",
+        "code": {
+          "language": "plaintext"
+        },
+        "content": "### Customer LDAP Queue UI\nUse one of the links below and replace `<QUEUE_DASHBOARD_TOKEN>`:\n\n- Dev: [https://api.dev.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>](https://api.dev.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>)\n- Prod: [https://api.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>](https://api.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN>)",
         "mode": "markdown"
       },
       "pluginVersion": "11.3.0",
@@ -949,6 +1106,6 @@
   "timezone": "browser",
   "title": "LDAP System",
   "uid": "ldap-system-dashboard",
-  "version": 4,
+  "version": 5,
   "weekStart": ""
 }
