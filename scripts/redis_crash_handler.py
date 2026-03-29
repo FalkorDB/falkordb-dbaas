@@ -1255,6 +1255,7 @@ class GoogleChatNotifier:
         try:
             response = requests.post(self.webhook_url, json=payload, timeout=30, verify=self.verify_ssl)
             response.raise_for_status()
+            return True
         except requests.RequestException as e:
             from urllib.parse import urlparse
             parsed = urlparse(self.webhook_url)
@@ -1262,8 +1263,7 @@ class GoogleChatNotifier:
             print(f"⚠️  Failed to send recurring crash notification to Google Chat: {e}", file=sys.stderr)
             print(f"   Webhook URL: {redacted_url}", file=sys.stderr)
             print(f"   Payload summary: Issue #{issue_number} for {namespace}", file=sys.stderr)
-        except Exception as e:
-            print(f"⚠️  Unexpected error sending recurring crash notification to Google Chat: {e}", file=sys.stderr)
+            return False
 
 
 def _build_parser():
@@ -1418,11 +1418,12 @@ def main(args):
     print("\n[6/6] Sending notification...")
     notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
     if is_same_crash:
-        notifier.send_recurring_crash_notification(
+        delivered = notifier.send_recurring_crash_notification(
             customer.email, args.cluster, args.pod, args.namespace,
             crash, issue_number, issue_repo, log_url
         )
-        print("Recurring crash notification sent!")
+        if delivered:
+            print("Recurring crash notification sent!")
     else:
         notifier.send_notification(
             customer.email, args.cluster, args.pod, args.namespace,
