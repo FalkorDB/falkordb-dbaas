@@ -5,6 +5,7 @@ import { init } from '@falkordb/configs';
 init(process.env.SERVICE_NAME, process.env.NODE_ENV);
 
 import { type FastifyInstance, type FastifyPluginOptions } from 'fastify';
+import { timingSafeEqual } from 'crypto';
 import AutoLoad from '@fastify/autoload';
 import Sensible from '@fastify/sensible';
 import Env from '@fastify/env';
@@ -81,8 +82,14 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   await queueManager.startWorkers();
   fastify.queueManager = queueManager;
 
-  // Register QueueDash UI for queue monitoring
-  if (fastify.config.NODE_ENV === 'development' || fastify.config.NODE_ENV === 'test') {
+  // Register QueueDash UI for queue monitoring and management
+  // Requires QUEUE_DASHBOARD_TOKEN env var when running outside dev/test
+  const queueDashToken = fastify.config.QUEUE_DASHBOARD_TOKEN;
+  const isDevOrTest = fastify.config.NODE_ENV === 'development' || fastify.config.NODE_ENV === 'test';
+
+  if (!queueDashToken && !isDevOrTest) {
+    fastify.log.warn('QUEUE_DASHBOARD_TOKEN is not set - QueueDash UI is disabled in production. Set QUEUE_DASHBOARD_TOKEN to enable it.');
+  } else {
     try {
       const ctx: QueueDashContext = {
         queues: queueManager.getQueues().map((queue) => ({
@@ -92,13 +99,43 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
         })),
       };
 
-      await fastify.register(
-        (fastify, opts, done) => {
-          fastifyQueueDashPlugin(fastify, { ctx, baseUrl: '/queues' }, done);
-        },
-        { prefix: '/queues' },
-      );
-      fastify.log.info('QueueDash UI available at /queues');
+      // Register QueueDash in a scope (no Fastify prefix — baseUrl handles mounting at /queues).
+      // Auth: first request must supply ?token=; a signed session cookie is then set so the
+      // SPA's internal tRPC calls pass without re-supplying the token on every request.
+      await fastify.register(async (instance) => {
+        if (queueDashToken) {
+          instance.addHook('onRequest', async (request, reply) => {
+            // Accept a valid ?token= query param (sets session cookie) OR a live session cookie.
+            const tokenParamRaw = (request.query as Record<string, unknown> | undefined)?.token;
+            const tokenParam = Array.isArray(tokenParamRaw) ? tokenParamRaw[0] : tokenParamRaw;
+
+            const validParam =
+              typeof tokenParam === 'string' &&
+              tokenParam.length === queueDashToken.length &&
+              timingSafeEqual(Buffer.from(tokenParam) as Uint8Array, Buffer.from(queueDashToken) as Uint8Array);
+
+            if (validParam) {
+              // Issue a signed session cookie so subsequent SPA API calls pass through.
+              reply.setCookie('queuedash_session', 'authenticated', {
+                httpOnly: true,
+                signed: true,
+                path: '/v1/queues',
+                sameSite: 'strict',
+                secure: !isDevOrTest,
+              });
+              return;
+            }
+
+            const cookieResult = request.unsignCookie(request.cookies?.queuedash_session ?? '');
+            if (!cookieResult.valid || cookieResult.value !== 'authenticated') {
+              return reply.code(401).send({ error: 'Unauthorized' });
+            }
+          });
+        }
+
+        await instance.register(fastifyQueueDashPlugin, { ctx, baseUrl: '/v1/queues' });
+      });
+      fastify.log.info('QueueDash UI available at /v1/queues (access with ?token=QUEUE_DASHBOARD_TOKEN)');
     } catch (error) {
       fastify.log.warn({ error }, 'Failed to register QueueDash UI');
     }
