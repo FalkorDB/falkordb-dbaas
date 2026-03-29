@@ -16,7 +16,7 @@ spec:
           # LogsQL: Filter for error level logs, then group and count them by the pod and namespace.
           # Trigger if any pod/namespace combination generates more than 10 error logs per minute.
           expr: |
-            level: "error" and -~".+error:0A000126:SSL.+" |
+            level: "error" and -~".+error:0A000126:SSL.+" and -~"; using defaults" |
             stats by (pod, namespace, cluster, environment) count() as error_count |
             filter error_count :> 10
           for: 5m
@@ -99,7 +99,7 @@ spec:
           # LogsQL: Detect Redis crash loop (4+ crashes in last 10 minutes)
           # Triggers critical alert immediately when Redis is repeatedly crashing
           expr: |
-            ~"Redis .+ crashed by signal" and -pod:~"vmalert*" and _time:10m | 
+            ~"Redis .+ crashed by signal" and -pod:~"vmalert*" and _time:15m | 
             stats by (pod, namespace, cluster, environment) count() as crash_count | 
             filter crash_count :>= 4
           for: 1m

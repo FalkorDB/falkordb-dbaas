@@ -38,6 +38,7 @@ export async function discoverGCPClusters(): Promise<{ clusters: Cluster[] }> {
           },
         },
         hostMode: 'managed',
+        createdAt: cluster.createTime ? new Date(cluster.createTime) : undefined,
       } as Cluster;
     }) || [],
   );

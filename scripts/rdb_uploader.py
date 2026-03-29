@@ -67,11 +67,14 @@ def kubectl_exec(
     container: str,
     command: list[str],
     redact_args: list[str] | None = None,
-) -> None:
+    warn_on_exit_codes: set[int] | None = None,
+) -> int:
     """Run a command inside a pod via kubectl exec. Raises on failure.
 
     Args:
         redact_args: List of argument values to redact in log output (e.g. signed URLs).
+        warn_on_exit_codes: Set of exit codes treated as non-fatal warnings instead of errors.
+            The exit code is still returned so callers can react if needed.
     """
     cmd = [
         "kubectl", "exec",
@@ -85,9 +88,13 @@ def kubectl_exec(
     print(f"  $ {' '.join(log_cmd)}")
     result = subprocess.run(cmd, check=False, timeout=_KUBECTL_TIMEOUT)
     if result.returncode != 0:
-        raise RuntimeError(
-            f"kubectl exec failed with exit code {result.returncode}: {' '.join(log_cmd)}"
-        )
+        if warn_on_exit_codes and result.returncode in warn_on_exit_codes:
+            print(f"  ⚠️  Warning: command exited with code {result.returncode} (non-fatal): {' '.join(log_cmd)}")
+        else:
+            raise RuntimeError(
+                f"kubectl exec failed with exit code {result.returncode}: {' '.join(log_cmd)}"
+            )
+    return result.returncode
 
 
 def write_github_output(key: str, value: str) -> None:
@@ -193,10 +200,18 @@ def main() -> None:
         print("  dump.rdb uploaded successfully.")
 
         if aof_enabled:
-            print("  Archiving appendonlydir on pod...")
+            print("  Snapshotting appendonlydir on pod...")
+            kubectl_exec(args.namespace, args.pod, args.container, [
+                "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
+            ])
+            print("  Archiving snapshot (no live files — no race condition)...")
             kubectl_exec(args.namespace, args.pod, args.container, [
                 "tar", "-czf", "/data/appendonlydir.tar.gz",
-                "-C", "/data/appendonlydir", ".",
+                "-C", "/data/appendonlydir.snapshot", ".",
+            ])
+            print("  Removing snapshot...")
+            kubectl_exec(args.namespace, args.pod, args.container, [
+                "rm", "-rf", "/data/appendonlydir.snapshot",
             ])
             print("  Uploading appendonlydir.tar.gz...")
             kubectl_exec(
