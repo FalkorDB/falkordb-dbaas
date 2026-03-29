@@ -101,7 +101,7 @@ spec:
           expr: |
             ~"Redis .+ crashed by signal" and -pod:~"vmalert*" and _time:15m | 
             stats by (pod, namespace, cluster, environment) count() as crash_count | 
-            filter crash_count :>= 4
+            filter crash_count :>= 2
           for: 1m
           labels:
             severity: critical
