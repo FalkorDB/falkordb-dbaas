@@ -241,6 +241,7 @@ async function addApiAuthMode(client: EKSClient, cluster: Cluster): Promise<bool
         },
       }),
     );
+    return true;
   } catch (error) {
     if (
       error instanceof InvalidRequestException &&

@@ -58,18 +58,22 @@ export default fp(
         const now = Date.now();
 
         if (!cachedMetrics || now - cacheTimestamp > CACHE_TTL_MS) {
-          const counts = await fastify.queueManager.getJobCounts();
+          try {
+            const counts = await fastify.queueManager.getJobCounts();
 
-          for (const queue of counts) {
-            queueWaiting.set({ queue: queue.name }, queue.waiting);
-            queueActive.set({ queue: queue.name }, queue.active);
-            queueCompleted.set({ queue: queue.name }, queue.completed);
-            queueFailed.set({ queue: queue.name }, queue.failed);
-            queueDelayed.set({ queue: queue.name }, queue.delayed);
+            for (const queue of counts) {
+              queueWaiting.set({ queue: queue.name }, queue.waiting);
+              queueActive.set({ queue: queue.name }, queue.active);
+              queueCompleted.set({ queue: queue.name }, queue.completed);
+              queueFailed.set({ queue: queue.name }, queue.failed);
+              queueDelayed.set({ queue: queue.name }, queue.delayed);
+            }
+
+            cachedMetrics = await register.metrics();
+            cacheTimestamp = now;
+          } catch (error) {
+            fastify.log.error({ error }, 'Failed to refresh /metrics cache');
           }
-
-          cachedMetrics = await register.metrics();
-          cacheTimestamp = now;
         }
 
         reply.header('Content-Type', register.contentType);

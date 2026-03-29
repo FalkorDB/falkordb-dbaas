@@ -350,6 +350,11 @@ spec:
                       target_label  = "cluster"
                       replacement   = "{{ .name }}"
                     }
+
+                    rule {
+                      target_label  = "environment"
+                      replacement   = "prod"
+                    }
                   }
 
                   prometheus.relabel "remove_unwanted_labels" {

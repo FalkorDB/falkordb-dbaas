@@ -161,15 +161,27 @@ export class QueueManager {
     const queues = this.getQueues();
     return Promise.all(
       queues.map(async (queue) => {
-        const counts = await queue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
-        return {
-          name: queue.name,
-          waiting: counts.waiting ?? 0,
-          active: counts.active ?? 0,
-          completed: counts.completed ?? 0,
-          failed: counts.failed ?? 0,
-          delayed: counts.delayed ?? 0,
-        };
+        try {
+          const counts = await queue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
+          return {
+            name: queue.name,
+            waiting: counts.waiting ?? 0,
+            active: counts.active ?? 0,
+            completed: counts.completed ?? 0,
+            failed: counts.failed ?? 0,
+            delayed: counts.delayed ?? 0,
+          };
+        } catch (error) {
+          this.fastify.log.error({ error, queue: queue.name }, 'Failed to fetch queue job counts');
+          return {
+            name: queue.name,
+            waiting: 0,
+            active: 0,
+            completed: 0,
+            failed: 0,
+            delayed: 0,
+          };
+        }
       }),
     );
   }
