@@ -11,7 +11,7 @@ spec:
       rules:
         - alert: FalkorDBDown
           expr: redis_up{container="service"} == 0
-          for: 75s
+          for: 90s
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
