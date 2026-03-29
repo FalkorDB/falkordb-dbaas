@@ -81,7 +81,7 @@ spec:
     - name: ldap.rules.auth
       rules:
         - alert: LDAPAuthDown
-          expr: up{job="ldap-auth"} == 0
+          expr: up{job="ldap-auth", pod!~"redis.+"} == 0
           for: 2m
           labels:
             severity: critical
