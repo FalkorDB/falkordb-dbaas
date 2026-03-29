@@ -16,7 +16,7 @@ patches:
         value: 1
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: "docker.io/falkordb/ldap-auth-rs:0.3.2"
+        value: "docker.io/falkordb/ldap-auth-rs:0.4.0"
       - op: add
         path: /spec/template/spec/nodeSelector
         value:
@@ -24,6 +24,14 @@ patches:
   - target:
       kind: StatefulSet
       name: redis
+    patch: |-
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          node_pool: observability
+  - target:
+      kind: StatefulSet
+      name: redis-replica
     patch: |-
       - op: add
         path: /spec/template/spec/nodeSelector
