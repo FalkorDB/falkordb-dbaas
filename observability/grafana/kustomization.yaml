@@ -38,3 +38,6 @@ configMapGenerator:
 
   - name: dashboards-k8s-views-fluent-bit
     files: [json=./dashboards/fluent-bit.json]
+
+  - name: dashboards-k8s-views-ldap-system
+    files: [json=./dashboards/ldap-system.json]
