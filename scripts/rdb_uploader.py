@@ -200,18 +200,19 @@ def main() -> None:
         print("  dump.rdb uploaded successfully.")
 
         if aof_enabled:
-            print("  Archiving appendonlydir on pod...")
-            tar_exit = kubectl_exec(
-                args.namespace, args.pod, args.container,
-                ["tar", "-czf", "/data/appendonlydir.tar.gz", "-C", "/data/appendonlydir", "."],
-                warn_on_exit_codes={1},
-            )
-            if tar_exit == 1:
-                print(
-                    "  ⚠️  Warning: tar exited with code 1 — some files changed during archiving "
-                    "(e.g. appendonly.aof is actively written to). "
-                    "Archive may be slightly inconsistent but is still usable."
-                )
+            print("  Snapshotting appendonlydir on pod...")
+            kubectl_exec(args.namespace, args.pod, args.container, [
+                "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
+            ])
+            print("  Archiving snapshot (no live files — no race condition)...")
+            kubectl_exec(args.namespace, args.pod, args.container, [
+                "tar", "-czf", "/data/appendonlydir.tar.gz",
+                "-C", "/data/appendonlydir.snapshot", ".",
+            ])
+            print("  Removing snapshot...")
+            kubectl_exec(args.namespace, args.pod, args.container, [
+                "rm", "-rf", "/data/appendonlydir.snapshot",
+            ])
             print("  Uploading appendonlydir.tar.gz...")
             kubectl_exec(
                 args.namespace, args.pod, args.container,

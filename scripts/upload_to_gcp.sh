@@ -73,14 +73,13 @@ upload_to_gcp(){
     echo "RDB file uploaded successfully to GCP."
     if [ "$aof_enabled" = "true" ]; then
       kubectl exec -it -n "$namespace" --context "$kubernetes_context" "$pod_name" -- \
-      tar -czvf /data/appendonlydir.tar.gz -C /data/appendonlydir .
-      tar_exit=$?
-      if [ $tar_exit -eq 1 ]; then
-        echo "⚠️  Warning: tar exited with code 1 (file changed during archiving, e.g. appendonly.aof). Continuing upload."
-      elif [ $tar_exit -ne 0 ]; then
-        echo "❌ tar failed with exit code $tar_exit"
-        exit 1
-      fi
+      cp -r /data/appendonlydir /data/appendonlydir.snapshot
+
+      kubectl exec -it -n "$namespace" --context "$kubernetes_context" "$pod_name" -- \
+      tar -czvf /data/appendonlydir.tar.gz -C /data/appendonlydir.snapshot .
+
+      kubectl exec -it -n "$namespace" --context "$kubernetes_context" "$pod_name" -- \
+      rm -rf /data/appendonlydir.snapshot
 
       kubectl exec -it -n "$namespace" --context "$kubernetes_context" "$pod_name" -- \
       curl -X PUT --fail \
