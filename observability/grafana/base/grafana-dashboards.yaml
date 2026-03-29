@@ -97,4 +97,16 @@ spec:
     name: dashboards-k8s-views-fluent-bit
     key: json
 ---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: ldap-system
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: "grafana"
+  configMapRef:
+    name: dashboards-k8s-views-ldap-system
+    key: json
+---
 

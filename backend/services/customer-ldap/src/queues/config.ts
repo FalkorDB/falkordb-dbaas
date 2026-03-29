@@ -16,7 +16,7 @@ export const JOB_OPTIONS: JobsOptions = {
   },
   removeOnComplete: {
     age: 86400, // Keep completed jobs for 24 hours
-    count: 100, // Keep last 100 completed jobs
+    count: 1000, // Keep last 1000 completed jobs
   },
   removeOnFail: {
     age: 604800, // Keep failed jobs for 7 days
@@ -26,9 +26,9 @@ export const JOB_OPTIONS: JobsOptions = {
 // Worker options
 export const WORKER_OPTIONS = {
   connection: undefined as any, // Will be set at runtime
-  concurrency: 5, // Process up to 5 jobs concurrently
+  concurrency: 20, // Process up to 20 jobs concurrently
   limiter: {
-    max: 10, // Max 10 jobs
+    max: 50, // Max 50 jobs
     duration: 1000, // Per second
   },
 };
