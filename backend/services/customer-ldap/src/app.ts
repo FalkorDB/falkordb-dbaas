@@ -23,6 +23,8 @@ import { QueueManager } from './queues/QueueManager';
 import type { Context as QueueDashContext } from '@queuedash/api';
 import { fastifyQueueDashPlugin } from '@queuedash/api';
 
+const QUEUE_DASH_BASE_URL = '/v1/customer-ldap/queues';
+
 export default async function (fastify: FastifyInstance, opts: FastifyPluginOptions): Promise<void> {
   await fastify.register(Env, {
     schema: EnvSchema,
@@ -119,7 +121,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
               reply.setCookie('queuedash_session', 'authenticated', {
                 httpOnly: true,
                 signed: true,
-                path: '/v1/queues',
+                path: QUEUE_DASH_BASE_URL,
                 sameSite: 'strict',
                 secure: !isDevOrTest,
               });
@@ -133,9 +135,9 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
           });
         }
 
-        await instance.register(fastifyQueueDashPlugin, { ctx, baseUrl: '/v1/queues' });
+        await instance.register(fastifyQueueDashPlugin, { ctx, baseUrl: QUEUE_DASH_BASE_URL });
       });
-      fastify.log.info('QueueDash UI available at /v1/queues (access with ?token=QUEUE_DASHBOARD_TOKEN)');
+      fastify.log.info({ path: QUEUE_DASH_BASE_URL }, 'QueueDash UI available (access with ?token=QUEUE_DASHBOARD_TOKEN)');
     } catch (error) {
       fastify.log.warn({ error }, 'Failed to register QueueDash UI');
     }
