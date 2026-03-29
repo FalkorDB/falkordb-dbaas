@@ -73,8 +73,14 @@ upload_to_gcp(){
     echo "RDB file uploaded successfully to GCP."
     if [ "$aof_enabled" = "true" ]; then
       kubectl exec -it -n "$namespace" --context "$kubernetes_context" "$pod_name" -- \
-      tar -czvf /data/appendonlydir.tar.gz -C /data/appendonlydir .
-      
+      cp -r /data/appendonlydir /data/appendonlydir.snapshot
+
+      kubectl exec -it -n "$namespace" --context "$kubernetes_context" "$pod_name" -- \
+      tar -czvf /data/appendonlydir.tar.gz -C /data/appendonlydir.snapshot .
+
+      kubectl exec -it -n "$namespace" --context "$kubernetes_context" "$pod_name" -- \
+      rm -rf /data/appendonlydir.snapshot
+
       kubectl exec -it -n "$namespace" --context "$kubernetes_context" "$pod_name" -- \
       curl -X PUT --fail \
       -H "Content-Type: application/octet-stream" \
