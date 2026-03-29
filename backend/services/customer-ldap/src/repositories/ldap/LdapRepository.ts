@@ -242,6 +242,10 @@ export class LdapRepository implements ILdapRepository {
         'Error creating LDAP user',
       );
 
+      if (axios.isAxiosError(error) && (error.response?.status ?? error.status) === 409) {
+        throw ApiError.conflict('LDAP user already exists', 'LDAP_USER_ALREADY_EXISTS');
+      }
+
       throw ApiError.internalServerError('Failed to create user in LDAP server', 'LDAP_CREATE_UNAVAILABLE');
     }
   }
