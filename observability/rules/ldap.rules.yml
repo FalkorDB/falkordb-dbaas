@@ -19,9 +19,10 @@ spec:
           labels:
             severity: warning
             cluster: '{{ $labels.cluster }}'
+            queue: '{{ $labels.queue }}'
           annotations:
             summary: "Customer LDAP queue backlog is building up"
-            description: "[cluster={{ $labels.cluster }}] The customer-ldap queue has {{ $value }} waiting jobs. Processing may be falling behind demand."
+            description: "[cluster={{ $labels.cluster }}] The customer-ldap queue {{ $queue }} has {{ $value }} waiting jobs. Processing may be falling behind demand."
             dashboard: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/d/ldap-system-dashboard/ldap-system'
             queue_dashboard: 'https://api{{ if eq $labels.environment "dev" }}.dev{{ end }}.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN> (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
 
@@ -93,7 +94,7 @@ spec:
             view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
 
         - alert: LDAPAuthNoPodRunning
-          expr: absent(up{job="ldap-auth"}) or sum by (cluster) (up{job="ldap-auth"}) == 0
+          expr: (sum by (cluster) (cluster_service_expected{service="ldap-auth"}) > 0) unless (sum by (cluster) (up{job="ldap-auth"}) > 0)
           for: 5m
           labels:
             severity: critical

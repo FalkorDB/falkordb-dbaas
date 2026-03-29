@@ -121,12 +121,13 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
                 signed: true,
                 path: '/v1/queues',
                 sameSite: 'strict',
+                secure: !isDevOrTest,
               });
               return;
             }
 
             const cookieResult = request.unsignCookie(request.cookies?.queuedash_session ?? '');
-            if (!cookieResult.valid) {
+            if (!cookieResult.valid || cookieResult.value !== 'authenticated') {
               return reply.code(401).send({ error: 'Unauthorized' });
             }
           });
