@@ -22,7 +22,7 @@ spec:
             queue: '{{ $labels.queue }}'
           annotations:
             summary: "Customer LDAP queue backlog is building up"
-            description: "[cluster={{ $labels.cluster }}] The customer-ldap queue {{ $queue }} has {{ $value }} waiting jobs. Processing may be falling behind demand."
+            description: "[cluster={{ $labels.cluster }}] The customer-ldap queue {{ $labels.queue }} has {{ $value }} waiting jobs. Processing may be falling behind demand."
             dashboard: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/d/ldap-system-dashboard/ldap-system'
             queue_dashboard: 'https://api{{ if eq $labels.environment "dev" }}.dev{{ end }}.falkordb.cloud/v1/customer-ldap/queues?token=<QUEUE_DASHBOARD_TOKEN> (kubectl port-forward svc/customer-ldap-api 3013:3013 -n api)'
 
