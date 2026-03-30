@@ -98,6 +98,40 @@ resource "google_storage_bucket" "omnistrate_metering_data" {
   }
 }
 
+resource "google_storage_bucket" "customer_rdb_bucket" {
+  name          = var.customer_rdb_bucket_name
+  project       = module.project.project_id
+  location      = "US"
+  force_destroy = false
+
+  uniform_bucket_level_access = true
+
+  lifecycle_rule {
+    condition {
+      age = 30
+    }
+    action {
+      type          = "SetStorageClass"
+      storage_class = "NEARLINE"
+    }
+  }
+
+  lifecycle_rule {
+    condition {
+      age = 60 # 30 days in NEARLLINE + 30 more = 60 days total from creation
+    }
+    action {
+      type = "Delete"
+    }
+  }
+}
+
+resource "google_storage_bucket_iam_member" "customer_rdb_bucket" {
+  bucket = google_storage_bucket.customer_rdb_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "group:devops-oncall@falkordb.com"
+}
+
 resource "google_storage_bucket_iam_member" "omnistrate_metering_data" {
   bucket = google_storage_bucket.omnistrate_metering_data.name
   role   = "roles/storage.objectAdmin"
