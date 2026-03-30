@@ -243,6 +243,11 @@ class LdapUserImporter:
                 )
                 return True
             else:
+                if response.status_code == 409:
+                    logger.warning(
+                        f"User '{username}' already exists in instance '{instance_id}', skipping"
+                    )
+                    return self.import_user(instance_id, subscription_id, username, password, acl)  # Retry logic for idempotency
                 logger.error(
                     f"Failed to create user '{username}' in instance '{instance_id}': "
                     f"HTTP {response.status_code} - {response.text}"
@@ -255,6 +260,46 @@ class LdapUserImporter:
             )
             return False
 
+    def import_user(self, instance_id: str, subscription_id: str, username: str, password: str, acl: str) -> bool:
+        """
+        Retry logic for creating a user in LDAP, used when a 409 Conflict is encountered.
+
+        Args:
+            instance_id: Instance ID (namespace)
+            subscription_id: Subscription ID (required query param)
+            username: Username to create
+            password: User password
+            acl: ACL permissions string
+
+        Returns:
+            True if successful, False otherwise
+        """
+        logger.info(
+            f"Retrying creation of user '{username}' in instance '{instance_id}' after conflict"
+        )
+        try:
+            response = self.session.put(
+                f"{self.api_base_url}/v1/customer-ldap/instances/{instance_id}/users/{username}?subscriptionId={subscription_id}",
+                json={"password": password, "acl": acl},
+            )
+
+            if response.ok:
+                logger.info(
+                    f"Successfully created user '{username}' in instance '{instance_id}' on retry"
+                )
+                return True
+            else:
+                logger.error(
+                    f"Failed to create user '{username}' in instance '{instance_id}' on retry: "
+                    f"HTTP {response.status_code} - {response.text}"
+                )
+                return False
+
+        except requests.exceptions.RequestException as e:
+            logger.error(
+                f"Network error creating user '{username}' in instance '{instance_id}' on retry: {e}"
+            )
+            return False
 
 def main():
     parser = argparse.ArgumentParser(
@@ -380,6 +425,7 @@ Example:
 
     # Standard ACL from constants.ts
     ALLOWED_ACL = "+INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +CLUSTER +COMMAND +GRAPH.MEMORY +MEMORY +BGREWRITEAOF +MODULE|LIST +MONITOR +GRAPH.UDF"
+    ALLOWED_SENTINEL_ACL = "+INFO +PING +AUTH +ROLE +CLIENT +SENTINEL|GET-MASTER-ADDR-BY-NAME +SENTINEL|MASTERS +SENTINEL|MASTER +SENTINEL|REPLICAS +SENTINEL|SENTINELS +SENTINEL|FAILOVER +SENTINEL|FLUSHCONFIG"
 
     for instance in instances:
         instance_result = instance.get("consumptionResourceInstanceResult", {})
@@ -415,7 +461,7 @@ Example:
             continue
 
         # Create user with standard ACL
-        acl = f"~* {ALLOWED_ACL}"
+        acl = f"~* {ALLOWED_ACL} {ALLOWED_SENTINEL_ACL}"
         success = importer.create_user(
             instance_id=instance_id,
             subscription_id=subscription_id,

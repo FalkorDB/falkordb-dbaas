@@ -7,7 +7,7 @@ import { IK8sCredentialsRepository } from '../../repositories/k8s-credentials/IK
 import { ILdapRepository } from '../../repositories/ldap/ILdapRepository';
 import { IConnectionCacheRepository } from '../../repositories/connection-cache/IConnectionCacheRepository';
 import { UserService } from '../../services/UserService';
-import { ALLOWED_ACL } from '../../constants';
+import { ALLOWED_ACL, ALLOWED_SENTINEL_ACL } from '../../constants';
 import { JOB_TIMEOUT_MS } from '../config';
 
 /**
@@ -85,7 +85,7 @@ export async function processInstanceCreated(
       await userService.createUser(instanceId, cloudProvider, k8sClusterName, region, {
         username: falkordbUsername,
         password: falkordbPassword,
-        acl: `~* ${ALLOWED_ACL}`,
+        acl: `~* ${ALLOWED_ACL} ${ALLOWED_SENTINEL_ACL}`,
       });
 
       logger.info({ username: '***' }, 'User created successfully');
