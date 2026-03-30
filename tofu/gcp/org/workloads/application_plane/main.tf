@@ -129,7 +129,7 @@ resource "google_storage_bucket" "customer_rdb_bucket" {
 resource "google_storage_bucket_iam_member" "customer_rdb_bucket" {
   bucket = google_storage_bucket.customer_rdb_bucket.name
   role   = "roles/storage.objectAdmin"
-  member = "group:devops-oncall@falkordb.com"
+  member = "serviceAccount:devops-writer@${module.project.project_id}.iam.gserviceaccount.com"
 }
 
 resource "google_storage_bucket_iam_member" "omnistrate_metering_data" {
