@@ -1,4 +1,4 @@
-import { ALLOWED_ACL } from '../constants';
+import { ALLOWED_ACL, ALLOWED_SENTINEL_ACL } from '../constants';
 
 /**
  * Parse ACL string into a set of allowed commands
@@ -48,7 +48,7 @@ function isCommandAllowed(command: string, allowedCommands: Set<string>): boolea
  * @returns Object with { valid: boolean, invalidCommands: string[] }
  */
 export function validateAcl(userAcl: string): { valid: boolean; invalidCommands: string[] } {
-  const allowedCommands = parseAcl(ALLOWED_ACL);
+  const allowedCommands = new Set([...parseAcl(ALLOWED_ACL), ...parseAcl(ALLOWED_SENTINEL_ACL)]);
   const userCommands = parseAcl(userAcl);
 
   const invalidCommands: string[] = [];
