@@ -143,3 +143,17 @@ resource "google_project_iam_member" "argocd_sa_k8s_dev" {
   role    = "roles/container.clusterAdmin"
   member  = "serviceAccount:${var.argocd_sa_email}"
 }
+
+# Dedicated SA for RDB bucket access (upload/download via rdb-uploader workflow)
+resource "google_service_account" "rdb_bucket_sa" {
+  account_id   = "rdb-bucket-sa"
+  display_name = "RDB Bucket Service Account"
+  description  = "Minimal SA for uploading and downloading customer RDB files. No project-level roles."
+  project      = module.project.project_id
+}
+
+resource "google_storage_bucket_iam_member" "rdb_bucket_sa_object_admin" {
+  bucket = google_storage_bucket.customer_rdb_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.rdb_bucket_sa.email}"
+}
