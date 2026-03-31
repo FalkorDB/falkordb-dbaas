@@ -230,7 +230,7 @@ class LdapUserImporter:
 
         if self.dry_run:
             logger.info(
-                f"[DRY RUN] Would create user '{username}' in instance '{instance_id}'"
+                f"[DRY RUN] Would create user '{username}' in instance '{instance_id}' with ACL: {acl}"
             )
             return True
 
@@ -425,7 +425,6 @@ Example:
 
     # Standard ACL from constants.ts
     ALLOWED_ACL = "+INFO +CLIENT +DBSIZE +PING +HELLO +AUTH +RESTORE +DUMP +DEL +EXISTS +UNLINK +TYPE +FLUSHALL +TOUCH +EXPIRE +PEXPIREAT +TTL +PTTL +EXPIRETIME +RENAME +RENAMENX +SCAN +DISCARD +EXEC +MULTI +UNWATCH +WATCH +ECHO +SLOWLOG +WAIT +WAITAOF +READONLY +GRAPH.INFO +GRAPH.LIST +GRAPH.QUERY +GRAPH.RO_QUERY +GRAPH.EXPLAIN +GRAPH.PROFILE +GRAPH.DELETE +GRAPH.CONSTRAINT +GRAPH.SLOWLOG +GRAPH.BULK +GRAPH.CONFIG +GRAPH.COPY +CLUSTER +COMMAND +GRAPH.MEMORY +MEMORY +BGREWRITEAOF +MODULE|LIST +MONITOR +GRAPH.UDF"
-    ALLOWED_SENTINEL_ACL = "+INFO +PING +AUTH +ROLE +CLIENT +SENTINEL|GET-MASTER-ADDR-BY-NAME +SENTINEL|MASTERS +SENTINEL|MASTER +SENTINEL|REPLICAS +SENTINEL|SENTINELS +SENTINEL|FAILOVER +SENTINEL|FLUSHCONFIG"
 
     for instance in instances:
         instance_result = instance.get("consumptionResourceInstanceResult", {})
@@ -452,7 +451,7 @@ Example:
         result_params = instance_result.get("result_params", {})
         falkordb_username = result_params.get("falkordbUser")
         falkordb_password = result_params.get("falkordbPassword")
-
+    
         if not falkordb_username or not falkordb_password:
             reason = f"Missing {'falkordbUser' if not falkordb_username else 'falkordbPassword'} in result_params"
             logger.warning(f"Instance {instance_id}: {reason}, skipping")
@@ -461,7 +460,7 @@ Example:
             continue
 
         # Create user with standard ACL
-        acl = f"~* {ALLOWED_ACL} {ALLOWED_SENTINEL_ACL}"
+        acl = f"~* {ALLOWED_ACL}".strip()
         success = importer.create_user(
             instance_id=instance_id,
             subscription_id=subscription_id,
