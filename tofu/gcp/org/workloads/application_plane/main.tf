@@ -126,6 +126,12 @@ resource "google_storage_bucket" "customer_rdb_bucket" {
   }
 }
 
+resource "google_storage_bucket_iam_member" "customer_rdb_bucket" {
+  bucket = google_storage_bucket.customer_rdb_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "group:devops-oncall@falkordb.com"
+}
+
 resource "google_storage_bucket_iam_member" "omnistrate_metering_data" {
   bucket = google_storage_bucket.omnistrate_metering_data.name
   role   = "roles/storage.objectAdmin"
