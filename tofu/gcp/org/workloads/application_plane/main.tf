@@ -128,7 +128,7 @@ resource "google_storage_bucket" "customer_rdb_bucket" {
 
 resource "google_storage_bucket_iam_member" "customer_rdb_bucket" {
   bucket = google_storage_bucket.customer_rdb_bucket.name
-  role   = "roles/storage.objectAdmin"
+  role   = "roles/storage.objectUser"
   member = "group:devops-oncall@falkordb.com"
 }
 
@@ -154,6 +154,6 @@ resource "google_service_account" "rdb_bucket_sa" {
 
 resource "google_storage_bucket_iam_member" "rdb_bucket_sa_object_admin" {
   bucket = google_storage_bucket.customer_rdb_bucket.name
-  role   = "roles/storage.objectAdmin"
+  role   = "roles/storage.objectUser"
   member = "serviceAccount:${google_service_account.rdb_bucket_sa.email}"
 }
