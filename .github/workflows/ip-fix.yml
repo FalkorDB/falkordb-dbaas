@@ -1,4 +1,4 @@
-name: Instance Monitor
+name: IP Fix
 
 permissions:
   contents: read
@@ -16,12 +16,15 @@ on:
         default: 'prod'
 
 jobs:
-  monitor:
+  ip-fix:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - name: Setup omnistrate-ctl
+        uses: omnistrate-oss/setup-omnistrate-ctl@v1
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
 
       - name: Set up Python
         uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5
@@ -30,6 +33,9 @@ jobs:
 
       - name: Install dependencies
         run: pip install requests
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
       - name: Set environment-specific variables
         env:
@@ -43,7 +49,7 @@ jobs:
             echo "OMNISTRATE_ENVIRONMENT_ID=$OMNISTRATE_PROD_ENV" >> $GITHUB_ENV
           fi
 
-      - name: Run instance monitor
+      - name: Run IP fix
         env:
           ENVIRONMENT: ${{ inputs.environment || 'prod' }}
           OMNISTRATE_API_URL: "https://api.omnistrate.cloud/2022-09-01-00/"
@@ -53,7 +59,10 @@ jobs:
           OMNISTRATE_ENVIRONMENT_ID: ${{ env.OMNISTRATE_ENVIRONMENT_ID }}
           # Product tier name used to resolve the tier ID dynamically from the Omnistrate API
           OMNISTRATE_PRODUCT_TIER_NAME: "FalkorDB Enterprise"
-          # Subscription ID to monitor — stored as a secret to protect customer data
+          # Subscription ID to monitor — stored as a var to protect customer data
           MONITORED_SUBSCRIPTION_ID: ${{ vars.COMMSCOPE_SUBSCRIPTION_ID }}
+          # Container name for redis-cli exec
+          REDIS_CONTAINER: "service"
+          # Redis password is read from /run/secrets/adminpassword inside the container
           GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL_PRODUCTION_CHAT }}
-        run: python ./scripts/instance_monitor.py
+        run: python ./scripts/ip_fix.py
