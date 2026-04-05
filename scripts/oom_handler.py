@@ -376,6 +376,10 @@ def main(args):
     oom_dt    = datetime.now(ZoneInfo("Asia/Jerusalem"))
     timestamp = oom_dt.strftime("%Y-%m-%d %H:%M:%S")
 
+    if args.pod == "node-f-0":
+        print(f"ℹ️  Skipping OOM handler for pod 'node-f-0'.")
+        return
+
     print(f"\n{'='*60}")
     print(f"OOM Handler: {args.pod} in {args.namespace} (container: {args.container})")
     print(f"{'='*60}\n")
