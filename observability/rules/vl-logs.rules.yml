@@ -76,12 +76,12 @@ spec:
 
         - alert: RedisCrashed
           # LogsQL: Detect any Redis crash (signal crash or assertion failure).
-          # Triggers when Redis crashes with a signal OR an internal assertion failure (single occurrence).
-          # Covers both "crashed by signal" (SIGSEGV/SIGABRT etc.) and "=== REDIS BUG REPORT START" (assertion failures).
+          # Uses "=== REDIS BUG REPORT START" as the single anchor — Redis emits this line exactly
+          # once per crash for ALL crash types (signal via sigsegvHandler and assertion via serverPanic).
           # This triggers log collection and a warning alert.
           # Note: Duplicate issues are prevented by checking for existing open issues in the alert-reaction script
           expr: |
-            (~"Redis .+ crashed by signal" OR ~"=== REDIS BUG REPORT START") and -pod:~"vmalert*" | 
+            ~"=== REDIS BUG REPORT START" and -pod:~"vmalert*" | 
             stats by (pod, namespace, cluster, environment) count() as crash_count    
           for: 0m
           labels:
@@ -98,11 +98,11 @@ spec:
 
         - alert: RedisCrashLoop
           # LogsQL: Detect Redis crash loop (2+ crashes in last 10 minutes).
-          # Covers both signal crashes and assertion failures.
-          # Uses a 10-minute window. A single crash where the pod takes 3+ minutes to restart
-          # will not produce a second crash log within that same window unless it truly crashes again.
+          # Uses "=== REDIS BUG REPORT START" as the single anchor — it is emitted exactly once per
+          # crash for all crash types. Using an OR with "crashed by signal" caused a single signal
+          # crash to match two lines (count=2) and falsely trigger this alert.
           expr: |
-            (~"Redis .+ crashed by signal" OR ~"=== REDIS BUG REPORT START") and -pod:~"vmalert*" and _time:10m | 
+            ~"=== REDIS BUG REPORT START" and -pod:~"vmalert*" and _time:10m | 
             stats by (pod, namespace, cluster, environment) count() as crash_count | 
             filter crash_count :>= 2
           for: 1m
