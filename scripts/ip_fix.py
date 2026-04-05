@@ -156,7 +156,10 @@ class OmnistrateClient:
 def _is_today(created_at: str, today, tz) -> bool:
     if not created_at:
         return False
-    dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    try:
+        dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return False
     return dt.astimezone(tz).date() == today
 
 
