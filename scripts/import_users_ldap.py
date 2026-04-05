@@ -451,7 +451,6 @@ Example:
         result_params = instance_result.get("result_params", {})
         falkordb_username = result_params.get("falkordbUser")
         falkordb_password = result_params.get("falkordbPassword")
-    
         if not falkordb_username or not falkordb_password:
             reason = f"Missing {'falkordbUser' if not falkordb_username else 'falkordbPassword'} in result_params"
             logger.warning(f"Instance {instance_id}: {reason}, skipping")
