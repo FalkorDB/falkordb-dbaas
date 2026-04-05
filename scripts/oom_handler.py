@@ -362,6 +362,10 @@ def main(args):
             file=sys.stderr,
         )
 
+    if args.pod == "node-f-0":
+        print(f"ℹ️  Skipping OOM handler for pod 'node-f-0'.")
+        return
+
     required_env_vars = [
         "OMNISTRATE_API_URL", "OMNISTRATE_USERNAME", "OMNISTRATE_PASSWORD",
         "OMNISTRATE_SERVICE_ID", "OMNISTRATE_ENVIRONMENT_ID",
