@@ -75,12 +75,13 @@ spec:
             view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
         - alert: RedisCrashed
-          # LogsQL: Detect Redis crash by signal
-          # Triggers when Redis crashes with a signal (single occurrence)
-          # This triggers log collection and a warning alert
+          # LogsQL: Detect any Redis crash (signal crash or assertion failure).
+          # Triggers when Redis crashes with a signal OR an internal assertion failure (single occurrence).
+          # Covers both "crashed by signal" (SIGSEGV/SIGABRT etc.) and "=== REDIS BUG REPORT START" (assertion failures).
+          # This triggers log collection and a warning alert.
           # Note: Duplicate issues are prevented by checking for existing open issues in the alert-reaction script
           expr: |
-            ~"Redis .+ crashed by signal" and -pod:~"vmalert*" | 
+            (~"Redis .+ crashed by signal" OR ~"=== REDIS BUG REPORT START") and -pod:~"vmalert*" | 
             stats by (pod, namespace, cluster, environment) count() as crash_count    
           for: 0m
           labels:
@@ -91,15 +92,17 @@ spec:
             summary: "Critical: Redis crashed in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
               [cluster={{ $labels.cluster }}] Redis in pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
-              has crashed due to a signal. Logs will be collected and a warning has been sent.
+              has crashed (signal crash or assertion failure). Logs will be collected and a warning has been sent.
               Crash count: {{ $value }}.
             view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
         - alert: RedisCrashLoop
-          # LogsQL: Detect Redis crash loop (2+ crashes in last 15 minutes)
-          # Triggers critical alert immediately when Redis is repeatedly crashing
+          # LogsQL: Detect Redis crash loop (2+ crashes in last 10 minutes).
+          # Covers both signal crashes and assertion failures.
+          # Uses a 10-minute window. A single crash where the pod takes 3+ minutes to restart
+          # will not produce a second crash log within that same window unless it truly crashes again.
           expr: |
-            ~"Redis .+ crashed by signal" and -pod:~"vmalert*" and _time:15m | 
+            (~"Redis .+ crashed by signal" OR ~"=== REDIS BUG REPORT START") and -pod:~"vmalert*" and _time:10m | 
             stats by (pod, namespace, cluster, environment) count() as crash_count | 
             filter crash_count :>= 2
           for: 1m
