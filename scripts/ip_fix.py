@@ -12,6 +12,7 @@ running from within a single pod.
 
 import json
 import os
+import shlex
 import subprocess
 import sys
 import requests
@@ -220,16 +221,15 @@ def get_pods(namespace: str, kubeconfig: str) -> list[str]:
 
 
 def _redis_cli(namespace: str, pod: str, container: str, args: list,
-               kubeconfig: str, check: bool = True,
-               password: Optional[str] = None) -> subprocess.CompletedProcess:
+               kubeconfig: str, check: bool = True) -> subprocess.CompletedProcess:
     redis_port = os.environ.get("REDIS_PORT", "6379")
-    auth = ["-a", password, "--no-auth-warning"] if password else []
-    cmd = (
-        ["exec", "-n", namespace, "-c", container, pod, "--",
-         "redis-cli", "-p", redis_port]
-        + auth
-        + args
+    # Password is read from /run/secrets/adminpassword inside the container by
+    # the shell, so it never appears in host-side process args or Python memory.
+    redis_cmd = " ".join(
+        shlex.quote(a) for a in ["redis-cli", "-p", redis_port] + args
     )
+    shell_cmd = f'REDISCLI_AUTH="$(cat /run/secrets/adminpassword)" {redis_cmd}'
+    cmd = ["exec", "-n", namespace, "-c", container, pod, "--", "sh", "-c", shell_cmd]
     return _kubectl(cmd, kubeconfig, check=check)
 
 
@@ -240,20 +240,6 @@ def _cat_file(namespace: str, pod: str, container: str, path: str,
         kubeconfig,
     )
     return r.stdout
-
-
-def _read_admin_password(namespace: str, pod: str, container: str,
-                         kubeconfig: str) -> Optional[str]:
-    """Read the Redis admin password from /run/secrets/adminpassword inside the container."""
-    r = _kubectl(
-        ["exec", "-n", namespace, "-c", container, pod, "--",
-         "cat", "/run/secrets/adminpassword"],
-        kubeconfig,
-        check=False,
-    )
-    if r.returncode != 0 or not r.stdout.strip():
-        return None
-    return r.stdout.strip()
 
 
 def _resolve_hostname(namespace: str, pod: str, container: str,
@@ -269,10 +255,8 @@ def _resolve_hostname(namespace: str, pod: str, container: str,
     return r.stdout.split()[0]
 
 
-def _can_ping(namespace: str, pod: str, container: str, kubeconfig: str,
-              password: Optional[str] = None) -> bool:
-    r = _redis_cli(namespace, pod, container, ["PING"], kubeconfig,
-                   check=False, password=password)
+def _can_ping(namespace: str, pod: str, container: str, kubeconfig: str) -> bool:
+    r = _redis_cli(namespace, pod, container, ["PING"], kubeconfig, check=False)
     return r.returncode == 0 and "PONG" in r.stdout
 
 
@@ -281,8 +265,7 @@ def _can_ping(namespace: str, pod: str, container: str, kubeconfig: str,
 # ---------------------------------------------------------------------------
 
 def meet_unknown_nodes(namespace: str, pod: str, container: str,
-                       kubeconfig: str, all_pods: list,
-                       password: Optional[str] = None) -> int:
+                       kubeconfig: str, all_pods: list) -> int:
     """
     Resolves the current IP of every other pod in the namespace using
     getent hosts (run from inside this pod), then issues CLUSTER MEET
@@ -305,16 +288,14 @@ def meet_unknown_nodes(namespace: str, pod: str, container: str,
 
         print(f"      → CLUSTER MEET {ip} {redis_port}  ({target_pod})")
         _redis_cli(namespace, pod, container,
-                   ["CLUSTER", "MEET", ip, redis_port], kubeconfig,
-                   password=password)
+                   ["CLUSTER", "MEET", ip, redis_port], kubeconfig)
         fixed += 1
 
     return fixed
 
 
 def fix_replica_master_ip(namespace: str, pod: str, container: str,
-                           kubeconfig: str,
-                           password: Optional[str] = None) -> bool:
+                           kubeconfig: str) -> bool:
     """
     Adapted from ensure_replica_connects_to_the_right_master_ip() in
     ip_fix_logic.sh.
@@ -326,7 +307,7 @@ def fix_replica_master_ip(namespace: str, pod: str, container: str,
     Returns True if CLUSTER REPLICATE was issued.
     """
     info_r = _redis_cli(namespace, pod, container,
-                        ["INFO", "REPLICATION"], kubeconfig, password=password)
+                        ["INFO", "REPLICATION"], kubeconfig)
     if "role:slave" not in info_r.stdout:
         return False
 
@@ -358,8 +339,7 @@ def fix_replica_master_ip(namespace: str, pod: str, container: str,
         return False
 
     _redis_cli(namespace, pod, container,
-               ["CLUSTER", "REPLICATE", master_id], kubeconfig,
-               password=password)
+               ["CLUSTER", "REPLICATE", master_id], kubeconfig)
     return True
 
 
@@ -387,33 +367,28 @@ def fix_instance(instance: dict, kubeconfig: str) -> dict:
         print(f"      No pods found in namespace {namespace}")
         return summary
 
-    # Password is the same across all pods — read once from the first pod
-    password = _read_admin_password(namespace, pods[0], container, kubeconfig)
-
     for pod in pods:
         summary["pods_checked"] += 1
         print(f"      Pod: {pod}")
 
-        if not _can_ping(namespace, pod, container, kubeconfig, password=password):
+        if not _can_ping(namespace, pod, container, kubeconfig):
             print(f"         ⚠️  Pod {pod} not reachable (no PONG) — will retry in 5 minutes")
             summary["pods_unreachable"] += 1
             return summary
 
         try:
-            met = meet_unknown_nodes(namespace, pod, container, kubeconfig, pods,
-                                     password=password)
+            met = meet_unknown_nodes(namespace, pod, container, kubeconfig, pods)
             summary["meet_fixes"] += met
         except Exception as e:
-            msg = f"meet_unknown_nodes failed on {pod}: {e}"
+            msg = f"meet_unknown_nodes failed on {pod}: {type(e).__name__}"
             print(f"         ❌ {msg}")
             summary["errors"].append(msg)
 
         try:
-            if fix_replica_master_ip(namespace, pod, container, kubeconfig,
-                                     password=password):
+            if fix_replica_master_ip(namespace, pod, container, kubeconfig):
                 summary["replicate_fixes"] += 1
         except Exception as e:
-            msg = f"fix_replica_master_ip failed on {pod}: {e}"
+            msg = f"fix_replica_master_ip failed on {pod}: {type(e).__name__}"
             print(f"         ❌ {msg}")
             summary["errors"].append(msg)
 
@@ -483,8 +458,9 @@ class GoogleChatNotifier:
         )
         response.raise_for_status()
 
-    def send_error_notification(self, error_message: str,
-                                error_details: Optional[str] = None) -> None:
+    def send_error_notification(self, error_message: str) -> None:
+        # Only send the operation name and sanitized error type — no tracebacks
+        # or full exception messages that could contain credential substrings.
         payload = {
             "text": "❌ IP Fix Failed",
             "cards": [{
@@ -499,15 +475,6 @@ class GoogleChatNotifier:
                 }],
             }],
         }
-
-        if error_details:
-            payload["cards"][0]["sections"].append({
-                "widgets": [{
-                    "textParagraph": {
-                        "text": f"<b>Details:</b><br><code>{error_details[:500]}</code>"
-                    }
-                }]
-            })
 
         try:
             requests.post(
@@ -624,7 +591,9 @@ if __name__ == "__main__":
         if google_chat_webhook:
             try:
                 notifier = GoogleChatNotifier(google_chat_webhook)
-                notifier.send_error_notification(error_msg, error_details)
+                # Send only the exception type — suppress full traceback to
+                # avoid leaking credential substrings to external services.
+                notifier.send_error_notification(type(e).__name__)
             except Exception as notify_error:
                 print(f"⚠️  Failed to send error notification: {notify_error}",
                       file=sys.stderr)
