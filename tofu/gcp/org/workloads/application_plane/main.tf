@@ -119,7 +119,7 @@ resource "google_storage_bucket" "customer_rdb_bucket" {
 
   lifecycle_rule {
     condition {
-      age = 60 # 30 days in NEARLLINE + 30 more = 60 days total from creation
+      age = 60 # 30 days in NEARLINE + 30 more = 60 days total from creation
     }
     action {
       type = "Delete"
