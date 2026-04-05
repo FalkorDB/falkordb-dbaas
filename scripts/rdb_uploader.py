@@ -14,6 +14,7 @@ import json
 import subprocess
 import argparse
 import datetime
+import time
 
 from google.oauth2 import service_account
 from google.cloud import storage
@@ -205,10 +206,20 @@ def main() -> None:
                 "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
             ])
             print("  Archiving snapshot (no live files — no race condition)...")
-            kubectl_exec(args.namespace, args.pod, args.container, [
-                "tar", "-czf", "/data/appendonlydir.tar.gz",
-                "-C", "/data/appendonlydir.snapshot", ".",
-            ])
+            _TAR_MAX_ATTEMPTS = 3
+            _TAR_RETRY_SLEEP = 30  # seconds — allows time for a liveness-probe restart
+            for _attempt in range(1, _TAR_MAX_ATTEMPTS + 1):
+                try:
+                    kubectl_exec(args.namespace, args.pod, args.container, [
+                        "tar", "-czf", "/data/appendonlydir.tar.gz",
+                        "-C", "/data/appendonlydir.snapshot", ".",
+                    ])
+                    break
+                except RuntimeError:
+                    if _attempt == _TAR_MAX_ATTEMPTS:
+                        raise
+                    print(f"  ⚠️  tar failed (attempt {_attempt}/{_TAR_MAX_ATTEMPTS}), retrying in {_TAR_RETRY_SLEEP}s...")
+                    time.sleep(_TAR_RETRY_SLEEP)
             print("  Removing snapshot...")
             kubectl_exec(args.namespace, args.pod, args.container, [
                 "rm", "-rf", "/data/appendonlydir.snapshot",
