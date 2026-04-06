@@ -153,7 +153,7 @@ resource "google_service_account" "rdb_bucket_sa" {
   project      = module.project.project_id
 }
 
-resource "google_storage_bucket_iam_member" "rdb_bucket_sa_object_admin" {
+resource "google_storage_bucket_iam_member" "rdb_bucket_sa_object_user" {
   bucket = google_storage_bucket.customer_rdb_bucket.name
   role   = "roles/storage.objectUser"
   member = "serviceAccount:${google_service_account.rdb_bucket_sa.email}"
