@@ -269,7 +269,7 @@ def main() -> None:
         print("\n[4/4] Generating signed download URLs (72h)...")
         write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
 
-        if aof_enabled:
+        if aof_enabled and not aof_upload_failed:
             write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
 
     print(f"\n{'='*60}")
