@@ -245,9 +245,9 @@ class LdapUserImporter:
             else:
                 if response.status_code == 409:
                     logger.warning(
-                        f"User '{username}' already exists in instance '{instance_id}', skipping"
+                        f"User '{username}' already exists in instance '{instance_id}', upserting via PUT"
                     )
-                    return self.import_user(instance_id, subscription_id, username, password, acl)  # Retry logic for idempotency
+                    return self.upsert_user(instance_id, subscription_id, username, password, acl)  # Retry logic for idempotency
                 logger.error(
                     f"Failed to create user '{username}' in instance '{instance_id}': "
                     f"HTTP {response.status_code} - {response.text}"
@@ -260,14 +260,15 @@ class LdapUserImporter:
             )
             return False
 
-    def import_user(self, instance_id: str, subscription_id: str, username: str, password: str, acl: str) -> bool:
+    def upsert_user(self, instance_id: str, subscription_id: str, username: str, password: str, acl: str) -> bool:
         """
-        Retry logic for creating a user in LDAP, used when a 409 Conflict is encountered.
+        Upsert a user in LDAP via PUT request, used when a 409 Conflict is encountered during creation.
+        Uses PUT semantics to create or update the user as needed.
 
         Args:
             instance_id: Instance ID (namespace)
             subscription_id: Subscription ID (required query param)
-            username: Username to create
+            username: Username to upsert
             password: User password
             acl: ACL permissions string
 
@@ -275,7 +276,7 @@ class LdapUserImporter:
             True if successful, False otherwise
         """
         logger.info(
-            f"Retrying creation of user '{username}' in instance '{instance_id}' after conflict"
+            f"Upserting user '{username}' in instance '{instance_id}' after conflict"
         )
         try:
             response = self.session.put(
@@ -285,19 +286,19 @@ class LdapUserImporter:
 
             if response.ok:
                 logger.info(
-                    f"Successfully created user '{username}' in instance '{instance_id}' on retry"
+                    f"Successfully upserted user '{username}' in instance '{instance_id}'"
                 )
                 return True
             else:
                 logger.error(
-                    f"Failed to create user '{username}' in instance '{instance_id}' on retry: "
+                    f"Failed to upsert user '{username}' in instance '{instance_id}': "
                     f"HTTP {response.status_code} - {response.text}"
                 )
                 return False
 
         except requests.exceptions.RequestException as e:
             logger.error(
-                f"Network error creating user '{username}' in instance '{instance_id}' on retry: {e}"
+                f"Network error upserting user '{username}' in instance '{instance_id}': {e}"
             )
             return False
 
