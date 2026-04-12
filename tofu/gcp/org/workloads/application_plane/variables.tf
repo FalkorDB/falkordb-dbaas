@@ -39,3 +39,13 @@ variable "customer_rdb_bucket_name" {
 variable "argocd_sa_email" {
   type = string
 }
+
+variable "gh_workload_identity_pool_name" {
+  type        = string
+  description = "Full resource name of the GitHub Actions workload identity pool from the control plane project"
+}
+
+variable "repo_name" {
+  type        = string
+  description = "GitHub repository name (org/repo) for workload identity attribute condition"
+}
