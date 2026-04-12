@@ -172,3 +172,10 @@ resource "google_service_account_iam_member" "rdb_bucket_sa_token_creator" {
   role               = "roles/iam.serviceAccountTokenCreator"
   member             = "serviceAccount:${google_service_account.rdb_bucket_sa.email}"
 }
+
+# Allow GitHub Actions WIF principal to generate access tokens for rdb_bucket_sa (required for impersonation)
+resource "google_service_account_iam_member" "rdb_bucket_sa_wi_token_creator" {
+  service_account_id = google_service_account.rdb_bucket_sa.id
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "principalSet://iam.googleapis.com/${var.gh_workload_identity_pool_name}/attribute.repository/${var.repo_name}"
+}
