@@ -10,38 +10,41 @@ Mirrors the logic of upload_to_gcp.sh.
 
 import os
 import sys
-import json
 import subprocess
 import argparse
 import datetime
 
-from google.oauth2 import service_account
+import google.auth
+import google.auth.transport.requests
 from google.cloud import storage
 
 
-def _load_credentials() -> service_account.Credentials:
-    """Parse GCS_SA_KEY once and return SA credentials."""
-    key_json = os.environ.get("GCS_SA_KEY")
-    if not key_json:
-        raise EnvironmentError("GCS_SA_KEY env var is not set")
-    return service_account.Credentials.from_service_account_info(
-        json.loads(key_json),
+def _load_credentials():
+    """Load Application Default Credentials (set by google-github-actions/auth)."""
+    credentials, _project = google.auth.default(
         scopes=["https://www.googleapis.com/auth/cloud-platform"],
     )
+    # Refresh to obtain an access token (needed for IAM signBlob-based signing)
+    credentials.refresh(google.auth.transport.requests.Request())
+    return credentials
 
 
 def get_signed_url(
     blob: storage.Blob,
-    credentials: service_account.Credentials,
+    credentials,
     expiration_minutes: int,
     method: str = "GET",
 ) -> str:
-    """Generate a v4 signed URL for a GCS blob."""
+    """Generate a v4 signed URL for a GCS blob using IAM signBlob API."""
+    sa_email = os.environ.get("GCS_SA_EMAIL")
+    if not sa_email:
+        raise EnvironmentError("GCS_SA_EMAIL env var is not set")
     return blob.generate_signed_url(
         version="v4",
         expiration=datetime.timedelta(minutes=expiration_minutes),
         method=method,
-        credentials=credentials,
+        service_account_email=sa_email,
+        access_token=credentials.token,
     )
 
 
