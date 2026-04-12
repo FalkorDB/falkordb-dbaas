@@ -197,6 +197,7 @@ jobs:
           POD: ${{ inputs.pod }}
           RDB_URL: ${{ steps.upload_gcs.outputs.rdb_url }}
           AOF_URL: ${{ steps.upload_gcs.outputs.aof_url }}
+          AOF_UPLOAD_FAILED: ${{ steps.upload_gcs.outputs.aof_upload_failed }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SIGN_ONLY: ${{ inputs.sign_only }}
         run: |
@@ -219,6 +220,12 @@ jobs:
           if [[ -n "$AOF_URL" ]]; then
             COMMENT+="
           | \`appendonlydir.tar.gz\` | [Download]($AOF_URL) |"
+          fi
+
+          if [[ "${AOF_UPLOAD_FAILED}" == "true" ]]; then
+            COMMENT+="
+
+          > ⚠️ AOF upload failed after retries — \`appendonlydir.tar.gz\` is not available."
           fi
 
           COMMENT+="
