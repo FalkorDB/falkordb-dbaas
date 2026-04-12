@@ -14,7 +14,6 @@ import json
 import subprocess
 import argparse
 import datetime
-import time
 
 from google.oauth2 import service_account
 from google.cloud import storage
@@ -60,6 +59,24 @@ def kubectl_check_path(namespace: str, pod: str, container: str, path: str, is_d
         timeout=_KUBECTL_TIMEOUT,
     )
     return result.returncode == 0
+
+
+def kubectl_wait_pod_ready(namespace: str, pod: str,
+                           timeout: int = _KUBECTL_TIMEOUT) -> None:
+    """Wait for the pod to pass its liveness/readiness checks via kubectl wait."""
+    print(f"  Checking pod status — waiting for {pod} to be Ready (timeout: {timeout}s)...")
+    result = subprocess.run(
+        ["kubectl", "wait", "pod", pod,
+         "-n", namespace,
+         "--for=condition=Ready",
+         f"--timeout={timeout}s"],
+        check=False,
+        timeout=timeout + 10,
+    )
+    if result.returncode == 0:
+        print(f"  Pod {pod} is Ready.")
+    else:
+        print(f"  ⚠️  Pod {pod} did not become Ready within {timeout}s, proceeding with retry anyway.")
 
 
 def kubectl_exec(
@@ -205,8 +222,7 @@ def main() -> None:
             kubectl_exec(args.namespace, args.pod, args.container, [
                 "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
             ])
-            print("  Archiving snapshot (no live files — no race condition)...")
-            _TAR_RETRY_SLEEP = 120  # seconds — allows time for a liveness-probe restart
+            print("  Archiving and uploading AOF...")
             aof_upload_failed = False
             try:
                 try:
@@ -215,29 +231,13 @@ def main() -> None:
                         "-C", "/data/appendonlydir.snapshot", ".",
                     ])
                 except RuntimeError:
-                    print(f"  ⚠️  tar failed, retrying in {_TAR_RETRY_SLEEP}s...")
-                    time.sleep(_TAR_RETRY_SLEEP)
+                    print("  ⚠️  tar failed, checking pod status before retry...")
+                    kubectl_wait_pod_ready(args.namespace, args.pod)
+                    print("  Retrying tar...")
                     kubectl_exec(args.namespace, args.pod, args.container, [
                         "tar", "-czf", "/data/appendonlydir.tar.gz",
                         "-C", "/data/appendonlydir.snapshot", ".",
                     ])
-            except RuntimeError as e:
-                print(f"  ⚠️  tar failed after retry, skipping AOF upload: {e}")
-                aof_upload_failed = True
-                write_github_output("aof_upload_failed", "true")
-                for _path in ["/data/appendonlydir.tar.gz", "/data/appendonlydir.snapshot"]:
-                    try:
-                        kubectl_exec(args.namespace, args.pod, args.container,
-                                     ["rm", "-rf", _path],
-                                     warn_on_exit_codes={1})
-                    except Exception:
-                        pass
-
-            if not aof_upload_failed:
-                print("  Removing snapshot...")
-                kubectl_exec(args.namespace, args.pod, args.container, [
-                    "rm", "-rf", "/data/appendonlydir.snapshot",
-                ])
                 print("  Uploading appendonlydir.tar.gz...")
                 kubectl_exec(
                     args.namespace, args.pod, args.container,
@@ -250,17 +250,26 @@ def main() -> None:
                     redact_args=[aof_put_url],
                 )
                 print("  appendonlydir.tar.gz uploaded successfully.")
-                print("  Cleaning up temporary archive on pod...")
-                kubectl_exec(args.namespace, args.pod, args.container, [
-                    "rm", "-f", "/data/appendonlydir.tar.gz",
-                ])
+            except RuntimeError as e:
+                print(f"  ⚠️  AOF upload failed: {e}")
+                aof_upload_failed = True
+                write_github_output("aof_upload_failed", "true")
+            finally:
+                print("  Cleaning up AOF artifacts on pod...")
+                for _path in ["/data/appendonlydir.tar.gz", "/data/appendonlydir.snapshot"]:
+                    try:
+                        kubectl_exec(args.namespace, args.pod, args.container,
+                                     ["rm", "-rf", _path],
+                                     warn_on_exit_codes={1})
+                    except Exception:
+                        pass
                 print("  Cleanup complete.")
 
         # 4. Generate signed GET/download URLs (72h)
         print("\n[4/4] Generating signed download URLs (72h)...")
         write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
 
-        if aof_enabled:
+        if aof_enabled and not aof_upload_failed:
             write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
 
     print(f"\n{'='*60}")
