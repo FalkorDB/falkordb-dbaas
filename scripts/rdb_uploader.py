@@ -206,41 +206,55 @@ def main() -> None:
                 "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
             ])
             print("  Archiving snapshot (no live files — no race condition)...")
-            _TAR_MAX_ATTEMPTS = 3
-            _TAR_RETRY_SLEEP = 30  # seconds — allows time for a liveness-probe restart
-            for _attempt in range(1, _TAR_MAX_ATTEMPTS + 1):
+            _TAR_RETRY_SLEEP = 120  # seconds — allows time for a liveness-probe restart
+            aof_upload_failed = False
+            try:
                 try:
                     kubectl_exec(args.namespace, args.pod, args.container, [
                         "tar", "-czf", "/data/appendonlydir.tar.gz",
                         "-C", "/data/appendonlydir.snapshot", ".",
                     ])
-                    break
                 except RuntimeError:
-                    if _attempt == _TAR_MAX_ATTEMPTS:
-                        raise
-                    print(f"  ⚠️  tar failed (attempt {_attempt}/{_TAR_MAX_ATTEMPTS}), retrying in {_TAR_RETRY_SLEEP}s...")
+                    print(f"  ⚠️  tar failed, retrying in {_TAR_RETRY_SLEEP}s...")
                     time.sleep(_TAR_RETRY_SLEEP)
-            print("  Removing snapshot...")
-            kubectl_exec(args.namespace, args.pod, args.container, [
-                "rm", "-rf", "/data/appendonlydir.snapshot",
-            ])
-            print("  Uploading appendonlydir.tar.gz...")
-            kubectl_exec(
-                args.namespace, args.pod, args.container,
-                [
-                    "curl", "-X", "PUT", "--fail", "--silent", "--show-error",
-                    "-H", "Content-Type: application/octet-stream",
-                    "--upload-file", "/data/appendonlydir.tar.gz",
-                    aof_put_url,
-                ],
-                redact_args=[aof_put_url],
-            )
-            print("  appendonlydir.tar.gz uploaded successfully.")
-            print("  Cleaning up temporary archive on pod...")
-            kubectl_exec(args.namespace, args.pod, args.container, [
-                "rm", "-f", "/data/appendonlydir.tar.gz",
-            ])
-            print("  Cleanup complete.")
+                    kubectl_exec(args.namespace, args.pod, args.container, [
+                        "tar", "-czf", "/data/appendonlydir.tar.gz",
+                        "-C", "/data/appendonlydir.snapshot", ".",
+                    ])
+            except RuntimeError as e:
+                print(f"  ⚠️  tar failed after retry, skipping AOF upload: {e}")
+                aof_upload_failed = True
+                write_github_output("aof_upload_failed", "true")
+                for _path in ["/data/appendonlydir.tar.gz", "/data/appendonlydir.snapshot"]:
+                    try:
+                        kubectl_exec(args.namespace, args.pod, args.container,
+                                     ["rm", "-rf", _path],
+                                     warn_on_exit_codes={1})
+                    except Exception:
+                        pass
+
+            if not aof_upload_failed:
+                print("  Removing snapshot...")
+                kubectl_exec(args.namespace, args.pod, args.container, [
+                    "rm", "-rf", "/data/appendonlydir.snapshot",
+                ])
+                print("  Uploading appendonlydir.tar.gz...")
+                kubectl_exec(
+                    args.namespace, args.pod, args.container,
+                    [
+                        "curl", "-X", "PUT", "--fail", "--silent", "--show-error",
+                        "-H", "Content-Type: application/octet-stream",
+                        "--upload-file", "/data/appendonlydir.tar.gz",
+                        aof_put_url,
+                    ],
+                    redact_args=[aof_put_url],
+                )
+                print("  appendonlydir.tar.gz uploaded successfully.")
+                print("  Cleaning up temporary archive on pod...")
+                kubectl_exec(args.namespace, args.pod, args.container, [
+                    "rm", "-f", "/data/appendonlydir.tar.gz",
+                ])
+                print("  Cleanup complete.")
 
         # 4. Generate signed GET/download URLs (72h)
         print("\n[4/4] Generating signed download URLs (72h)...")
