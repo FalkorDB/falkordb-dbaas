@@ -5,6 +5,7 @@ name: Redis Crash Handler
 
 permissions:
   contents: read
+  id-token: write
   issues: write
 
 on:

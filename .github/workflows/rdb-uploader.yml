@@ -10,6 +10,7 @@ name: RDB Uploader
 
 permissions:
   contents: read
+  id-token: write
   issues: write
 
 on:
@@ -163,7 +164,16 @@ jobs:
           echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
 
       # ------------------------------------------------------------------ #
-      # 6. Run rdb_uploader.py — handles signing, kubectl exec, and outputs
+      # 6. Authenticate to GCP via Workload Identity Federation
+      # ------------------------------------------------------------------ #
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCS_SA_EMAIL }}
+
+      # ------------------------------------------------------------------ #
+      # 7. Run rdb_uploader.py — handles signing, kubectl exec, and outputs
       # ------------------------------------------------------------------ #
       - name: Upload RDB (and AOF) from pod to GCS
         id: upload_gcs
@@ -173,7 +183,7 @@ jobs:
           CONTAINER: ${{ inputs.container }}
           SIGN_ONLY: ${{ inputs.sign_only }}
           GCS_BUCKET: ${{ vars.GCS_BUCKET }}
-          GCS_SA_KEY: ${{ secrets.GCP_BUCKET_SA_KEY }}
+          GCS_SA_EMAIL: ${{ vars.GCS_SA_EMAIL }}
         run: |
           EXTRA_ARGS=()
           [[ "${SIGN_ONLY,,}" == "true" ]] && EXTRA_ARGS+=("--sign-only")
@@ -185,7 +195,7 @@ jobs:
             "${EXTRA_ARGS[@]}"
 
       # ------------------------------------------------------------------ #
-      # 7. Comment download links on the GitHub issue
+      # 8. Comment download links on the GitHub issue
       # ------------------------------------------------------------------ #
       - name: Comment download links on issue
         if: ${{ inputs.issue_number != '' }}

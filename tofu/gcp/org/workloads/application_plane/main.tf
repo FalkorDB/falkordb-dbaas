@@ -158,3 +158,17 @@ resource "google_storage_bucket_iam_member" "rdb_bucket_sa_object_user" {
   role   = "roles/storage.objectUser"
   member = "serviceAccount:${google_service_account.rdb_bucket_sa.email}"
 }
+
+# Allow GitHub Actions workload identity to impersonate rdb_bucket_sa
+resource "google_service_account_iam_member" "rdb_bucket_sa_wi_user" {
+  service_account_id = google_service_account.rdb_bucket_sa.id
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${var.gh_workload_identity_pool_name}/attribute.repository/${var.repo_name}"
+}
+
+# Allow rdb_bucket_sa to sign blobs (required for generating signed URLs via IAM API)
+resource "google_service_account_iam_member" "rdb_bucket_sa_token_creator" {
+  service_account_id = google_service_account.rdb_bucket_sa.id
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.rdb_bucket_sa.email}"
+}
