@@ -94,7 +94,6 @@ controller:
       value: "3"
   extraArgs:
     - --sharding-method=consistent-hashing
-    - --dynamic-cluster-distribution-enabled
   metrics:
     enabled: true
   serviceAccount:
