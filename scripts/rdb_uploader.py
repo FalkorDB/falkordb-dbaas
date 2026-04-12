@@ -21,7 +21,7 @@ from google.cloud import storage
 
 def _load_credentials():
     """Load Application Default Credentials (set by google-github-actions/auth)."""
-    credentials, project = google.auth.default(
+    credentials, _project = google.auth.default(
         scopes=["https://www.googleapis.com/auth/cloud-platform"],
     )
     # Refresh to obtain an access token (needed for IAM signBlob-based signing)
