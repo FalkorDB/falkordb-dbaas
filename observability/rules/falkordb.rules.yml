@@ -201,12 +201,10 @@ spec:
         - alert: FalkorDBLowDiskSpaceWarning
           expr: |
             (
-              kubelet_volume_stats_used_bytes{job="kubelet", metrics_path="/metrics"}
+              kubelet_volume_stats_used_bytes{namespace=~"instance-.*"}
                 /
-              kubelet_volume_stats_capacity_bytes{job="kubelet", metrics_path="/metrics"}
+              kubelet_volume_stats_capacity_bytes{namespace=~"instance-.*"}
             ) * 100 > 80
-            and on(namespace)
-            redis_up{container="service"} == 1
           for: 5m
           labels:
             severity: warning
@@ -219,12 +217,10 @@ spec:
         - alert: FalkorDBLowDiskSpaceCritical
           expr: |
             (
-              kubelet_volume_stats_used_bytes{job="kubelet", metrics_path="/metrics"}
+              kubelet_volume_stats_used_bytes{namespace=~"instance-.*"}
                 /
-              kubelet_volume_stats_capacity_bytes{job="kubelet", metrics_path="/metrics"}
+              kubelet_volume_stats_capacity_bytes{namespace=~"instance-.*"}
             ) * 100 > 90
-            and on(namespace)
-            redis_up{container="service"} == 1
           for: 5m
           labels:
             severity: critical
