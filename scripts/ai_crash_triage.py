@@ -143,7 +143,20 @@ A Redis/FalkorDB crash has been detected. Please perform a full triage.
         prompt += f"- AOF directory available: yes\n"
         prompt += f"  AOF URL: {args.aof_url}\n"
 
-    prompt += """
+    if args.crash_log_file:
+        with open(args.crash_log_file, "r") as f:
+            crash_log = f.read()
+        prompt += f"""
+**Full crash log loaded from file ({len(crash_log)} bytes):**
+
+```
+{crash_log}
+```
+
+Skip Step 1 (fetch_crash_logs) since the full crash log is above. Proceed directly to Step 2: source code analysis.
+"""
+    else:
+        prompt += """
 Start with Step 1: fetch the crash logs for this pod/namespace, then proceed through all steps.
 """
     return prompt
@@ -183,8 +196,8 @@ async def run_triage(args):
     async with CopilotClient(SubprocessConfig(github_token=github_token)) as client:
         async with await client.create_session(
             on_permission_request=PermissionHandler.approve_all,
-            model="claude-sonnet-4",
-            streaming=False,
+            model="claude-opus-4.6",
+            streaming=True,
             tools=ALL_TOOLS,
             system_message={
                 "mode": "append",
@@ -193,14 +206,36 @@ async def run_triage(args):
         ) as session:
             done = asyncio.Event()
             messages = []
+            streamed_chunks = []  # collect streaming deltas as fallback
+            turn_active = False
 
             def on_event(event):
-                if event.type.value == "assistant.message":
+                nonlocal turn_active
+                t = event.type.value
+                print(f"  [{t}]", file=sys.stderr, flush=True)
+                if t in ("assistant.message_delta", "assistant.streaming_delta"):
+                    delta = event.data.delta_content or ""
+                    streamed_chunks.append(delta)
+                    print(delta, end="", flush=True)
+                elif t == "assistant.message":
                     messages.append(event.data.content)
-                elif event.type.value == "session.idle":
-                    done.set()
-                elif event.type.value == "session.error":
-                    print(f"Session error: {event.data.message}", file=sys.stderr)
+                    print()  # newline after streamed message
+                elif t == "assistant.turn_start":
+                    turn_active = True
+                elif t == "assistant.turn_end":
+                    turn_active = False
+                elif t == "tool.execution_start":
+                    name = getattr(event.data, 'tool_name', '') or getattr(event.data, 'name', '') or ''
+                    print(f"🔧 Running tool: {name}", flush=True)
+                elif t == "tool.execution_complete":
+                    name = getattr(event.data, 'tool_name', '') or getattr(event.data, 'name', '') or ''
+                    print(f"✅ Tool complete: {name}", flush=True)
+                elif t == "session.idle":
+                    # Only finish if no turn is active
+                    if not turn_active:
+                        done.set()
+                elif t == "session.error":
+                    print(f"Session error: {getattr(event.data, 'message', event.data)}", file=sys.stderr, flush=True)
                     done.set()
 
             session.on(on_event)
@@ -209,9 +244,11 @@ async def run_triage(args):
             await session.send(prompt)
             await done.wait()
 
-            # The last assistant message should be the final report
+            # Prefer the last assistant.message; fall back to streamed chunks
             if messages:
                 triage_report = messages[-1]
+            elif streamed_chunks:
+                triage_report = "".join(streamed_chunks)
 
     return triage_report
 
@@ -228,6 +265,7 @@ def main():
     parser.add_argument("--rdb-url", default="", help="Signed GCS URL for dump.rdb")
     parser.add_argument("--aof-url", default="", help="Signed GCS URL for appendonlydir.tar.gz")
     parser.add_argument("--falkordb-version", default="", help="FalkorDB version")
+    parser.add_argument("--crash-log-file", default="", help="Path to a local crash log file (skip VMAuth log fetch)")
     args = parser.parse_args()
 
     # Pass vmauth-url to tools via env
@@ -238,7 +276,7 @@ def main():
         if report:
             _post_report_to_issue(report, args.issue_number, args.issue_repo)
         else:
-            print("ERROR: No triage report generated", file=sys.stderr)
+            print("ERROR: No triage report generated", file=sys.stderr, flush=True)
             sys.exit(1)
     finally:
         cleanup()
