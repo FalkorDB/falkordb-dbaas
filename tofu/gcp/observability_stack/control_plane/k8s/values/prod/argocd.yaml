@@ -84,7 +84,7 @@ applicationSet:
       memory: "2Gi"
       cpu: "500m"
     limits:
-      memory: "4Gi"
+      memory: "5Gi"
       cpu: "2"
 
 controller:
