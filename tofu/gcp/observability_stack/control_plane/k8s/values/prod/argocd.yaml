@@ -84,7 +84,7 @@ applicationSet:
       memory: "2Gi"
       cpu: "500m"
     limits:
-      memory: "5Gi"
+      memory: "4Gi"
       cpu: "2"
 
 controller:
@@ -104,7 +104,7 @@ controller:
       memory: "2Gi"
       cpu: "1"
     limits:
-      memory: "4Gi"
+      memory: "5Gi"
       cpu: "2"
   volumes:
     - name: aws-profile
