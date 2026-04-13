@@ -204,14 +204,14 @@ spec:
               kubelet_volume_stats_used_bytes{namespace=~"instance-.*"}
                 /
               kubelet_volume_stats_capacity_bytes{namespace=~"instance-.*"}
-            ) * 100 > 80
+            ) * 100 > 60
           for: 5m
           labels:
             severity: warning
             cluster: '{{ $labels.cluster }}'
           annotations:
-            summary: "FalkorDB instance disk space above 80% in namespace {{ $labels.namespace }}"
-            description: "[cluster={{ $labels.cluster }}] FalkorDB instance in namespace {{ $labels.namespace }} is using more than 80% of its disk space (PVC: {{ $labels.persistentvolumeclaim }}). Current usage: {{ $value | printf \"%.1f\" }}%."
+            summary: "FalkorDB instance disk space above 60% in namespace {{ $labels.namespace }}"
+            description: "[cluster={{ $labels.cluster }}] FalkorDB instance in namespace {{ $labels.namespace }} is using more than 60% of its disk space (PVC: {{ $labels.persistentvolumeclaim }}). Current usage: {{ $value | printf \"%.1f\" }}%."
             threshold: "{{ $value | printf \"%.1f\" }}"
 
         - alert: FalkorDBLowDiskSpaceCritical
@@ -220,14 +220,14 @@ spec:
               kubelet_volume_stats_used_bytes{namespace=~"instance-.*"}
                 /
               kubelet_volume_stats_capacity_bytes{namespace=~"instance-.*"}
-            ) * 100 > 90
+            ) * 100 > 75
           for: 5m
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
           annotations:
-            summary: "FalkorDB instance disk space above 90% in namespace {{ $labels.namespace }}"
-            description: "[cluster={{ $labels.cluster }}] FalkorDB instance in namespace {{ $labels.namespace }} is using more than 90% of its disk space (PVC: {{ $labels.persistentvolumeclaim }}). Current usage: {{ $value | printf \"%.1f\" }}%."
+            summary: "FalkorDB instance disk space above 75% in namespace {{ $labels.namespace }}"
+            description: "[cluster={{ $labels.cluster }}] FalkorDB instance in namespace {{ $labels.namespace }} is using more than 75% of its disk space (PVC: {{ $labels.persistentvolumeclaim }}). Current usage: {{ $value | printf \"%.1f\" }}%."
             runbook_url: "https://runbooks.falkordb.cloud/alerts/falkordb-low-disk-space-critical/"
             threshold: "{{ $value | printf \"%.1f\" }}"
     - name: falkordb.rules.standalone
