@@ -88,10 +88,10 @@ applicationSet:
       cpu: "2"
 
 controller:
-  replicas: 3
+  replicas: 4
   env:
     - name: ARGOCD_CONTROLLER_REPLICAS
-      value: "3"
+      value: "4"
   extraArgs:
     - --sharding-method=consistent-hashing
   metrics:
@@ -104,7 +104,7 @@ controller:
       memory: "2Gi"
       cpu: "1"
     limits:
-      memory: "6Gi"
+      memory: "4Gi"
       cpu: "2"
   volumes:
     - name: aws-profile
