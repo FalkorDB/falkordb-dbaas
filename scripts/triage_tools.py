@@ -496,8 +496,8 @@ async def get_git_blame(params: GetGitBlameParams) -> str:
 # ---------------------------------------------------------------------------
 
 class RunFalkorDBLocalParams(BaseModel):
-    rdb_url: str = Field(default="", description="Signed GCS URL to download dump.rdb")
-    aof_url: str = Field(default="", description="Signed GCS URL to download appendonlydir.tar.gz")
+    rdb_url: str = Field(default="", description="GCS path (gs://...) or signed URL to download dump.rdb")
+    aof_url: str = Field(default="", description="GCS path (gs://...) or signed URL to download appendonlydir.tar.gz")
     version: str = Field(default="latest", description="FalkorDB Docker image tag")
 
 
@@ -505,7 +505,8 @@ class RunFalkorDBLocalParams(BaseModel):
     name="run_falkordb_local",
     description=(
         "Start a local FalkorDB Docker container, optionally loading an RDB dump "
-        "and/or AOF directory from signed GCS URLs. Returns the container ID "
+        "and/or AOF directory from GCS paths (gs://...). Downloads use gsutil with "
+        "Application Default Credentials (IAM-authenticated). Returns the container ID "
         "and connection details. Use this to reproduce crashes locally."
     ),
 )
@@ -523,20 +524,38 @@ async def run_falkordb_local(params: RunFalkorDBLocalParams) -> str:
     # Download RDB if provided
     if params.rdb_url:
         rdb_path = os.path.join(data_dir, "dump.rdb")
-        resp = requests.get(params.rdb_url, timeout=300)
-        if resp.status_code != 200:
-            return f"ERROR: Failed to download RDB (HTTP {resp.status_code})"
-        with open(rdb_path, "wb") as f:
-            f.write(resp.content)
+        if params.rdb_url.startswith("gs://"):
+            result = subprocess.run(
+                ["gsutil", "cp", params.rdb_url, rdb_path],
+                capture_output=True, text=True,
+            )
+            if result.returncode != 0:
+                return f"ERROR: gsutil failed to download RDB: {result.stderr}"
+        else:
+            # Fallback: treat as a plain HTTPS URL (legacy signed URLs)
+            resp = requests.get(params.rdb_url, timeout=300)
+            if resp.status_code != 200:
+                return f"ERROR: Failed to download RDB (HTTP {resp.status_code})"
+            with open(rdb_path, "wb") as f:
+                f.write(resp.content)
 
     # Download and extract AOF if provided
     if params.aof_url:
         aof_tar = os.path.join(_work_dir, "appendonlydir.tar.gz")
-        resp = requests.get(params.aof_url, timeout=300)
-        if resp.status_code != 200:
-            return f"ERROR: Failed to download AOF (HTTP {resp.status_code})"
-        with open(aof_tar, "wb") as f:
-            f.write(resp.content)
+        if params.aof_url.startswith("gs://"):
+            result = subprocess.run(
+                ["gsutil", "cp", params.aof_url, aof_tar],
+                capture_output=True, text=True,
+            )
+            if result.returncode != 0:
+                return f"ERROR: gsutil failed to download AOF: {result.stderr}"
+        else:
+            # Fallback: treat as a plain HTTPS URL (legacy signed URLs)
+            resp = requests.get(params.aof_url, timeout=300)
+            if resp.status_code != 200:
+                return f"ERROR: Failed to download AOF (HTTP {resp.status_code})"
+            with open(aof_tar, "wb") as f:
+                f.write(resp.content)
         subprocess.run(["tar", "xzf", aof_tar, "-C", data_dir], check=True)
 
     image = f"falkordb/falkordb:{params.version}"
