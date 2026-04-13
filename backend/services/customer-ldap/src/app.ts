@@ -2,7 +2,7 @@ import { configDotenv } from 'dotenv';
 configDotenv();
 
 import { init } from '@falkordb/configs';
-init(process.env.SERVICE_NAME ?? 'customer-ldap', process.env.NODE_ENV ?? 'development');
+init(process.env.SERVICE_NAME ?? 'customer-ldap', process.env.NODE_ENV ?? 'production');
 
 import { type FastifyInstance, type FastifyPluginOptions } from 'fastify';
 import { timingSafeEqual } from 'crypto';

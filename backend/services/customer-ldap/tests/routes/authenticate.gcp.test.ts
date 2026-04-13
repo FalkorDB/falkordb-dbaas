@@ -48,7 +48,7 @@ describe('createAuthenticateHook with GCP service account', () => {
       } as unknown as FastifyRequest['log'],
       server: {
         config: {
-          LDAP_MIN_OMNISTRATE_TIER_VERSION: '0',
+          LDAP_MIN_OMNISTRATE_TIER_VERSION: 0,
         },
         httpErrors: {
           badRequest: (msg: string) => new Error(msg),

@@ -34,7 +34,7 @@ export const deleteUserHandler: RouteHandlerMethod<
     );
     const instance = await omnistrateRepository.getInstance(sessionData.instanceId);
     const originalUsername = instance.resultParams?.falkordbUser;
-    if (originalUsername && username === originalUsername) {
+    if (!originalUsername || username === originalUsername) {
       throw ApiError.forbidden('Cannot delete the original instance user', 'CANNOT_DELETE_ORIGINAL_USER');
     }
 

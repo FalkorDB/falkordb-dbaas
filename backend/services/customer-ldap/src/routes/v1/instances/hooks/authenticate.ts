@@ -100,12 +100,14 @@ export function createAuthenticateHook(requiredPermission: 'reader' | 'writer'):
 
         const authService = new AuthService(opts, omnistrateRepository, sessionRepository);
 
-        const [{ session, sessionData: newSessionData }, instance] = await Promise.all([
-          authService.authenticateAndAuthorize(token, instanceId, subscriptionId, requiredPermission),
-          omnistrateRepository.getInstance(instanceId),
-        ]);
+        const { session, sessionData: newSessionData, instance } = await authService.authenticateAndAuthorize(
+          token,
+          instanceId,
+          subscriptionId,
+          requiredPermission,
+        );
 
-        if (instance.tierVersion < request.server.config.LDAP_MIN_OMNISTRATE_TIER_VERSION) {
+        if (Number(instance.tierVersion) < request.server.config.LDAP_MIN_OMNISTRATE_TIER_VERSION) {
           throw request.server.httpErrors.forbidden(
             `Instance tier version ${instance.tierVersion} does not meet minimum required version.`,
           );

@@ -62,7 +62,7 @@ export const setupGlobalContainer = (fastify: FastifyInstance) => {
       return new GcpServiceAccountValidator({
         logger: fastify.log,
         adminServiceAccountEmail: fastify.config.GCP_ADMIN_SERVICE_ACCOUNT_EMAIL,
-        audience: fastify.config.GCP_SERVICE_ACCOUNT_TOKEN_AUDIENCE ?? '',
+        audience: fastify.config.GCP_SERVICE_ACCOUNT_TOKEN_AUDIENCE,
       });
     }).singleton(),
   });
