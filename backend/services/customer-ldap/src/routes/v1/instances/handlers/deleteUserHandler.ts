@@ -1,4 +1,4 @@
-import { RouteHandlerMethod } from 'fastify';
+import { RawServerBase, RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import {
   DeleteUserResponseSchemaType,
@@ -9,12 +9,14 @@ import { IK8sRepository } from '../../../../repositories/k8s/IK8sRepository';
 import { IK8sCredentialsRepository } from '../../../../repositories/k8s-credentials/IK8sCredentialsRepository';
 import { ILdapRepository } from '../../../../repositories/ldap/ILdapRepository';
 import { IConnectionCacheRepository } from '../../../../repositories/connection-cache/IConnectionCacheRepository';
+import { IOmnistrateRepository } from '../../../../repositories/omnistrate/IOmnistrateRepository';
 import { UserService } from '../../../../services/UserService';
+import { IncomingMessage, ServerResponse } from 'http';
 
 export const deleteUserHandler: RouteHandlerMethod<
-  undefined,
-  undefined,
-  undefined,
+  RawServerBase,
+  IncomingMessage,
+  ServerResponse<IncomingMessage>,
   {
     Params: UsernameParamSchemaType;
     Querystring: SubscriptionIdQuerySchemaType;
@@ -26,14 +28,22 @@ export const deleteUserHandler: RouteHandlerMethod<
   const { username } = request.params;
 
   try {
+    // Check that the user being deleted is not the original instance user
+    const omnistrateRepository = request.diScope.resolve<IOmnistrateRepository>(
+      IOmnistrateRepository.repositoryName,
+    );
+    const instance = await omnistrateRepository.getInstance(sessionData.instanceId);
+    const originalUsername = instance.resultParams?.falkordbUser;
+    if (originalUsername && username === originalUsername) {
+      throw ApiError.forbidden('Cannot delete the original instance user', 'CANNOT_DELETE_ORIGINAL_USER');
+    }
+
     // Execute the user operation
     const k8sRepository = request.diScope.resolve<IK8sRepository>(IK8sRepository.repositoryName);
     const k8sCredentialsRepository = request.diScope.resolve<IK8sCredentialsRepository>(
       IK8sCredentialsRepository.repositoryName,
     );
-    const ldapRepository = request.diScope.resolve<ILdapRepository>(
-      ILdapRepository.repositoryName,
-    );
+    const ldapRepository = request.diScope.resolve<ILdapRepository>(ILdapRepository.repositoryName);
     const connectionCache = request.diScope.resolve<IConnectionCacheRepository>(
       IConnectionCacheRepository.repositoryName,
     );

@@ -11,9 +11,7 @@ declare module 'fastify' {
   }
 }
 
-export function createAuthenticateHook(
-  requiredPermission: 'reader' | 'writer',
-): preHandlerHookHandler {
+export function createAuthenticateHook(requiredPermission: 'reader' | 'writer'): preHandlerHookHandler {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     const opts = { logger: request.log };
     const { instanceId } = request.params as { instanceId: string };
@@ -27,19 +25,13 @@ export function createAuthenticateHook(
     const sessionCookie = request.cookies[SESSION_COOKIE_NAME] as string | undefined;
     let sessionData: SessionData | null = null;
 
-    const sessionRepository = request.diScope.resolve<ISessionRepository>(
-      ISessionRepository.repositoryName,
-    );
+    const sessionRepository = request.diScope.resolve<ISessionRepository>(ISessionRepository.repositoryName);
 
     if (sessionCookie) {
       sessionData = sessionRepository.decodeSession(sessionCookie);
 
       // Validate session matches the request
-      if (
-        sessionData &&
-        sessionData.instanceId === instanceId &&
-        sessionData.subscriptionId === subscriptionId
-      ) {
+      if (sessionData && sessionData.instanceId === instanceId && sessionData.subscriptionId === subscriptionId) {
         // Check if user has required permissions
         if (!AuthService.checkPermission(sessionData.role, requiredPermission)) {
           throw request.server.httpErrors.forbidden('Insufficient permissions');
@@ -108,13 +100,16 @@ export function createAuthenticateHook(
 
         const authService = new AuthService(opts, omnistrateRepository, sessionRepository);
 
-        const { session, sessionData: newSessionData } =
-          await authService.authenticateAndAuthorize(
-            token,
-            instanceId,
-            subscriptionId,
-            requiredPermission,
+        const [{ session, sessionData: newSessionData }, instance] = await Promise.all([
+          authService.authenticateAndAuthorize(token, instanceId, subscriptionId, requiredPermission),
+          omnistrateRepository.getInstance(instanceId),
+        ]);
+
+        if (instance.tierVersion < request.server.config.LDAP_MIN_OMNISTRATE_TIER_VERSION) {
+          throw request.server.httpErrors.forbidden(
+            `Instance tier version ${instance.tierVersion} does not meet minimum required version.`,
           );
+        }
 
         sessionData = newSessionData;
 

@@ -2,7 +2,7 @@ import { configDotenv } from 'dotenv';
 configDotenv();
 
 import { init } from '@falkordb/configs';
-init(process.env.SERVICE_NAME, process.env.NODE_ENV);
+init(process.env.SERVICE_NAME ?? 'customer-ldap', process.env.NODE_ENV ?? 'development');
 
 import { type FastifyInstance, type FastifyPluginOptions } from 'fastify';
 import { timingSafeEqual } from 'crypto';
@@ -46,6 +46,7 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   await fastify.register(Cors, {
     origin: corsOrigins,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   });
 
   await fastify.register(Cookie, {
