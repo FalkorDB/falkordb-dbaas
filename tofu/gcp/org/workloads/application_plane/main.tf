@@ -166,7 +166,7 @@ resource "google_service_account_iam_member" "rdb_bucket_sa_wi_user" {
   member             = "principalSet://iam.googleapis.com/${var.gh_workload_identity_pool_name}/attribute.repository/${var.repo_name}"
 }
 
-# Allow rdb_bucket_sa to sign blobs (required for generating signed URLs via IAM API)
+# Allow rdb_bucket_sa to sign blobs (required for generating signed PUT URLs via IAM API)
 resource "google_service_account_iam_member" "rdb_bucket_sa_token_creator" {
   service_account_id = google_service_account.rdb_bucket_sa.id
   role               = "roles/iam.serviceAccountTokenCreator"
@@ -178,4 +178,18 @@ resource "google_service_account_iam_member" "rdb_bucket_sa_wi_token_creator" {
   service_account_id = google_service_account.rdb_bucket_sa.id
   role               = "roles/iam.serviceAccountTokenCreator"
   member             = "principalSet://iam.googleapis.com/${var.gh_workload_identity_pool_name}/attribute.repository/${var.repo_name}"
+}
+
+# Enable GCS data access audit logs to track all reads and writes on the customer RDB bucket
+resource "google_project_iam_audit_config" "storage_data_access" {
+  project = module.project.project_id
+  service = "storage.googleapis.com"
+
+  audit_log_config {
+    log_type = "DATA_READ"
+  }
+
+  audit_log_config {
+    log_type = "DATA_WRITE"
+  }
 }
