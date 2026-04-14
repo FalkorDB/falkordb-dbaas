@@ -93,7 +93,7 @@ controller:
     - name: ARGOCD_CONTROLLER_REPLICAS
       value: "4"
   extraArgs:
-    - --sharding-method=consistent-hashing
+    - --sharding-method=round-robin
   metrics:
     enabled: true
   serviceAccount:
