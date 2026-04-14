@@ -114,11 +114,10 @@ jobs:
           cache-to: type=gha,mode=max
           load: true
 
-      - name: Trivy image scan
-        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37 # v0.31.0
+      - name: Grype image scan
+        uses: anchore/scan-action@7c4571e31f4c185eea09b15a7441f5e51b8cf3f9 # v6.2.0
         with:
-          image-ref: ${{ fromJSON(steps.build-push.outputs.metadata)['image.name'] }}
-          format: table
-          exit-code: "0"
-          ignore-unfixed: true
-          severity: CRITICAL,HIGH
+          image: ${{ fromJSON(steps.build-push.outputs.metadata)['image.name'] }}
+          fail-build: "false"
+          severity-cutoff: high
+          output-format: table
