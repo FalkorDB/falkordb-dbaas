@@ -6,6 +6,12 @@ permissions:
   issues: write
 
 on:
+  push:
+    branches:
+      - 672-ai-triage-of-crashes
+    paths:
+      - '.github/workflows/ai-crash-triage.yml'
+
   workflow_dispatch:
     inputs:
       issue_number:
@@ -41,12 +47,12 @@ on:
           - prod
           - dev
       rdb_url:
-        description: 'GCS path for dump.rdb (gs://bucket/namespace/dump.rdb)'
+        description: 'GCS path (gs://…) or legacy signed URL for dump.rdb'
         required: false
         type: string
         default: ''
       aof_url:
-        description: 'GCS path for AOF (gs://bucket/namespace/appendonlydir.tar.gz)'
+        description: 'GCS path (gs://…) or legacy signed URL for appendonlydir.tar.gz'
         required: false
         type: string
         default: ''
@@ -97,7 +103,15 @@ env:
   ISSUE_REPO: 'FalkorDB/private'
 
 jobs:
+  # On push: no-op job just to register the workflow with GitHub
+  register:
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Workflow registered. You can now trigger it manually via workflow_dispatch."
+
   ai-triage:
+    if: ${{ github.event_name != 'push' }}
     runs-on: ubuntu-latest
     steps:
       - name: Check authorised actor
@@ -133,7 +147,7 @@ jobs:
           pip install github-copilot-sdk requests pydantic
 
       - name: Authenticate to GCP
-        if: ${{ inputs.rdb_url != '' || inputs.aof_url != '' }}
+        if: ${{ startsWith(inputs.rdb_url, 'gs://') || startsWith(inputs.aof_url, 'gs://') }}
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
