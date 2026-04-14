@@ -3,45 +3,49 @@
 RDB Uploader
 Generates signed GCS PUT URLs then triggers the Redis pod to upload
 its RDB (and optionally AOF) directly to GCS via kubectl exec + curl.
-Finally generates signed GET URLs and writes them to GITHUB_OUTPUT.
+Finally writes the gs:// bucket paths to GITHUB_OUTPUT (IAM authentication
+required to download — no publicly-accessible signed URLs are produced).
 
 Mirrors the logic of upload_to_gcp.sh.
 """
 
 import os
 import sys
-import json
 import subprocess
 import argparse
 import datetime
 
-from google.oauth2 import service_account
+import google.auth
+import google.auth.transport.requests
 from google.cloud import storage
 
 
-def _load_credentials() -> service_account.Credentials:
-    """Parse GCS_SA_KEY once and return SA credentials."""
-    key_json = os.environ.get("GCS_SA_KEY")
-    if not key_json:
-        raise EnvironmentError("GCS_SA_KEY env var is not set")
-    return service_account.Credentials.from_service_account_info(
-        json.loads(key_json),
+def _load_credentials():
+    """Load Application Default Credentials (set by google-github-actions/auth)."""
+    credentials, _project = google.auth.default(
         scopes=["https://www.googleapis.com/auth/cloud-platform"],
     )
+    # Refresh to obtain an access token (needed for IAM signBlob-based signing)
+    credentials.refresh(google.auth.transport.requests.Request())
+    return credentials
 
 
 def get_signed_url(
     blob: storage.Blob,
-    credentials: service_account.Credentials,
+    credentials,
     expiration_minutes: int,
     method: str = "GET",
 ) -> str:
-    """Generate a v4 signed URL for a GCS blob."""
+    """Generate a v4 signed URL for a GCS blob using IAM signBlob API."""
+    sa_email = os.environ.get("GCS_SA_EMAIL")
+    if not sa_email:
+        raise EnvironmentError("GCS_SA_EMAIL env var is not set")
     return blob.generate_signed_url(
         version="v4",
         expiration=datetime.timedelta(minutes=expiration_minutes),
         method=method,
-        credentials=credentials,
+        service_account_email=sa_email,
+        access_token=credentials.token,
     )
 
 
@@ -61,17 +65,38 @@ def kubectl_check_path(namespace: str, pod: str, container: str, path: str, is_d
     return result.returncode == 0
 
 
+def kubectl_wait_pod_ready(namespace: str, pod: str,
+                           timeout: int = _KUBECTL_TIMEOUT) -> None:
+    """Wait for the pod to pass its liveness/readiness checks via kubectl wait."""
+    print(f"  Checking pod status — waiting for {pod} to be Ready (timeout: {timeout}s)...")
+    result = subprocess.run(
+        ["kubectl", "wait", "pod", pod,
+         "-n", namespace,
+         "--for=condition=Ready",
+         f"--timeout={timeout}s"],
+        check=False,
+        timeout=timeout + 10,
+    )
+    if result.returncode == 0:
+        print(f"  Pod {pod} is Ready.")
+    else:
+        print(f"  ⚠️  Pod {pod} did not become Ready within {timeout}s, proceeding with retry anyway.")
+
+
 def kubectl_exec(
     namespace: str,
     pod: str,
     container: str,
     command: list[str],
     redact_args: list[str] | None = None,
-) -> None:
+    warn_on_exit_codes: set[int] | None = None,
+) -> int:
     """Run a command inside a pod via kubectl exec. Raises on failure.
 
     Args:
         redact_args: List of argument values to redact in log output (e.g. signed URLs).
+        warn_on_exit_codes: Set of exit codes treated as non-fatal warnings instead of errors.
+            The exit code is still returned so callers can react if needed.
     """
     cmd = [
         "kubectl", "exec",
@@ -85,19 +110,27 @@ def kubectl_exec(
     print(f"  $ {' '.join(log_cmd)}")
     result = subprocess.run(cmd, check=False, timeout=_KUBECTL_TIMEOUT)
     if result.returncode != 0:
-        raise RuntimeError(
-            f"kubectl exec failed with exit code {result.returncode}: {' '.join(log_cmd)}"
-        )
+        if warn_on_exit_codes and result.returncode in warn_on_exit_codes:
+            print(f"  ⚠️  Warning: command exited with code {result.returncode} (non-fatal): {' '.join(log_cmd)}")
+        else:
+            raise RuntimeError(
+                f"kubectl exec failed with exit code {result.returncode}: {' '.join(log_cmd)}"
+            )
+    return result.returncode
 
 
-def write_github_output(key: str, value: str) -> None:
+def write_github_output(key: str, value: str, sensitive: bool = False) -> None:
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:
-        # Mask the value in Actions logs before writing to GITHUB_OUTPUT
-        print(f"::add-mask::{value}")
+        if sensitive:
+            # Mask sensitive values (e.g. signed PUT URLs) in Actions logs
+            print(f"::add-mask::{value}")
         with open(github_output, "a") as f:
             f.write(f"{key}={value}\n")
-    print(f"  Output: {key}=<redacted>")
+    if sensitive:
+        print(f"  Output: {key}=<redacted>")
+    else:
+        print(f"  Output: {key}={value}")
 
 
 def mask_in_actions(value: str) -> None:
@@ -129,30 +162,32 @@ def main() -> None:
 
     rdb_object = f"{args.namespace}/dump.rdb"
     aof_object = f"{args.namespace}/appendonlydir.tar.gz"
-
-    # Load credentials and GCS client once
-    creds = _load_credentials()
-    client = storage.Client(credentials=creds)
-    rdb_blob = client.bucket(args.bucket).blob(rdb_object)
-    aof_blob = client.bucket(args.bucket).blob(aof_object)
+    rdb_gcs_path = f"gs://{args.bucket}/{rdb_object}"
+    aof_gcs_path = f"gs://{args.bucket}/{aof_object}"
 
     if args.sign_only:
         # ------------------------------------------------------------------
-        # Sign-only: just regenerate GET URLs — no pod access whatsoever
+        # Sign-only: output GCS paths without accessing the pod — no
+        # publicly-accessible signed URLs are produced.
         # ------------------------------------------------------------------
-        print("[1/1] Regenerating signed download URLs (72h)...")
-        write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
-
+        print("[1/1] Outputting GCS paths (IAM authentication required to download)...")
+        write_github_output("rdb_url", rdb_gcs_path)
         if aof_enabled:
-            write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
+            write_github_output("aof_url", aof_gcs_path)
 
     else:
         # ------------------------------------------------------------------
-        # Upload: sign PUT URLs → pod curl-PUTs → sign GET URLs
+        # Upload: sign PUT URLs → pod curl-PUTs → output gs:// paths
         # ------------------------------------------------------------------
         if not args.container:
             print("ERROR: --container is required in upload mode", file=sys.stderr)
             sys.exit(1)
+
+        # Load credentials and GCS client (needed for PUT URL signing)
+        creds = _load_credentials()
+        client = storage.Client(credentials=creds)
+        rdb_blob = client.bucket(args.bucket).blob(rdb_object)
+        aof_blob = client.bucket(args.bucket).blob(aof_object)
 
         # 1. Generate signed PUT URLs (1h)
         print("[1/4] Generating signed PUT URLs (1h)...")
@@ -193,35 +228,59 @@ def main() -> None:
         print("  dump.rdb uploaded successfully.")
 
         if aof_enabled:
-            print("  Archiving appendonlydir on pod...")
+            print("  Snapshotting appendonlydir on pod...")
             kubectl_exec(args.namespace, args.pod, args.container, [
-                "tar", "-czf", "/data/appendonlydir.tar.gz",
-                "-C", "/data/appendonlydir", ".",
+                "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
             ])
-            print("  Uploading appendonlydir.tar.gz...")
-            kubectl_exec(
-                args.namespace, args.pod, args.container,
-                [
-                    "curl", "-X", "PUT", "--fail", "--silent", "--show-error",
-                    "-H", "Content-Type: application/octet-stream",
-                    "--upload-file", "/data/appendonlydir.tar.gz",
-                    aof_put_url,
-                ],
-                redact_args=[aof_put_url],
-            )
-            print("  appendonlydir.tar.gz uploaded successfully.")
-            print("  Cleaning up temporary archive on pod...")
-            kubectl_exec(args.namespace, args.pod, args.container, [
-                "rm", "-f", "/data/appendonlydir.tar.gz",
-            ])
-            print("  Cleanup complete.")
+            print("  Archiving and uploading AOF...")
+            aof_upload_failed = False
+            try:
+                try:
+                    kubectl_exec(args.namespace, args.pod, args.container, [
+                        "tar", "-czf", "/data/appendonlydir.tar.gz",
+                        "-C", "/data/appendonlydir.snapshot", ".",
+                    ])
+                except RuntimeError:
+                    print("  ⚠️  tar failed, checking pod status before retry...")
+                    kubectl_wait_pod_ready(args.namespace, args.pod)
+                    print("  Retrying tar...")
+                    kubectl_exec(args.namespace, args.pod, args.container, [
+                        "tar", "-czf", "/data/appendonlydir.tar.gz",
+                        "-C", "/data/appendonlydir.snapshot", ".",
+                    ])
+                print("  Uploading appendonlydir.tar.gz...")
+                kubectl_exec(
+                    args.namespace, args.pod, args.container,
+                    [
+                        "curl", "-X", "PUT", "--fail", "--silent", "--show-error",
+                        "-H", "Content-Type: application/octet-stream",
+                        "--upload-file", "/data/appendonlydir.tar.gz",
+                        aof_put_url,
+                    ],
+                    redact_args=[aof_put_url],
+                )
+                print("  appendonlydir.tar.gz uploaded successfully.")
+            except RuntimeError as e:
+                print(f"  ⚠️  AOF upload failed: {e}")
+                aof_upload_failed = True
+                write_github_output("aof_upload_failed", "true")
+            finally:
+                print("  Cleaning up AOF artifacts on pod...")
+                for _path in ["/data/appendonlydir.tar.gz", "/data/appendonlydir.snapshot"]:
+                    try:
+                        kubectl_exec(args.namespace, args.pod, args.container,
+                                     ["rm", "-rf", _path],
+                                     warn_on_exit_codes={1})
+                    except Exception:
+                        pass
+                print("  Cleanup complete.")
 
-        # 4. Generate signed GET/download URLs (72h)
-        print("\n[4/4] Generating signed download URLs (72h)...")
-        write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
+        # 4. Output GCS paths (IAM authentication required to download)
+        print("\n[4/4] Outputting GCS paths...")
+        write_github_output("rdb_url", rdb_gcs_path)
 
-        if aof_enabled:
-            write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
+        if aof_enabled and not aof_upload_failed:
+            write_github_output("aof_url", aof_gcs_path)
 
     print(f"\n{'='*60}")
     print("✅ Done!")

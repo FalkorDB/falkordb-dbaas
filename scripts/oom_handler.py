@@ -228,6 +228,35 @@ class GoogleChatNotifier:
         except requests.RequestException as e:
             print(f"⚠️  Failed to send Google Chat notification: {e}", file=sys.stderr)
 
+    def send_unknown_workload_notification(self, pod: str, namespace: str,
+                                           cluster: str, container: str,
+                                           timestamp: str):
+        payload = {
+            "text": f"🚨 ContainerOOMKilled (non-FalkorDB) — {pod} ({namespace})",
+            "cards": [{
+                "header": {
+                    "title": "🚨 ContainerOOMKilled (non-FalkorDB workload)",
+                    "subtitle": f"{pod} in {namespace} @ {cluster}",
+                },
+                "sections": [{
+                    "widgets": [
+                        {"keyValue": {"topLabel": "Cluster", "content": cluster}},
+                        {"keyValue": {"topLabel": "Namespace", "content": namespace}},
+                        {"keyValue": {"topLabel": "Pod", "content": pod}},
+                        {"keyValue": {"topLabel": "Container", "content": container}},
+                        {"keyValue": {"topLabel": "Time (Israel)", "content": timestamp}},
+                    ]
+                }],
+            }],
+        }
+
+        try:
+            response = requests.post(self.webhook_url, json=payload, timeout=30,
+                                     verify=self.verify_ssl)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            print(f"⚠️  Failed to send Google Chat notification: {e}", file=sys.stderr)
+
     def send_error_notification(self, error_message: str, pod: str,
                                 namespace: str, cluster: str,
                                 error_details: Optional[str] = None):
@@ -333,6 +362,10 @@ def main(args):
             file=sys.stderr,
         )
 
+    if args.pod == "node-f-0":
+        print(f"ℹ️  Skipping OOM handler for pod 'node-f-0'.")
+        return
+
     required_env_vars = [
         "OMNISTRATE_API_URL", "OMNISTRATE_USERNAME", "OMNISTRATE_PASSWORD",
         "OMNISTRATE_SERVICE_ID", "OMNISTRATE_ENVIRONMENT_ID",
@@ -361,7 +394,22 @@ def main(args):
         environment_id=os.environ["OMNISTRATE_ENVIRONMENT_ID"],
         verify_ssl=verify_ssl,
     )
-    customer = omnistrate.get_customer_info(args.namespace)
+    try:
+        customer = omnistrate.get_customer_info(args.namespace)
+    except ValueError as e:
+        print(f"   ℹ️  Skipping: {e} — not a FalkorDB workload.")
+        webhook = os.environ.get("GOOGLE_CHAT_WEBHOOK_URL")
+        if webhook:
+            notifier = GoogleChatNotifier(webhook, verify_ssl=verify_ssl)
+            notifier.send_unknown_workload_notification(
+                pod=args.pod,
+                namespace=args.namespace,
+                cluster=args.cluster,
+                container=args.container,
+                timestamp=timestamp,
+            )
+            print("   Notification sent.")
+        return
     print(f"   Customer: {customer.name} ({mask_email(customer.email)})")
 
     # Step 2: Build Grafana links (±10 min window centred on OOM time)

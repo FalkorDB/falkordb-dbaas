@@ -66,12 +66,12 @@ export async function start() {
   const fastify = Fastify({
     logger: getLoggerConfig(process.env.NODE_ENV),
     trustProxy: true,
-    requestTimeout: parseInt(process.env.REQUEST_TIMEOUT_MS, 10) || 30000,
+    requestTimeout: parseInt(process.env.REQUEST_TIMEOUT_MS ?? '30000', 10),
   });
 
   await fastify.register(App);
 
-  const port = fastify.config?.PORT || parseInt(process.env.PORT, 10) || 3013;
+  const port = fastify.config?.PORT || parseInt(process.env.PORT ?? '3013', 10);
   const host = '0.0.0.0';
 
   await fastify.listen({

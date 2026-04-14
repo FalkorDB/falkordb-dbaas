@@ -10,6 +10,10 @@ output "gh_workload_identity_provider" {
   value = module.gh_oidc.provider_name
 }
 
+output "gh_workload_identity_pool_name" {
+  value = module.gh_oidc.pool_name
+}
+
 output "db_exporter_sa_email" {
   value = google_service_account.db_exporter_sa.email
 }

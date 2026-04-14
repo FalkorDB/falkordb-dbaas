@@ -11,7 +11,7 @@ spec:
       rules:
         - alert: FalkorDBDown
           expr: redis_up{container="service"} == 0
-          for: 60s
+          for: 90s
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
@@ -197,6 +197,39 @@ spec:
             description: "[cluster={{ $labels.cluster }}] AOF pending rewrite has been pending for more than 20 minutes on namespace {{ $labels.namespace }}. This is a critical issue that could impact data durability."
             runbook_url: "https://runbooks.falkordb.cloud/alerts/falkordbaofpendingrewritecriticalrunbook/"
             view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
+
+        - alert: FalkorDBLowDiskSpaceWarning
+          expr: |
+            (
+              kubelet_volume_stats_used_bytes{namespace=~"instance-.*"}
+                /
+              kubelet_volume_stats_capacity_bytes{namespace=~"instance-.*"}
+            ) * 100 > 60
+          for: 5m
+          labels:
+            severity: warning
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: "FalkorDB instance disk space above 60% in namespace {{ $labels.namespace }}"
+            description: "[cluster={{ $labels.cluster }}] FalkorDB instance in namespace {{ $labels.namespace }} is using more than 60% of its disk space (PVC: {{ $labels.persistentvolumeclaim }}). Current usage: {{ $value | printf \"%.1f\" }}%."
+            threshold: "{{ $value | printf \"%.1f\" }}"
+
+        - alert: FalkorDBLowDiskSpaceCritical
+          expr: |
+            (
+              kubelet_volume_stats_used_bytes{namespace=~"instance-.*"}
+                /
+              kubelet_volume_stats_capacity_bytes{namespace=~"instance-.*"}
+            ) * 100 > 75
+          for: 5m
+          labels:
+            severity: critical
+            cluster: '{{ $labels.cluster }}'
+          annotations:
+            summary: "FalkorDB instance disk space above 75% in namespace {{ $labels.namespace }}"
+            description: "[cluster={{ $labels.cluster }}] FalkorDB instance in namespace {{ $labels.namespace }} is using more than 75% of its disk space (PVC: {{ $labels.persistentvolumeclaim }}). Current usage: {{ $value | printf \"%.1f\" }}%."
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/falkordb-low-disk-space-critical/"
+            threshold: "{{ $value | printf \"%.1f\" }}"
     - name: falkordb.rules.standalone
       rules: []
 
@@ -212,6 +245,19 @@ spec:
           annotations:
             summary: FalkorDB replication broken (instance {{ $labels.namespace }})
             description: "[cluster={{ $labels.cluster }}] FalkorDB instance lost a slave\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+            view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
+
+        - alert: FalkorDBReplicaMasterLinkDown
+          expr: redis_master_link_up{container="service"} == 0
+          for: 20m
+          labels:
+            severity: critical
+            cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
+          annotations:
+            summary: FalkorDB replica master link down (instance {{ $labels.namespace }})
+            description: "[cluster={{ $labels.cluster }}] FalkorDB replica in namespace {{ $labels.namespace }} has lost its link to the master for more than 20 minutes.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/falkordbReplicamasterlinkdownrunbook/"
             view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
     - name: falkordb.rules.cluster

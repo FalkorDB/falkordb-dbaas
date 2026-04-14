@@ -4,6 +4,24 @@ import { IOmnistrateRepository } from '../../../../repositories/omnistrate/IOmni
 import { AuthService } from '../../../../services/AuthService';
 import { GcpServiceAccountValidator } from '../../../../services/GcpServiceAccountValidator';
 import { SESSION_COOKIE_NAME, SESSION_EXPIRY_SECONDS } from '../../../../constants';
+import { EnvSchemaType } from '../../../../schemas/dotenv';
+
+function getMinTierVersion(productTierName: string, config: EnvSchemaType): number {
+  switch (productTierName) {
+    case 'FalkorDB Free':
+      return config.LDAP_MIN_TIER_VERSION_FREE;
+    case 'FalkorDB Startup':
+      return config.LDAP_MIN_TIER_VERSION_STARTUP;
+    case 'FalkorDB Pro':
+      return config.LDAP_MIN_TIER_VERSION_PRO;
+    case 'FalkorDB Enterprise':
+      return config.LDAP_MIN_TIER_VERSION_ENTERPRISE;
+    case 'FalkorDB Enterprise BYOA':
+      return config.LDAP_MIN_TIER_VERSION_ENTERPRISE_BYOA;
+    default:
+      return 0;
+  }
+}
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -11,9 +29,7 @@ declare module 'fastify' {
   }
 }
 
-export function createAuthenticateHook(
-  requiredPermission: 'reader' | 'writer',
-): preHandlerHookHandler {
+export function createAuthenticateHook(requiredPermission: 'reader' | 'writer'): preHandlerHookHandler {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     const opts = { logger: request.log };
     const { instanceId } = request.params as { instanceId: string };
@@ -27,19 +43,13 @@ export function createAuthenticateHook(
     const sessionCookie = request.cookies[SESSION_COOKIE_NAME] as string | undefined;
     let sessionData: SessionData | null = null;
 
-    const sessionRepository = request.diScope.resolve<ISessionRepository>(
-      ISessionRepository.repositoryName,
-    );
+    const sessionRepository = request.diScope.resolve<ISessionRepository>(ISessionRepository.repositoryName);
 
     if (sessionCookie) {
       sessionData = sessionRepository.decodeSession(sessionCookie);
 
       // Validate session matches the request
-      if (
-        sessionData &&
-        sessionData.instanceId === instanceId &&
-        sessionData.subscriptionId === subscriptionId
-      ) {
+      if (sessionData && sessionData.instanceId === instanceId && sessionData.subscriptionId === subscriptionId) {
         // Check if user has required permissions
         if (!AuthService.checkPermission(sessionData.role, requiredPermission)) {
           throw request.server.httpErrors.forbidden('Insufficient permissions');
@@ -108,13 +118,19 @@ export function createAuthenticateHook(
 
         const authService = new AuthService(opts, omnistrateRepository, sessionRepository);
 
-        const { session, sessionData: newSessionData } =
-          await authService.authenticateAndAuthorize(
-            token,
-            instanceId,
-            subscriptionId,
-            requiredPermission,
+        const { session, sessionData: newSessionData, instance } = await authService.authenticateAndAuthorize(
+          token,
+          instanceId,
+          subscriptionId,
+          requiredPermission,
+        );
+
+        const minTierVersion = getMinTierVersion(instance.productTierName, request.server.config);
+        if (minTierVersion === 0 || Number(instance.tierVersion) < minTierVersion) {
+          throw request.server.httpErrors.forbidden(
+            `Instance tier version ${instance.tierVersion} does not meet minimum required version.`,
           );
+        }
 
         sessionData = newSessionData;
 

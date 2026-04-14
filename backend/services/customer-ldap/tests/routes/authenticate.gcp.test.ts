@@ -47,6 +47,13 @@ describe('createAuthenticateHook with GCP service account', () => {
         error: jest.fn(),
       } as unknown as FastifyRequest['log'],
       server: {
+        config: {
+          LDAP_MIN_TIER_VERSION_FREE: 1,
+          LDAP_MIN_TIER_VERSION_STARTUP: 0,
+          LDAP_MIN_TIER_VERSION_PRO: 0,
+          LDAP_MIN_TIER_VERSION_ENTERPRISE: 0,
+          LDAP_MIN_TIER_VERSION_ENTERPRISE_BYOA: 0,
+        },
         httpErrors: {
           badRequest: (msg: string) => new Error(msg),
           unauthorized: (msg: string) => new Error(msg),
@@ -166,9 +173,10 @@ describe('createAuthenticateHook with GCP service account', () => {
         serviceId: 'service-id',
         environmentId: 'env-id',
         productTierId: 'tier-id',
+        tierVersion: '1',
         status: 'RUNNING',
         resourceId: 'resource-id',
-        productTierName: 'Free',
+        productTierName: 'FalkorDB Free',
         deploymentType: 'standalone',
       });
       mockSessionRepository.createSession.mockReturnValue('omnistrate-session-token');
