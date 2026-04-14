@@ -16,110 +16,73 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  load-stack-matrix:
-    runs-on: ubuntu-latest
-    environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - name: Read plan-jobs.json
-        id: set-matrix
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq gettext
-          delimiter="$(openssl rand -hex 8)"
-          JSON="$(cat .github/workflows/stacks.json)"
-          # Replace strings starting with TF_ with their respective environment variables
-          JSON=$(echo "$JSON" | sed -e "s/TF_STATE_BUCKET/\$TF_STATE_BUCKET/g" | sed -e "s/: \"TF_/: \"\$TF_/g")
-          echo "matrix<<${delimiter}" >> "${GITHUB_OUTPUT}"
-          echo "$JSON" >> "${GITHUB_OUTPUT}"
-          echo "${delimiter}" >> "${GITHUB_OUTPUT}"
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix || '[]' }}
-
   apply:
-    needs: load-stack-matrix
-    name: Apply stack ${{ matrix.stack.name }}
     runs-on: ubuntu-latest
-    environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        stack: ${{fromJson(needs.load-stack-matrix.outputs.matrix)}}
+    environment: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
+    env:
+      TF_ARGOCD_ADMIN_PASSWORD: ${{ secrets.TF_ARGOCD_ADMIN_PASSWORD }}
+      TF_ARGOCD_GROUPS_SA_JSON: ${{ secrets.TF_ARGOCD_GROUPS_SA_JSON }}
+      TF_CLUSTER_CA_CERTIFICATE: ${{ secrets.TF_CLUSTER_CA_CERTIFICATE }}
+      TF_CLUSTER_ENDPOINT: ${{ secrets.TF_CLUSTER_ENDPOINT }}
+      TF_CLUSTER_NAME: ${{ secrets.TF_CLUSTER_NAME }}
+      TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
+      TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
+      TF_CTRL_PLANE_DEV_ZONES: ${{ secrets.TF_CTRL_PLANE_ZONES }}
+      TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
+      TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
+      TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
+      TF_DB_EXPORTER_SA_ID: ${{ secrets.TF_DB_EXPORTER_SA_ID }}
+      TF_DEFAULT_MAX_PODS_PER_NODE: ${{ vars.TF_DEFAULT_MAX_PODS_PER_NODE }}
+      TF_DEX_GOOGLE_ADMIN_EMAIL: ${{ secrets.TF_DEX_GOOGLE_ADMIN_EMAIL }}
+      TF_DEX_GOOGLE_CLIENT_ID: ${{ secrets.TF_DEX_GOOGLE_CLIENT_ID }}
+      TF_DEX_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_DEX_GOOGLE_CLIENT_SECRET }}
+      TF_ENVIRONMENT: ${{ vars.TF_ENVIRONMENT }}
+      TF_GRAFANA_GOOGLE_CLIENT_ID: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_ID }}
+      TF_GRAFANA_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_SECRET }}
+      TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+      TF_ARGOCD_SA_ID: ${{ secrets.TF_ARGOCD_SA_ID }}
+      TF_OMNISTRATE_SERVICE_ID: ${{ secrets.TF_OMNISTRATE_SERVICE_ID }}
+      TF_OMNISTRATE_ENVIRONMENT_ID: ${{ secrets.TF_OMNISTRATE_ENVIRONMENT_ID }}
+      TF_AZURE_SUBSCRIPTION_ID: ${{ secrets.TF_AZURE_SUBSCRIPTION_ID }}
+      TF_AZURE_TENANT_ID: ${{ secrets.TF_AZURE_TENANT_ID }}
     steps:
-      - name: Set environment vars
-        env:
-          TF_ARGOCD_ADMIN_PASSWORD: ${{ secrets.TF_ARGOCD_ADMIN_PASSWORD }}
-          TF_ARGOCD_GROUPS_SA_JSON: ${{ secrets.TF_ARGOCD_GROUPS_SA_JSON }}
-          TF_CLUSTER_CA_CERTIFICATE: ${{ secrets.TF_CLUSTER_CA_CERTIFICATE }}
-          TF_CLUSTER_ENDPOINT: ${{ secrets.TF_CLUSTER_ENDPOINT }}
-          TF_CLUSTER_NAME: ${{ secrets.TF_CLUSTER_NAME }}
-          TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
-          TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
-          TF_CTRL_PLANE_DEV_ZONES: ${{ secrets.TF_CTRL_PLANE_ZONES }}
-          TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
-          TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
-          TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
-          TF_DB_EXPORTER_SA_ID: ${{ secrets.TF_DB_EXPORTER_SA_ID }}
-          TF_DEFAULT_MAX_PODS_PER_NODE: ${{ vars.TF_DEFAULT_MAX_PODS_PER_NODE }}
-          TF_DEX_GOOGLE_ADMIN_EMAIL: ${{ secrets.TF_DEX_GOOGLE_ADMIN_EMAIL }}
-          TF_DEX_GOOGLE_CLIENT_ID: ${{ secrets.TF_DEX_GOOGLE_CLIENT_ID }}
-          TF_DEX_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_DEX_GOOGLE_CLIENT_SECRET }}
-          TF_ENVIRONMENT: ${{ vars.TF_ENVIRONMENT }}
-          TF_GRAFANA_GOOGLE_CLIENT_ID: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_ID }}
-          TF_GRAFANA_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_SECRET }}
-          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
-          TF_ARGOCD_SA_ID: ${{ secrets.TF_ARGOCD_SA_ID }}
-          TF_OMNISTRATE_SERVICE_ID: ${{ secrets.TF_OMNISTRATE_SERVICE_ID }}
-          TF_OMNISTRATE_ENVIRONMENT_ID: ${{ secrets.TF_OMNISTRATE_ENVIRONMENT_ID }}
-          TF_AZURE_SUBSCRIPTION_ID: ${{ secrets.TF_AZURE_SUBSCRIPTION_ID }}
-          TF_AZURE_TENANT_ID: ${{ secrets.TF_AZURE_TENANT_ID }}
-        run: |
-          json='${{ toJson(matrix) }}'
-          # Resolve $VARS from the environment without re-serializing JSON.
-          while IFS=$'\t' read -r key value; do
-            if [[ "$value" == \$* ]]; then
-              var_name="${value:1}"
-              resolved="${!var_name}"
-            else
-              resolved="$value"
-            fi
-            echo "${key}=${resolved}" >> "$GITHUB_ENV"
-          done < <(echo "$json" | jq -r '.stack.variables | to_entries[] | "\(.key)\t\(.value)"')
-          # set init_param variable
-          init_param_template=$(echo "$json" | jq -r '.stack.init_param')
-          echo "init_param=$(echo "$init_param_template" | envsubst)" >> "$GITHUB_ENV"
-
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install OpenTofu
         uses: opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f # v1
 
-      - name: Setup GCloud
+      - name: Install Terragrunt
+        run: |
+          TG_VERSION="0.77.19"
+          curl -sSfL "https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64" \
+            -o /usr/local/bin/terragrunt
+          chmod +x /usr/local/bin/terragrunt
+          terragrunt --version
+
+      - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1"
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
         with:
           version: ">= 363.0.0"
 
-      - name: Setup Azure Login
-        if: startsWith(matrix.stack.path, 'tofu/azure/')
+      - name: Authenticate Azure
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
         with:
           client-id: ${{ secrets.TF_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.TF_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.TF_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Setup Tofu workspace
+      - name: Apply all stacks
         run: |
-          cd ${{ matrix.stack.path }}
-          tofu init --upgrade ${{ env.init_param }}
-
-      - name: Apply stack
-        run: |
-          cd ${{ matrix.stack.path }}
-          tofu apply -input=false -auto-approve
+          terragrunt run-all apply \
+            --terragrunt-working-dir tofu \
+            --terragrunt-non-interactive \
+            --terragrunt-parallelism 3 \
+            -input=false \
+            -auto-approve
