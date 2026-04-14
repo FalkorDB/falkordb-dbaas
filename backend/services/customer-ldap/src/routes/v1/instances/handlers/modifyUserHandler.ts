@@ -1,4 +1,4 @@
-import { RouteHandlerMethod } from 'fastify';
+import { RawServerBase, RouteHandlerMethod } from 'fastify';
 import { ApiError } from '@falkordb/errors';
 import {
   ModifyUserRequestSchemaType,
@@ -11,11 +11,12 @@ import { IK8sCredentialsRepository } from '../../../../repositories/k8s-credenti
 import { ILdapRepository } from '../../../../repositories/ldap/ILdapRepository';
 import { IConnectionCacheRepository } from '../../../../repositories/connection-cache/IConnectionCacheRepository';
 import { UserService } from '../../../../services/UserService';
+import { IncomingMessage, ServerResponse } from 'http';
 
 export const modifyUserHandler: RouteHandlerMethod<
-  undefined,
-  undefined,
-  undefined,
+  RawServerBase,
+  IncomingMessage,
+  ServerResponse<IncomingMessage>,
   {
     Params: UsernameParamSchemaType;
     Querystring: SubscriptionIdQuerySchemaType;
