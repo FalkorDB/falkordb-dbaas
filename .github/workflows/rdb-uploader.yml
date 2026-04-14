@@ -73,6 +73,13 @@ on:
       environment:
         required: true
         type: string
+    outputs:
+      rdb_url:
+        description: 'Signed GCS download URL for dump.rdb'
+        value: ${{ jobs.upload-rdb.outputs.rdb_url }}
+      aof_url:
+        description: 'Signed GCS download URL for appendonlydir.tar.gz'
+        value: ${{ jobs.upload-rdb.outputs.aof_url }}
 
 env:
   ISSUE_REPO: 'FalkorDB/private'
@@ -81,6 +88,9 @@ jobs:
   upload-rdb:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    outputs:
+      rdb_url: ${{ steps.upload_gcs.outputs.rdb_url }}
+      aof_url: ${{ steps.upload_gcs.outputs.aof_url }}
     steps:
       # ------------------------------------------------------------------ #
       # 0. Check that the actor is an authorised user
