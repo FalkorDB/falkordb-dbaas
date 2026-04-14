@@ -5,7 +5,7 @@ import { ApiError } from '@falkordb/errors';
 export interface GcpServiceAccountValidatorOptions {
   logger: FastifyBaseLogger;
   adminServiceAccountEmail?: string;
-  audience: string;
+  audience?: string;
 }
 
 export class GcpServiceAccountValidator {
