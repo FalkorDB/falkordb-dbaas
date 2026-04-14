@@ -90,7 +90,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       serviceId: instance?.['serviceId'],
       environmentId: instance?.['environmentId'],
       productTierId: instance?.['productTierId'],
-      tierVersion: instance?.['productTierVersion'] || '0',
+      tierVersion: instance?.['tierVersion'] || '0',
       status: instance?.['consumptionResourceInstanceResult']?.['status'],
       resourceId:
         Object.entries(instance?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology'] ?? {}).filter(
