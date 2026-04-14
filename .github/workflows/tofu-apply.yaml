@@ -81,7 +81,7 @@ jobs:
       - name: Apply all stacks
         run: |
           terragrunt run-all apply \
-            --terragrunt-working-dir tofu \
+            --terragrunt-working-dir tofu/runtime \
             --terragrunt-non-interactive \
             --terragrunt-parallelism 3 \
             -input=false \

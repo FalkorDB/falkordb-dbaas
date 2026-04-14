@@ -1,11 +1,25 @@
-# Terragrunt shim for tofu/gcp/observability_stack/control_plane/infra
-#
-# Replaces the stacks.json variable mapping for observability_stack_ctrl_plane_infra.
-# All TF_ environment variables are already exported by the CI workflow;
-# inputs{} forwards them as OpenTofu variable values.
+# Terragrunt shim for runtime/gcp/infra
+# (was tofu/gcp/observability_stack/control_plane/infra)
 
 include "root" {
-  path = find_in_parent_folders("terragrunt.hcl")
+  path   = find_in_parent_folders("terragrunt.hcl")
+  expose = true
+}
+
+# Pin to the historical GCS prefix so no state migration is needed.
+# The auto-computed path_relative_to_include() would resolve to
+# "runtime/gcp/infra" (new path), but existing state lives at the old prefix.
+generate "backend" {
+  path      = "backend_override.tf"
+  if_exists = "overwrite_terragrunt"
+  contents  = <<-EOF
+    terraform {
+      backend "gcs" {
+        bucket = "${include.root.locals.tf_state_bucket}"
+        prefix = "gcp/observability_stack/control_plane/infra"
+      }
+    }
+  EOF
 }
 
 inputs = {

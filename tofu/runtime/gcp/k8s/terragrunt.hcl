@@ -1,9 +1,22 @@
-# Terragrunt shim for tofu/gcp/observability_stack/control_plane/k8s
-#
-# Replaces the stacks.json variable mapping for observability_stack_ctrl_plane_k8s.
+# Terragrunt shim for runtime/gcp/k8s
+# (was tofu/gcp/observability_stack/control_plane/k8s)
 
 include "root" {
-  path = find_in_parent_folders("terragrunt.hcl")
+  path   = find_in_parent_folders("terragrunt.hcl")
+  expose = true
+}
+
+generate "backend" {
+  path      = "backend_override.tf"
+  if_exists = "overwrite_terragrunt"
+  contents  = <<-EOF
+    terraform {
+      backend "gcs" {
+        bucket = "${include.root.locals.tf_state_bucket}"
+        prefix = "gcp/observability_stack/control_plane/k8s"
+      }
+    }
+  EOF
 }
 
 # The k8s stack depends on the infra stack (cluster must exist before k8s resources).

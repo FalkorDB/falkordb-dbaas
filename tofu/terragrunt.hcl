@@ -1,32 +1,31 @@
 # Root Terragrunt configuration
 #
-# Every stack that includes this root via `find_in_parent_folders()` gets:
-#   - A generated backend.tf using the TF_STATE_BUCKET environment variable
-#   - The GCS backend prefix is derived from the relative path, so each stack
-#     gets an isolated state prefix (e.g. tofu/gcp/observability_stack/control_plane/infra)
+# All stacks under tofu/runtime/ inherit this config automatically via
+# find_in_parent_folders("terragrunt.hcl"). Bootstrap and org stacks also
+# include this root and get the same shared locals.
 #
-# The per-stack terragrunt.hcl provides inputs{} that map CI environment
-# variables to OpenTofu variable values, replacing the stacks.json variables
-# mapping that was previously resolved at workflow run-time.
+# State buckets (GCS):
+#   dev  → falkordb-dev-state-4620
+#   prod → falkordb-prod-state-c49b
+#
+# Each child stack generates its own backend_override.tf with the canonical
+# GCS bucket (selected by TF_ENVIRONMENT) and an explicit gcs_prefix that
+# preserves the historical state location so no migration is needed.
+#
+# AWS stacks (bootstrap/aws, org/aws-org, org/aws-app-plane) use S3 and do
+# NOT include this root — they keep their own backend.tf intact. State will
+# be centralized to GCS in a future migration.
 
 locals {
-  tf_state_bucket = get_env("TF_STATE_BUCKET", "")
-  # Use the path relative to this root file as the GCS prefix
-  gcs_prefix = path_relative_to_include()
-}
+  environment = get_env("TF_ENVIRONMENT", "dev")
 
-# Generate backend.tf at plan/apply time so stacks do not need to check in a
-# backend.tf themselves (the empty `terraform { backend "gcs" {} }` files can
-# be safely deleted from each stack once Terragrunt is fully adopted).
-generate "backend" {
-  path      = "backend_override.tf"
-  if_exists = "overwrite_terragrunt"
-  contents = <<-EOF
-    terraform {
-      backend "gcs" {
-        bucket = "${local.tf_state_bucket}"
-        prefix = "${local.gcs_prefix}"
-      }
-    }
-  EOF
+  state_buckets = {
+    dev  = "falkordb-dev-state-4620"
+    prod = "falkordb-prod-state-c49b"
+  }
+
+  # TF_STATE_BUCKET overrides the env-mapped bucket for backward compatibility
+  # with any scripts that still set it explicitly.
+  explicit_bucket = get_env("TF_STATE_BUCKET", "")
+  tf_state_bucket = local.explicit_bucket != "" ? local.explicit_bucket : local.state_buckets[local.environment]
 }
