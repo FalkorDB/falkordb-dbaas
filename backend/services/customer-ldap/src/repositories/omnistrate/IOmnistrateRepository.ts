@@ -20,6 +20,7 @@ export interface OmnistrateInstance {
   serviceId: string;
   environmentId: string;
   productTierId: string;
+  tierVersion: string;
   status: string;
   resourceId: string;
   cloudProvider: 'gcp' | 'aws' | 'azure';
