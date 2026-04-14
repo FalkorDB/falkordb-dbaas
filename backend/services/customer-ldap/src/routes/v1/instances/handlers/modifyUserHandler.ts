@@ -10,6 +10,7 @@ import { IK8sRepository } from '../../../../repositories/k8s/IK8sRepository';
 import { IK8sCredentialsRepository } from '../../../../repositories/k8s-credentials/IK8sCredentialsRepository';
 import { ILdapRepository } from '../../../../repositories/ldap/ILdapRepository';
 import { IConnectionCacheRepository } from '../../../../repositories/connection-cache/IConnectionCacheRepository';
+import { IOmnistrateRepository } from '../../../../repositories/omnistrate/IOmnistrateRepository';
 import { UserService } from '../../../../services/UserService';
 import { IncomingMessage, ServerResponse } from 'http';
 
@@ -30,6 +31,23 @@ export const modifyUserHandler: RouteHandlerMethod<
   const userData = request.body;
 
   try {
+    // The principal user's password must only be changed via the Omnistrate API
+    // (which triggers the instance-updated webhook and syncs to LDAP automatically).
+    // Block any attempt to modify it through the customer-ldap API.
+    if (userData.password !== undefined) {
+      const omnistrateRepository = request.diScope.resolve<IOmnistrateRepository>(
+        IOmnistrateRepository.repositoryName,
+      );
+      const instance = await omnistrateRepository.getInstance(sessionData.instanceId);
+      const principalUsername = instance.resultParams?.falkordbUser;
+      if (principalUsername && username === principalUsername) {
+        throw ApiError.forbidden(
+          'The principal user password can only be changed via the Omnistrate API',
+          'CANNOT_CHANGE_PRINCIPAL_USER_PASSWORD',
+        );
+      }
+    }
+
     // Execute the user operation
     const k8sRepository = request.diScope.resolve<IK8sRepository>(IK8sRepository.repositoryName);
     const k8sCredentialsRepository = request.diScope.resolve<IK8sCredentialsRepository>(

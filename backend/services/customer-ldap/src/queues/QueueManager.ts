@@ -1,14 +1,23 @@
 import { Queue, Worker, type ConnectionOptions } from 'bullmq';
 import { type FastifyInstance } from 'fastify';
 import { QUEUE_NAMES, JOB_OPTIONS, WORKER_OPTIONS } from './config';
-import { type InstanceCreatedJobData, type InstanceDeletedJobData } from './types';
+import {
+  type InstanceCreatedJobData,
+  type InstanceDeletedJobData,
+  type InstanceUpdatedJobData,
+  type InstanceRestoredJobData,
+} from './types';
 import { processInstanceCreated } from './processors/instanceCreatedProcessor';
 import { processInstanceDeleted } from './processors/instanceDeletedProcessor';
+import { processInstanceUpdated } from './processors/instanceUpdatedProcessor';
+import { processInstanceRestored } from './processors/instanceRestoredProcessor';
 import { createRedisConnection } from './connection';
 
 export class QueueManager {
   private instanceCreatedQueue: Queue<InstanceCreatedJobData>;
   private instanceDeletedQueue: Queue<InstanceDeletedJobData>;
+  private instanceUpdatedQueue: Queue<InstanceUpdatedJobData>;
+  private instanceRestoredQueue: Queue<InstanceRestoredJobData>;
   private workers: Worker[] = [];
   private connection: ConnectionOptions;
 
@@ -23,6 +32,14 @@ export class QueueManager {
     });
 
     this.instanceDeletedQueue = new Queue<InstanceDeletedJobData>(QUEUE_NAMES.INSTANCE_DELETED, {
+      connection: this.connection,
+    });
+
+    this.instanceUpdatedQueue = new Queue<InstanceUpdatedJobData>(QUEUE_NAMES.INSTANCE_UPDATED, {
+      connection: this.connection,
+    });
+
+    this.instanceRestoredQueue = new Queue<InstanceRestoredJobData>(QUEUE_NAMES.INSTANCE_RESTORED, {
       connection: this.connection,
     });
 
@@ -57,11 +74,37 @@ export class QueueManager {
       },
     );
 
+    // Worker for instance updated events
+    const instanceUpdatedWorker = new Worker<InstanceUpdatedJobData>(
+      QUEUE_NAMES.INSTANCE_UPDATED,
+      async (job) => {
+        return processInstanceUpdated(job, this.fastify);
+      },
+      {
+        ...WORKER_OPTIONS,
+        connection: this.connection,
+      },
+    );
+
+    // Worker for instance restored events
+    const instanceRestoredWorker = new Worker<InstanceRestoredJobData>(
+      QUEUE_NAMES.INSTANCE_RESTORED,
+      async (job) => {
+        return processInstanceRestored(job, this.fastify);
+      },
+      {
+        ...WORKER_OPTIONS,
+        connection: this.connection,
+      },
+    );
+
     // Set up worker event handlers
     this.setupWorkerEvents(instanceCreatedWorker, 'instance-created');
     this.setupWorkerEvents(instanceDeletedWorker, 'instance-deleted');
+    this.setupWorkerEvents(instanceUpdatedWorker, 'instance-updated');
+    this.setupWorkerEvents(instanceRestoredWorker, 'instance-restored');
 
-    this.workers.push(instanceCreatedWorker, instanceDeletedWorker);
+    this.workers.push(instanceCreatedWorker, instanceDeletedWorker, instanceUpdatedWorker, instanceRestoredWorker);
 
     this.fastify.log.info('Queue workers started');
   }
@@ -80,6 +123,40 @@ export class QueueManager {
     );
 
     this.fastify.log.info({ jobId: job.id, instanceId: data.instanceId }, 'Instance created job added to queue');
+    return job.id!;
+  }
+
+  /**
+   * Add instance updated job to queue
+   */
+  async addInstanceUpdatedJob(data: Omit<InstanceUpdatedJobData, 'timestamp'>): Promise<string> {
+    const job = await this.instanceUpdatedQueue.add(
+      'instance-updated',
+      {
+        ...data,
+        timestamp: Date.now(),
+      },
+      JOB_OPTIONS,
+    );
+
+    this.fastify.log.info({ jobId: job.id, instanceId: data.instanceId }, 'Instance updated job added to queue');
+    return job.id!;
+  }
+
+  /**
+   * Add instance restored job to queue
+   */
+  async addInstanceRestoredJob(data: Omit<InstanceRestoredJobData, 'timestamp'>): Promise<string> {
+    const job = await this.instanceRestoredQueue.add(
+      'instance-restored',
+      {
+        ...data,
+        timestamp: Date.now(),
+      },
+      JOB_OPTIONS,
+    );
+
+    this.fastify.log.info({ jobId: job.id, instanceId: data.instanceId }, 'Instance restored job added to queue');
     return job.id!;
   }
 
@@ -142,7 +219,7 @@ export class QueueManager {
    * Get all queues for monitoring (e.g., QueueDash)
    */
   getQueues(): Queue[] {
-    return [this.instanceCreatedQueue, this.instanceDeletedQueue];
+    return [this.instanceCreatedQueue, this.instanceDeletedQueue, this.instanceUpdatedQueue, this.instanceRestoredQueue];
   }
 
   /**
@@ -205,6 +282,8 @@ export class QueueManager {
     // Close queues
     await this.instanceCreatedQueue.close();
     await this.instanceDeletedQueue.close();
+    await this.instanceUpdatedQueue.close();
+    await this.instanceRestoredQueue.close();
 
     // Close Redis connection
     if (this.connection && typeof (this.connection as any).quit === 'function') {
