@@ -41,12 +41,12 @@ on:
           - prod
           - dev
       rdb_url:
-        description: 'Signed GCS URL for dump.rdb (optional)'
+        description: 'GCS path for dump.rdb (gs://bucket/namespace/dump.rdb)'
         required: false
         type: string
         default: ''
       aof_url:
-        description: 'Signed GCS URL for appendonlydir.tar.gz (optional)'
+        description: 'GCS path for AOF (gs://bucket/namespace/appendonlydir.tar.gz)'
         required: false
         type: string
         default: ''
@@ -131,6 +131,13 @@ jobs:
         run: |
           npm install -g @github/copilot
           pip install github-copilot-sdk requests pydantic
+
+      - name: Authenticate to GCP
+        if: ${{ inputs.rdb_url != '' || inputs.aof_url != '' }}
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCS_SA_EMAIL }}
 
       - name: Set environment variables
         env:
