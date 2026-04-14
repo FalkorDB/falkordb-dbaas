@@ -1,0 +1,51 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "labels": ["dependencies"],
+  "reviewers": ["team:platform-team"],
+  "packageRules": [
+    {
+      "description": "Group GitHub Actions minor/patch updates together",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "github-actions (minor & patch)"
+    },
+    {
+      "description": "Group Node.js dependency minor/patch updates in backend",
+      "matchManagers": ["npm"],
+      "matchPaths": ["backend/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "backend npm (minor & patch)"
+    },
+    {
+      "description": "Group Node.js dependency minor/patch updates in frontend",
+      "matchManagers": ["npm"],
+      "matchPaths": ["frontend/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "frontend npm (minor & patch)"
+    },
+    {
+      "description": "Require manual approval for major updates",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Auto-merge patch bumps for GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr"
+    }
+  ],
+  "dockerfile": {
+    "enabled": true
+  },
+  "helmValues": {
+    "enabled": true
+  },
+  "kubernetes": {
+    "enabled": true,
+    "fileMatch": ["argocd/kustomize/.+\\.yaml$"]
+  },
+  "dependencyDashboard": true
+}

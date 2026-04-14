@@ -1,0 +1,20 @@
+# CODEOWNERS — require review from relevant team for each area
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Infrastructure (OpenTofu modules)
+tofu/                   @FalkorDB/infra-team
+
+# GitOps / ArgoCD configurations
+argocd/                 @FalkorDB/platform-team
+
+# Backend services
+backend/                @FalkorDB/app-team
+
+# Frontend applications
+frontend/               @FalkorDB/app-team
+
+# CI/CD workflows
+.github/                @FalkorDB/platform-team
+
+# Observability (dashboards, alert rules)
+observability/          @FalkorDB/platform-team

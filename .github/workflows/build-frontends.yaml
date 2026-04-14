@@ -93,6 +93,17 @@ jobs:
         id: version
         run: echo "VERSION=$(node -p "require('./frontend/apps/auth-proxy/package.json').version")" >> "$GITHUB_OUTPUT"
 
+      - name: Set tags
+        id: set-tags
+        run: |
+          BASE_IMAGE="us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            echo "TAGS=${BASE_IMAGE}:${{ steps.version.outputs.VERSION }}-dev.${{ github.run_number }},${BASE_IMAGE}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "TAGS=${BASE_IMAGE}:${{ steps.version.outputs.VERSION }},${BASE_IMAGE}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create .env
         working-directory: frontend/apps/auth-proxy
         run: |
@@ -110,7 +121,14 @@ jobs:
           context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
           push: true
-          tags: |
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:${{ github.sha }}
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:${{ steps.version.outputs.VERSION }}
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:latest
+          load: true
+          tags: ${{ steps.set-tags.outputs.TAGS }}
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@76071ef0d7ec797419534a183b498b4d6366cf37 # v0.31.0
+        with:
+          image-ref: ${{ fromJSON(steps.build-push.outputs.metadata)['image.name'] }}
+          format: table
+          exit-code: "0"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
