@@ -221,17 +221,23 @@ jobs:
             SUBTEXT="Snapshot uploaded to GCS."
           fi
 
+          # Derive HTTPS console URLs from gs:// paths (prompts Google login then downloads)
+          RDB_CONSOLE_URL="https://storage.cloud.google.com/${RDB_PATH#gs://}"
+          if [[ -n "$AOF_PATH" ]]; then
+            AOF_CONSOLE_URL="https://storage.cloud.google.com/${AOF_PATH#gs://}"
+          fi
+
           COMMENT="$HEADER
 
-          ${SUBTEXT} Access requires GCP IAM authentication — no public download links are generated.
+          ${SUBTEXT} Access requires GCP IAM authentication.
 
-          | File | GCS Path |
-          |------|----------|
-          | \`dump.rdb\` | \`$RDB_PATH\` |"
+          | File | GCS Path | Console |
+          |------|----------|---------|
+          | \`dump.rdb\` | \`$RDB_PATH\` | [Open in GCP]($RDB_CONSOLE_URL) |"
 
           if [[ -n "$AOF_PATH" ]]; then
             COMMENT+="
-          | \`appendonlydir.tar.gz\` | \`$AOF_PATH\` |"
+          | \`appendonlydir.tar.gz\` | \`$AOF_PATH\` | [Open in GCP]($AOF_CONSOLE_URL) |"
           fi
 
           if [[ "${AOF_UPLOAD_FAILED}" == "true" ]]; then
@@ -248,9 +254,7 @@ jobs:
 
           ---
           <details>
-          <summary>⬇️ How to download</summary>
-
-          Authenticate with GCP first, then use \`gsutil\`:
+          <summary>⬇️ How to download via CLI</summary>
 
           \`\`\`bash
           # Humans — interactive login:
