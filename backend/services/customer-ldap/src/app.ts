@@ -2,7 +2,7 @@ import { configDotenv } from 'dotenv';
 configDotenv();
 
 import { init } from '@falkordb/configs';
-init(process.env.SERVICE_NAME, process.env.NODE_ENV);
+init(process.env.SERVICE_NAME ?? 'customer-ldap', process.env.NODE_ENV ?? 'production');
 
 import { type FastifyInstance, type FastifyPluginOptions } from 'fastify';
 import { timingSafeEqual } from 'crypto';
@@ -34,10 +34,12 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   await fastify.register(Sensible);
 
-  // Parse CORS origins from comma-separated string
+  // Parse CORS origins from comma-separated string.
+  // A wildcard '*' cannot be used with credentials; in that case reflect the
+  // request Origin back so browsers can send cookies (Access-Control-Allow-Credentials: true).
   const corsOrigins =
     fastify.config.CORS_ORIGINS === '*'
-      ? true
+      ? async (origin: string | undefined) => origin ?? '*' // reflect any origin — allows credentials
       : fastify.config.CORS_ORIGINS
         ? fastify.config.CORS_ORIGINS.split(',')
             .map((o) => o.trim())
@@ -46,6 +48,8 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
   await fastify.register(Cors, {
     origin: corsOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   });
 
   await fastify.register(Cookie, {
@@ -90,7 +94,9 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
   const isDevOrTest = fastify.config.NODE_ENV === 'development' || fastify.config.NODE_ENV === 'test';
 
   if (!queueDashToken && !isDevOrTest) {
-    fastify.log.warn('QUEUE_DASHBOARD_TOKEN is not set - QueueDash UI is disabled in production. Set QUEUE_DASHBOARD_TOKEN to enable it.');
+    fastify.log.warn(
+      'QUEUE_DASHBOARD_TOKEN is not set - QueueDash UI is disabled in production. Set QUEUE_DASHBOARD_TOKEN to enable it.',
+    );
   } else {
     try {
       const ctx: QueueDashContext = {
@@ -137,13 +143,16 @@ export default async function (fastify: FastifyInstance, opts: FastifyPluginOpti
 
         await instance.register(fastifyQueueDashPlugin, { ctx, baseUrl: QUEUE_DASH_BASE_URL });
       });
-      fastify.log.info({ path: QUEUE_DASH_BASE_URL }, 'QueueDash UI available (access with ?token=QUEUE_DASHBOARD_TOKEN)');
+      fastify.log.info(
+        { path: QUEUE_DASH_BASE_URL },
+        'QueueDash UI available (access with ?token=QUEUE_DASHBOARD_TOKEN)',
+      );
     } catch (error) {
       fastify.log.warn({ error }, 'Failed to register QueueDash UI');
     }
   }
 
-  // 
+  //
   // Gracefully close queue manager on shutdown
   fastify.addHook('onClose', async () => {
     await queueManager.close();

@@ -22,6 +22,11 @@ export const EnvSchema = Type.Object({
   REDIS_PASSWORD: Type.Optional(Type.String()),
   REDIS_DB: Type.Number({ default: 0 }),
   QUEUE_DASHBOARD_TOKEN: Type.Optional(Type.String()),
+  LDAP_MIN_TIER_VERSION_FREE: Type.Number({ default: 0 }),
+  LDAP_MIN_TIER_VERSION_STARTUP: Type.Number({ default: 0 }),
+  LDAP_MIN_TIER_VERSION_PRO: Type.Number({ default: 0 }),
+  LDAP_MIN_TIER_VERSION_ENTERPRISE: Type.Number({ default: 0 }),
+  LDAP_MIN_TIER_VERSION_ENTERPRISE_BYOA: Type.Number({ default: 0 }),
 });
 
 export type EnvSchemaType = Static<typeof EnvSchema>;

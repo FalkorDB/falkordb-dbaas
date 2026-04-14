@@ -95,19 +95,16 @@ upload_to_gcp(){
     fi
 }
 
-return_download_url(){
-    local rdb_download_url=$(gcloud storage sign-url gs://falkordb_rdbs_test_eu/${namespace}/dump.rdb \
-        --duration 12h \
-        --impersonate-service-account falkordb-rdb-storage-reader@pipelines-development-f7a2434f.iam.gserviceaccount.com \
-        --region eu)
-    echo "RDB Download URL: $(echo "$rdb_download_url" | grep signed_url | awk '{print $2}')"
-    
+echo_gcs_paths(){
+    echo "RDB GCS path: gs://falkordb_rdbs_test_eu/${namespace}/dump.rdb"
     if [ "$aof_enabled" = "true" ]; then
-      local aof_download_url=$(gcloud storage sign-url gs://falkordb_rdbs_test_eu/${namespace}/appendonlydir.tar.gz \
-        --duration 12h \
-        --impersonate-service-account falkordb-rdb-storage-reader@pipelines-development-f7a2434f.iam.gserviceaccount.com \
-        --region eu)
-      echo "AOF Download URL: $(echo "$aof_download_url" | grep signed_url | awk '{print $2}')"
+      echo "AOF GCS path: gs://falkordb_rdbs_test_eu/${namespace}/appendonlydir.tar.gz"
+    fi
+    echo ""
+    echo "To download (requires GCP IAM authentication):"
+    echo "  gsutil cp gs://falkordb_rdbs_test_eu/${namespace}/dump.rdb ."
+    if [ "$aof_enabled" = "true" ]; then
+      echo "  gsutil cp gs://falkordb_rdbs_test_eu/${namespace}/appendonlydir.tar.gz ."
     fi
 }
 
@@ -121,4 +118,4 @@ else
   upload_to_gcp "$rdb_path" "" "$rdb_put_url" ""
 fi
 
-return_download_url
+echo_gcs_paths

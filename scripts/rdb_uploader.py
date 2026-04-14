@@ -3,7 +3,8 @@
 RDB Uploader
 Generates signed GCS PUT URLs then triggers the Redis pod to upload
 its RDB (and optionally AOF) directly to GCS via kubectl exec + curl.
-Finally generates signed GET URLs and writes them to GITHUB_OUTPUT.
+Finally writes the gs:// bucket paths to GITHUB_OUTPUT (IAM authentication
+required to download — no publicly-accessible signed URLs are produced).
 
 Mirrors the logic of upload_to_gcp.sh.
 """
@@ -118,14 +119,18 @@ def kubectl_exec(
     return result.returncode
 
 
-def write_github_output(key: str, value: str) -> None:
+def write_github_output(key: str, value: str, sensitive: bool = False) -> None:
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:
-        # Mask the value in Actions logs before writing to GITHUB_OUTPUT
-        print(f"::add-mask::{value}")
+        if sensitive:
+            # Mask sensitive values (e.g. signed PUT URLs) in Actions logs
+            print(f"::add-mask::{value}")
         with open(github_output, "a") as f:
             f.write(f"{key}={value}\n")
-    print(f"  Output: {key}=<redacted>")
+    if sensitive:
+        print(f"  Output: {key}=<redacted>")
+    else:
+        print(f"  Output: {key}={value}")
 
 
 def mask_in_actions(value: str) -> None:
@@ -157,30 +162,32 @@ def main() -> None:
 
     rdb_object = f"{args.namespace}/dump.rdb"
     aof_object = f"{args.namespace}/appendonlydir.tar.gz"
-
-    # Load credentials and GCS client once
-    creds = _load_credentials()
-    client = storage.Client(credentials=creds)
-    rdb_blob = client.bucket(args.bucket).blob(rdb_object)
-    aof_blob = client.bucket(args.bucket).blob(aof_object)
+    rdb_gcs_path = f"gs://{args.bucket}/{rdb_object}"
+    aof_gcs_path = f"gs://{args.bucket}/{aof_object}"
 
     if args.sign_only:
         # ------------------------------------------------------------------
-        # Sign-only: just regenerate GET URLs — no pod access whatsoever
+        # Sign-only: output GCS paths without accessing the pod — no
+        # publicly-accessible signed URLs are produced.
         # ------------------------------------------------------------------
-        print("[1/1] Regenerating signed download URLs (72h)...")
-        write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
-
+        print("[1/1] Outputting GCS paths (IAM authentication required to download)...")
+        write_github_output("rdb_url", rdb_gcs_path)
         if aof_enabled:
-            write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
+            write_github_output("aof_url", aof_gcs_path)
 
     else:
         # ------------------------------------------------------------------
-        # Upload: sign PUT URLs → pod curl-PUTs → sign GET URLs
+        # Upload: sign PUT URLs → pod curl-PUTs → output gs:// paths
         # ------------------------------------------------------------------
         if not args.container:
             print("ERROR: --container is required in upload mode", file=sys.stderr)
             sys.exit(1)
+
+        # Load credentials and GCS client (needed for PUT URL signing)
+        creds = _load_credentials()
+        client = storage.Client(credentials=creds)
+        rdb_blob = client.bucket(args.bucket).blob(rdb_object)
+        aof_blob = client.bucket(args.bucket).blob(aof_object)
 
         # 1. Generate signed PUT URLs (1h)
         print("[1/4] Generating signed PUT URLs (1h)...")
@@ -268,12 +275,12 @@ def main() -> None:
                         pass
                 print("  Cleanup complete.")
 
-        # 4. Generate signed GET/download URLs (72h)
-        print("\n[4/4] Generating signed download URLs (72h)...")
-        write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
+        # 4. Output GCS paths (IAM authentication required to download)
+        print("\n[4/4] Outputting GCS paths...")
+        write_github_output("rdb_url", rdb_gcs_path)
 
         if aof_enabled and not aof_upload_failed:
-            write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
+            write_github_output("aof_url", aof_gcs_path)
 
     print(f"\n{'='*60}")
     print("✅ Done!")
