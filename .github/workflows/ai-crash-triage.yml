@@ -169,7 +169,8 @@ jobs:
       - name: Run AI crash triage
         env:
           ENVIRONMENT: ${{ inputs.environment }}
-          GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PRIVATE_REPO_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
           ISSUE_REPO: ${{ env.ISSUE_REPO }}
           VMAUTH_URL: ${{ inputs.vmauth_url }}
           VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}

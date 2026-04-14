@@ -164,9 +164,11 @@ Start with Step 1: fetch the crash logs for this pod/namespace, then proceed thr
 
 def _post_report_to_issue(report: str, issue_number: int, issue_repo: str):
     """Post the triage report as a comment on the GitHub issue."""
-    token = os.environ.get("GITHUB_TOKEN", "")
+    # Prefer PRIVATE_REPO_TOKEN (PAT with cross-repo access) for posting
+    # to FalkorDB/private; fall back to GITHUB_TOKEN if unavailable.
+    token = os.environ.get("PRIVATE_REPO_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
     if not token:
-        print("WARNING: GITHUB_TOKEN not set, cannot post report to issue", file=sys.stderr)
+        print("WARNING: No token available, cannot post report to issue", file=sys.stderr)
         print(report)
         return
 

@@ -28,7 +28,9 @@ from copilot import define_tool
 # Shared state & helpers
 # ---------------------------------------------------------------------------
 
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+# Prefer PRIVATE_REPO_TOKEN (PAT with cross-repo access) for GitHub API
+# calls; fall back to GITHUB_TOKEN (built-in, same-repo only).
+GITHUB_TOKEN = os.environ.get("PRIVATE_REPO_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
 GITHUB_HEADERS = {
     "Authorization": f"Bearer {GITHUB_TOKEN}",
     "Accept": "application/vnd.github.v3+json",
