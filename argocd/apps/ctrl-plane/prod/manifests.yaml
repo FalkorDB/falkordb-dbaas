@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
     targetRevision: main
-    path: argocd/ctrl_plane/prod/manifests
+    path: argocd/apps/ctrl-plane/prod/manifests
     directory:
       recurse: true
   destination:
@@ -18,7 +18,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
     automated:
-      prune: true
+      prune: false
       selfHeal: true
   ignoreDifferences:
     - jsonPointers:

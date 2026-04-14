@@ -19,7 +19,7 @@ spec:
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: main
-        path: argocd/app_plane/prod/manifests
+        path: argocd/apps/app-plane/prod/manifests
         directory:
           recurse: true
       destination:
