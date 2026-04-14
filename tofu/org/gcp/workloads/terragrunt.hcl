@@ -1,4 +1,4 @@
-# Terragrunt shim for org/workloads
+# Terragrunt shim for org/gcp/workloads
 # (was tofu/gcp/org/workloads)
 #
 # Manages GCP workloads folder structure: control plane, application plane,

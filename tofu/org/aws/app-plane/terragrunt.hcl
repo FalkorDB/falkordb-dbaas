@@ -1,7 +1,7 @@
-# Terragrunt shim for org/aws-org
-# (was tofu/aws/2-org)
+# Terragrunt shim for org/aws/app-plane
+# (was tofu/aws/3-application_plane)
 #
-# Manages AWS org-level resources.
+# Manages AWS application-plane resources (EKS clusters, VPCs, IAM).
 # Apply manually; it is NOT part of the CI runtime pipeline.
 #
 # AWS stacks use an S3 backend (credentials and config passed via -backend-config

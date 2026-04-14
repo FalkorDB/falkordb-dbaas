@@ -1,18 +1,16 @@
-# Terragrunt shim for org/cypago
-# (was tofu/gcp/org/cypago)
+# Terragrunt shim for org/gcp/core
+# (was tofu/gcp/org)
 #
-# Manages Cypago-related GCP resources.
+# Manages org-level GCP resources: shared projects, billing, policies, monitoring.
 # Apply manually; it is NOT part of the CI runtime pipeline.
-#
-# Note: the original backend.tf had backend "gcs" {} with no explicit prefix.
-# The canonical prefix is now set to "org/cypago".  If prior state exists at
-# "" (root level), locate it and run state push with the new prefix configured.
+# Calls the ./shared module internally for shared resource creation.
 
 include "root" {
   path   = find_in_parent_folders("terragrunt.hcl")
   expose = true
 }
 
+# Pin to the historical GCS prefix so no state migration is needed.
 generate "backend" {
   path      = "backend_override.tf"
   if_exists = "overwrite_terragrunt"
@@ -20,7 +18,7 @@ generate "backend" {
     terraform {
       backend "gcs" {
         bucket = "${include.root.locals.tf_state_bucket}"
-        prefix = "org/cypago"
+        prefix = "org"
       }
     }
   EOF
