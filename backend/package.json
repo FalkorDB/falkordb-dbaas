@@ -10,7 +10,10 @@
     "deploy:dev": "pnpm --filter './services/*' run deploy:dev",
     "deploy:prod": "pnpm --filter './services/*' run deploy:prod",
     "build": "pnpm --filter './services/**' run build",
-    "build:libs": "pnpm --filter './libs/**' run build"
+    "build:libs": "pnpm --filter './libs/**' run build",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "changeset publish"
   },
   "keywords": [],
   "author": "",
@@ -72,5 +75,8 @@
       "lodash@>=4.0.0 <=4.17.22": ">=4.17.23",
       "tar@<7.5.7": ">=7.5.7"
     }
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.30.0"
   }
 }
