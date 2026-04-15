@@ -133,7 +133,11 @@ def kubectl_exec_output(
         pod, "--",
     ] + command
     print(f"  $ {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=_KUBECTL_TIMEOUT)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=_KUBECTL_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        print(f"  ⚠️  Command timed out after {_KUBECTL_TIMEOUT}s: {' '.join(cmd)}")
+        return None
     if result.returncode != 0:
         print(f"  ⚠️  Command exited with code {result.returncode}")
         stderr_snippet = (result.stderr or "").strip()
@@ -302,14 +306,14 @@ def main() -> None:
                 print("  Snapshotting appendonlydir on pod...")
                 try:
                     kubectl_exec(args.namespace, args.pod, args.container, [
-                        "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
+                        "sh", "-c", "rm -rf /data/appendonlydir.snapshot && cp -r /data/appendonlydir /data/appendonlydir.snapshot",
                     ])
                 except RuntimeError:
                     print("  ⚠️  cp failed, checking pod status before retry...")
                     kubectl_wait_pod_ready(args.namespace, args.pod)
                     print("  Retrying cp...")
                     kubectl_exec(args.namespace, args.pod, args.container, [
-                        "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
+                        "sh", "-c", "rm -rf /data/appendonlydir.snapshot && cp -r /data/appendonlydir /data/appendonlydir.snapshot",
                     ])
                 print("  Archiving and uploading AOF...")
                 try:
