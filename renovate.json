@@ -1,51 +1,55 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":separatePatchReleases"
+  ],
+  "schedule": ["before 6am on Monday"],
   "labels": ["dependencies"],
-  "reviewers": ["team:platform-team"],
+  "ignorePaths": ["**/node_modules/**"],
   "packageRules": [
     {
-      "description": "Group GitHub Actions minor/patch updates together",
+      "description": "Group all GitHub Actions updates",
       "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "github-actions (minor & patch)"
+      "groupName": "github-actions",
+      "automerge": false
     },
     {
-      "description": "Group Node.js dependency minor/patch updates in backend",
+      "description": "Group npm minor and patch updates",
       "matchManagers": ["npm"],
-      "matchPaths": ["backend/**"],
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "backend npm (minor & patch)"
+      "groupName": "npm minor and patch",
+      "automerge": false
     },
     {
-      "description": "Group Node.js dependency minor/patch updates in frontend",
-      "matchManagers": ["npm"],
-      "matchPaths": ["frontend/**"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "frontend npm (minor & patch)"
+      "description": "OpenTofu / Terraform provider bumps",
+      "matchManagers": ["terraform"],
+      "groupName": "opentofu providers",
+      "automerge": false
     },
     {
-      "description": "Require manual approval for major updates",
-      "matchUpdateTypes": ["major"],
-      "dependencyDashboardApproval": true
+      "description": "Docker base image updates",
+      "matchManagers": ["dockerfile"],
+      "groupName": "docker base images",
+      "automerge": false
     },
     {
-      "description": "Auto-merge patch bumps for GitHub Actions",
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["patch"],
-      "automerge": true,
-      "automergeType": "pr"
+      "description": "Helm chart version updates in ArgoCD Application CRDs",
+      "matchManagers": ["helm-values", "helmv3"],
+      "groupName": "helm charts",
+      "automerge": false
     }
   ],
-  "dockerfile": {
-    "enabled": true
-  },
-  "helmValues": {
-    "enabled": true
-  },
-  "kubernetes": {
-    "enabled": true,
-    "fileMatch": ["argocd/kustomize/.+\\.yaml$"]
-  },
-  "dependencyDashboard": true
+  "customManagers": [
+    {
+      "description": "Terragrunt version pinned in CI workflows",
+      "customType": "regex",
+      "fileMatch": [".github/workflows/.+\\.ya?ml$"],
+      "matchStrings": ["TG_VERSION=\"(?<currentValue>[\\d.]+)\""],
+      "depNameTemplate": "gruntwork-io/terragrunt",
+      "datasourceTemplate": "github-releases"
+    }
+  ]
 }

@@ -1,20 +1,25 @@
-# CODEOWNERS — require review from relevant team for each area
+# CODEOWNERS
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Last reviewer is the tiebreaker; all listed owners must approve.
 
-# Infrastructure (OpenTofu modules)
-tofu/                   @FalkorDB/infra-team
+# Default owner for everything not matched below
+* @dudizimber
 
-# GitOps / ArgoCD configurations
-argocd/                 @FalkorDB/platform-team
+# Infrastructure (OpenTofu / Terragrunt)
+/tofu/ @dudizimber
 
-# Backend services
-backend/                @FalkorDB/app-team
+# GitOps / ArgoCD manifests and Application CRDs
+/argocd/ @dudizimber
 
-# Frontend applications
-frontend/               @FalkorDB/app-team
+# Backend monorepo
+/backend/ @dudizimber
 
-# CI/CD workflows
-.github/                @FalkorDB/platform-team
+# Frontend monorepo
+/frontend/ @dudizimber
 
-# Observability (dashboards, alert rules)
-observability/          @FalkorDB/platform-team
+# CI / CD workflows
+/.github/ @dudizimber
+
+# Observability rules and dashboards
+/observability/ @dudizimber

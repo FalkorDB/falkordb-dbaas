@@ -1,0 +1,93 @@
+name: Changesets
+
+# Runs on every push to dev or main when backend or frontend code changes.
+# If pending changesets exist, the changesets/action opens (or updates) a
+# "Version Packages" PR that bumps package.json versions and writes changelogs.
+# When that PR merges the build-backends / build-frontends workflows fire and
+# tag images with the newly-bumped semver (e.g. 1.2.0-dev.42 or 1.2.0).
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/changesets.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # ── Backend monorepo ────────────────────────────────────────────────────────
+  release-backend:
+    name: Version backend packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "24.x.x"
+          cache: "pnpm"
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pnpm i --frozen-lockfile
+
+      - name: Create or update Version PR
+        # changesets/action reads .changeset/ relative to the repo root by
+        # default, but our changesets live under backend/.changeset/.
+        # We override GITHUB_WORKSPACE to backend/ so the action behaves as
+        # if the repo root is backend/.
+        uses: changesets/action@c8bada60c408975afd1a20b3db81d6eee6789308 # v1
+        with:
+          version: pnpm version
+          commit: "chore: version backend packages"
+          title: "chore: version backend packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}/backend
+
+  # ── Frontend monorepo ───────────────────────────────────────────────────────
+  release-frontend:
+    name: Version frontend packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "22.x.x"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm i --frozen-lockfile
+
+      - name: Create or update Version PR
+        uses: changesets/action@c8bada60c408975afd1a20b3db81d6eee6789308 # v1
+        with:
+          version: pnpm version
+          commit: "chore: version frontend packages"
+          title: "chore: version frontend packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}/frontend
