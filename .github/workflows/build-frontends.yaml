@@ -119,7 +119,6 @@ jobs:
           context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
           push: true
-          load: true
           tags: ${{ steps.set-tags.outputs.TAGS }}
 
       - name: Grype image scan

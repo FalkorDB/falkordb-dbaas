@@ -112,7 +112,8 @@ jobs:
           tags: ${{ steps.set-tags.outputs.TAGS }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          load: true
+          # load locally only when not pushing (push and load are mutually exclusive exporters)
+          load: ${{ !(github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) }}
 
       - name: Grype image scan
         uses: anchore/scan-action@7c4571e31f4c185eea09b15a7441f5e51b8cf3f9 # v6.2.0
