@@ -6,12 +6,6 @@ permissions:
   issues: write
 
 on:
-  push:
-    branches:
-      - 672-ai-triage-of-crashes
-    paths:
-      - '.github/workflows/ai-crash-triage.yml'
-
   workflow_dispatch:
     inputs:
       issue_number:
