@@ -53,10 +53,10 @@ patches:
     patch: |-
       - op: replace
         path: /spec/minReplicas
-        value: 1
+        value: 2
       - op: replace
         path: /spec/maxReplicas
-        value: 2
+        value: 3
   - target:
       kind: ConfigMap
       name: ldap-auth-config
