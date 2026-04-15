@@ -4,3 +4,29 @@ kind: Kustomization
 resources:
   - create-admin-job.yaml
   - secret.yaml
+
+
+patches:
+  - target:
+      kind: Service
+      name: ldap-auth-service
+    patch: |-
+      - op: add
+        path: /spec/ports/-
+        value:
+          name: ldaps
+          port: 3390
+          targetPort: ldap
+          protocol: TCP
+  - target:
+      kind: Service
+      name: ldap-auth-headless
+    patch: |-
+      - op: add
+        path: /spec/ports/-
+        value:
+          name: ldaps
+          port: 3390
+          targetPort: ldap
+          protocol: TCP
+ 
