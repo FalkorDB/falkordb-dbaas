@@ -1113,7 +1113,7 @@ class GoogleChatNotifier:
             subtitle = f"Customer: {customer_email}"
         
         payload = {
-            "text": f"{crash_type} @Roi Lipman @Avi Avni",
+            "text": f"{crash_type} <users/41mghml0hxc75e> <users/2xcytpi2tpey8y>",
             "cards": [{
                 "header": {
                     "title": crash_type,

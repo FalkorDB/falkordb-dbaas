@@ -119,6 +119,72 @@ def kubectl_exec(
     return result.returncode
 
 
+def kubectl_exec_output(
+    namespace: str,
+    pod: str,
+    container: str,
+    command: list[str],
+) -> str | None:
+    """Run a command inside a pod and return its stdout, or None on failure."""
+    cmd = [
+        "kubectl", "exec",
+        "-n", namespace,
+        "-c", container,
+        pod, "--",
+    ] + command
+    print(f"  $ {' '.join(cmd)}")
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=_KUBECTL_TIMEOUT)
+    if result.returncode != 0:
+        print(f"  ⚠️  Command exited with code {result.returncode}")
+        stderr_snippet = (result.stderr or "").strip()
+        if stderr_snippet:
+            if len(stderr_snippet) > 300:
+                stderr_snippet = f"{stderr_snippet[:300]}..."
+            print(f"  stderr: {stderr_snippet}")
+        return None
+    return result.stdout
+
+
+def parse_falkordb_version(module_list_output: str) -> str | None:
+    """Parse FalkorDB version from MODULE LIST output.
+
+    The 'graph' module reports its version as a single integer MNNPP where
+    M=major, NN=minor, PP=patch.  e.g. 41608 → v4.16.8, 41800 → v4.18.0.
+    """
+    import re
+    # Match lines like:  "ver"  or  3) "ver"  followed by the integer
+    for match in re.finditer(r'"ver"\s*\n\s*\d+\)\s*\(integer\)\s*(\d+)', module_list_output):
+        ver = int(match.group(1))
+        major = ver // 10000
+        minor = (ver % 10000) // 100
+        patch = ver % 100
+        return f"v{major}.{minor}.{patch}"
+
+    # Fallback: look for a bare integer right after "ver"
+    for match in re.finditer(r'ver\s+(\d{4,6})', module_list_output):
+        ver = int(match.group(1))
+        major = ver // 10000
+        minor = (ver % 10000) // 100
+        patch = ver % 100
+        return f"v{major}.{minor}.{patch}"
+
+    return None
+
+
+def detect_falkordb_version(namespace: str, pod: str, container: str) -> str:
+    """Run MODULE LIST on the pod and return the FalkorDB version string."""
+    output = kubectl_exec_output(namespace, pod, container, ["redis-cli", "MODULE", "LIST"])
+    if not output:
+        print("  ⚠️  Could not retrieve MODULE LIST — version unknown")
+        return ""
+    version = parse_falkordb_version(output)
+    if version:
+        print(f"  FalkorDB version: {version}")
+        return version
+    print(f"  ⚠️  Could not parse FalkorDB version from MODULE LIST output")
+    return ""
+
+
 def write_github_output(key: str, value: str, sensitive: bool = False) -> None:
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:
@@ -212,6 +278,9 @@ def main() -> None:
                 raise RuntimeError("/data/appendonlydir not found on pod.")
             print("  /data/appendonlydir — found.")
 
+        # 2b. Detect FalkorDB version via MODULE LIST
+        falkordb_version = detect_falkordb_version(args.namespace, args.pod, args.container)
+
         # 3. Pod uploads directly to GCS via curl
         print("\n[3/4] Uploading from pod to GCS...")
         print("  Uploading dump.rdb...")
@@ -228,13 +297,21 @@ def main() -> None:
         print("  dump.rdb uploaded successfully.")
 
         if aof_enabled:
-            print("  Snapshotting appendonlydir on pod...")
-            kubectl_exec(args.namespace, args.pod, args.container, [
-                "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
-            ])
-            print("  Archiving and uploading AOF...")
             aof_upload_failed = False
             try:
+                print("  Snapshotting appendonlydir on pod...")
+                try:
+                    kubectl_exec(args.namespace, args.pod, args.container, [
+                        "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
+                    ])
+                except RuntimeError:
+                    print("  ⚠️  cp failed, checking pod status before retry...")
+                    kubectl_wait_pod_ready(args.namespace, args.pod)
+                    print("  Retrying cp...")
+                    kubectl_exec(args.namespace, args.pod, args.container, [
+                        "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
+                    ])
+                print("  Archiving and uploading AOF...")
                 try:
                     kubectl_exec(args.namespace, args.pod, args.container, [
                         "tar", "-czf", "/data/appendonlydir.tar.gz",
@@ -281,6 +358,9 @@ def main() -> None:
 
         if aof_enabled and not aof_upload_failed:
             write_github_output("aof_url", aof_gcs_path)
+
+        if falkordb_version:
+            write_github_output("falkordb_version", falkordb_version)
 
     print(f"\n{'='*60}")
     print("✅ Done!")
