@@ -97,15 +97,7 @@ env:
   ISSUE_REPO: 'FalkorDB/private'
 
 jobs:
-  # On push: no-op job just to register the workflow with GitHub
-  register:
-    if: ${{ github.event_name == 'push' }}
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Workflow registered. You can now trigger it manually via workflow_dispatch."
-
   ai-triage:
-    if: ${{ github.event_name != 'push' }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
