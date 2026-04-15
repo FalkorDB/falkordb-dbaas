@@ -19,12 +19,12 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  ENVIRONMENT: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
+  ENVIRONMENT: ${{ (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main') && 'prod' || (github.event_name != 'pull_request' && github.ref_name == 'main') && 'prod' || 'dev' }}
 
 jobs:
   plan:
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
+    environment: ${{ (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main') && 'prod' || (github.event_name != 'pull_request' && github.ref_name == 'main') && 'prod' || 'dev' }}
     env:
       TF_ARGOCD_ADMIN_PASSWORD: ${{ secrets.TF_ARGOCD_ADMIN_PASSWORD }}
       TF_ARGOCD_GROUPS_SA_JSON: ${{ secrets.TF_ARGOCD_GROUPS_SA_JSON }}
@@ -100,12 +100,64 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = fs.readFileSync('plan-output.txt', 'utf8');
-            const body = `## Terragrunt Plan — ${process.env.ENVIRONMENT}\n\n\`\`\`\n${output.slice(-65000)}\n\`\`\``;
-            github.rest.issues.createComment({
+            // Strip ANSI escape codes so the comment renders cleanly
+            let output = fs.readFileSync('plan-output.txt', 'utf8')
+              .replace(/\x1B\[[0-9;]*m/g, '');
+
+            const LIMIT = 60000;
+            const truncated = output.length > LIMIT;
+            if (truncated) output = output.slice(-LIMIT);
+
+            const env  = process.env.ENVIRONMENT;
+            const pr   = context.payload.pull_request;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const truncNote = truncated
+              ? `> [!WARNING]\n> Output was truncated. [View full run](${runUrl}) for the complete plan.\n\n`
+              : '';
+
+            const body = [
+              `## Terragrunt Plan — \`${env}\``,
+              '',
+              `| | |`,
+              `|---|---|`,
+              `| **Base branch** | \`${pr.base.ref}\` |`,
+              `| **Head branch** | \`${pr.head.ref}\` |`,
+              `| **Run** | [#${context.runId}](${runUrl}) |`,
+              '',
+              truncNote,
+              '<details>',
+              '<summary>Plan output</summary>',
+              '',
+              '```',
+              output.trim(),
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+
+            // Replace previous bot comment if one exists (avoids comment pile-up)
+            const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body,
             });
+            const existing = comments.find(
+              c => c.user.type === 'Bot' && c.body.startsWith('## Terragrunt Plan')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                comment_id: existing.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            }
 
