@@ -85,5 +85,17 @@ describe('ACL Validator', () => {
       // PING without + should be ignored, not treated as invalid
       expect(result.invalidCommands).toEqual([]);
     });
+
+    it('should accept MONITOR command', () => {
+      const result = validateAcl('+MONITOR');
+      expect(result.valid).toBe(true);
+      expect(result.invalidCommands).toEqual([]);
+    });
+
+    it('should accept MONITOR with other commands', () => {
+      const result = validateAcl('+INFO +MONITOR +PING');
+      expect(result.valid).toBe(true);
+      expect(result.invalidCommands).toEqual([]);
+    });
   });
 });

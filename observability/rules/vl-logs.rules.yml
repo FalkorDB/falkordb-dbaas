@@ -16,20 +16,21 @@ spec:
           # LogsQL: Filter for error level logs, then group and count them by the pod and namespace.
           # Trigger if any pod/namespace combination generates more than 10 error logs per minute.
           expr: |
-            level: "error" | 
-            stats by (pod, namespace, cluster) count() as error_count | 
+            level: "error" and -~".+error:0A000126:SSL.+" and -~"; using defaults" |
+            stats by (pod, namespace, cluster, environment) count() as error_count |
             filter error_count :> 10
           for: 5m
           labels:
             severity: warning
             cluster: "{{ $labels.cluster }}"
+            environment: "{{ $labels.environment }}"
           annotations:
             summary: "WARNING: Sustained Error Rate in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
               [cluster={{ $labels.cluster }}] The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
               has exceeded 10 errors per minute for the last 5 minutes.
               Latest 1-minute count: {{ $value }}.
-            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
 
         - alert: CriticalErrorLogSpikeInK8s
           # LogsQL: Similar to the warning, but triggers on an unacceptably high absolute count.
@@ -37,7 +38,7 @@ spec:
           # (equivalent to 2.5 errors/second, indicating a potential crash loop or critical bug).
           expr: |
             level: "error" | 
-            stats by (pod, namespace, cluster) count() as error_count | 
+            stats by (pod, namespace, cluster, environment) count() as error_count | 
             filter error_count :> 150
           for: 2m
           labels:
@@ -49,19 +50,21 @@ spec:
               [cluster={{ $labels.cluster }}] CRITICAL FAILURE: The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
               is generating error logs at an extremely high rate (over 150 per minute).
               Latest 1-minute count: {{ $value }}.
-            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/criticalerrorlogspikeink8srunbook/"
+            view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
 
         - alert: SentinelHostnameResolutionFailure
           # LogsQL: Detect failed hostname resolution for sentinel nodes
           # Triggers when sentinel nodes fail to resolve hostnames (e.g., wrong sentinel address configuration)
           expr: |
             ~"Failed to resolve hostname .+f2e0a955bb84.cloud.+" and ~namespace: 'instance-.*' | 
-            stats by (pod, namespace, cluster) count() as failure_count | 
+            stats by (pod, namespace, cluster, environment) count() as failure_count | 
             filter failure_count :> 10
           for: 2m
           labels:
             severity: critical
             cluster: "{{ $labels.cluster }}"
+            environment: "{{ $labels.environment }}"
           annotations:
             summary: "Sentinel hostname resolution failure in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
@@ -69,43 +72,48 @@ spec:
               is experiencing hostname resolution failures, indicating a wrong sentinel address configuration.
               This can prevent proper sentinel communication. 
               Failure count in last 2 minutes: {{ $value }}.
-            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
         - alert: RedisCrashed
-          # LogsQL: Detect Redis crash by signal
-          # Triggers when Redis crashes with a signal (single occurrence)
-          # This triggers log collection and a warning alert
+          # LogsQL: Detect any Redis crash (signal crash or assertion failure).
+          # Uses "=== REDIS BUG REPORT START" as the single anchor — Redis emits this line exactly
+          # once per crash for ALL crash types (signal via sigsegvHandler and assertion via serverPanic).
+          # This triggers log collection and a warning alert.
           # Note: Duplicate issues are prevented by checking for existing open issues in the alert-reaction script
           expr: |
-            ~"Redis .+ crashed by signal" and -pod:~"vmalert*" | 
-            stats by (pod, namespace, cluster) count() as crash_count    
+            ~"=== REDIS BUG REPORT START" and -pod:~"vmalert*" | 
+            stats by (pod, namespace, cluster, environment) count() as crash_count    
           for: 0m
           labels:
-            severity: critical
+            severity: warning
             cluster: "{{ $labels.cluster }}"
+            environment: "{{ $labels.environment }}"
           annotations:
             summary: "Critical: Redis crashed in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
               [cluster={{ $labels.cluster }}] Redis in pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
-              has crashed due to a signal. Logs will be collected and a warning has been sent.
+              has crashed (signal crash or assertion failure). Logs will be collected and a warning has been sent.
               Crash count: {{ $value }}.
-            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
         - alert: RedisCrashLoop
-          # LogsQL: Detect Redis crash loop (2+ crashes in last 10 minutes)
-          # Triggers critical alert immediately when Redis is repeatedly crashing
+          # LogsQL: Detect Redis crash loop (2+ crashes in last 10 minutes).
+          # Uses "=== REDIS BUG REPORT START" as the single anchor — it is emitted exactly once per
+          # crash for all crash types. Using an OR with "crashed by signal" caused a single signal
+          # crash to match two lines (count=2) and falsely trigger this alert.
           expr: |
-            ~"Redis .+ crashed by signal" and -pod:~"vmalert*" and _time:10m | 
-            stats by (pod, namespace, cluster) count() as crash_count |
+            ~"=== REDIS BUG REPORT START" and -pod:~"vmalert*" and _time:10m | 
+            stats by (pod, namespace, cluster, environment) count() as crash_count | 
             filter crash_count :>= 2
           for: 1m
           labels:
             severity: critical
             cluster: "{{ $labels.cluster }}"
+            environment: "{{ $labels.environment }}"
           annotations:
             summary: "CRITICAL: Redis crash loop detected in {{ $labels.pod }} ({{ $labels.namespace }})"
             description: |
               [cluster={{ $labels.cluster }}] CRITICAL: Redis in pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' 
               is in a crash loop. It has crashed {{ $value }} times in the last 10 minutes.
               This requires immediate attention to prevent service disruption.
-            view_logs: 'https://grafana.observability{{ if ne $labels.environment "prod" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
+            view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'

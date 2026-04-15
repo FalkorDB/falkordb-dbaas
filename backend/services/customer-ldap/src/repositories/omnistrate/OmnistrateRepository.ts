@@ -90,10 +90,11 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       serviceId: instance?.['serviceId'],
       environmentId: instance?.['environmentId'],
       productTierId: instance?.['productTierId'],
+      tierVersion: instance?.['tierVersion'] || '0',
       status: instance?.['consumptionResourceInstanceResult']?.['status'],
       resourceId:
         Object.entries(instance?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology'] ?? {}).filter(
-          (ob) => (ob[1] as unknown)?.['main'],
+          (ob) => (ob[1] as any)?.['main'],
         )?.[0]?.[0] ?? null,
       cloudProvider: instance?.['cloudProvider'],
       productTierName: instance?.['productTierName'],
@@ -117,7 +118,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     );
 
     return (
-      response.data['users']?.map((d: unknown) => ({
+      response.data['users']?.map((d: any) => ({
         userId: d?.['userId'],
         email: d?.['email'],
         role: d?.['userSubscriptionRole'],

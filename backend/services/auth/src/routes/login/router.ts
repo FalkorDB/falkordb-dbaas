@@ -8,7 +8,7 @@ import { loginWithEmailHandler } from './handlers/loginWithEmailHandler';
 export default fp(
   async function login(fastify, opts) {
     fastify.addHook('preHandler', async (request) => {
-      if (request.routerPath.startsWith('/login')) await fastify.validateCaptcha(request);
+      await fastify.validateCaptcha(request);
     });
 
     fastify.post(

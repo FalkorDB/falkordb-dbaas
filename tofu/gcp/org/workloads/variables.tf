@@ -29,6 +29,13 @@ variable "application_plane_metering_bucket_name" {
   type = string
 }
 
+variable "application_plane_customer_rdb_bucket_name" {
+  type = string
+}
+
+variable "application_plane_repo_name" {
+  type = string
+}
 
 ###### CONTROL PLANE ######
 

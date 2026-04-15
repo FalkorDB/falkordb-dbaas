@@ -5,7 +5,7 @@ import { sendForgotPasswordHandler } from './handlers/send';
 export default fp(
   async function signUp(fastify, opts) {
     fastify.addHook('preHandler', async (request) => {
-      if (request.routerPath.startsWith('/forgot-password')) await fastify.validateCaptcha(request);
+      await fastify.validateCaptcha(request);
     });
 
     fastify.post(

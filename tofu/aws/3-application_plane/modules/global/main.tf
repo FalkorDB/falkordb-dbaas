@@ -10,7 +10,35 @@ data "aws_iam_policy_document" "cluster_user_policy" {
   statement {
     effect = "Allow"
 
-    actions   = ["eks:ListClusters", "eks:DescribeCluster"]
+    actions   = ["eks:ListClusters", "eks:DescribeCluster", "eks:ListNodegroups", "eks:DescribeNodegroup", "eks:CreateNodegroup", "eks:DeleteNodegroup"]
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions   = ["iam:PassRole", "iam:GetRole", "iam:ListAttachedRolePolicies"]
+    resources = ["arn:aws:iam::${var.account_id}:role/omnistrate-ec2-node-group-iam-role"]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = ["iam:GetRole", "iam:ListAttachedRolePolicies"]
+    resources = ["arn:aws:iam::${var.account_id}:role/omnistrate-eks-iam-role"]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = ["iam:GetRole",  "iam:CreateServiceLinkedRole"]
+    resources = ["arn:aws:iam::${var.account_id}:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup"]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = ["ec2:DescribeSubnets"]
     resources = ["*"]
   }
 }

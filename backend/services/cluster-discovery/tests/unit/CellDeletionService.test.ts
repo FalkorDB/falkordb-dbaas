@@ -14,6 +14,7 @@ describe('CellDeletionService', () => {
     mockOmnistrateClient = {
       getDeploymentCell: jest.fn(),
       getBYOCCloudAccounts: jest.fn(),
+      getBYOAAccountConfigs: jest.fn(),
       getDeploymentCellCredentials: jest.fn(),
     } as any;
 
@@ -34,7 +35,8 @@ describe('CellDeletionService', () => {
           region: 'us-central1',
           modelType: 'BYOA',
           status: 'RUNNING',
-          destinationAccountID: 'gcp-project-123',
+          accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         const mockCloudAccount = {
@@ -56,7 +58,14 @@ describe('CellDeletionService', () => {
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
-        mockOmnistrateClient.getBYOCCloudAccounts.mockResolvedValue([mockCloudAccount]);
+        mockOmnistrateClient.getBYOAAccountConfigs.mockResolvedValue([
+          {
+            id: 'cfg-test',
+            azureTenantID: '',
+            azureSubscriptionID: '',
+            gcpProjectNumber: '123456789',
+          },
+        ]);
         mockOmnistrateClient.getDeploymentCellCredentials.mockResolvedValue(mockCredentials);
         (deleteObservabilityNodePool as jest.Mock).mockResolvedValue(undefined);
 
@@ -65,7 +74,7 @@ describe('CellDeletionService', () => {
 
         // Assert
         expect(mockOmnistrateClient.getDeploymentCell).toHaveBeenCalledWith(deploymentCellId);
-        expect(mockOmnistrateClient.getBYOCCloudAccounts).toHaveBeenCalled();
+        expect(mockOmnistrateClient.getBYOAAccountConfigs).toHaveBeenCalled();
         expect(mockOmnistrateClient.getDeploymentCellCredentials).toHaveBeenCalledWith(deploymentCellId);
         expect(deleteObservabilityNodePool).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -73,7 +82,6 @@ describe('CellDeletionService', () => {
             cloud: 'gcp',
             region: 'us-central1',
             hostMode: 'byoa',
-            destinationAccountID: 'gcp-project-123',
             endpoint: 'https://k8s.example.com',
           })
         );
@@ -88,7 +96,8 @@ describe('CellDeletionService', () => {
           region: 'us-east-1',
           modelType: 'BYOA',
           status: 'RUNNING',
-          destinationAccountID: '123456789012',
+          accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         const mockCloudAccount = {
@@ -110,7 +119,14 @@ describe('CellDeletionService', () => {
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
-        mockOmnistrateClient.getBYOCCloudAccounts.mockResolvedValue([mockCloudAccount]);
+        mockOmnistrateClient.getBYOAAccountConfigs.mockResolvedValue([
+          {
+            id: 'cfg-test',
+            azureTenantID: '',
+            azureSubscriptionID: '',
+            awsAccountID: '123456789012',
+          },
+        ]);
         mockOmnistrateClient.getDeploymentCellCredentials.mockResolvedValue(mockCredentials);
         (deleteObservabilityNodePool as jest.Mock).mockResolvedValue(undefined);
 
@@ -124,7 +140,6 @@ describe('CellDeletionService', () => {
             cloud: 'aws',
             region: 'us-east-1',
             hostMode: 'byoa',
-            destinationAccountID: '123456789012',
           })
         );
       });
@@ -138,7 +153,8 @@ describe('CellDeletionService', () => {
           region: 'us-west1',
           modelType: 'BYOA',
           status: 'RUNNING',
-          destinationAccountID: 'unknown-project',
+          accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         const mockCredentials = {
@@ -152,7 +168,7 @@ describe('CellDeletionService', () => {
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
-        mockOmnistrateClient.getBYOCCloudAccounts.mockResolvedValue([]);
+        mockOmnistrateClient.getBYOAAccountConfigs.mockResolvedValue([]);
         mockOmnistrateClient.getDeploymentCellCredentials.mockResolvedValue(mockCredentials);
         (deleteObservabilityNodePool as jest.Mock).mockResolvedValue(undefined);
 
@@ -163,8 +179,6 @@ describe('CellDeletionService', () => {
         expect(deleteObservabilityNodePool).toHaveBeenCalledWith(
           expect.objectContaining({
             name: 'c-cellnoaccount',
-            destinationAccountNumber: undefined,
-            organizationId: undefined,
           })
         );
       });
@@ -180,7 +194,8 @@ describe('CellDeletionService', () => {
           region: 'europe-west1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'managed-project',
+          accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
@@ -190,7 +205,7 @@ describe('CellDeletionService', () => {
         await handleCellDeletion(deploymentCellId);
 
         // Assert
-        expect(mockOmnistrateClient.getBYOCCloudAccounts).not.toHaveBeenCalled();
+        expect(mockOmnistrateClient.getBYOAAccountConfigs).not.toHaveBeenCalled();
         expect(mockOmnistrateClient.getDeploymentCellCredentials).not.toHaveBeenCalled();
         expect(deleteObservabilityNodePool).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -211,7 +226,8 @@ describe('CellDeletionService', () => {
           region: 'ap-southeast-1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'managed-account',
+          accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
@@ -254,7 +270,8 @@ describe('CellDeletionService', () => {
           region: 'us-central1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'project-123',
+          accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         const deletionError = new Error('Failed to delete node pool');
@@ -265,7 +282,7 @@ describe('CellDeletionService', () => {
         await expect(handleCellDeletion(deploymentCellId)).rejects.toThrow('Failed to delete node pool');
       });
 
-      it('should handle errors from getBYOCCloudAccounts', async () => {
+      it('should handle errors from getAccountConfigs', async () => {
         // Arrange
         const deploymentCellId = 'byoa-error-cell';
         const mockDeploymentCell = {
@@ -274,11 +291,12 @@ describe('CellDeletionService', () => {
           region: 'us-west-2',
           modelType: 'BYOA',
           status: 'RUNNING',
-          destinationAccountID: 'account-123',
+          accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
-        mockOmnistrateClient.getBYOCCloudAccounts.mockRejectedValue(new Error('API error'));
+        mockOmnistrateClient.getBYOAAccountConfigs.mockRejectedValue(new Error('API error'));
 
         // Act & Assert
         await expect(handleCellDeletion(deploymentCellId)).rejects.toThrow('API error');
@@ -294,11 +312,12 @@ describe('CellDeletionService', () => {
           region: 'asia-east1',
           modelType: 'BYOA',
           status: 'RUNNING',
-          destinationAccountID: 'project-456',
+          accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
-        mockOmnistrateClient.getBYOCCloudAccounts.mockResolvedValue([]);
+        mockOmnistrateClient.getBYOAAccountConfigs.mockResolvedValue([]);
         mockOmnistrateClient.getDeploymentCellCredentials.mockRejectedValue(
           new Error('Credentials not available')
         );
@@ -319,7 +338,8 @@ describe('CellDeletionService', () => {
           region: 'us-central1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'project-123',
+          accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
@@ -345,7 +365,8 @@ describe('CellDeletionService', () => {
           region: 'us-central1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'project-123',
+          accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);
@@ -371,7 +392,8 @@ describe('CellDeletionService', () => {
           region: 'us-east-1',
           modelType: 'CUSTOMER_HOSTED',
           status: 'RUNNING',
-          destinationAccountID: 'account-123',
+          accountConfigId: 'cfg-test',
+          createdAt: new Date().toISOString(),
         };
 
         mockOmnistrateClient.getDeploymentCell.mockResolvedValue(mockDeploymentCell);

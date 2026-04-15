@@ -2,9 +2,11 @@ import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
 // set logger
 // diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.DEBUG);
 
-import { BatchSpanProcessor, RandomIdGenerator } from '@opentelemetry/sdk-trace-base';
+import { RandomIdGenerator } from '@opentelemetry/sdk-trace-base';
+import { tracing } from '@opentelemetry/sdk-node';
 import { Resource } from '@opentelemetry/resources';
-import { SEMRESATTRS_SERVICE_NAME, SEMRESATTRS_DEPLOYMENT_ENVIRONMENT } from '@opentelemetry/semantic-conventions';
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions';
+import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from '@opentelemetry/semantic-conventions/incubating';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTTracePropagator } from '@opentelemetry/propagator-ot-trace';
 import { NodeSDK } from '@opentelemetry/sdk-node';
@@ -35,11 +37,11 @@ export const init = (serviceName: string, environment: string) => {
   const provider = new NodeSDK({
     idGenerator: new CustomIDGenerator(),
     resource: new Resource({
-      [SEMRESATTRS_SERVICE_NAME]: serviceName,
-      [SEMRESATTRS_DEPLOYMENT_ENVIRONMENT]: environment,
+      [ATTR_SERVICE_NAME]: serviceName,
+      [ATTR_DEPLOYMENT_ENVIRONMENT_NAME]: environment,
     }),
     traceExporter: exporter,
-    spanProcessors: [new BatchSpanProcessor(exporter)],
+    spanProcessors: [new tracing.BatchSpanProcessor(exporter)],
     textMapPropagator: new OTTracePropagator(),
     contextManager: new AsyncHooksContextManager().enable(),
     instrumentations: [getNodeAutoInstrumentations()],

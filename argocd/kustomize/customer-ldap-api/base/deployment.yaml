@@ -26,7 +26,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: customer-ldap-api
-          image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/customer-ldap:1.0.0
+          image: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/customer-ldap:1.1.0
           imagePullPolicy: Always
           ports:
             - name: http

@@ -6,6 +6,10 @@ variable "region" {
   type = string
 }
 
+variable "zones" {
+  type = list(string)
+}
+
 variable "ip_range_subnet" {
   type = string
 }

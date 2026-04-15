@@ -1,0 +1,96 @@
+---
+apiVersion: alertreaction.io/v1alpha1
+kind: AlertReaction
+metadata:
+  name: container-oom-killed-alert
+  namespace: observability
+spec:
+  alertName: ContainerOOMKilled
+  actions:
+  - name: trigger-oom-workflow
+    image: alpine:latest
+    serviceAccount: alert-reaction-actions-sa
+    command: ["sh", "-c"]
+    args:
+      - |
+        # Install curl and jq
+        apk add --no-cache curl jq
+
+        echo "=========================================="
+        echo "ContainerOOMKilled Alert Triggered"
+        echo "Cluster: ${CLUSTER}"
+        echo "Pod: ${POD_NAME}"
+        echo "Container: ${CONTAINER}"
+        echo "Namespace: ${NAMESPACE}"
+        echo "=========================================="
+
+        echo "Triggering GitHub workflow..."
+
+        HTTP_STATUS=$(curl -sS --max-time 10 -X POST \
+          -o /tmp/workflow_body \
+          -w "%{http_code}" \
+          -H "Authorization: token ${GITHUB_TOKEN}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Content-Type: application/json" \
+          "${GITHUB_API}/repos/${WORKFLOW_REPO_OWNER}/${WORKFLOW_REPO_NAME}/actions/workflows/${WORKFLOW_FILE}/dispatches" \
+          -d "$(jq -n \
+            --arg ref "main" \
+            --arg pod "${POD_NAME}" \
+            --arg namespace "${NAMESPACE}" \
+            --arg cluster "${CLUSTER}" \
+            --arg container "${CONTAINER}" \
+            --arg grafana_url "${GRAFANA_URL}" \
+            --arg env "dev" \
+            '{
+              ref: $ref,
+              inputs: {
+                pod: $pod,
+                namespace: $namespace,
+                cluster: $cluster,
+                container: $container,
+                grafana_url: $grafana_url,
+                environment: $env
+              }
+            }')")
+
+        WORKFLOW_RESPONSE=$(cat /tmp/workflow_body)
+
+        if [ "${HTTP_STATUS:0:1}" != "2" ]; then
+          echo "❌ Failed to trigger workflow (HTTP ${HTTP_STATUS})"
+          echo "${WORKFLOW_RESPONSE}" | jq '.' 2>/dev/null || echo "${WORKFLOW_RESPONSE}"
+          exit 1
+        fi
+
+        echo "✅ Workflow triggered successfully (HTTP ${HTTP_STATUS})"
+    env:
+    - name: POD_NAME
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.pod"
+    - name: NAMESPACE
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.namespace"
+    - name: CLUSTER
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.cluster"
+    - name: CONTAINER
+      valueFrom:
+        alertRef:
+          fieldPath: "labels.container"
+    - name: GITHUB_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: redis-crash-token
+          key: token
+    - name: GITHUB_API
+      value: "https://api.github.com"
+    - name: WORKFLOW_REPO_OWNER
+      value: "FalkorDB"
+    - name: WORKFLOW_REPO_NAME
+      value: "falkordb-dbaas"
+    - name: WORKFLOW_FILE
+      value: "oom-handler.yml"
+    - name: GRAFANA_URL
+      value: "https://grafana.observability.dev.internal.falkordb.cloud"

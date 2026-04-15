@@ -28,7 +28,7 @@ jobs:
     environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Read stacks.json
         id: set-matrix
@@ -63,6 +63,7 @@ jobs:
           TF_CLUSTER_NAME: ${{ secrets.TF_CLUSTER_NAME }}
           TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
           TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
+          TF_CTRL_PLANE_DEV_ZONES: ${{ secrets.TF_CTRL_PLANE_ZONES }}
           TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
           TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
           TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
@@ -78,31 +79,48 @@ jobs:
           TF_ARGOCD_SA_ID: ${{ secrets.TF_ARGOCD_SA_ID }}
           TF_OMNISTRATE_SERVICE_ID: ${{ secrets.TF_OMNISTRATE_SERVICE_ID }}
           TF_OMNISTRATE_ENVIRONMENT_ID: ${{ secrets.TF_OMNISTRATE_ENVIRONMENT_ID }}
+          TF_AZURE_SUBSCRIPTION_ID: ${{ secrets.TF_AZURE_SUBSCRIPTION_ID }}
+          TF_AZURE_TENANT_ID: ${{ secrets.TF_AZURE_TENANT_ID }}
         run: |
-          json=$(echo '${{ toJson(matrix) }}' | envsubst)
-          # set the matrix values as environment variables
-          for key in $(echo $json | jq -r '.stack.variables | to_entries[] | "\(.key)=\(.value)"'); do
-            echo "$key" >> $GITHUB_ENV
-          done
+          json='${{ toJson(matrix) }}'
+          # Resolve $VARS from the environment without re-serializing JSON.
+          while IFS=$'\t' read -r key value; do
+            if [[ "$value" == \$* ]]; then
+              var_name="${value:1}"
+              resolved="${!var_name}"
+            else
+              resolved="$value"
+            fi
+            echo "${key}=${resolved}" >> "$GITHUB_ENV"
+          done < <(echo "$json" | jq -r '.stack.variables | to_entries[] | "\(.key)\t\(.value)"')
           # set init_param variable
-          echo "init_param=$(echo $json | jq -r '.stack.init_param')" >> $GITHUB_ENV
+          init_param_template=$(echo "$json" | jq -r '.stack.init_param')
+          echo "init_param=$(echo "$init_param_template" | envsubst)" >> "$GITHUB_ENV"
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install OpenTofu
-        uses: opentofu/setup-opentofu@v1
+        uses: opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f # v1
 
       - name: Setup GCloud
-        uses: "google-github-actions/auth@v2.1.2"
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3"
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
-        uses: "google-github-actions/setup-gcloud@v2.1.0"
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1"
         with:
           version: ">= 363.0.0"
+
+      - name: Setup Azure Login
+        if: startsWith(matrix.stack.path, 'tofu/azure/')
+        uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2
+        with:
+          client-id: ${{ secrets.TF_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.TF_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.TF_AZURE_SUBSCRIPTION_ID }}
 
       - name: Setup Tofu workspace
         run: |
@@ -117,13 +135,13 @@ jobs:
           tofu show -json tfplan > tfplan.json
 
       - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: tofu-plan-${{ env.ENVIRONMENT }}-${{ matrix.stack.name }}
           path: ${{ matrix.stack.path }}/tfplan
 
       - name: Comment Plan Changes
-        uses: liatrio/terraform-change-pr-commenter@v1.10.0
+        uses: liatrio/terraform-change-pr-commenter@9c5e30fc65d87116c6419e74bb93c2d9b6336b2f # v1.14.1
         with:
           json-file: ${{ matrix.stack.path }}/tfplan.json
           comment-header: "Tofu Plan for ${{ matrix.stack.name }} in ${{ env.ENVIRONMENT }} environment"

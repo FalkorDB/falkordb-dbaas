@@ -50,6 +50,13 @@ spec:
                 logFormat: json
                 nodeSelector:
                   node_pool: observability
+                resources:
+                  requests:
+                    memory: "1Gi"
+                    cpu: "80m"
+                  limits:
+                    memory: "4Gi"
+                    cpu: "400m"
                 storage:
                   resources:
                     requests:
@@ -77,7 +84,7 @@ spec:
                       alertname: RedisCrashed
                     target_match_re:
                       alertname: (FalkorDBDown|SustainedErrorLogInK8s)
-                    equal: ['namespace', 'pod', 'cluster']
+                    equal: ["namespace", "cluster"]
                 route:
                   group_by: ["alertname", "namespace", "pod"]
                   group_wait: 30s

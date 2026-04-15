@@ -5,6 +5,7 @@ name: Redis Crash Handler
 
 permissions:
   contents: read
+  id-token: write
   issues: write
 
 on:
@@ -38,45 +39,66 @@ on:
         description: 'Environment (dev or prod)'
         required: true
         type: string
+      test:
+        description: 'Boolean to allow testing on dev branch'
+        required: false
+        type: boolean
+        default: false
 env:
   ISSUE_REPO: 'FalkorDB/private'
   PROJECT_ID: 'PVT_kwDOCFj3QM4BM1wV'
 
 jobs:
+  log-dev-crash:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.environment == 'dev' }}
+    steps:
+      - name: Log dev environment crash
+        run: |
+          echo "Environment is 'dev'. It is worth noting that a crash happened!"
+  
   analyze-crash:
     runs-on: ubuntu-latest
+    if: ${{ inputs.environment != 'dev' || inputs.test }}
     outputs:
       issue_number: ${{ steps.process_crash.outputs.issue_number }}
       is_new_crash: ${{ steps.process_crash.outputs.is_new_crash }}
-      customer_email: ${{ steps.process_crash.outputs.customer_email }}
+      customer_domain: ${{ steps.process_crash.outputs.customer_domain }}
       namespace: ${{ steps.process_crash.outputs.namespace }}
       pod: ${{ steps.process_crash.outputs.pod }}
       cluster: ${{ steps.process_crash.outputs.cluster }}
     
     steps:
-      - name: If environment is dev exit early
-        if: ${{ inputs.environment == 'dev' }}
+      # ------------------------------------------------------------------ #
+      # 0. Check that the actor is an authorised user
+      # ------------------------------------------------------------------ #
+      - name: Check authorised actor
+        env:
+          ACTOR: ${{ github.actor }}
         run: |
-          echo "Environment is 'dev'. Exiting job early. It is worth noting that a crash happened!."
-          exit 0
-      
+          ALLOWED_USERS=("swilly22" "MuhammadQadora" "dudizimber" "AviAvni" "barakb")
+          for user in "${ALLOWED_USERS[@]}"; do
+            if [[ "$ACTOR" == "$user" ]]; then
+              echo "Actor '$ACTOR' is authorised. Proceeding."
+              exit 0
+            fi
+          done
+          echo "Actor '$ACTOR' is not authorised to run this workflow."
+          exit 1
+
       - name: Checkout repository
-        if: ${{ inputs.environment != 'dev' }}
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
       
       - name: Set up Python
-        if: ${{ inputs.environment != 'dev' }}
-        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
         with:
           python-version: '3.11'
       
       - name: Install dependencies
-        if: ${{ inputs.environment != 'dev' }}
         run: |
           pip install requests
       
       - name: Set environment variables
-        if: ${{ inputs.environment != 'dev' }}
         env:
           ENVIRONMENT: ${{ inputs.environment }}
           OMNISTRATE_DEV_ENV: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
@@ -93,9 +115,9 @@ jobs:
           fi
       
       - name: Process crash
-        if: ${{ inputs.environment != 'dev' }}
         id: process_crash
         env:
+          ENVIRONMENT: ${{ inputs.environment }}
           OMNISTRATE_API_URL: "https://api.omnistrate.cloud/2022-09-01-00/"
           OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
           OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
@@ -103,7 +125,7 @@ jobs:
           VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
           VMAUTH_PASSWORD: ${{ env.VMAUTH_PASSWORD }}
           GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
-          GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL }}
+          GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL_PRODUCTION_CHAT }}
           ISSUE_REPO: ${{ env.ISSUE_REPO }}
           PROJECT_ID: ${{ env.PROJECT_ID }}
           POD: ${{ inputs.pod }}
@@ -120,3 +142,92 @@ jobs:
             --container "$CONTAINER" \
             --vmauth-url "$VMAUTH_URL" \
             --grafana-url "$GRAFANA_URL"
+
+  upload-rdb:
+    needs: analyze-crash
+    uses: ./.github/workflows/rdb-uploader.yml
+    secrets: inherit
+    with:
+      pod: ${{ needs.analyze-crash.outputs.pod }}
+      namespace: ${{ needs.analyze-crash.outputs.namespace }}
+      container: ${{ inputs.container }}
+      cluster: ${{ needs.analyze-crash.outputs.cluster }}
+      issue_number: ${{ needs.analyze-crash.outputs.issue_number }}
+      environment: ${{ inputs.environment }}
+
+  ai-triage:
+    needs: [analyze-crash, upload-rdb]
+    runs-on: ubuntu-latest
+    if: ${{ needs.analyze-crash.outputs.issue_number != '' }}
+
+    steps:
+      - name: Check authorised actor
+        env:
+          ACTOR: ${{ github.actor }}
+        run: |
+          ALLOWED_USERS=("swilly22" "MuhammadQadora" "dudizimber" "AviAvni" "barakb")
+          for user in "${ALLOWED_USERS[@]}"; do
+            if [[ "$ACTOR" == "$user" ]]; then
+              echo "Actor '$ACTOR' is authorised. Proceeding."
+              exit 0
+            fi
+          done
+          echo "Actor '$ACTOR' is not authorised to run this workflow."
+          exit 1
+
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Copilot CLI and Python deps
+        run: |
+          npm install -g @github/copilot
+          pip install github-copilot-sdk requests pydantic
+
+      - name: Set environment variables
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          VMAUTH_PASS_DEV: ${{ secrets.VMAUTH_PASSWORD_DEV }}
+          VMAUTH_PASS_PROD: ${{ secrets.VMAUTH_PASSWORD_PROD }}
+        run: |
+          if [ "$ENVIRONMENT" = "dev" ]; then
+            echo "VMAUTH_PASSWORD=$VMAUTH_PASS_DEV" >> $GITHUB_ENV
+          else
+            echo "VMAUTH_PASSWORD=$VMAUTH_PASS_PROD" >> $GITHUB_ENV
+          fi
+
+      - name: Run AI crash triage
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          ISSUE_REPO: ${{ env.ISSUE_REPO }}
+          VMAUTH_URL: ${{ inputs.vmauth_url }}
+          VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
+          VMAUTH_PASSWORD: ${{ env.VMAUTH_PASSWORD }}
+          ISSUE_NUMBER: ${{ needs.analyze-crash.outputs.issue_number }}
+          POD: ${{ needs.analyze-crash.outputs.pod }}
+          NAMESPACE: ${{ needs.analyze-crash.outputs.namespace }}
+          CLUSTER: ${{ needs.analyze-crash.outputs.cluster }}
+          CONTAINER: ${{ inputs.container }}
+          RDB_URL: ${{ needs.upload-rdb.outputs.rdb_url }}
+          AOF_URL: ${{ needs.upload-rdb.outputs.aof_url }}
+        run: |
+          cd scripts
+          python ai_crash_triage.py \
+            --issue-number "$ISSUE_NUMBER" \
+            --pod "$POD" \
+            --namespace "$NAMESPACE" \
+            --cluster "$CLUSTER" \
+            --container "$CONTAINER" \
+            --vmauth-url "$VMAUTH_URL" \
+            ${RDB_URL:+--rdb-url "$RDB_URL"} \
+            ${AOF_URL:+--aof-url "$AOF_URL"}

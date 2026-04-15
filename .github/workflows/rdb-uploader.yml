@@ -1,0 +1,306 @@
+name: RDB Uploader
+
+# Triggered automatically by redis-crash-handler.yml (workflow_call)
+# or manually via GitHub Actions UI / gh CLI (workflow_dispatch).
+#
+# Replicates upload_to_gcp.sh logic:
+#   1. Runner generates a signed PUT URL (1h)
+#   2. Pod uploads directly to GCS via kubectl exec + curl (no runner disk used)
+#   3. Runner outputs gs:// bucket paths to GITHUB_OUTPUT (no publicly-accessible
+#      signed GET URLs — IAM authentication is required to download)
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      pod:
+        description: 'Pod name (e.g. node-f-0)'
+        required: true
+        type: string
+      namespace:
+        description: 'Kubernetes namespace / instance ID (e.g. instance-ljsr6b3gz)'
+        required: true
+        type: string
+      container:
+        description: 'Container name (not required in sign-only mode)'
+        required: false
+        type: string
+      cluster:
+        description: 'Cluster name (= Omnistrate deployment cell ID, e.g. hc-xxxx)'
+        required: true
+        type: string
+      sign_only:
+        description: 'Post GCS paths to issue without re-uploading — skips pod access (use when data is already in GCS)'
+        required: false
+        default: 'false'
+        type: string
+      issue_number:
+        description: 'GitHub issue number to post download links on'
+        required: false
+        type: string
+      environment:
+        description: 'Environment (dev or prod)'
+        required: true
+        type: string
+
+  workflow_call:
+    inputs:
+      pod:
+        required: true
+        type: string
+      namespace:
+        required: true
+        type: string
+      container:
+        required: false
+        type: string
+        default: ''
+      cluster:
+        required: true
+        type: string
+      sign_only:
+        required: false
+        default: 'false'
+        type: string
+      issue_number:
+        required: false
+        default: ''
+        type: string
+      environment:
+        required: true
+        type: string
+    outputs:
+      rdb_url:
+        description: 'Signed GCS download URL for dump.rdb'
+        value: ${{ jobs.upload-rdb.outputs.rdb_url }}
+      aof_url:
+        description: 'Signed GCS download URL for appendonlydir.tar.gz'
+        value: ${{ jobs.upload-rdb.outputs.aof_url }}
+
+env:
+  ISSUE_REPO: 'FalkorDB/private'
+
+jobs:
+  upload-rdb:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    outputs:
+      rdb_url: ${{ steps.upload_gcs.outputs.rdb_url }}
+      aof_url: ${{ steps.upload_gcs.outputs.aof_url }}
+    steps:
+      # ------------------------------------------------------------------ #
+      # 0. Check that the actor is an authorised user
+      # ------------------------------------------------------------------ #
+      - name: Check authorised actor
+        env:
+          ACTOR: ${{ github.actor }}
+        run: |
+          ALLOWED_USERS=("swilly22" "MuhammadQadora" "dudizimber" "AviAvni" "barakb")
+          for user in "${ALLOWED_USERS[@]}"; do
+            if [[ "$ACTOR" == "$user" ]]; then
+              echo "Actor '$ACTOR' is authorised. Proceeding."
+              exit 0
+            fi
+          done
+          echo "Actor '$ACTOR' is not authorised to run this workflow."
+          exit 1
+
+      # ------------------------------------------------------------------ #
+      # 1. Install + authenticate omnistrate-ctl (skipped in sign-only mode)
+      # ------------------------------------------------------------------ #
+      - name: Setup omnistrate-ctl
+        if: ${{ inputs.sign_only != 'true' }}
+        uses: omnistrate-oss/setup-omnistrate-ctl@0ac9e5945eb7019952b098c7d155b0c1b77b5c7a # v1
+
+      # ------------------------------------------------------------------ #
+      # 2. Install kubectl (skipped in sign-only mode)
+      # ------------------------------------------------------------------ #
+      - name: Install kubectl
+        if: ${{ inputs.sign_only != 'true' }}
+        uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
+
+      # ------------------------------------------------------------------ #
+      # 3. Set up Python
+      # ------------------------------------------------------------------ #
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install google-cloud-storage
+
+      # ------------------------------------------------------------------ #
+      # 4. Checkout (for scripts/rdb_uploader.py)
+      # ------------------------------------------------------------------ #
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+
+      # ------------------------------------------------------------------ #
+      # 5. Update kubeconfig via omnistrate-ctl (skipped in sign-only mode)
+      #    cluster name == deployment cell ID
+      #    GCP quirk: k8s cluster name is "c-hc20vidasdi" but deployment cell ID is "hc-20vidasdi"
+      #    Normalize by stripping the "c-hc" prefix and replacing with "hc-"
+      # ------------------------------------------------------------------ #
+      - name: Update kubeconfig via omnistrate-ctl
+        if: ${{ inputs.sign_only != 'true' }}
+        env:
+          OMNISTRATE_EMAIL: ${{ secrets.OMNISTRATE_USERNAME }}
+          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
+          CLUSTER: ${{ inputs.cluster }}
+        run: |
+          # Normalize GCP cluster name to deployment cell ID
+          # GCP passes "c-hc<id>" but omnistrate-ctl expects "hc-<id>"
+          if [[ "$CLUSTER" =~ ^c-hc ]]; then
+            DEPLOYMENT_CELL="hc-${CLUSTER#c-hc}"
+            echo "Normalized GCP cluster name: $CLUSTER -> $DEPLOYMENT_CELL"
+          else
+            DEPLOYMENT_CELL="$CLUSTER"
+          fi
+
+          # Login does not use a spinner, so no PTY needed
+          echo "$OMNISTRATE_PASSWORD" | omnistrate-ctl login \
+            --email "$OMNISTRATE_EMAIL" \
+            --password-stdin
+
+          # update-kubeconfig uses a spinner that requires /dev/tty — wrap in script
+          script -q -c \
+            "omnistrate-ctl deployment-cell update-kubeconfig \"$DEPLOYMENT_CELL\" --role cluster-admin --kubeconfig /tmp/kubeconfig" \
+            /dev/null
+
+          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+
+      # ------------------------------------------------------------------ #
+      # 6. Authenticate to GCP via Workload Identity Federation
+      # ------------------------------------------------------------------ #
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCS_SA_EMAIL }}
+
+      # ------------------------------------------------------------------ #
+      # 7. Run rdb_uploader.py — handles signing, kubectl exec, and outputs
+      # ------------------------------------------------------------------ #
+      - name: Upload RDB (and AOF) from pod to GCS
+        id: upload_gcs
+        env:
+          NAMESPACE: ${{ inputs.namespace }}
+          POD: ${{ inputs.pod }}
+          CONTAINER: ${{ inputs.container }}
+          SIGN_ONLY: ${{ inputs.sign_only }}
+          GCS_BUCKET: ${{ vars.GCS_BUCKET }}
+          GCS_SA_EMAIL: ${{ secrets.GCS_SA_EMAIL }}
+        run: |
+          EXTRA_ARGS=()
+          [[ "${SIGN_ONLY,,}" == "true" ]] && EXTRA_ARGS+=("--sign-only")
+          python scripts/rdb_uploader.py \
+            --namespace   "$NAMESPACE" \
+            --pod         "$POD" \
+            --container   "$CONTAINER" \
+            --bucket      "$GCS_BUCKET" \
+            "${EXTRA_ARGS[@]}"
+
+      # ------------------------------------------------------------------ #
+      # 8. Comment GCS paths on the GitHub issue
+      # ------------------------------------------------------------------ #
+      - name: Comment GCS paths on issue
+        if: ${{ inputs.issue_number != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          ISSUE_REPO: ${{ env.ISSUE_REPO }}
+          ISSUE_NUMBER: ${{ inputs.issue_number }}
+          NAMESPACE: ${{ inputs.namespace }}
+          POD: ${{ inputs.pod }}
+          GCS_BUCKET: ${{ vars.GCS_BUCKET }}
+          RDB_PATH: ${{ steps.upload_gcs.outputs.rdb_url }}
+          AOF_PATH: ${{ steps.upload_gcs.outputs.aof_url }}
+          AOF_UPLOAD_FAILED: ${{ steps.upload_gcs.outputs.aof_upload_failed }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SIGN_ONLY: ${{ inputs.sign_only }}
+        run: |
+          if [[ "${SIGN_ONLY,,}" == "true" ]]; then
+            HEADER="## 📂 RDB GCS Paths"
+            SUBTEXT="GCS paths for the existing snapshot."
+          else
+            HEADER="## 📦 RDB Export Available"
+            SUBTEXT="Snapshot uploaded to GCS."
+          fi
+
+          # Derive HTTPS console URLs from gs:// paths (prompts Google login then downloads)
+          RDB_CONSOLE_URL="https://storage.cloud.google.com/${RDB_PATH#gs://}"
+          if [[ -n "$AOF_PATH" ]]; then
+            AOF_CONSOLE_URL="https://storage.cloud.google.com/${AOF_PATH#gs://}"
+          fi
+
+          COMMENT="$HEADER
+
+          ${SUBTEXT} Access requires GCP IAM authentication.
+
+          | File | GCS Path | Console |
+          |------|----------|---------|
+          | \`dump.rdb\` | \`$RDB_PATH\` | [Open in GCP]($RDB_CONSOLE_URL) |"
+
+          if [[ -n "$AOF_PATH" ]]; then
+            COMMENT+="
+          | \`appendonlydir.tar.gz\` | \`$AOF_PATH\` | [Open in GCP]($AOF_CONSOLE_URL) |"
+          fi
+
+          if [[ "${AOF_UPLOAD_FAILED}" == "true" ]]; then
+            COMMENT+="
+
+          > ⚠️ AOF upload failed after retries — \`appendonlydir.tar.gz\` is not available."
+          fi
+
+          COMMENT+="
+
+          **Pod:** \`$POD\` &nbsp; **Namespace:** \`$NAMESPACE\`
+
+          > [View workflow run]($RUN_URL)
+
+          ---
+          <details>
+          <summary>⬇️ How to download via CLI</summary>
+
+          \`\`\`bash
+          # Humans — interactive login:
+          gcloud auth login
+
+          # AI agents / pipelines — use SA credentials already available in the environment.
+
+          # Download files:
+          gsutil cp $RDB_PATH ."
+
+          if [[ -n "$AOF_PATH" ]]; then
+            COMMENT+="
+          gsutil cp $AOF_PATH ."
+          fi
+
+          COMMENT+="
+          \`\`\`
+          </details>
+
+          ---
+          <details>
+          <summary>🔄 Re-post GCS paths without re-uploading</summary>
+
+          \`\`\`bash
+          gh workflow run rdb-uploader.yml \\
+            -R FalkorDB/falkordb-dbaas \\
+            --field pod=\"$POD\" \\
+            --field namespace=\"$NAMESPACE\" \\
+            --field container=\"${{ inputs.container }}\" \\
+            --field cluster=\"${{ inputs.cluster }}\" \\
+            --field sign_only=\"true\" \\
+            --field issue_number=\"$ISSUE_NUMBER\" \\
+            --field environment=\"${{ inputs.environment }}\"
+          \`\`\`
+          </details>"
+
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$ISSUE_REPO" \
+            --body "$COMMENT"

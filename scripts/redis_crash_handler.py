@@ -17,6 +17,8 @@ from dataclasses import dataclass
 import argparse
 import urllib3
 from urllib.parse import quote
+import time
+import hashlib
 
 
 def mask_email(email: str) -> str:
@@ -47,38 +49,156 @@ class CrashSummary:
     memory_rss: str
     client_command: str
     
+    @staticmethod
+    def _normalize_stack_trace(trace: str) -> str:
+        """Normalize stack trace by removing variable memory addresses
+        
+        ASLR (Address Space Layout Randomization) causes memory addresses to change
+        between crashes, but the crash location (function+offset) remains the same.
+        
+        Examples:
+        - /var/lib/falkordb/bin/falkordb.so(AlgebraicExpression_Dest+0x4)[0x7f2c70b95664]
+          -> /var/lib/falkordb/bin/falkordb.so(AlgebraicExpression_Dest+0x4)
+        - redis-server *:6379(debugCommand+0x244)[0xaaaab1e89984]
+          -> redis-server *:6379(debugCommand+0x244)
+        - /lib/x86_64-linux-gnu/libc.so.6(+0x3c050)[0x7f8b8c3c050]
+          -> /lib/x86_64-linux-gnu/libc.so.6(+0x3c050)
+        """
+        # Remove hex addresses in square brackets: [0x7f2c70b95664] -> ""
+        normalized = re.sub(r'\[0x[0-9a-fA-F]+\]', '', trace)
+        return normalized.strip()
+    
+    @staticmethod
+    def _normalize_client_command(command: str) -> str:
+        """Normalize client command to base command only
+        
+        Different queries can trigger the same bug, so we only care about
+        the command type (e.g., GRAPH.QUERY) not the specific query content.
+        This focuses on WHERE the crash happened (command handler), not WHAT
+        data was being processed.
+        
+        Examples:
+        - GRAPH.QUERY // Per-repo delivery metrics... -> GRAPH.QUERY
+        - GRAPH.QUERY CYPHER timeout=45000 -> GRAPH.QUERY
+        - GRAPH.DELETE mykey -> GRAPH.DELETE
+        - SET key value -> SET
+        """
+        if not command or command == "unknown":
+            return command
+        
+        # Extract just the base command (first word)
+        # This groups crashes by the command that was executed, regardless of parameters
+        parts = command.split()
+        if not parts:
+            return command
+        
+        return parts[0]
+    
+    @staticmethod
+    def _extract_primary_crash_function(stack_traces: List[str]) -> Optional[str]:
+        """Extract the primary crashing function from FalkorDB/Redis
+        
+        This identifies the actual function where the crash occurred, regardless
+        of the call path that led to it. This is more reliable for deduplication
+        than using full stack traces, as the same bug can be reached via different
+        execution paths.
+        
+        Priority:
+        1. First FalkorDB function (falkordb.so with a named function)
+        2. First Redis function (redis-server with a named function)
+        3. First FalkorDB function (even if anonymous like +0x...)
+        4. First Redis function (even if anonymous)
+        
+        Returns:
+            The primary crash function or None if not found
+        """
+        falkordb_pattern = re.compile(r'/var/lib/falkordb/bin/falkordb\.so\(([^)]+)\)')
+        redis_pattern = re.compile(r'redis-server[^(]*\(([^)]+)\)')
+        
+        # First pass: Look for named FalkorDB functions
+        for trace in stack_traces:
+            if 'falkordb.so' in trace:
+                match = falkordb_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    # Prefer named functions over anonymous ones (starting with +0x)
+                    if not func.startswith('+0x'):
+                        return f"falkordb.so({func})"
+        
+        # Second pass: Look for named Redis functions
+        for trace in stack_traces:
+            if 'redis-server' in trace:
+                match = redis_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    if not func.startswith('+0x'):
+                        return f"redis-server({func})"
+        
+        # Third pass: Accept anonymous FalkorDB functions
+        for trace in stack_traces:
+            if 'falkordb.so' in trace:
+                match = falkordb_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    return f"falkordb.so({func})"
+        
+        # Fourth pass: Accept anonymous Redis functions
+        for trace in stack_traces:
+            if 'redis-server' in trace:
+                match = redis_pattern.search(trace)
+                if match:
+                    func = match.group(1)
+                    return f"redis-server({func})"
+        
+        return None
+    
     @property
     def signature(self) -> str:
         """Unique signature for duplicate detection
         
-        Includes stack traces, exit code, and client command to ensure
-        different crashes are not incorrectly marked as duplicates.
-        Filters out 'N/A' from stack traces and 'unknown' from exit code and client command.
-        """
-        # Filter out N/A stack traces for signature
-        meaningful_stacks = [st for st in self.stack_traces[:3] if st != "N/A"]
+        Uses the primary crashing function (where the crash actually occurred)
+        rather than the full call stack, since the same bug can be reached via
+        different execution paths. This prevents false negatives where the same
+        crash is reported as different issues.
         
-        # Build signature components
-        components = meaningful_stacks.copy()
+        Signature components:
+        1. Primary crash function (e.g., "falkordb.so(AlgebraicExpression_Dest+0x4)")
+        2. Exit code (e.g., "139")
+        3. Base command (e.g., "GRAPH.QUERY")
+        """
+        components = []
+        
+        # Extract primary crash function from stack traces
+        if self.stack_traces and self.stack_traces[0] != "N/A":
+            primary_func = self._extract_primary_crash_function(self.stack_traces)
+            if primary_func:
+                components.append(primary_func)
+            else:
+                # Fallback: use normalized first stack trace if no function extracted
+                normalized = self._normalize_stack_trace(self.stack_traces[0])
+                components.append(normalized)
         
         # Add exit code if it's meaningful
         if self.exit_code and self.exit_code != "unknown":
             components.append(self.exit_code)
         
-        # Add client command if it's meaningful
+        # Add normalized client command if it's meaningful
         if self.client_command and self.client_command != "unknown":
-            components.append(self.client_command)
+            normalized_command = self._normalize_client_command(self.client_command)
+            components.append(normalized_command)
         
-        return "|".join(components)
+        return "|".join(components) if components else "unknown"
 
 
 class OmnistrateClient:
     """Client for Omnistrate API"""
     
-    def __init__(self, api_url: str, username: str, password: str, verify_ssl: bool = True):
+    def __init__(self, api_url: str, username: str, password: str, service_id: str = None, environment_id: str = None, verify_ssl: bool = True):
         self.api_url = api_url.rstrip('/')
         self.username = username
         self.password = password
+        self.service_id = service_id
+        self.environment_id = environment_id
         self.verify_ssl = verify_ssl
         self.token = None
         self._login()
@@ -101,60 +221,131 @@ class OmnistrateClient:
             "Authorization": f"Bearer {self.token}"
         }
     
-    def get_customer_info(self, service_id: str, environment_id: str, namespace: str) -> CustomerInfo:
+    def get_customer_info(self, namespace: str) -> CustomerInfo:
         """Extract customer info from instance details
         
-        Uses ListAllResourceInstances API filtered by instance ID (namespace).
-        This approach is more efficient than the previous subscription-based filtering.
-        """
-        # List all resource instances to find the one matching namespace
-        response = requests.get(
-            f"{self.api_url}/resource-instance",
-            headers=self._get_headers(),
-            timeout=30,
-            verify=self.verify_ssl
-        )
-        response.raise_for_status()
-        instances = response.json().get("resourceInstances", [])
+        The namespace parameter is the instance ID (e.g., instance-ljsr6b3gz).
+        In Omnistrate's model:
+        - Instance ID (namespace) uniquely identifies a deployed resource
+        - Each instance belongs to a subscription
+        - Each subscription has an owner (user)
         
-        # Find the instance matching the namespace (instance ID)
-        instance_data = None
-        for instance in instances:
-            if instance.get("id") == namespace:
-                instance_data = instance
+        We query the Fleet API to find the instance matching this ID,
+        then extract the subscription ID and owner info.
+        """
+        if not self.service_id or not self.environment_id:
+            raise ValueError("service_id and environment_id are required for customer info retrieval")
+        
+        # Get instances with pagination - search each page and return early when match found
+        fleet_url = f"{self.api_url}/fleet/service/{self.service_id}/environment/{self.environment_id}/instances"
+        params = {
+            "Filter": "excludeCloudAccounts",
+            "ExcludeDetail": "false",  # We need full details to get subscription info
+            "pageSize": 100  # Request 100 instances per page
+        }
+        
+        matching_instance = None
+        next_page_token = None
+        
+        # Loop through pages until instance is found or no more pages
+        while True:
+            # Add nextPageToken to params if we have one
+            if next_page_token:
+                params["nextPageToken"] = next_page_token
+            
+            response = requests.get(
+                fleet_url,
+                params=params,
+                headers=self._get_headers(),
+                timeout=30,
+                verify=self.verify_ssl
+            )
+            response.raise_for_status()
+            response_data = response.json()
+            page_instances = response_data.get("resourceInstances", [])
+            
+            # Search this page for matching instance
+            # The instance ID is nested in consumptionResourceInstanceResult.id
+            for instance in page_instances:
+                # Extract instance ID from nested structure
+                nested_result = instance.get("consumptionResourceInstanceResult")
+                if nested_result and isinstance(nested_result, dict):
+                    instance_id = nested_result.get("id", "")
+                else:
+                    instance_id = ""
+                
+                # Direct match on instance ID (which is the namespace)
+                if instance_id == namespace:
+                    matching_instance = instance
+                    break
+            
+            # If found, stop searching
+            if matching_instance:
+                break
+            
+            # Check for next page
+            next_page_token = response_data.get("nextPageToken")
+            if not next_page_token:
+                # No more pages and instance not found
                 break
         
-        if not instance_data:
-            return CustomerInfo(
-                email='unknown@unknown.com',
-                name='Unknown Customer',
-                subscription_id=namespace
+        if not matching_instance:
+            print(f"❌ ERROR: Instance not found with ID/namespace: {namespace}", file=sys.stderr)
+            raise ValueError(f"Instance not found for instance ID/namespace: {namespace}")
+        
+        # Extract subscription owner info from the instance
+        subscription_id = matching_instance.get("subscriptionId", "")
+        subscription_owner_name = matching_instance.get("subscriptionOwnerName", "Unknown")
+        
+        # Get users with pagination - search each page and return early when match found
+        users_url = f"{self.api_url}/fleet/users"
+        users_params = {
+            "pageSize": 100  # Request 100 users per page
+        }
+        
+        next_page_token = None
+        
+        # Loop through pages until user is found or no more pages
+        while True:
+            # Add nextPageToken to params if we have one
+            if next_page_token:
+                users_params["nextPageToken"] = next_page_token
+            
+            users_response = requests.get(
+                users_url,
+                params=users_params,
+                headers=self._get_headers(),
+                timeout=30,
+                verify=self.verify_ssl
             )
+            users_response.raise_for_status()
+            users_data = users_response.json()
+            page_users = users_data.get("users", [])
+            
+            # Search this page for matching user
+            for user in page_users:
+                user_name = user.get("userName")
+                if user_name == subscription_owner_name:
+                    email = user.get('email', 'unknown@unknown.com')
+                    return CustomerInfo(
+                        email=email,
+                        name=subscription_owner_name,
+                        subscription_id=subscription_id
+                    )
+            
+            # Check for next page
+            next_page_token = users_data.get("nextPageToken")
+            if not next_page_token:
+                # No more pages and user not found
+                break
         
-        # Extract owner info from instance data
-        subscription_owner_name = instance_data.get("createdByUserName", "Unknown")
-        subscription_owner_id = instance_data.get("createdByUserId")
-        subscription_id = instance_data.get("subscriptionId", namespace)
-        
-        if not subscription_owner_id:
-            return CustomerInfo(
-                email='unknown@unknown.com',
-                name=subscription_owner_name,
-                subscription_id=subscription_id
-            )
-        
-        # Get customer email using owner ID
-        user_response = requests.get(
-            f"{self.api_url}/user/{subscription_owner_id}",
-            headers=self._get_headers(),
-            timeout=30,
-            verify=self.verify_ssl
-        )
-        user_response.raise_for_status()
-        user_data = user_response.json()
-        
+        # If user not found in any page (likely internal team member)
+        # Use synthetic email as fallback to avoid script failure
+        print(f"⚠️ WARNING: User '{subscription_owner_name}' not found in Fleet users API", file=sys.stderr)
+        print(f"   This is likely an internal team member. Using synthetic email as fallback.", file=sys.stderr)
+        synthetic_email = f"{subscription_owner_name}@internal.falkordb.com"
         return CustomerInfo(
-            email=user_data.get('email', 'unknown@unknown.com'),
+            email=synthetic_email,
             name=subscription_owner_name,
             subscription_id=subscription_id
         )
@@ -168,20 +359,21 @@ class VMAauthClient:
         self.auth = (username, password)
         self.verify_ssl = verify_ssl
     
-    def get_logs(self, namespace: str, pod: str, container: str, hours: int = 24) -> str:
-        """Fetch logs from VictoriaLogs"""
+    def get_logs(self, namespace: str, pod: str, container: str, hours: float = 7/60) -> str:
+        """Fetch logs from VictoriaLogs (default: last 7 minutes)"""
         # Calculate time range
         end_time = datetime.now(timezone.utc)
         start_time = end_time - timedelta(hours=hours)
         
         # Build LogsQL query
-        query = f'{{namespace="{namespace}", pod=~"{pod}.*", container="{container}"}}'
+        # Use exact match for pod name (pod="...") instead of regex (pod=~"...")
+        query = f'{{namespace="{namespace}", pod="{pod}", container="{container}"}}'
         
         params = {
             'query': query,
             'start': int(start_time.timestamp() * 1000000000),  # nanoseconds
             'end': int(end_time.timestamp() * 1000000000),
-            'limit': 10000
+            'limit': 50000
         }
         
         response = requests.get(
@@ -204,38 +396,24 @@ class VMAauthClient:
         
         # Parse response - VictoriaLogs returns newline-delimited JSON (NDJSON)
         logs = []
+        lines = response.text.strip().split('\n')
         
-        for line in response.text.strip().split('\n'):
+        for line in lines:
             if not line:
                 continue
             try:
                 data = json.loads(line)
-                
-                # VictoriaLogs returns _msg directly in each JSON object
                 msg = data.get('_msg', '')
                 if msg:
                     logs.append(msg)
-            except json.JSONDecodeError as e:
-                # Skip malformed lines
-                print(f"Warning: Failed to parse log line: {e}", file=sys.stderr)
+            except json.JSONDecodeError:
                 continue
         
         result = '\n'.join(logs)
+        if len(logs) > 0:
+            print(f"   Retrieved {len(logs)} log lines", file=sys.stderr)
+        
         if not result:
-            # Check if debug mode is enabled via environment variable
-            debug_enabled = os.environ.get('DEBUG', 'false').lower() == 'true'
-            
-            print(f"DEBUG: Empty result. Response status: {response.status_code}, length: {len(response.text)} bytes")
-            
-            if debug_enabled:
-                # Only print full response in debug mode
-                print(f"DEBUG: Full response text:\n{response.text}")
-            else:
-                # Print truncated response (first 200 chars) for safety
-                truncated = response.text[:200] + '...' if len(response.text) > 200 else response.text
-                print(f"DEBUG: Response preview (first 200 chars): {truncated}")
-                print("DEBUG: Set DEBUG=true environment variable to see full response")
-            
             raise ValueError("No logs retrieved from VictoriaLogs. Check query parameters and data availability.")
         return result
 
@@ -248,39 +426,53 @@ class CrashAnalyzer:
         """Parse crash logs and extract summary"""
         lines = logs.split('\n')
         
-        # Extract stack traces - try multiple formats
+        # Find the crashing thread (marked with ' *' at the end of thread name line)
+        # This ensures we extract stack traces from the actual crashing thread only
+        crashing_thread_idx = -1
+        for i, line in enumerate(lines):
+            # Look for thread identifier lines ending with ' *'
+            if re.search(r'^\d+\s+\S.*\s+\*\s*$', line.strip()) or \
+               line.strip().endswith('thread-pool-thr *') or \
+               line.strip().endswith('redis-server *'):
+                crashing_thread_idx = i
+                break
+        
+        # Extract stack traces from the crashing thread
         stack_traces = []
         
-        # Pattern 1: FalkorDB module format: /var/lib/falkordb/bin/falkordb.so(AlgebraicExpression_Dest+0x4)[0x7fae4dd95664]
-        falkordb_pattern = re.compile(r'/var/lib/falkordb/[^(]+\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
-        for line in lines:
-            if '/var/lib/falkordb/' in line and '(' in line:
-                matches = falkordb_pattern.findall(line)
-                for func in matches:
-                    if func and func not in ['_start', '_libc_start_main']:
-                        stack_traces.append(func)
+        if crashing_thread_idx >= 0:
+            # Extract stack frames from the crashing thread until we hit the next thread or end
+            hex_address_pattern = re.compile(r'\[0x[0-9a-fA-F]+\]')
+            for i in range(crashing_thread_idx + 1, len(lines)):
+                line = lines[i]
+                
+                # Stop if we hit the next thread marker or end of stack trace section
+                if re.search(r'^\d+\s+\S', line.strip()) or \
+                   '--- STACK TRACE DONE ---' in line or \
+                   '--- REGISTERS ---' in line or \
+                   'expected stacktraces' in line:
+                    break
+                
+                # Extract stack trace lines with hex addresses
+                if hex_address_pattern.search(line) and ('/' in line or 'redis-server' in line):
+                    trace_line = line.strip()
+                    # Remove timestamp prefix if present
+                    if 'stdout F' in trace_line:
+                        trace_line = trace_line.split('stdout F', 1)[1].strip()
+                    if trace_line and len(trace_line) > 10:
+                        stack_traces.append(trace_line)
         
-        # Pattern 2: Redis crash stack trace format: redis-server *:6379(debugCommand+0x244)[0xaaaab1e89984]
+        # Fallback: If we couldn't find crashing thread, try extracting from all threads
+        # This maintains backward compatibility
         if not stack_traces:
-            redis_stack_pattern = re.compile(r'redis-server[^(]*\(([^+)]+)(?:\+0x[0-9a-f]+)?\)')
+            hex_address_pattern = re.compile(r'\[0x[0-9a-fA-F]+\]')
             for line in lines:
-                if 'redis-server' in line and '(' in line:
-                    matches = redis_stack_pattern.findall(line)
-                    for func in matches:
-                        if func and func not in ['_start', '_libc_start_main']:
-                            stack_traces.append(func)
-        
-        # Pattern 3: Generic file:line format
-        if not stack_traces:
-            file_pattern = re.compile(r'([a-zA-Z0-9_/.-]+\.[ch]:?\d+)(?:\s+\(?(\w+)\)?)?')
-            for line in lines:
-                matches = file_pattern.findall(line)
-                for match in matches:
-                    location, function = match
-                    if function:
-                        stack_traces.append(f"{location} ({function})")
-                    else:
-                        stack_traces.append(location)
+                if hex_address_pattern.search(line) and ('/' in line or 'redis-server' in line):
+                    trace_line = line.strip()
+                    if 'stdout F' in trace_line:
+                        trace_line = trace_line.split('stdout F', 1)[1].strip()
+                    if trace_line and len(trace_line) > 10:
+                        stack_traces.append(trace_line)
         
         # Get top 3 unique stack traces
         unique_stacks = []
@@ -292,9 +484,9 @@ class CrashAnalyzer:
                 if len(unique_stacks) >= 3:
                     break
         
-        # Pad with "N/A" if less than 3
-        while len(unique_stacks) < 3:
-            unique_stacks.append("N/A")
+        # If no stack traces found, use single N/A
+        if not unique_stacks:
+            unique_stacks = ["N/A"]
         
         # Extract exit code
         exit_code = "unknown"
@@ -341,7 +533,6 @@ class CrashAnalyzer:
         client_command = "unknown"
         
         # Find the most recent crash dump section to extract command from
-        # Crash dumps are between "=== REDIS BUG REPORT START ===" and "=== REDIS BUG REPORT END ==="
         crash_sections = []
         current_section = []
         in_crash_dump = False
@@ -371,7 +562,7 @@ class CrashAnalyzer:
             if match:
                 query = match.group(1).strip()
                 client_command = f"GRAPH.QUERY {query[:100]}"
-                break  # Can break now since we're only looking in the relevant crash section
+                break
         
         # Pattern 2: Redis client info format: cmd=debug
         if client_command == "unknown":
@@ -408,16 +599,21 @@ class CrashAnalyzer:
                 if client_command != "unknown":
                     break
         
-        return CrashSummary(
+        summary = CrashSummary(
             stack_traces=unique_stacks,
             exit_code=exit_code,
             memory_rss=memory_rss,
             client_command=client_command
         )
+        
+        return summary
 
 
 class GitHubIssueManager:
     """Manages GitHub issues for crash tracking"""
+    
+    # GitHub label name maximum length
+    MAX_LABEL_LENGTH = 50
     
     def __init__(self, token: str, repo: str, project_id: Optional[str] = None):
         self.token = token
@@ -430,8 +626,49 @@ class GitHubIssueManager:
         })
         self.api_url = "https://api.github.com"
     
+    @staticmethod
+    def _make_safe_label(prefix: str, value: str) -> str:
+        """Create a GitHub-safe label that fits within the 50-character limit.
+        
+        If the full label would exceed 50 characters, use a hash of the value instead.
+        This ensures labels are unique and trackable while staying within GitHub's limits.
+        
+        Args:
+            prefix: The label prefix (e.g., 'customer', 'namespace')
+            value: The value to include (e.g., email address, namespace name)
+            
+        Returns:
+            A label string that's guaranteed to be <= 50 characters
+            
+        Examples:
+            _make_safe_label('customer', 'short@email.com') -> 'customer:short@email.com'
+            _make_safe_label('customer', 'very-long-email@company.com') -> 'customer:abc123def456...'
+        """
+        full_label = f"{prefix}:{value}"
+        
+        if len(full_label) <= GitHubIssueManager.MAX_LABEL_LENGTH:
+            return full_label
+        
+        # Label is too long, use a hash of the value
+        # Use first 8 characters of SHA256 hash for uniqueness
+        value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:8]
+        label = f"{prefix}:{value_hash}"
+        
+        # Ensure even the hashed version fits (it should always fit)
+        if len(label) > GitHubIssueManager.MAX_LABEL_LENGTH:
+            # Extremely unlikely, but truncate prefix if needed
+            max_prefix_len = GitHubIssueManager.MAX_LABEL_LENGTH - 9  # 9 = ':' + 8-char hash
+            label = f"{prefix[:max_prefix_len]}:{value_hash}"
+        
+        print(f"⚠️  Label '{prefix}:{value}' too long ({len(full_label)} chars), using hash: {label}")
+        return label
+    
     def _ensure_label_exists(self, label: str):
         """Ensure a label exists in the repository, create if it doesn't"""
+        # Validate label length
+        if len(label) > self.MAX_LABEL_LENGTH:
+            raise ValueError(f"Label '{label}' exceeds GitHub's {self.MAX_LABEL_LENGTH} character limit (length: {len(label)})")
+        
         # Check if label exists (URL-encode label for valid path)
         encoded_label = quote(label, safe='')
         response = self.session.get(
@@ -440,23 +677,31 @@ class GitHubIssueManager:
         )
         
         if response.status_code == 404:
-            # Label doesn't exist, create it
-            # Use a default color based on label type
-            color = "d73a4a"  # Red for crash/redis
-            if label.startswith("customer:"):
-                color = "0075ca"  # Blue for customer labels
-            
+            # Label doesn't exist, create it with default color
             create_response = self.session.post(
                 f"{self.api_url}/repos/{self.repo}/labels",
-                json={"name": label, "color": color},
+                json={"name": label, "color": "ededed"},  # Default gray color
                 timeout=30
             )
             
             if create_response.status_code == 201:
                 print(f"Created label: {label}")
             elif create_response.status_code == 422:
-                # Label was created by another process, ignore
-                pass
+                # Check if it's a "label already exists" error or validation error
+                try:
+                    error_data = create_response.json()
+                    errors = error_data.get('errors', [])
+                    # If error mentions "already_exists", it's safe to ignore
+                    if any('already_exists' in str(e).lower() for e in errors):
+                        print(f"Label already exists: {label}")
+                    else:
+                        # Some other validation error - log details and raise
+                        print(f"❌ ERROR: Failed to create label '{label}': {error_data.get('message', 'Unknown error')}" , file=sys.stderr)
+                        print(f"   Errors: {errors}", file=sys.stderr)
+                        create_response.raise_for_status()
+                except (ValueError, KeyError):
+                    # Can't parse error, assume label already exists to be safe
+                    print(f"Label creation returned 422, assuming exists: {label}")
             else:
                 create_response.raise_for_status()
         elif response.status_code == 200:
@@ -467,8 +712,6 @@ class GitHubIssueManager:
     
     def _add_issue_to_project(self, issue_node_id: str):
         """Add issue to GitHub project using GraphQL API"""
-        print(f"DEBUG: _add_issue_to_project called with node_id: {issue_node_id}")
-        print(f"DEBUG: self.project_id = {self.project_id}")
         
         if not self.project_id:
             print("DEBUG: No project_id configured, skipping project linking")
@@ -496,8 +739,6 @@ class GitHubIssueManager:
             timeout=30
         )
         
-        print(f"DEBUG: Project linking response status: {response.status_code}")
-        print(f"DEBUG: Project linking response: {response.text}")
         
         if response.status_code == 200:
             result = response.json()
@@ -521,15 +762,19 @@ class GitHubIssueManager:
         from datetime import timezone
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
         
+        # Use safe label names for search (same as what was used during creation)
+        customer_label = self._make_safe_label('customer', customer_email)
+        namespace_label = self._make_safe_label('namespace', namespace)
+        
         # Get all open issues for this customer and namespace
         params = {
             'state': 'open',
-            'labels': f'customer:{customer_email},namespace:{namespace}',
+            'labels': f'{customer_label},{namespace_label}',
             'per_page': 100
         }
         
         print("\n🔍 Searching for existing issue...")
-        print(f"   Customer: {customer_email}")
+        print(f"   Customer: {mask_email(customer_email)}")
         print(f"   Namespace: {namespace}")
         
         response = self.session.get(
@@ -599,24 +844,23 @@ class GitHubIssueManager:
             exit_code = self._extract_field(text, 'Exit Code')
             client_cmd = self._extract_field(text, 'Client Command')
             
-            # Build existing signature using the same logic as CrashSummary
-            existing_stacks = [stack_1, stack_2, stack_3]
-            meaningful_stacks = [st for st in existing_stacks if st and st != "N/A"]
+            # Build stack traces list (filter out empty/N/A values)
+            existing_stacks = [st for st in [stack_1, stack_2, stack_3] if st and st != "N/A"]
+            if not existing_stacks:
+                existing_stacks = ["N/A"]  # Match CrashSummary default
             
-            # Start with meaningful stacks
-            components = meaningful_stacks.copy()
+            # Create a CrashSummary object and use its signature property
+            # This ensures we use the exact same logic (including normalization) as new crashes
+            existing_crash = CrashSummary(
+                stack_traces=existing_stacks,
+                exit_code=exit_code or "unknown",
+                memory_rss="unknown",  # Not used in signature
+                client_command=client_cmd or "unknown"
+            )
+            existing_sig = existing_crash.signature
             
-            # Add exit_code if it's meaningful (matching CrashSummary.signature)
-            if exit_code and exit_code != "unknown":
-                components.append(exit_code)
-            
-            if client_cmd and client_cmd != "unknown":
-                components.append(client_cmd)
-            
-            existing_sig = "|".join(components)
-            
-            if not existing_sig or existing_sig == exit_code:
-                # Empty or minimal signature, skip
+            if not existing_sig or existing_sig == "unknown":
+                # Empty signature, skip
                 continue
             
             if current_sig == existing_sig:
@@ -648,9 +892,18 @@ class GitHubIssueManager:
         """Create new GitHub issue"""
         title = f"[CRITICAL] Redis Crash: {pod} in {namespace} ({cluster}) - {timestamp}"
         
+        # Format stack traces - handle variable length
+        if crash.stack_traces and crash.stack_traces[0] != "N/A":
+            stack_trace_section = "\n".join([f"**Stack Trace {i+1}:** {trace}" for i, trace in enumerate(crash.stack_traces)])
+        else:
+            stack_trace_section = "**Stack Traces:** N/A (crash occurred too quickly to generate stack trace)"
+        
+        # Mask email for privacy in issue body
+        masked_email = mask_email(customer.email)
+        
         body = f"""## Redis Crash Detected
 
-**Customer:** {customer.name} ({customer.email})
+**Customer:** {customer.name} {customer.email}
 **Subscription ID:** {customer.subscription_id}
 **Pod:** {pod}
 **Container:** {container}
@@ -660,19 +913,21 @@ class GitHubIssueManager:
 
 ### Crash Summary
 
-**Stack Trace 1:** {crash.stack_traces[0]}
-**Stack Trace 2:** {crash.stack_traces[1]}
-**Stack Trace 3:** {crash.stack_traces[2]}
+{stack_trace_section}
 **Exit Code:** {crash.exit_code}
 **Memory RSS:** {crash.memory_rss} bytes
 **Client Command:** {crash.client_command}
 
 **Crash Logs:** [View in Grafana]({log_url})"""
         
+        # Create safe labels that fit within GitHub's 50-character limit
+        customer_label = self._make_safe_label('customer', customer.email)
+        namespace_label = self._make_safe_label('namespace', namespace)
+        
         # Ensure all labels exist before creating the issue
         labels = [
-            f'customer:{customer.email}',
-            f'namespace:{namespace}',
+            customer_label,
+            namespace_label,
             'crash',
             'redis'
         ]
@@ -695,8 +950,6 @@ class GitHubIssueManager:
         issue_number = issue_data['number']
         issue_node_id = issue_data['node_id']
         
-        print(f"DEBUG: Created issue #{issue_number} with node_id: {issue_node_id}")
-        print(f"DEBUG: Project ID configured: {self.project_id}")
         
         # Add issue to project
         self._add_issue_to_project(issue_node_id)
@@ -715,6 +968,12 @@ class GitHubIssueManager:
         timestamp: str
     ):
         """Add comment to existing issue"""
+        # Format stack traces - handle variable length
+        if crash.stack_traces and crash.stack_traces[0] != "N/A":
+            stack_trace_section = "\n".join([f"**Stack Trace {i+1}:** {trace}" for i, trace in enumerate(crash.stack_traces)])
+        else:
+            stack_trace_section = "**Stack Traces:** N/A (crash occurred too quickly to generate stack trace)"
+        
         comment = f"""### Another crash detected at {timestamp}
 
 **Pod:** {pod}
@@ -722,15 +981,22 @@ class GitHubIssueManager:
 **Namespace:** {namespace}
 **Cluster:** {cluster}
 
-**Stack Trace 1:** {crash.stack_traces[0]}
-**Stack Trace 2:** {crash.stack_traces[1]}
-**Stack Trace 3:** {crash.stack_traces[2]}
+{stack_trace_section}
 **Exit Code:** {crash.exit_code}
 **Memory RSS:** {crash.memory_rss} bytes
 **Client Command:** {crash.client_command}
 
 **Crash Logs:** [View in Grafana]({log_url})"""
         
+        response = self.session.post(
+            f"{self.api_url}/repos/{self.repo}/issues/{issue_number}/comments",
+            json={'body': comment},
+            timeout=30
+        )
+        response.raise_for_status()
+    
+    def add_raw_comment(self, issue_number: int, comment: str):
+        """Add a raw text comment to an existing issue"""
         response = self.session.post(
             f"{self.api_url}/repos/{self.repo}/issues/{issue_number}/comments",
             json={'body': comment},
@@ -763,7 +1029,7 @@ class GrafanaLinkGenerator:
         encoded_query = quote(query)
         
         # Construct Grafana explore URL
-        grafana_url = f"{self.base_url}/explore?left=%5B%22{from_ms}%22,%22{to_ms}%22,%22Loki%22,%7B%22expr%22:%22{encoded_query}%22%7D%5D"
+        grafana_url = f"{self.base_url}/explore?left=%5B%22{from_ms}%22,%22{to_ms}%22,%22VictoriaLogs%22,%7B%22expr%22:%22{encoded_query}%22%7D%5D"
         
         return grafana_url
 
@@ -785,7 +1051,7 @@ class GoogleChatNotifier:
     ):
         """Send error notification to Google Chat"""
         payload = {
-            "text": "❌ Redis Crash Handler Failed",
+            "text": "❌ Redis Crash Handler Failed @Roi Lipman @Avi Avni",
             "cards": [{
                 "header": {
                     "title": "❌ Redis Crash Handler Failed",
@@ -819,6 +1085,13 @@ class GoogleChatNotifier:
         except Exception as e:
             print(f"⚠️  Failed to send error notification to Google Chat: {e}", file=sys.stderr)
     
+    @staticmethod
+    def _format_stack_traces_html(stack_traces: list[str]) -> str:
+        """Format stack traces for HTML display"""
+        if not stack_traces or stack_traces[0] == "N/A":
+            return "N/A (crash occurred too quickly)"
+        return "<br>".join(stack_traces)
+    
     def send_notification(
         self,
         customer_email: str,
@@ -832,17 +1105,15 @@ class GoogleChatNotifier:
         is_new_crash_type: bool
     ):
         """Send crash notification to Google Chat"""
-        masked_email = mask_email(customer_email)
-        
         if is_new_crash_type:
             crash_type = "⚠️ Redis Crash (New Type)"
-            subtitle = f"New crash type for {masked_email}"
+            subtitle = f"New crash type for {customer_email}"
         else:
             crash_type = "🚨 Redis Crash (New Issue)"
-            subtitle = f"Customer: {masked_email}"
+            subtitle = f"Customer: {customer_email}"
         
         payload = {
-            "text": crash_type,
+            "text": f"{crash_type} @Roi Lipman @Avi Avni",
             "cards": [{
                 "header": {
                     "title": crash_type,
@@ -851,7 +1122,7 @@ class GoogleChatNotifier:
                 "sections": [
                     {
                         "widgets": [
-                            {"keyValue": {"topLabel": "Customer", "content": masked_email}},
+                            {"keyValue": {"topLabel": "Customer", "content": customer_email}},
                             {"keyValue": {"topLabel": "Cluster", "content": cluster}},
                             {"keyValue": {"topLabel": "Pod", "content": pod}},
                             {"keyValue": {"topLabel": "Namespace", "content": namespace}},
@@ -861,7 +1132,7 @@ class GoogleChatNotifier:
                     {
                         "widgets": [{
                             "textParagraph": {
-                                "text": f"<b>Stack Trace:</b><br><code>{crash.stack_traces[0]}<br>{crash.stack_traces[1]}<br>{crash.stack_traces[2]}</code>"
+                                "text": f"<b>Stack Trace:</b><br><code>{self._format_stack_traces_html(crash.stack_traces)}</code>"
                             }
                         }]
                     },
@@ -910,6 +1181,90 @@ class GoogleChatNotifier:
         except Exception as e:
             print(f"⚠️  Unexpected error sending crash notification to Google Chat: {e}", file=sys.stderr)
 
+    def send_recurring_crash_notification(
+        self,
+        customer_email: str,
+        cluster: str,
+        pod: str,
+        namespace: str,
+        crash: CrashSummary,
+        issue_number: int,
+        issue_repo: str,
+        log_url: str,
+    ):
+        """Send a recurring-crash warning card to Google Chat.
+
+        Called when the exact same crash signature is seen again for an existing
+        issue. Uses a distinct card style (🔁) to differentiate from first-time
+        crash notifications.
+        """
+        payload = {
+            "text": "🔁 Recurring Redis Crash @Roi Lipman @Avi Avni",
+            "cards": [{
+                "header": {
+                    "title": "🔁 Recurring Redis Crash",
+                    "subtitle": f"Same crash seen again for {customer_email}"
+                },
+                "sections": [
+                    {
+                        "widgets": [
+                            {"keyValue": {"topLabel": "Customer", "content": customer_email}},
+                            {"keyValue": {"topLabel": "Cluster", "content": cluster}},
+                            {"keyValue": {"topLabel": "Pod", "content": pod}},
+                            {"keyValue": {"topLabel": "Namespace", "content": namespace}},
+                            {"keyValue": {"topLabel": "Exit Code", "content": crash.exit_code}}
+                        ]
+                    },
+                    {
+                        "widgets": [{
+                            "textParagraph": {
+                                "text": f"<b>Stack Trace:</b><br><code>{self._format_stack_traces_html(crash.stack_traces)}</code>"
+                            }
+                        }]
+                    },
+                    {
+                        "widgets": [{
+                            "buttons": [
+                                {
+                                    "textButton": {
+                                        "text": f"View Issue #{issue_number}",
+                                        "onClick": {
+                                            "openLink": {
+                                                "url": f"https://github.com/{issue_repo}/issues/{issue_number}"
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    "textButton": {
+                                        "text": "View Logs in Grafana",
+                                        "onClick": {
+                                            "openLink": {
+                                                "url": log_url
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }]
+                    }
+                ]
+            }]
+        }
+
+        try:
+            response = requests.post(self.webhook_url, json=payload, timeout=30, verify=self.verify_ssl)
+            response.raise_for_status()
+            return True
+        except requests.RequestException as e:
+            from urllib.parse import urlparse
+            parsed = urlparse(self.webhook_url)
+            redacted_url = f"{parsed.scheme}://{parsed.netloc}/..." if parsed.scheme and parsed.netloc else "[REDACTED]"
+            print(f"⚠️  Failed to send recurring crash notification to Google Chat: {e}", file=sys.stderr)
+            print(f"   Webhook URL: {redacted_url}", file=sys.stderr)
+            print(f"   Payload summary: Issue #{issue_number} for {namespace}", file=sys.stderr)
+            return False
+
 
 def _build_parser():
     """Build argument parser"""
@@ -929,13 +1284,22 @@ def main(args):
     Args:
         args: Parsed command-line arguments from argparse
     """
-    # Configure SSL verification: True for prod (default), False for dev
-    # Set DISABLE_SSL_VERIFY=true in dev environments only
-    verify_ssl = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() != 'true'
+    # Configure SSL verification - disabled in dev environment or when explicitly disabled
+    # By default, SSL verification is enabled unless in dev or explicitly disabled
+    environment = os.environ.get('ENVIRONMENT', 'prod').lower()
+    disable_ssl_verify = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() == 'true'
+    verify_ssl = not (environment == 'dev' or disable_ssl_verify)
+
     if not verify_ssl:
-        # Disable SSL warnings only when verification is explicitly disabled
+        # Disable SSL warnings when verification is disabled
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        print("⚠️  WARNING: SSL verification is DISABLED. Use only in development environments.", file=sys.stderr)
+        reasons = []
+        if environment == 'dev':
+            reasons.append("ENVIRONMENT=dev")
+        if disable_ssl_verify:
+            reasons.append("DISABLE_SSL_VERIFY=true")
+        reason = " and ".join(reasons)
+        print(f"⚠️  WARNING: SSL verification is DISABLED ({reason}). Use only in development environments.", file=sys.stderr)
     
     # Validate required environment variables
     required_env_vars = [
@@ -970,66 +1334,61 @@ def main(args):
     google_chat_webhook = os.environ['GOOGLE_CHAT_WEBHOOK_URL']
     
     # Generate timestamp in Israel timezone
-    timestamp = datetime.now(ZoneInfo('Asia/Jerusalem')).strftime('%Y%m%d-%H%M%S')
+    timestamp = datetime.now(ZoneInfo('Asia/Jerusalem')).strftime('%Y-%m-%d %H:%M:%S')
     
+    print(f"\n{'='*60}")
     print(f"Processing crash for pod {args.pod} in namespace {args.namespace}")
+    print(f"{'='*60}\n")
     
     # Step 1: Extract customer info
-    print("Extracting customer information...")
+    print("\n[1/6] Extracting customer information...")
     try:
-        omnistrate = OmnistrateClient(omnistrate_url, omnistrate_user, omnistrate_pass, verify_ssl=verify_ssl)
-        customer = omnistrate.get_customer_info(service_id, environment_id, args.namespace)
+        omnistrate = OmnistrateClient(omnistrate_url, omnistrate_user, omnistrate_pass, service_id, environment_id, verify_ssl=verify_ssl)
+        customer = omnistrate.get_customer_info(args.namespace)
         print(f"Customer: {customer.name} ({mask_email(customer.email)})")
     except Exception as e:
-        print(f"⚠️  Failed to get customer info: {e}", file=sys.stderr)
-        print("   Continuing with fallback customer info...", file=sys.stderr)
-        # Use fallback customer info instead of stopping
-        customer = CustomerInfo(
-            email='failed-to-retrieve@unknown.com',
-            name='Failed to retrieve customer',
-            subscription_id=args.namespace
-        )
+        print(f"❌ ERROR: Failed to get customer info: {e}", file=sys.stderr)
+        import traceback
+        print(f"DEBUG: Full traceback:\n{traceback.format_exc()}", file=sys.stderr)
+        raise
     
-    # Step 2: Collect logs (last 5 minutes - crash just happened)
-    print("Collecting logs from VictoriaLogs (last 5 minutes)...")
+    # Step 2: Collect logs (last 7 minutes)
+    print("\n[2/6] Collecting logs from VictoriaLogs (last 7 minutes)...")
     try:
         vmauth = VMAauthClient(vmauth_url, vmauth_user, vmauth_pass, verify_ssl=verify_ssl)
-        logs = vmauth.get_logs(args.namespace, args.pod, args.container, hours=5/60)  # 5 minutes
+        logs = vmauth.get_logs(args.namespace, args.pod, args.container, hours=7/60)  # 7 minutes
         print(f"Collected {len(logs)} bytes of logs")
     except Exception as e:
-        print(f"⚠️  Failed to collect logs: {e}", file=sys.stderr)
-        print("   Continuing with empty logs...", file=sys.stderr)
-        # Use empty logs instead of stopping
-        logs = ""
+        print(f"❌ ERROR: Failed to collect logs: {e}", file=sys.stderr)
+        import traceback
+        print(f"DEBUG: Full traceback:\n{traceback.format_exc()}", file=sys.stderr)
+        raise
     
     # Step 3: Parse crash summary
-    print("Analyzing crash...")
+    print("\n[3/6] Analyzing crash...")
     analyzer = CrashAnalyzer()
     crash = analyzer.parse_logs(logs)
     print(f"Exit code: {crash.exit_code}, Stack traces: {len([s for s in crash.stack_traces if s != 'N/A'])}")
     
     # Step 4: Generate Grafana link
-    print("Generating Grafana link...")
+    print("\n[4/6] Generating Grafana link...")
     grafana = GrafanaLinkGenerator(grafana_url)
     log_url = grafana.generate_link(args.namespace, args.pod, args.container, minutes=7)
     print(f"Grafana link: {log_url}")
     
     # Step 5: Check for existing issue and crash duplication
-    print("Checking for existing issue...")
+    print("\n[5/6] Checking for existing issue...")
     github = GitHubIssueManager(github_token, issue_repo, project_id)
     existing_issue, is_same_crash = github.find_or_get_issue(customer.email, args.namespace, crash)
     
     if existing_issue and is_same_crash:
-        # Same crash already reported in this issue - add comment to track occurrences
+        # Same crash already reported in this issue - add brief comment to track occurrences
         print(f"✅ Exact same crash already reported in issue #{existing_issue}")
         print("   Adding comment to track crash occurrence...")
         
         # Add a brief comment to track that this crash happened again
         duplicate_comment = f"**Same crash detected again at {timestamp}**\n\nPod: {args.pod}, Namespace: {args.namespace}, Cluster: {args.cluster}"
-        github.add_comment(
-            existing_issue, crash, args.pod, args.namespace,
-            args.cluster, args.container, log_url, timestamp
-        )
+        github.add_raw_comment(existing_issue, duplicate_comment)
         
         issue_number = existing_issue
         is_duplicate = True
@@ -1055,17 +1414,22 @@ def main(args):
         is_duplicate = False
         is_new_crash_type = False
     
-    # Step 6: Send notification (only for new issues or new crash types, not same crashes)
-    if not is_same_crash:
-        print("Sending Google Chat notification...")
-        notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
+    # Step 6: Send notification
+    print("\n[6/6] Sending notification...")
+    notifier = GoogleChatNotifier(google_chat_webhook, verify_ssl=verify_ssl)
+    if is_same_crash:
+        delivered = notifier.send_recurring_crash_notification(
+            customer.email, args.cluster, args.pod, args.namespace,
+            crash, issue_number, issue_repo, log_url
+        )
+        if delivered:
+            print("Recurring crash notification sent!")
+    else:
         notifier.send_notification(
             customer.email, args.cluster, args.pod, args.namespace,
             crash, issue_number, issue_repo, log_url, is_new_crash_type
         )
         print("Notification sent!")
-    else:
-        print("Skipping Google Chat notification for duplicate crash")
     
     # Output for GitHub Actions
     github_output = os.environ.get('GITHUB_OUTPUT')
@@ -1083,10 +1447,12 @@ def main(args):
             f.write(f"cluster={args.cluster}\n")
     else:
         # Fallback for local testing or older GitHub Actions
-        print(f"\nIssue: #{issue_number}, Duplicate: {is_duplicate}, Customer: {customer.email}")
+        print(f"\nIssue: #{issue_number}, Duplicate: {is_duplicate}, Customer: {mask_email(customer.email)}")
         print(f"Namespace: {args.namespace}, Pod: {args.pod}, Cluster: {args.cluster}")
     
-    print("\n✅ Crash handling complete!")
+    print(f"\n{'='*60}")
+    print("✅ Crash handling complete!")
+    print(f"{'='*60}")
 
 
 if __name__ == '__main__':
@@ -1109,8 +1475,10 @@ if __name__ == '__main__':
         # Get Google Chat webhook early for error notifications
         google_chat_webhook = os.environ.get('GOOGLE_CHAT_WEBHOOK_URL')
         
-        # Configure SSL verification
-        verify_ssl = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() != 'true'
+        # Configure SSL verification - must match logic in main()
+        environment = os.environ.get('ENVIRONMENT', 'prod').lower()
+        disable_ssl_verify = os.environ.get('DISABLE_SSL_VERIFY', 'false').lower() == 'true'
+        verify_ssl = not (environment == 'dev' or disable_ssl_verify)
         
         main(args)
     except Exception as e:

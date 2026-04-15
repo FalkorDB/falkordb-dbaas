@@ -55,5 +55,16 @@ spec:
         server: https://kubernetes.default.svc
         namespace: observability
       syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
         syncOptions:
           - CreateNamespace=true
+          - RespectIgnoreDifferences=true
+      ignoreDifferences:
+        - group: ""
+          kind: Secret
+          name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-vmuser'
+          namespace: observability
+          jsonPointers:
+            - /data

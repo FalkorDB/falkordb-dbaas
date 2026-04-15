@@ -15,7 +15,6 @@ export const mockGCPCluster: Cluster = {
     'certificate-authority-data': 'mock-ca-data',
     token: 'mock-token',
   },
-  organizationId: 'org-123',
 };
 
 export const mockAWSCluster: Cluster = {
@@ -29,7 +28,6 @@ export const mockAWSCluster: Cluster = {
     'certificate-authority-data': 'mock-ca-data',
     token: 'mock-token',
   },
-  organizationId: 'org-123',
 };
 
 export const mockBYOACluster: Cluster = {
@@ -38,8 +36,6 @@ export const mockBYOACluster: Cluster = {
   cloud: 'gcp',
   region: 'us-west1',
   hostMode: 'byoa',
-  destinationAccountID: 'customer-project-123',
-  destinationAccountNumber: '123456789012',
   secretConfig: {
     server: 'https://byoa-cluster-endpoint.com',
     'certificate-authority-data': 'mock-ca-data',
@@ -47,7 +43,6 @@ export const mockBYOACluster: Cluster = {
     'client-certificate-data': 'mock-client-cert',
     'client-key-data': 'mock-client-key',
   },
-  organizationId: 'org-789',
 };
 
 export const mockAzureCluster: Cluster = {
@@ -61,7 +56,6 @@ export const mockAzureCluster: Cluster = {
     'certificate-authority-data': 'mock-ca-data',
     token: 'mock-token',
   },
-  organizationId: 'org-123',
 };
 
 export const mockBastionCluster: Cluster = {
@@ -75,5 +69,4 @@ export const mockBastionCluster: Cluster = {
     'certificate-authority-data': 'mock-ca-data',
     token: 'mock-token',
   },
-  organizationId: 'org-bastion',
 };

@@ -1,0 +1,98 @@
+name: OOM Handler
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      pod:
+        description: 'Pod name'
+        required: true
+        type: string
+      namespace:
+        description: 'Namespace (instance ID)'
+        required: true
+        type: string
+      cluster:
+        description: 'Cluster name'
+        required: true
+        type: string
+      container:
+        description: 'Container that was OOMKilled'
+        required: true
+        type: string
+      grafana_url:
+        description: 'Grafana base URL'
+        required: true
+        type: string
+      environment:
+        description: 'Environment (dev or prod)'
+        required: true
+        type: string
+      test:
+        description: 'Allow testing on dev environment'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  log-dev-oom:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.environment == 'dev' && !inputs.test }}
+    steps:
+      - name: Log dev environment OOM
+        run: |
+          echo "Environment is 'dev' — OOMKilled event noted."
+          echo "Pod: ${{ inputs.pod }}, Namespace: ${{ inputs.namespace }}, Container: ${{ inputs.container }}"
+
+  analyze-oom:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.environment != 'dev' || inputs.test }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Set environment-specific variables
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          OMNISTRATE_DEV_ENV: ${{ vars.OMNISTRATE_INTERNAL_DEV_ENVIRONMENT }}
+          OMNISTRATE_PROD_ENV: ${{ vars.OMNISTRATE_INTERNAL_PROD_ENVIRONMENT }}
+        run: |
+          if [ "$ENVIRONMENT" = "dev" ]; then
+            echo "OMNISTRATE_ENVIRONMENT_ID=$OMNISTRATE_DEV_ENV" >> $GITHUB_ENV
+          else
+            echo "OMNISTRATE_ENVIRONMENT_ID=$OMNISTRATE_PROD_ENV" >> $GITHUB_ENV
+          fi
+
+      - name: Run OOM handler
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          OMNISTRATE_API_URL: "https://api.omnistrate.cloud/2022-09-01-00/"
+          OMNISTRATE_USERNAME: ${{ secrets.OMNISTRATE_USERNAME }}
+          OMNISTRATE_PASSWORD: ${{ secrets.OMNISTRATE_PASSWORD }}
+          OMNISTRATE_SERVICE_ID: ${{ vars.OMNISTRATE_INTERNAL_SERVICE_ID }}
+          OMNISTRATE_ENVIRONMENT_ID: ${{ env.OMNISTRATE_ENVIRONMENT_ID }}
+          GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL_PRODUCTION_CHAT }}
+          POD: ${{ inputs.pod }}
+          NAMESPACE: ${{ inputs.namespace }}
+          CLUSTER: ${{ inputs.cluster }}
+          CONTAINER: ${{ inputs.container }}
+          GRAFANA_URL: ${{ inputs.grafana_url }}
+        run: |
+          python ./scripts/oom_handler.py \
+            --pod "$POD" \
+            --namespace "$NAMESPACE" \
+            --cluster "$CLUSTER" \
+            --container "$CONTAINER" \
+            --grafana-url "$GRAFANA_URL"

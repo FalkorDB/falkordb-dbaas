@@ -15,9 +15,11 @@
   "keywords": [],
   "author": "",
   "license": "SSPL",
-  "packageManager": "pnpm@8.7.1",
+  "packageManager": "pnpm@8.15.9+sha512.499434c9d8fdd1a2794ebf4552b3b25c0a633abcee5bb15e7b5de90f32f47b513aca98cd5cfd001c31f0db454bc3804edccd578501e4ca293a6816166bbd9f81",
   "pnpm": {
     "overrides": {
+      "bullmq@>=5.69.3": "5.69.2",
+      "ioredis@>=5.9.3": "5.9.2",
       "follow-redirects@<=1.15.5": ">=1.15.6",
       "follow-redirects@<1.15.9": ">=1.15.9",
       "tar@<6.2.1": ">=6.2.1",

@@ -7,7 +7,9 @@ metadata:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/configuration-snippet: |
-      rewrite ^/v1/customer-ldap(/|$)(.*) /v1/$2 break;
+      if ($uri !~ "^/v1/customer-ldap/queues(/|$)") {
+        rewrite ^/v1/customer-ldap(/|$)(.*) /v1/$2 break;
+      }
 spec:
   ingressClassName: nginx
   tls:

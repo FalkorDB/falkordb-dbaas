@@ -15,6 +15,10 @@ backend.conf
 !.env.example
 .secrets
 
+# CSV files may contain sensitive user data (passwords, credentials)
+*.csv
+!*.example.csv
+
 
 node_modules
 dist
