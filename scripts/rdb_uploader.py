@@ -292,13 +292,21 @@ def main() -> None:
         print("  dump.rdb uploaded successfully.")
 
         if aof_enabled:
-            print("  Snapshotting appendonlydir on pod...")
-            kubectl_exec(args.namespace, args.pod, args.container, [
-                "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
-            ])
-            print("  Archiving and uploading AOF...")
             aof_upload_failed = False
             try:
+                print("  Snapshotting appendonlydir on pod...")
+                try:
+                    kubectl_exec(args.namespace, args.pod, args.container, [
+                        "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
+                    ])
+                except RuntimeError:
+                    print("  ⚠️  cp failed, checking pod status before retry...")
+                    kubectl_wait_pod_ready(args.namespace, args.pod)
+                    print("  Retrying cp...")
+                    kubectl_exec(args.namespace, args.pod, args.container, [
+                        "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
+                    ])
+                print("  Archiving and uploading AOF...")
                 try:
                     kubectl_exec(args.namespace, args.pod, args.container, [
                         "tar", "-czf", "/data/appendonlydir.tar.gz",
