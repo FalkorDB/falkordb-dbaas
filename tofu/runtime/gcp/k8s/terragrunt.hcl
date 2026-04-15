@@ -13,7 +13,7 @@ generate "backend" {
     terraform {
       backend "gcs" {
         bucket = "${include.root.locals.tf_state_bucket}"
-        prefix = "gcp/observability_stack/control_plane/k8s"
+        prefix = "observability_stack_control_plane_k8s"
       }
     }
   EOF
