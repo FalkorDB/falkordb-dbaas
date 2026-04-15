@@ -45,6 +45,8 @@ jobs:
       TF_OMNISTRATE_ENVIRONMENT_ID: ${{ secrets.TF_OMNISTRATE_ENVIRONMENT_ID }}
       TF_AZURE_SUBSCRIPTION_ID: ${{ secrets.TF_AZURE_SUBSCRIPTION_ID }}
       TF_AZURE_TENANT_ID: ${{ secrets.TF_AZURE_TENANT_ID }}
+      # Tell Terragrunt to use the OpenTofu binary instead of the default 'terraform'
+      TERRAGRUNT_TFPATH: tofu
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -55,10 +57,12 @@ jobs:
       - name: Install Terragrunt
         run: |
           TG_VERSION="0.77.19"
+          mkdir -p "$HOME/.local/bin"
           curl -sSfL "https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64" \
-            -o /usr/local/bin/terragrunt
-          chmod +x /usr/local/bin/terragrunt
-          terragrunt --version
+            -o "$HOME/.local/bin/terragrunt"
+          chmod +x "$HOME/.local/bin/terragrunt"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/terragrunt" --version
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
