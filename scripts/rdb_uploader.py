@@ -136,6 +136,11 @@ def kubectl_exec_output(
     result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=_KUBECTL_TIMEOUT)
     if result.returncode != 0:
         print(f"  ⚠️  Command exited with code {result.returncode}")
+        stderr_snippet = (result.stderr or "").strip()
+        if stderr_snippet:
+            if len(stderr_snippet) > 300:
+                stderr_snippet = f"{stderr_snippet[:300]}..."
+            print(f"  stderr: {stderr_snippet}")
         return None
     return result.stdout
 
