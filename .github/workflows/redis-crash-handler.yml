@@ -170,3 +170,4 @@ jobs:
       environment: ${{ inputs.environment }}
       rdb_url: ${{ needs.upload-rdb.outputs.rdb_url }}
       aof_url: ${{ needs.upload-rdb.outputs.aof_url }}
+      falkordb_version: ${{ needs.upload-rdb.outputs.falkordb_version }}
