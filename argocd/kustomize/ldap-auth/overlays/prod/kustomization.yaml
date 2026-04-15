@@ -53,10 +53,10 @@ patches:
     patch: |-
       - op: replace
         path: /spec/minReplicas
-        value: 1
+        value: 2
       - op: replace
         path: /spec/maxReplicas
-        value: 2
+        value: 3
   - target:
       kind: ConfigMap
       name: ldap-auth-config
@@ -81,6 +81,28 @@ patches:
       - op: add
         path: /spec/dnsNames/-
         value: "localhost"
+  - target:
+      kind: Service
+      name: ldap-auth-service
+    patch: |-
+      - op: add
+        path: /spec/ports/-
+        value:
+          name: ldaps
+          port: 3390
+          targetPort: ldap
+          protocol: TCP
+  - target:
+      kind: Service
+      name: ldap-auth-headless
+    patch: |-
+      - op: add
+        path: /spec/ports/-
+        value:
+          name: ldaps
+          port: 3390
+          targetPort: ldap
+          protocol: TCP
 
 patchesStrategicMerge:
   - |-
