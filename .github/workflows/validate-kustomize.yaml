@@ -1,38 +1,41 @@
 name: Validate Kustomize
 
 on:
-  pull_request:
-    paths:
-      - 'argocd/kustomize/**'
-      - .github/workflows/validate-kustomize.yaml
-  push:
-    paths:
-      - 'argocd/kustomize/**'
-      - .github/workflows/validate-kustomize.yaml
+    pull_request:
+        paths:
+            - "argocd/kustomize/**"
+            - .github/workflows/validate-kustomize.yaml
+    push:
+        paths:
+            - "argocd/kustomize/**"
+            - .github/workflows/validate-kustomize.yaml
+
+permissions:
+    contents: read
 
 jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+    validate:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@776cee7c27a1d728feb33e4c6f5028bcc0b2fc90 # v4
+            - name: Set up kubectl
+              uses: azure/setup-kubectl@829323503d1be3d00ca8346e5391ca0b07a9ab0d # v4
 
-      - name: Validate all kustomize overlays
-        run: |
-          set -euo pipefail
-          failed=0
-          for overlay in argocd/kustomize/*/overlays/*/; do
-            echo "Validating $overlay ..."
-            if ! kubectl kustomize "$overlay" > /dev/null; then
-              echo "FAILED: $overlay"
-              failed=1
-            fi
-          done
-          if [ "$failed" -ne 0 ]; then
-            echo "One or more kustomize overlays failed validation."
-            exit 1
-          fi
-          echo "All overlays validated successfully."
+            - name: Validate all kustomize overlays
+              run: |
+                  set -euo pipefail
+                  failed=0
+                  for overlay in argocd/kustomize/*/overlays/*/; do
+                    echo "Validating $overlay ..."
+                    if ! kubectl kustomize "$overlay" > /dev/null; then
+                      echo "FAILED: $overlay"
+                      failed=1
+                    fi
+                  done
+                  if [ "$failed" -ne 0 ]; then
+                    echo "One or more kustomize overlays failed validation."
+                    exit 1
+                  fi
+                  echo "All overlays validated successfully."
