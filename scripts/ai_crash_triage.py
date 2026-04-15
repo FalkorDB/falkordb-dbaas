@@ -92,7 +92,9 @@ After completing your analysis, output EXACTLY this structured report:
 and what specifically could cause this crash type]
 
 ### Related Issues
-[List any related GitHub issues found, with URLs and relevance]
+[List any related GitHub issues and PRs found, with URLs.
+For each, include the status in brackets: [open], [closed], [merged].
+Example: [FalkorDB/FalkorDB#1234](url) [merged] — description]
 
 ### Previous Crash History
 [Summary of previous crashes for this namespace/signature if any.
@@ -102,12 +104,17 @@ What new evidence does this occurrence add?]
 [Whether reproduction was attempted, succeeded, and what was observed]
 
 ### Root Cause Hypothesis
-[Your best theory for why this crash happens, with supporting evidence.
-Rate confidence: High / Medium / Low]
+[Your best theory for why this crash happens, with supporting evidence.]
+
+**Confidence:** [High / Medium / Low] — [one-sentence justification for the confidence level]
+
+**Status:** [New bug / Known issue (link) / Fixed in (version/PR link) but not deployed]
 
 ### Suggested Fix
 [Specific code change suggestion if you have enough evidence.
-File, function, and what to change.]
+File, function, and what to change.
+SKIP this section if the bug is already fixed in a merged PR — instead,
+state which PR/version contains the fix and recommend upgrading.]
 
 ### Recommended Next Steps
 [Ordered list of what the team should do next]
@@ -164,9 +171,11 @@ Start with Step 1: fetch the crash logs for this pod/namespace, then proceed thr
 
 def _post_report_to_issue(report: str, issue_number: int, issue_repo: str):
     """Post the triage report as a comment on the GitHub issue."""
-    token = os.environ.get("GITHUB_TOKEN", "")
+    # Prefer PRIVATE_REPO_TOKEN (PAT with cross-repo access) for posting
+    # to FalkorDB/private; fall back to GITHUB_TOKEN if unavailable.
+    token = os.environ.get("PRIVATE_REPO_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
     if not token:
-        print("WARNING: GITHUB_TOKEN not set, cannot post report to issue", file=sys.stderr)
+        print("WARNING: No token available, cannot post report to issue", file=sys.stderr)
         print(report)
         return
 
