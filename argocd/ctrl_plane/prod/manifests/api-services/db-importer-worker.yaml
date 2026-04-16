@@ -17,7 +17,7 @@ spec:
       serviceAccountName: db-exporter-sa
       containers:
         - name: db-importer-worker
-          image: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer-worker:1.0.0
+          image: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer-worker:1.0.1
           imagePullPolicy: Always
           ports:
             - containerPort: 3001
