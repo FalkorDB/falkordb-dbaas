@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: wazuh-rules-kustomization
+namespace: security
+resources:
+  - wazuh-custom-rules.yaml
+  - wazuh-dashboard-soc2.yaml

@@ -49,3 +49,8 @@ variable "omnistrate_environment_id" {
   description = "Omnistrate environment ID used to tag the alert-reaction workflow."
 }
 
+variable "spoke_nat_cidrs" {
+  type        = list(string)
+  description = "NAT gateway CIDRs of spoke clusters allowed to reach the Wazuh Manager. Each entry should be a /32 or CIDR of the spoke's NAT IP."
+  default     = []
+}

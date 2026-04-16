@@ -1,0 +1,119 @@
+# Custom Wazuh rules for SOC 2 compliance monitoring.
+#
+# Deployed as a ConfigMap and mounted into the Wazuh Manager container
+# at /var/ossec/etc/rules/local_rules.xml.
+#
+# Rule groups:
+#   prowler_compliance  — Triggers on Prowler FAIL results pushed via syslog
+#   fim_critical        — High-severity FIM alerts for SOC 2 CC6.1
+#   soc2_auth           — Authentication anomaly detection for SOC 2 CC6.1/CC6.2
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wazuh-custom-rules
+  namespace: security
+  labels:
+    app: wazuh
+    component: rules
+data:
+  local_rules.xml: |
+    <!-- SOC 2 Evidence Engine — Custom Rules -->
+    <group name="prowler_compliance,soc2">
+
+      <!-- ====================================================
+           Prowler Compliance FAIL Detection
+           Matches JSON log lines from Prowler results containing
+           "Status": "FAIL" that are forwarded via syslog or API.
+           ==================================================== -->
+
+      <!-- Base rule: any Prowler result ingested -->
+      <rule id="100100" level="3">
+        <decoded_as>json</decoded_as>
+        <field name="Provider">\.+</field>
+        <field name="Status">\.+</field>
+        <description>Prowler compliance check result received.</description>
+        <group>prowler_compliance</group>
+      </rule>
+
+      <!-- Prowler FAIL — triggers Slack notification (level ≥ 10) -->
+      <rule id="100101" level="10">
+        <if_sid>100100</if_sid>
+        <field name="Status">FAIL</field>
+        <description>Prowler SOC 2 compliance check FAILED: $(CheckTitle) — $(StatusExtended)</description>
+        <group>prowler_compliance,soc2_fail</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- Prowler FAIL — critical severity -->
+      <rule id="100102" level="13">
+        <if_sid>100101</if_sid>
+        <field name="Severity">critical</field>
+        <description>CRITICAL Prowler SOC 2 failure: $(CheckTitle) — $(StatusExtended)</description>
+        <group>prowler_compliance,soc2_fail,soc2_critical</group>
+      </rule>
+
+      <!-- Prowler FAIL — high severity -->
+      <rule id="100103" level="12">
+        <if_sid>100101</if_sid>
+        <field name="Severity">high</field>
+        <description>HIGH Prowler SOC 2 failure: $(CheckTitle) — $(StatusExtended)</description>
+        <group>prowler_compliance,soc2_fail</group>
+      </rule>
+
+    </group>
+
+    <group name="fim_critical,soc2">
+
+      <!-- ====================================================
+           File Integrity Monitoring — SOC 2 CC6.1
+           Elevated alerts for changes to critical system files.
+           ==================================================== -->
+
+      <!-- /etc/passwd or /etc/shadow modification -->
+      <rule id="100200" level="12">
+        <if_group>syscheck</if_group>
+        <match>/etc/passwd|/etc/shadow|/etc/group</match>
+        <description>SOC 2 CC6.1: Critical authentication file modified — $(file)</description>
+        <group>fim_critical,soc2_cc6</group>
+      </rule>
+
+      <!-- SSH configuration change -->
+      <rule id="100201" level="11">
+        <if_group>syscheck</if_group>
+        <match>/etc/ssh/sshd_config</match>
+        <description>SOC 2 CC6.1: SSH daemon configuration modified.</description>
+        <group>fim_critical,soc2_cc6</group>
+      </rule>
+
+      <!-- Kubernetes PKI certificate change -->
+      <rule id="100202" level="12">
+        <if_group>syscheck</if_group>
+        <match>/etc/kubernetes/pki</match>
+        <description>SOC 2 CC6.1: Kubernetes PKI certificate modified — $(file)</description>
+        <group>fim_critical,soc2_cc6</group>
+      </rule>
+
+    </group>
+
+    <group name="soc2_auth">
+
+      <!-- ====================================================
+           Authentication Anomaly Detection — SOC 2 CC6.1/CC6.2
+           ==================================================== -->
+
+      <!-- Brute-force SSH detection (8+ failures in 120s) -->
+      <rule id="100300" level="12" frequency="8" timeframe="120">
+        <if_matched_sid>5710</if_matched_sid>
+        <description>SOC 2 CC6.2: Possible SSH brute-force attack (8+ failures in 2 min).</description>
+        <group>soc2_auth,authentication_failures</group>
+      </rule>
+
+      <!-- Root/sudo escalation outside maintenance window -->
+      <rule id="100301" level="11">
+        <if_sid>5402</if_sid>
+        <time>02:00-22:00</time>
+        <description>SOC 2 CC6.1: Privilege escalation outside maintenance window.</description>
+        <group>soc2_auth,privilege_escalation</group>
+      </rule>
+
+    </group>

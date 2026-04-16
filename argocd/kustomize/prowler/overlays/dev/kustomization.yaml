@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: security
+resources:
+  - ../../base
+configMapGenerator:
+  - name: prowler-config
+    behavior: create
+    literals:
+      - evidence-bucket=falkordb-evidence-locker-dev
+      - cloud-provider=gcp
+      - cluster-name=ctrl-plane-dev
+generatorOptions:
+  disableNameSuffixHash: true
+patchesStrategicMerge:
+  - wi-patch.yaml

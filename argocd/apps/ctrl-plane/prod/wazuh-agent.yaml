@@ -1,0 +1,21 @@
+# Wazuh Agent — production.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wazuh-agent
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+    targetRevision: main
+    path: argocd/kustomize/wazuh-agent/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: security
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
