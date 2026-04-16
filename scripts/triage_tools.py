@@ -28,7 +28,9 @@ from copilot import define_tool
 # Shared state & helpers
 # ---------------------------------------------------------------------------
 
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+# Prefer PRIVATE_REPO_TOKEN (PAT with cross-repo access) for GitHub API
+# calls; fall back to GITHUB_TOKEN (built-in, same-repo only).
+GITHUB_TOKEN = os.environ.get("PRIVATE_REPO_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
 GITHUB_HEADERS = {
     "Authorization": f"Bearer {GITHUB_TOKEN}",
     "Accept": "application/vnd.github.v3+json",
@@ -251,8 +253,15 @@ async def search_falkordb_issues(params: SearchFalkorDBIssuesParams) -> str:
     results = []
     for item in items:
         labels = ", ".join(l["name"] for l in item.get("labels", []))
+        # Distinguish PRs: merged vs closed-unmerged
+        state = item["state"]
+        if "pull_request" in item and state == "closed":
+            # Check if PR was merged via the pull_request.merged_at field
+            pr_data = item["pull_request"]
+            if pr_data.get("merged_at"):
+                state = "merged"
         results.append(
-            f"- **#{item['number']}** [{item['state']}] {item['title']}\n"
+            f"- **#{item['number']}** [{state}] {item['title']}\n"
             f"  Labels: {labels or 'none'} | Updated: {item['updated_at']}\n"
             f"  URL: {item['html_url']}\n"
             f"  {(item.get('body', '') or '')[:500]}"
