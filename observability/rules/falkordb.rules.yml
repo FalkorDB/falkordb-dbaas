@@ -13,7 +13,7 @@ spec:
           expr: redis_up{container="service"} == 0
           for: 15s
           labels:
-            severity: warning
+            severity: critical
             cluster: '{{ $labels.cluster }}'
             environment: '{{ $labels.environment }}'
           annotations:
