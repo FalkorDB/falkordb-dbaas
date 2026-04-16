@@ -1,0 +1,129 @@
+name: Changesets
+
+# Runs on every push to dev or main when backend or frontend code changes.
+# If pending changesets exist, the changesets/action opens (or updates) a
+# "Version Packages" PR that bumps package.json versions and writes changelogs.
+# When that PR merges the build-backends / build-frontends workflows fire and
+# tag images with the newly-bumped semver (e.g. 1.2.0-dev.42 or 1.2.0).
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/workflows/changesets.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # ── Backend monorepo ────────────────────────────────────────────────────────
+  release-backend:
+    name: Version backend packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "24.x"
+          cache: "pnpm"
+          cache-dependency-path: backend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pnpm i --frozen-lockfile
+
+      - name: Bump versions
+        id: version
+        working-directory: backend
+        run: |
+          pnpm changeset version
+          if git diff --quiet HEAD; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create or update Version PR
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="changeset-release/backend-${GITHUB_REF_NAME}"
+          git checkout -B "$BRANCH"
+          git add backend/
+          git commit -m "chore: version backend packages"
+          git push origin "$BRANCH" --force
+          gh pr create \
+            --title "chore: version backend packages" \
+            --body "Automated version bump from Changesets. Merge this PR to release." \
+            --base "${GITHUB_REF_NAME}" \
+            --head "$BRANCH" 2>/dev/null \
+          || echo "PR already open for this branch — updated by force-push."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Frontend monorepo ───────────────────────────────────────────────────────
+  release-frontend:
+    name: Version frontend packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: "24.x"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm i --frozen-lockfile
+
+      - name: Bump versions
+        id: version
+        working-directory: frontend
+        run: |
+          pnpm changeset version
+          if git diff --quiet HEAD; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create or update Version PR
+        if: steps.version.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="changeset-release/frontend-${GITHUB_REF_NAME}"
+          git checkout -B "$BRANCH"
+          git add frontend/
+          git commit -m "chore: version frontend packages"
+          git push origin "$BRANCH" --force
+          gh pr create \
+            --title "chore: version frontend packages" \
+            --body "Automated version bump from Changesets. Merge this PR to release." \
+            --base "${GITHUB_REF_NAME}" \
+            --head "$BRANCH" 2>/dev/null \
+          || echo "PR already open for this branch — updated by force-push."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

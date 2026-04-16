@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-image-updater
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argocd-image-updater
+    targetRevision: "0.12.x"
+    helm:
+      valuesObject:
+        config:
+          argocd:
+            serverAddress: argocd-server
+            grpcWeb: true
+            insecure: true
+            plaintext: true
+          registries:
+            - name: GCP Artifact Registry
+              api_url: https://us-central1-docker.pkg.dev
+              credentials: pullsecret:argocd/argocd-image-updater-pull-secret
+              default: true
+        git:
+          email: argocd-image-updater@falkordb.com
+          username: argocd-image-updater
+        extraEnv:
+          - name: ARGOCD_IMAGE_UPDATER_GITCREDS_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: argocd-image-updater-git-secret
+                key: username
+          - name: ARGOCD_IMAGE_UPDATER_GITCREDS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: argocd-image-updater-git-secret
+                key: password
+        nodeSelector:
+          node_pool: observability-resources
+        serviceAccount:
+          annotations:
+            iam.gke.io/workload-identity-pool: ""
+  destination:
+    namespace: argocd
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
