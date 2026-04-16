@@ -115,10 +115,16 @@ jobs:
           # load locally only when not pushing (push and load are mutually exclusive exporters)
           load: ${{ !(github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev')) }}
 
+      - name: Extract primary tag for scan
+        id: primary-tag
+        # TAGS may be comma-separated; take the first entry as the scan target.
+        # This is always a concrete tag regardless of whether the image was pushed or loaded.
+        run: echo "TAG=$(echo '${{ steps.set-tags.outputs.TAGS }}' | cut -d',' -f1)" >> "$GITHUB_OUTPUT"
+
       - name: Grype image scan
         uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
         with:
-          image: ${{ fromJSON(steps.build-push.outputs.metadata)['image.name'] }}
+          image: ${{ steps.primary-tag.outputs.TAG }}
           fail-build: "false"
           severity-cutoff: high
           output-format: table
