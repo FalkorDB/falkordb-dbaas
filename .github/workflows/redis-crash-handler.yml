@@ -157,7 +157,7 @@ jobs:
 
   ai-triage:
     needs: [analyze-crash, upload-rdb]
-    if: ${{ needs.analyze-crash.outputs.issue_number != '' }}
+    if: ${{ always() && needs.analyze-crash.outputs.issue_number != '' }}
     uses: ./.github/workflows/ai-crash-triage.yml
     secrets: inherit
     with:
@@ -168,6 +168,6 @@ jobs:
       container: ${{ inputs.container }}
       vmauth_url: ${{ inputs.vmauth_url }}
       environment: ${{ inputs.environment }}
-      rdb_url: ${{ needs.upload-rdb.outputs.rdb_url }}
-      aof_url: ${{ needs.upload-rdb.outputs.aof_url }}
-      falkordb_version: ${{ needs.upload-rdb.outputs.falkordb_version }}
+      rdb_url: ${{ needs.upload-rdb.result == 'success' && needs.upload-rdb.outputs.rdb_url || '' }}
+      aof_url: ${{ needs.upload-rdb.result == 'success' && needs.upload-rdb.outputs.aof_url || '' }}
+      falkordb_version: ${{ needs.upload-rdb.result == 'success' && needs.upload-rdb.outputs.falkordb_version || '' }}

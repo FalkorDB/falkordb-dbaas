@@ -133,7 +133,11 @@ def kubectl_exec_output(
         pod, "--",
     ] + command
     print(f"  $ {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=_KUBECTL_TIMEOUT)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=_KUBECTL_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        print(f"  ⚠️  Command timed out after {_KUBECTL_TIMEOUT}s: {' '.join(cmd)}")
+        return None
     if result.returncode != 0:
         print(f"  ⚠️  Command exited with code {result.returncode}")
         stderr_snippet = (result.stderr or "").strip()
@@ -148,25 +152,29 @@ def kubectl_exec_output(
 def parse_falkordb_version(module_list_output: str) -> str | None:
     """Parse FalkorDB version from MODULE LIST output.
 
-    The 'graph' module reports its version as a single integer MNNPP where
-    M=major, NN=minor, PP=patch.  e.g. 41608 → v4.16.8, 41800 → v4.18.0.
+    Locates the 'graph' module block and extracts its version integer MNNPP
+    where M=major, NN=minor, PP=patch.  e.g. 41608 → v4.16.8, 41800 → v4.18.0.
     """
     import re
-    # Match lines like:  "ver"  or  3) "ver"  followed by the integer
-    for match in re.finditer(r'"ver"\s*\n\s*\d+\)\s*\(integer\)\s*(\d+)', module_list_output):
-        ver = int(match.group(1))
-        major = ver // 10000
-        minor = (ver % 10000) // 100
-        patch = ver % 100
-        return f"v{major}.{minor}.{patch}"
 
-    # Fallback: look for a bare integer right after "ver"
-    for match in re.finditer(r'ver\s+(\d{4,6})', module_list_output):
-        ver = int(match.group(1))
-        major = ver // 10000
-        minor = (ver % 10000) // 100
-        patch = ver % 100
-        return f"v{major}.{minor}.{patch}"
+    # Split output into per-module blocks (each starts with  N)  1) "name" )
+    # and find the one whose name is "graph" or "falkordb".
+    blocks = re.split(r'(?=\d+\)\s*1\)\s*"name")', module_list_output)
+    for block in blocks:
+        name_match = re.search(r'"name"\s*\n\s*\d+\)\s*"(\w+)"', block)
+        if not name_match:
+            continue
+        name = name_match.group(1).lower()
+        if name not in ("graph", "falkordb"):
+            continue
+        # Found the graph module block — extract its version
+        ver_match = re.search(r'"ver"\s*\n\s*\d+\)\s*\(integer\)\s*(\d+)', block)
+        if ver_match:
+            ver = int(ver_match.group(1))
+            major = ver // 10000
+            minor = (ver % 10000) // 100
+            patch = ver % 100
+            return f"v{major}.{minor}.{patch}"
 
     return None
 
@@ -302,14 +310,14 @@ def main() -> None:
                 print("  Snapshotting appendonlydir on pod...")
                 try:
                     kubectl_exec(args.namespace, args.pod, args.container, [
-                        "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
+                        "sh", "-c", "rm -rf /data/appendonlydir.snapshot && cp -r /data/appendonlydir /data/appendonlydir.snapshot",
                     ])
                 except RuntimeError:
                     print("  ⚠️  cp failed, checking pod status before retry...")
                     kubectl_wait_pod_ready(args.namespace, args.pod)
                     print("  Retrying cp...")
                     kubectl_exec(args.namespace, args.pod, args.container, [
-                        "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
+                        "sh", "-c", "rm -rf /data/appendonlydir.snapshot && cp -r /data/appendonlydir /data/appendonlydir.snapshot",
                     ])
                 print("  Archiving and uploading AOF...")
                 try:
