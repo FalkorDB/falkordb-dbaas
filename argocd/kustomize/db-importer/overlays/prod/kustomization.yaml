@@ -12,4 +12,4 @@ patches:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/image
-        value: "us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer:1.1.0"
+        value: "us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer:1.1.1"
