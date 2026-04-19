@@ -6,6 +6,10 @@ resources:
   - ../../base/
   - cluster-discovery-env-secret.yaml
 
+images:
+  - name: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery
+    newName: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/cluster-discovery
+
 patches:
   - target:
       kind: Deployment

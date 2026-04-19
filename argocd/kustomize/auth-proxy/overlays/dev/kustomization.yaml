@@ -4,3 +4,7 @@ namespace: customer-observability
 
 resources:
   - ../../base
+
+images:
+  - name: us-central1-docker.pkg.dev/PROJECT/frontend/auth-proxy-web
+    newName: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/frontend/auth-proxy-web

@@ -4,3 +4,7 @@ namespace: observability
 
 resources:
   - ../../base
+
+images:
+  - name: us-central1-docker.pkg.dev/PROJECT/backend/alert-silence-syncer
+    newName: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/alert-silence-syncer

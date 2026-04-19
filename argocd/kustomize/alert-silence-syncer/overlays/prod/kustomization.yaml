@@ -5,11 +5,6 @@ namespace: observability
 resources:
   - ../../base
 
-patches:
-  - target:
-      kind: CronJob
-      name: alert-silence-syncer
-    patch: |-
-      - op: replace
-        path: /spec/jobTemplate/spec/template/spec/containers/0/image
-        value: "us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/alert-silence-syncer:1.0.0"
+images:
+  - name: us-central1-docker.pkg.dev/PROJECT/backend/alert-silence-syncer
+    newName: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/alert-silence-syncer
