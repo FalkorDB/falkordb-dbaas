@@ -97,6 +97,9 @@ export class ClusterDiscoveryService {
 
       // Always update VMUser secret
       await this.secretService.createOrUpdateVMUserSecret(cluster);
+
+      // Always ensure sealed-secrets key is present
+      await this.secretService.createOrUpdateSealedSecretsKey(cluster);
     }
   }
 
