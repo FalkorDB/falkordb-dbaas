@@ -79,10 +79,10 @@ dex:
         secretName: argocd-google-groups
 
 controller:
-  replicas: 2
+  replicas: 1
   env:
     - name: ARGOCD_CONTROLLER_REPLICAS
-      value: "2"
+      value: "1"
   extraArgs:
     - --sharding-method=round-robin
   metrics:
