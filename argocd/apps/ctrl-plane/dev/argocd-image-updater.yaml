@@ -21,7 +21,8 @@ spec:
           registries:
             - name: GCP Artifact Registry
               api_url: https://us-central1-docker.pkg.dev
-              credentials: pullsecret:argocd/argocd-image-updater-pull-secret
+              credentials: ext:/usr/local/bin/gcp-creds.sh
+              credsexpire: 45m
               default: true
         # Allow write-back of updated image tags to git
         git:
@@ -43,7 +44,16 @@ spec:
           node_pool: observability-resources
         serviceAccount:
           annotations:
-            iam.gke.io/workload-identity-pool: ""
+            iam.gke.io/gcp-service-account: argocd-image-updater@ctrl-plane-dev-f7a2434f.iam.gserviceaccount.com
+        extraVolumes:
+          - name: gcp-auth
+            configMap:
+              name: argocd-image-updater-gcp-auth
+              defaultMode: 0755
+        extraVolumeMounts:
+          - name: gcp-auth
+            mountPath: /usr/local/bin/gcp-creds.sh
+            subPath: gcp-creds.sh
   destination:
     namespace: argocd
     server: https://kubernetes.default.svc
