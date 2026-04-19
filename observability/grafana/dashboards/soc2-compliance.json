@@ -107,31 +107,6 @@
       ]
     },
     {
-      "title": "ThreatMapper Sensors Unavailable",
-      "description": "Unavailable ThreatMapper sensor pods across clusters",
-      "type": "stat",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "${datasource}" },
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "orange", "value": 3 },
-              { "color": "red", "value": 5 }
-            ]
-          }
-        }
-      },
-      "targets": [
-        {
-          "expr": "sum(kube_daemonset_status_number_unavailable{daemonset=\"threatmapper-sensor\"})",
-          "legendFormat": "Unavailable Sensors"
-        }
-      ]
-    },
-    {
       "title": "Wazuh Manager Up",
       "type": "stat",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 4 },
@@ -187,11 +162,11 @@
       "datasource": { "type": "prometheus", "uid": "${datasource}" },
       "targets": [
         {
-          "expr": "sum(kube_daemonset_status_number_ready{daemonset=~\"wazuh-agent|threatmapper-sensor\"})",
+          "expr": "sum(kube_daemonset_status_number_ready{daemonset=~\"wazuh-agent\"})",
           "legendFormat": "Ready"
         },
         {
-          "expr": "sum(kube_daemonset_status_number_unavailable{daemonset=~\"wazuh-agent|threatmapper-sensor\"})",
+          "expr": "sum(kube_daemonset_status_number_unavailable{daemonset=~\"wazuh-agent\"})",
           "legendFormat": "Unavailable"
         }
       ]
@@ -254,7 +229,7 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["soc2", "compliance", "security", "prowler", "wazuh", "threatmapper"],
+  "tags": ["soc2", "compliance", "security", "prowler", "wazuh"],
   "templating": {
     "list": [
       {

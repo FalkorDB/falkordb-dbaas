@@ -4,8 +4,6 @@
 # Generates a point-in-time SOC 2 compliance evidence folder by collecting:
 #   1. Prowler HTML/JSON reports from the GCS Evidence Locker
 #   2. Wazuh inventory and CVE exports via the Wazuh API
-#   3. ThreatMapper network topology export via the ThreatMapper API
-#   4. ThreatMapper topology diagram rendered as SVG via the report API
 #
 # Usage:
 #   ./generate_compliance_report.sh [--date YYYY-MM-DD] [--output-dir DIR] [--bucket BUCKET]
@@ -13,7 +11,6 @@
 # Prerequisites:
 #   - gcloud CLI authenticated with access to the evidence locker bucket
 #   - WAZUH_API_URL and WAZUH_API_TOKEN environment variables set
-#   - THREATMAPPER_API_URL and THREATMAPPER_API_KEY environment variables set
 #   - curl, jq installed
 #
 # Output structure:
@@ -23,10 +20,6 @@
 #     │   ├── agents.json     — Active agent inventory
 #     │   ├── cve-list.json   — Detected CVEs
 #     │   └── fim-events.json — File integrity events (last 24h)
-#     ├── threatmapper/
-#     │   ├── topology.json   — Network topology & vulnerability map
-#     │   ├── topology.svg    — Network topology diagram
-#     │   └── vulnerabilities.json — Full vulnerability report
 #     └── metadata.json       — Report generation metadata
 
 set -euo pipefail
@@ -60,7 +53,7 @@ if [[ -z "$BUCKET" ]]; then
 fi
 
 REPORT_DIR="${OUTPUT_DIR}/compliance-report-${DATE}"
-mkdir -p "${REPORT_DIR}"/{prowler,wazuh,threatmapper}
+mkdir -p "${REPORT_DIR}"/{prowler,wazuh}
 
 echo "=== SOC 2 Compliance Evidence Report ==="
 echo "Date:       ${DATE}"
@@ -120,76 +113,9 @@ else
 fi
 
 # ------------------------------------------------------------------
-# 3. ThreatMapper Topology
-# ------------------------------------------------------------------
-echo "[3/4] Exporting ThreatMapper topology ..."
-if [[ -n "${THREATMAPPER_API_URL:-}" && -n "${THREATMAPPER_API_KEY:-}" ]]; then
-  TM_AUTH="Authorization: Bearer ${THREATMAPPER_API_KEY}"
-  TM_TLS_OPTS=()
-  if [[ -n "${THREATMAPPER_CA_BUNDLE:-}" ]]; then
-    TM_TLS_OPTS=(--cacert "${THREATMAPPER_CA_BUNDLE}")
-  fi
-
-  # Network topology JSON
-  curl -sS "${TM_TLS_OPTS[@]}" -H "${TM_AUTH}" \
-    "${THREATMAPPER_API_URL}/deepfence/graph/topology" \
-    | jq '.' > "${REPORT_DIR}/threatmapper/topology.json"
-  echo "  ✓ Network topology JSON exported."
-
-  # Vulnerability report
-  curl -sS "${TM_TLS_OPTS[@]}" -H "${TM_AUTH}" \
-    -H "Content-Type: application/json" \
-    -d '{"filters":{"severity":["critical","high","medium","low"]},"window":{"duration":86400}}' \
-    "${THREATMAPPER_API_URL}/deepfence/vulnerabilities" \
-    | jq '.' > "${REPORT_DIR}/threatmapper/vulnerabilities.json"
-  VULN_COUNT=$(jq '.data | length // 0' "${REPORT_DIR}/threatmapper/vulnerabilities.json" 2>/dev/null || echo 0)
-  echo "  ✓ Vulnerability report: ${VULN_COUNT} findings."
-
-  # Request topology diagram (PDF/SVG) via the report API.
-  # ThreatMapper exposes /deepfence/report which generates a topology diagram.
-  REPORT_RESPONSE=$(curl -sS "${TM_TLS_OPTS[@]}" -H "${TM_AUTH}" \
-    -H "Content-Type: application/json" \
-    -d '{"report_type":"topology","duration":{"number":24,"time_unit":"hour"},"filters":{}}' \
-    "${THREATMAPPER_API_URL}/deepfence/reports" 2>/dev/null || true)
-
-  REPORT_ID=$(echo "${REPORT_RESPONSE}" | jq -r '.report_id // empty' 2>/dev/null || true)
-  if [[ -n "${REPORT_ID}" ]]; then
-    echo "  ⏳ Waiting for topology diagram generation (report ${REPORT_ID})..."
-    RETRIES=0
-    while [[ $RETRIES -lt 30 ]]; do
-      STATUS=$(curl -sS "${TM_TLS_OPTS[@]}" -H "${TM_AUTH}" \
-        "${THREATMAPPER_API_URL}/deepfence/reports/${REPORT_ID}" \
-        | jq -r '.status // "pending"' 2>/dev/null || echo "pending")
-      if [[ "${STATUS}" == "complete" ]]; then
-        # Download the generated report
-        curl -sS "${TM_TLS_OPTS[@]}" -H "${TM_AUTH}" \
-          -o "${REPORT_DIR}/threatmapper/topology.svg" \
-          "${THREATMAPPER_API_URL}/deepfence/reports/${REPORT_ID}/download"
-        echo "  ✓ Network topology diagram exported as SVG."
-        break
-      elif [[ "${STATUS}" == "error" ]]; then
-        echo "  ⚠ Topology diagram generation failed. Skipping diagram."
-        break
-      fi
-      RETRIES=$((RETRIES + 1))
-      sleep 10
-    done
-    if [[ $RETRIES -ge 30 ]]; then
-      echo "  ⚠ Topology diagram generation timed out. Skipping diagram."
-    fi
-  else
-    echo "  ⚠ Could not initiate topology diagram report. Skipping diagram."
-  fi
-else
-  echo "  ⚠ THREATMAPPER_API_URL / THREATMAPPER_API_KEY not set. Skipping ThreatMapper export."
-fi
-
-# ------------------------------------------------------------------
-# 4. Metadata
+# 3. Metadata
 # ------------------------------------------------------------------
 PROWLER_FILE_COUNT=$(ls "${REPORT_DIR}/prowler/" 2>/dev/null | wc -l | tr -d ' ')
-HAS_TOPOLOGY=$( [ -s "${REPORT_DIR}/threatmapper/topology.json" ] && echo "true" || echo "false" )
-HAS_DIAGRAM=$( [ -s "${REPORT_DIR}/threatmapper/topology.svg" ] && echo "true" || echo "false" )
 
 jq -n \
   --arg date "${DATE}" \
@@ -200,9 +126,6 @@ jq -n \
   --argjson agents "${AGENT_COUNT:-0}" \
   --argjson cves "${CVE_COUNT:-0}" \
   --argjson fim "${FIM_COUNT:-0}" \
-  --argjson topology "${HAS_TOPOLOGY}" \
-  --argjson vulns "${VULN_COUNT:-0}" \
-  --argjson diagram "${HAS_DIAGRAM}" \
   '{
     report_date: $date,
     generated_at: $generated_at,
@@ -212,10 +135,7 @@ jq -n \
       prowler: $prowler,
       wazuh_agents: $agents,
       wazuh_cves: $cves,
-      wazuh_fim_events: $fim,
-      threatmapper_topology: $topology,
-      threatmapper_vulnerabilities: $vulns,
-      threatmapper_topology_diagram: $diagram
+      wazuh_fim_events: $fim
     }
   }' > "${REPORT_DIR}/metadata.json"
 

@@ -1,8 +1,8 @@
 # oauth2-proxy — Identity-Aware Proxy for security dashboards.
 #
 # Runs as a ClusterIP service in the security namespace.
-# Nginx Ingress auth-url annotations on Wazuh Dashboard and ThreatMapper
-# Console route every request through /oauth2/auth before forwarding.
+# Nginx Ingress auth-url annotations on Wazuh Dashboard
+# route every request through /oauth2/auth before forwarding.
 #
 # Restricted to the devops@falkordb.com Google Group via --allowed-group.
 # Uses Google OIDC as the identity provider with IAP brand OAuth client

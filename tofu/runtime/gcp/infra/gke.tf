@@ -5,7 +5,7 @@
 #   observability-resources    — observability stack pods (0-20, e2-standard-2)
 #   observability-resources-large — Grafana/heavy pods (0-20, e2-standard-4)
 #   backend                    — backend API pods (0-20, e2-standard-2)
-#   security                   — Wazuh Manager, ThreatMapper Console (0-10, e2-standard-4)
+#   security                   — Wazuh Manager (0-10, e2-standard-4)
 #   public-pool                — internet-facing workloads (0-220, e2-standard-2,
 #                                 private_nodes=false for L4 LoadBalancer IPs)
 #

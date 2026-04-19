@@ -13,7 +13,6 @@ Day-to-day operations, routine maintenance, and troubleshooting procedures.
 - [Secret Rotation](#secret-rotation)
 - [Evidence Locker Management](#evidence-locker-management)
 - [Wazuh Operations](#wazuh-operations)
-- [ThreatMapper Operations](#threatmapper-operations)
 - [Prowler Operations](#prowler-operations)
 - [Troubleshooting](#troubleshooting)
 
@@ -26,7 +25,6 @@ The security stack is designed to run autonomously. The following occur automati
 | Time (UTC) | Event | Component |
 |-------------|-------|-----------|
 | Continuous | Host log collection, FIM | Wazuh Agents |
-| Continuous | Container/network scanning | ThreatMapper Sensors |
 | 02:00 | SOC 2 compliance scan + upload | Prowler CronJob |
 | Continuous | Alert evaluation | VMRule (VictoriaMetrics) |
 
@@ -58,9 +56,6 @@ On the new cluster, create secrets in the `security` namespace:
 ```bash
 kubectl create secret generic wazuh-agent-key -n security \
   --from-literal=enrollment-key=<ENROLLMENT_PASSWORD>
-
-kubectl create secret generic threatmapper-sensor-key -n security \
-  --from-literal=api-key=<API_KEY>
 ```
 
 For AWS spokes, also create:
@@ -89,7 +84,6 @@ kubectl create secret generic prowler-gcs-credentials -n security \
 
 The ApplicationSets will automatically detect the new cluster and deploy:
 - Wazuh Agent DaemonSet
-- ThreatMapper Sensor DaemonSet
 - Prowler CronJob
 
 ```bash
@@ -106,8 +100,6 @@ kubectl get ds,cronjob -n security
 # Wazuh agent should appear in Manager
 curl -k -u admin:admin \
   "https://<WAZUH_IP>:55000/agents?status=active" | jq '.data.affected_items[] | .name'
-
-# ThreatMapper sensor should appear in Console UI → Topology
 ```
 
 ---
@@ -127,7 +119,6 @@ Or explicitly delete generated Applications:
 ```bash
 argocd app delete <cluster>-prowler
 argocd app delete <cluster>-wazuh-agent
-argocd app delete <cluster>-threatmapper-sensor
 ```
 
 ### 2. Deregister Wazuh agent
@@ -163,16 +154,6 @@ curl -k -u admin:admin -X DELETE \
    kubectl rollout restart ds/wazuh-agent -n security
    ```
 
-### ThreatMapper (Console + Sensors)
-
-1. Update versions in:
-   - `argocd/apps/ctrl-plane/{dev,prod}/threatmapper.yaml` (Helm chart)
-   - `argocd/kustomize/threatmapper-sensor/base/daemonset.yaml` (image tag)
-
-2. **Upgrade Console first**, then Sensors. Check the [Deepfence release notes](https://github.com/deepfence/ThreatMapper/releases) for breaking changes.
-
-3. The API key may need regeneration after major Console upgrades.
-
 ### Prowler
 
 1. Update image tag in `argocd/kustomize/prowler/base/cronjob.yaml`:
@@ -196,13 +177,6 @@ curl -k -u admin:admin -X DELETE \
 1. Update the enrollment password in the Wazuh Manager configuration
 2. Update the `wazuh-agent-key` secret on all clusters
 3. Rolling restart the agents: `kubectl rollout restart ds/wazuh-agent -n security`
-
-### ThreatMapper API Key
-
-1. Generate a new key in the Console UI → Settings → API Keys
-2. Revoke the old key
-3. Update `threatmapper-sensor-key` on all clusters
-4. Rolling restart sensors: `kubectl rollout restart ds/threatmapper-sensor -n security`
 
 ### Prowler GCS Key (AWS/Azure spokes)
 
@@ -264,8 +238,6 @@ gsutil cp -r "gs://<BUCKET>/prowler/2025/01/15/gcp-cluster-1/" ./evidence/
 ```bash
 export WAZUH_API_URL="https://wazuh.security.internal.falkordb.cloud:55000"
 export WAZUH_API_TOKEN="<TOKEN>"
-export THREATMAPPER_API_URL="https://threatmapper.security.internal.falkordb.cloud"
-export THREATMAPPER_API_KEY="<API_KEY>"
 
 ./scripts/generate_compliance_report.sh \
   --bucket <BUCKET> \
@@ -281,10 +253,6 @@ compliance-report-2025-01-15/
 │   ├── agents.json       # Active agent inventory
 │   ├── cve-list.json     # Detected CVEs
 │   └── fim-events.json   # File integrity events (last 24h)
-├── threatmapper/
-│   ├── topology.json     # Network topology
-│   ├── topology.svg      # Topology diagram
-│   └── vulnerabilities.json
 └── metadata.json         # Report metadata
 ```
 
@@ -329,27 +297,6 @@ curl -k -u admin:admin "https://<WAZUH_IP>:55000/agents/summary/status"
 | `ctrl-plane-prod` | Control plane agents (prod) |
 | `app-plane-dev` | Spoke cluster agents (dev) |
 | `app-plane-prod` | Spoke cluster agents (prod) |
-
----
-
-## ThreatMapper Operations
-
-### Console access
-
-| Environment | URL |
-|-------------|-----|
-| Dev | `https://threatmapper.security.dev.internal.falkordb.cloud` |
-| Prod | `https://threatmapper.security.internal.falkordb.cloud` |
-
-### Triggering a vulnerability scan
-
-1. Log in to the Console
-2. Navigate to **Topology** → select target containers/hosts
-3. Click **Start Scan** → choose scan type (vulnerability, secret, malware)
-
-### Viewing topology
-
-The Console provides a live network topology map showing all clusters and their workloads. This is the basis for the SOC 2 topology evidence exported by `generate_compliance_report.sh`.
 
 ---
 
@@ -407,14 +354,6 @@ kubectl exec -it ds/wazuh-agent -n security -- \
 # Check agent logs
 kubectl logs ds/wazuh-agent -n security | tail -50
 ```
-
-### ThreatMapper sensors not appearing in Console
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| Sensor pod running but not in Console | Wrong console URL | Check `threatmapper-sensor-config` ConfigMap has correct hostname |
-| Sensor pod CrashLoopBackOff | Invalid API key | Regenerate key in Console, update `threatmapper-sensor-key` secret |
-| Sensor pod running, intermittent | DNS resolution failure | Ensure spoke cluster can resolve `threatmapper.security.*.falkordb.cloud` |
 
 ### Prowler scan failures
 
