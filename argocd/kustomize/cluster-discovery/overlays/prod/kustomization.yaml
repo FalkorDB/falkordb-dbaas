@@ -15,9 +15,6 @@ patches:
         path: /spec/replicas
         value: 1
       - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: "us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/cluster-discovery:1.2.2"
-      - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: "IfNotPresent"
   - target:

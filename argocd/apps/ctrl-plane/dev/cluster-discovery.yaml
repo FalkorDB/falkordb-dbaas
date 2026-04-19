@@ -3,6 +3,12 @@ kind: Application
 metadata:
   name: cluster-discovery
   namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: "discovery=us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery"
+    argocd-image-updater.argoproj.io/discovery.update-strategy: semver
+    argocd-image-updater.argoproj.io/discovery.allow-tags: regexp:^[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]+$
+    argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/argocd-image-updater-git-secret
+    argocd-image-updater.argoproj.io/git-branch: dev
 spec:
   project: default
   source:

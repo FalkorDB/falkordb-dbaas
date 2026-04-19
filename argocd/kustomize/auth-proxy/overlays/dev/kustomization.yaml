@@ -4,12 +4,3 @@ namespace: customer-observability
 
 resources:
   - ../../base
-
-patches:
-  - target:
-      kind: Deployment
-      name: auth-proxy
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: "us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/frontend/auth-proxy-web:latest"
