@@ -1,3 +1,3 @@
 kustomize:
   images:
-  - us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer:1.1.1
+  - us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer:1.1.2
