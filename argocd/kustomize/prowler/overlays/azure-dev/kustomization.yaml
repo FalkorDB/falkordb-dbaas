@@ -12,5 +12,5 @@ configMapGenerator:
       - cluster-name=app-plane-azure-dev
 generatorOptions:
   disableNameSuffixHash: true
-patchesStrategicMerge:
-  - azure-credentials-patch.yaml
+patches:
+  - path: azure-credentials-patch.yaml

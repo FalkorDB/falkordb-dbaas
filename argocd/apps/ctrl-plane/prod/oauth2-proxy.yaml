@@ -8,7 +8,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
-    targetRevision: HEAD
+    targetRevision: main
     path: argocd/kustomize/oauth2-proxy/overlays/prod
   destination:
     server: https://kubernetes.default.svc

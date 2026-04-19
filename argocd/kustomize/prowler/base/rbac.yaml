@@ -42,7 +42,6 @@ rules:
     verbs: ["get", "list"]
   - apiGroups: ["policy"]
     resources:
-      - podsecuritypolicies
       - poddisruptionbudgets
     verbs: ["get", "list"]
 ---

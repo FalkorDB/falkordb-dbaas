@@ -12,5 +12,5 @@ configMapGenerator:
       - cluster-name=app-plane-gcp-prod
 generatorOptions:
   disableNameSuffixHash: true
-patchesStrategicMerge:
-  - wi-patch.yaml
+patches:
+  - path: wi-patch.yaml

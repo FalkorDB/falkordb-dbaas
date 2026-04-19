@@ -12,5 +12,5 @@ configMapGenerator:
       - cluster-name=app-plane-aws-dev
 generatorOptions:
   disableNameSuffixHash: true
-patchesStrategicMerge:
-  - aws-credentials-patch.yaml
+patches:
+  - path: aws-credentials-patch.yaml
