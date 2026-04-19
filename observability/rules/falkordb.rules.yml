@@ -10,8 +10,9 @@ spec:
     - name: falkordb.rules.general
       rules:
         - alert: FalkorDBDown
-          expr: redis_up{container="service"} == 0
-          for: 15s
+        # ignore free tier for this alert
+          expr: redis_up{container="service",pod!="node-f-0"} == 0
+          for: 30s
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
