@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: api
+
+resources:
+  - ../../base
+
+images:
+  - name: us-central1-docker.pkg.dev/PROJECT/backend/db-importer-worker
+    newName: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer-worker

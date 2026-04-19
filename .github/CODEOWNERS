@@ -1,0 +1,25 @@
+# CODEOWNERS
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Last reviewer is the tiebreaker; all listed owners must approve.
+
+# Default owner for everything not matched below
+* @dudizimber
+
+# Infrastructure (OpenTofu / Terragrunt)
+/tofu/ @dudizimber
+
+# GitOps / ArgoCD manifests and Application CRDs
+/argocd/ @dudizimber
+
+# Backend monorepo
+/backend/ @dudizimber
+
+# Frontend monorepo
+/frontend/ @dudizimber
+
+# CI / CD workflows
+/.github/ @dudizimber
+
+# Observability rules and dashboards
+/observability/ @dudizimber

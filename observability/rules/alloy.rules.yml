@@ -35,7 +35,7 @@ spec:
             cluster: '{{ $labels.cluster }}'
         - alert: PrometheusRemoteWriteFailing
           expr: rate(prometheus_remote_storage_samples_failed_total[5m]) > 0
-          for: 1m
+          for: 10m
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'
@@ -56,7 +56,7 @@ spec:
               [cluster={{ $labels.cluster }}] The Prometheus remote write queue on instance {{ $labels.instance }} in cluster {{ $labels.cluster }} is close to its capacity.
         - alert: LokiLogsDropped
           expr: rate(loki_write_dropped_entries_total[5m]) > 0
-          for: 1m
+          for: 10m
           labels:
             severity: critical
             cluster: '{{ $labels.cluster }}'

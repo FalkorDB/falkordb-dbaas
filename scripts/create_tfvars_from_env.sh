@@ -17,4 +17,3 @@
     # falkordb_domain=\"$falkordb_domain\"
     " > ../tofu/terraform.tfvars
 cp ../tofu/terraform.tfvars ../tofu/aws/terraform.tfvars
-cp ../tofu/terraform.tfvars ../tofu/k8s/terraform.tfvars

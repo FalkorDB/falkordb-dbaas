@@ -1,84 +1,82 @@
-# Turborepo starter
+# FalkorDB DBaaS — Frontend
 
-This Turborepo starter is maintained by the Turborepo core team.
+Turborepo (pnpm) monorepo containing the **auth-proxy** web application and shared packages.
 
-## Using this example
+## Apps and Packages
 
-Run the following command:
+| Path | Description |
+|---|---|
+| `apps/auth-proxy` | Next.js 16 portal — authentication, organization management, and Grafana proxy for the FalkorDB cloud |
+| `packages/ui` | Shared React component library (MUI + Tailwind) |
+| `packages/eslint-config` | Shared ESLint configuration |
+| `packages/typescript-config` | Shared `tsconfig` bases |
 
-```sh
-npx create-turbo@latest
+## Prerequisites
+
+| Tool | Version |
+|---|---|
+| Node.js | ≥ 18 (22.x recommended) |
+| pnpm | 9.x (`corepack enable`) |
+
+## Local Development
+
+```bash
+cd frontend
+pnpm install
+pnpm dev          # starts auth-proxy on http://localhost:3000
 ```
 
-## What's inside?
+To work on a single app only:
 
-This Turborepo includes the following packages/apps:
-
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-pnpm build
+```bash
+pnpm --filter auth-proxy dev
 ```
 
-### Develop
+## Build
 
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-pnpm dev
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-npx turbo login
+```bash
+pnpm build        # Turborepo builds all apps and packages
+pnpm check-types  # TypeScript type checking across all packages
+pnpm lint         # ESLint across all packages
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+## Release Flow
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+Releases follow the [Changesets](https://github.com/changesets/changesets) workflow:
 
-```
-npx turbo link
-```
+1. **Describe the change** — after making code changes, run:
 
-## Useful Links
+   ```bash
+   pnpm changeset
+   # select changed packages, bump type (patch/minor/major), write summary
+   ```
 
-Learn more about the power of Turborepo:
+2. **Commit and open a PR** targeting `dev`.
 
-- [Tasks](https://turbo.build/repo/docs/core-concepts/monorepos/running-tasks)
-- [Caching](https://turbo.build/repo/docs/core-concepts/caching)
-- [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching)
-- [Filtering](https://turbo.build/repo/docs/core-concepts/monorepos/filtering)
-- [Configuration Options](https://turbo.build/repo/docs/reference/configuration)
-- [CLI Usage](https://turbo.build/repo/docs/reference/command-line-reference)
+3. **Merge the PR** — the `changesets.yaml` workflow automatically opens a **Version PR** that bumps `package.json` versions and updates `CHANGELOG.md`.
+
+4. **Merge the Version PR** — the `build-frontends.yaml` CI workflow:
+   - Builds and pushes `auth-proxy` Docker image tagged `<version>-dev.<run>` (dev) or `<version>` (main).
+   - Image is pushed to `us-central1-docker.pkg.dev/<project>/frontend/auth-proxy-web`.
+
+5. **ArgoCD Image Updater** detects the new semver tag and rolls it out automatically to the cluster.
+
+> Image Updater configuration lives in [argocd/apps/ctrl-plane/dev/auth-proxy.yaml](../argocd/apps/ctrl-plane/dev/auth-proxy.yaml).
+
+## Docker Image
+
+| Registry | Path |
+|---|---|
+| Dev | `us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/frontend/auth-proxy-web` |
+| Prod | `us-central1-docker.pkg.dev/ctrl-plane-prod-<id>/frontend/auth-proxy-web` |
+
+Tag format: `<semver>-dev.<run_number>` on dev, `<semver>` on main, `sha-<git_sha>` always pushed.
+
+## Environment Variables
+
+Auth-proxy reads `NEXT_PUBLIC_*` variables at build time and server-side `AUTH_*` / `NEXTAUTH_*` variables at runtime.
+These are injected via GitHub Actions environments (`dev` / `prod`) and Kubernetes secrets.
+
+See `frontend/apps/auth-proxy/.env.example` (if present) or the GitHub Actions workflow for the full list.
+
+

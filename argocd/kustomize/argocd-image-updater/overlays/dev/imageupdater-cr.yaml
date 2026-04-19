@@ -1,0 +1,11 @@
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: global
+  namespace: argocd
+spec:
+  # Select all applications and read image config from their existing annotations.
+  # This preserves the 0.x annotation-based workflow with the 1.x CRD controller.
+  applicationRefs:
+    - namePattern: "*"
+      useAnnotations: true

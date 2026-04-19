@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+patches:
+  - target:
+      kind: Ingress
+      name: customer-ldap-api-ingress
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: "api.falkordb.cloud"
+      - op: replace
+        path: /spec/rules/0/host
+        value: "api.falkordb.cloud"
+  - target:
+      kind: Ingress
+      name: api-ingress
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: "api.falkordb.cloud"
+      - op: replace
+        path: /spec/rules/0/host
+        value: "api.falkordb.cloud"
