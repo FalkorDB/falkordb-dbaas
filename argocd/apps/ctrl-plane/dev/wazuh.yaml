@@ -43,12 +43,10 @@ spec:
           authd:
             enabled: true
             existingSecret: "wazuh-manager-authd"
-          # External LoadBalancer for agent connectivity
-          # TODO: configure static IP (34.46.116.195) via service patch
+          # LoadBalancer managed separately via kustomize (wazuh-manager)
+          # to allow setting loadBalancerIP for the tofu-provisioned static IP.
           loadBalancer:
-            enabled: true
-            annotations:
-              cloud.google.com/load-balancer-type: "External"
+            enabled: false
 
           master:
             enabled: true

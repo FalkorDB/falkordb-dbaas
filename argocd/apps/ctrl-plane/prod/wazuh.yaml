@@ -28,11 +28,9 @@ spec:
           authd:
             enabled: true
             existingSecret: "wazuh-manager-authd"
-          # TODO: configure static IP via service patch
+          # LoadBalancer managed separately via kustomize (wazuh-manager)
           loadBalancer:
-            enabled: true
-            annotations:
-              cloud.google.com/load-balancer-type: "External"
+            enabled: false
 
           master:
             enabled: true
