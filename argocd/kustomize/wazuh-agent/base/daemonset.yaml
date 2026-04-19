@@ -1,0 +1,108 @@
+# Wazuh Agent DaemonSet — runs on every node to stream security events
+# (host logs, file integrity changes, vulnerability data) to the central
+# Wazuh Manager on the GCP control plane.
+#
+# Communication: outbound TCP/1514 (TLS) from agent → manager static IP.
+# The enrollment key is stored in a Sealed Secret (wazuh-agent-key).
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: wazuh-agent
+  namespace: security
+  labels:
+    app: wazuh-agent
+spec:
+  selector:
+    matchLabels:
+      app: wazuh-agent
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: wazuh-agent
+    spec:
+      serviceAccountName: wazuh-agent
+      hostPID: true
+      hostNetwork: true
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+        - operator: Exists
+          effect: NoExecute
+      containers:
+        - name: wazuh-agent
+          image: wazuh/wazuh-agent:4.9.2
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          securityContext:
+            privileged: true
+          env:
+            - name: WAZUH_MANAGER
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-agent-key
+                  key: manager-ip
+            - name: WAZUH_MANAGER_PORT
+              value: "1514"
+            - name: WAZUH_REGISTRATION_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-agent-key
+                  key: manager-ip
+            - name: WAZUH_REGISTRATION_PORT
+              value: "1515"
+            - name: WAZUH_REGISTRATION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-agent-key
+                  key: enrollment-key
+            - name: WAZUH_AGENT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: WAZUH_AGENT_GROUP
+              valueFrom:
+                configMapKeyRef:
+                  name: wazuh-agent-config
+                  key: agent-group
+          volumeMounts:
+            - name: var-log
+              mountPath: /var/log
+              readOnly: true
+            - name: etc
+              mountPath: /host/etc
+              readOnly: true
+            - name: var-ossec-data
+              mountPath: /var/ossec/data
+          livenessProbe:
+            exec:
+              command:
+                - /var/ossec/bin/wazuh-control
+                - status
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /var/ossec/bin/wazuh-control
+                - status
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: var-log
+          hostPath:
+            path: /var/log
+        - name: etc
+          hostPath:
+            path: /etc
+        - name: var-ossec-data
+          emptyDir: {}

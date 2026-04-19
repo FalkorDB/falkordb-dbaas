@@ -1,0 +1,27 @@
+# Ingress for oauth2-proxy callback and sign-in endpoints.
+# Nginx auth-url annotations on protected services redirect to /oauth2/start.
+# After Google OIDC auth, the callback lands at /oauth2/callback.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth2-proxy
+  namespace: security
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - secretName: oauth2-proxy-tls
+      hosts:
+        - auth.security.dev.internal.falkordb.cloud
+  rules:
+    - host: auth.security.dev.internal.falkordb.cloud
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth2-proxy
+                port:
+                  number: 4180
