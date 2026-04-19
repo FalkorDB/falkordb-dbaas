@@ -43,8 +43,8 @@ spec:
               env:
                 - name: EVIDENCE_BUCKET
                   valueFrom:
-                    configMapKeyRef:
-                      name: prowler-config
+                    secretKeyRef:
+                      name: prowler-infra
                       key: evidence-bucket
                 - name: CLOUD_PROVIDER
                   valueFrom:

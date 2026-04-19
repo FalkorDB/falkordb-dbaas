@@ -35,7 +35,7 @@ data:
         <group>prowler_compliance</group>
       </rule>
 
-      <!-- Prowler FAIL — triggers Slack notification (level ≥ 10) -->
+      <!-- Prowler FAIL — triggers Google Chat notification (level ≥ 10) -->
       <rule id="100101" level="10">
         <if_sid>100100</if_sid>
         <field name="Status">FAIL</field>

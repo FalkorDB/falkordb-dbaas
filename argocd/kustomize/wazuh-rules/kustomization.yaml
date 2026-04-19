@@ -6,3 +6,5 @@ namespace: security
 resources:
   - wazuh-custom-rules.yaml
   - wazuh-dashboard-soc2.yaml
+  - wazuh-google-chat-integration.yaml
+  - secrets-env-secret.yaml

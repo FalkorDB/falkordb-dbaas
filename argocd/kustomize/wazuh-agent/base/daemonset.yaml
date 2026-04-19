@@ -47,15 +47,15 @@ spec:
           env:
             - name: WAZUH_MANAGER
               valueFrom:
-                configMapKeyRef:
-                  name: wazuh-agent-config
+                secretKeyRef:
+                  name: wazuh-agent-key
                   key: manager-ip
             - name: WAZUH_MANAGER_PORT
               value: "1514"
             - name: WAZUH_REGISTRATION_SERVER
               valueFrom:
-                configMapKeyRef:
-                  name: wazuh-agent-config
+                secretKeyRef:
+                  name: wazuh-agent-key
                   key: manager-ip
             - name: WAZUH_REGISTRATION_PORT
               value: "1515"

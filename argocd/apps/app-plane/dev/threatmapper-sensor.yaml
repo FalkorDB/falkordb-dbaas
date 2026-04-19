@@ -1,6 +1,9 @@
 # ThreatMapper Sensor — deployed to all app-plane clusters via ApplicationSet.
 # Each spoke cluster gets a DaemonSet reporting back to the central
 # ThreatMapper Management Console on the GCP control plane.
+#
+# Security: No Services or Ingresses — sensor-only workload with no
+# internet-facing endpoints. Outbound-only connection to Console.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:

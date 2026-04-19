@@ -75,21 +75,40 @@ spec:
                     check_all: "yes"
                   - path: /bin
                     check_all: "yes"
-              # Slack integration for alerts
+              # Google Chat integration for alerts — webhook URL is injected
+              # from the sealed secret (GOOGLE_CHAT_WEBHOOK_URL env var);
+              # the hook_url value below is a placeholder that satisfies
+              # ossec.conf schema validation while the script reads the
+              # real URL from the environment.
               integration:
-                - name: slack
-                  hook_url: "${WAZUH_SLACK_WEBHOOK_URL}"
+                - name: custom-google-chat
+                  hook_url: "FROM_SECRET"
                   level: 10
                   alert_format: "json"
-            # Mount custom SOC 2 rules from ConfigMap
+            # Mount custom SOC 2 rules and integrations from ConfigMaps
+            extraEnvFrom:
+              - secretRef:
+                  name: wazuh-google-chat-webhook
             extraVolumes:
               - name: custom-rules
                 configMap:
                   name: wazuh-custom-rules
+              - name: google-chat-integration
+                configMap:
+                  name: wazuh-google-chat-integration
+                  defaultMode: 0755
             extraVolumeMounts:
               - name: custom-rules
                 mountPath: /var/ossec/etc/rules/local_rules.xml
                 subPath: local_rules.xml
+                readOnly: true
+              - name: google-chat-integration
+                mountPath: /var/ossec/integrations/custom-google-chat
+                subPath: custom-google-chat
+                readOnly: true
+              - name: google-chat-integration
+                mountPath: /var/ossec/integrations/custom-google-chat.py
+                subPath: custom-google-chat.py
                 readOnly: true
             persistence:
               enabled: true
@@ -173,6 +192,10 @@ spec:
               annotations:
                 cert-manager.io/cluster-issuer: "letsencrypt-prod"
                 kubernetes.io/ingress.class: nginx
+                # IAP — oauth2-proxy enforces Google OIDC + group membership
+                nginx.ingress.kubernetes.io/auth-url: "https://auth.security.dev.internal.falkordb.cloud/oauth2/auth"
+                nginx.ingress.kubernetes.io/auth-signin: "https://auth.security.dev.internal.falkordb.cloud/oauth2/start?rd=$scheme://$host$escaped_request_uri"
+                nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-Request-User,X-Auth-Request-Email"
               hosts:
                 - host: wazuh.security.dev.internal.falkordb.cloud
                   paths:

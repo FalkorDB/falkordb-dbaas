@@ -1,6 +1,9 @@
 # Prowler SOC 2 scanner — deployed to all app-plane clusters via ApplicationSet.
 # Each spoke cluster runs a daily CronJob scanning its cloud environment and
 # uploading results to the central GCS Evidence Locker.
+#
+# Security: No Services or Ingresses — batch workload with no
+# internet-facing endpoints. Outbound-only to GCS for uploads.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
@@ -15,7 +18,7 @@ spec:
           matchLabels:
             role: app-plane
         values:
-          cloud: '{{ index .metadata.labels "cloud" }}'
+          cloud: '{{ index .metadata.labels "cloud_provider" }}'
   template:
     metadata:
       name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-prowler'

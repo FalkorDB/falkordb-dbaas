@@ -73,9 +73,10 @@ resource "google_service_account_iam_member" "prowler_workload_identity" {
 }
 
 # -----------------------------------------------------------------------
-# Firewall: restrict Wazuh Manager ports to known spoke cluster NAT IPs.
-# Spoke clusters connect outbound-only via their NAT gateway IPs.
-# These rules allow *only* whitelisted IPs on ports 1514/1515/55000.
+# Firewall: allow Wazuh agent traffic from any source.
+# Spoke clusters are created dynamically so their NAT IPs are not known
+# ahead of time. All sources are permitted; the Manager itself enforces
+# enrollment keys for authentication.
 # -----------------------------------------------------------------------
 
 resource "google_compute_firewall" "wazuh_agent_ingress" {
@@ -91,31 +92,25 @@ resource "google_compute_firewall" "wazuh_agent_ingress" {
     ports    = ["1514", "1515", "55000"]
   }
 
-  # NAT IPs of spoke clusters allowed to reach the Wazuh Manager.
-  # Populate via var.spoke_nat_cidrs; defaults to empty (deny-all) until
-  # spokes are provisioned and their NAT IPs are known.
-  source_ranges = var.spoke_nat_cidrs
-
-  target_tags = ["wazuh-manager"]
-
-  description = "Allow Wazuh agent traffic from whitelisted spoke cluster NAT IPs."
-}
-
-resource "google_compute_firewall" "wazuh_deny_all" {
-  name    = "deny-wazuh-ports-all"
-  project = var.project_id
-  network = module.vpc.network_name
-
-  direction = "INGRESS"
-  priority  = 1000
-
-  deny {
-    protocol = "tcp"
-    ports    = ["1514", "1515", "55000"]
-  }
-
   source_ranges = ["0.0.0.0/0"]
   target_tags   = ["wazuh-manager"]
 
-  description = "Default deny for Wazuh agent ports — overridden by higher-priority allow rule for spoke IPs."
+  description = "Allow Wazuh agent traffic from any source. Agents authenticate via enrollment keys."
+}
+
+# -----------------------------------------------------------------------
+# OAuth2 client for security dashboard IAP (oauth2-proxy).
+# Protects Wazuh Dashboard + ThreatMapper Console behind Google OIDC,
+# restricted to the devops@falkordb.com Google Group.
+# -----------------------------------------------------------------------
+
+resource "google_iap_brand" "security" {
+  project           = var.project_id
+  support_email     = var.iap_support_email
+  application_title = "FalkorDB Security Dashboards"
+}
+
+resource "google_iap_client" "security_oauth2_proxy" {
+  brand        = google_iap_brand.security.name
+  display_name = "security-oauth2-proxy-${var.environment}"
 }

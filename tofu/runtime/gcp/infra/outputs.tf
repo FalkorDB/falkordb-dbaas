@@ -48,3 +48,13 @@ output "evidence_locker_bucket" {
 output "prowler_uploader_email" {
   value = google_service_account.prowler_uploader.email
 }
+
+output "security_oauth_client_id" {
+  value     = google_iap_client.security_oauth2_proxy.client_id
+  sensitive = true
+}
+
+output "security_oauth_client_secret" {
+  value     = google_iap_client.security_oauth2_proxy.secret
+  sensitive = true
+}

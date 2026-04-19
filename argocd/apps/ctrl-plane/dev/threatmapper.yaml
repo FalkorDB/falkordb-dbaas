@@ -22,6 +22,11 @@ spec:
 
         console:
           replicas: 1
+          # Pre-set API key from a SealedSecret so sensors can connect
+          # without manually generating a key from the Console UI.
+          deepfenceKey:
+            existingSecret: threatmapper-console-key
+            key: DEEPFENCE_KEY
           resources:
             requests:
               cpu: "1"
@@ -51,6 +56,10 @@ spec:
           annotations:
             cert-manager.io/cluster-issuer: "letsencrypt-prod"
             kubernetes.io/ingress.class: nginx
+            # IAP — oauth2-proxy enforces Google OIDC + group membership
+            nginx.ingress.kubernetes.io/auth-url: "https://auth.security.dev.internal.falkordb.cloud/oauth2/auth"
+            nginx.ingress.kubernetes.io/auth-signin: "https://auth.security.dev.internal.falkordb.cloud/oauth2/start?rd=$scheme://$host$escaped_request_uri"
+            nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-Request-User,X-Auth-Request-Email"
           hosts:
             - host: threatmapper.security.dev.internal.falkordb.cloud
               paths:

@@ -13,7 +13,7 @@ Before starting, ensure the following are available:
 - [ ] `kubeseal` CLI for creating SealedSecrets
 - [ ] `argocd` CLI or ArgoCD UI access
 - [ ] `gcloud` CLI authenticated with the GCP project
-- [ ] A Slack incoming webhook URL for Wazuh alerts
+- [ ] A Google Chat space webhook URL for Wazuh alerts
 - [ ] Access to AWS console (if deploying to AWS spokes)
 - [ ] Access to Azure portal (if deploying to Azure spokes)
 
@@ -27,12 +27,6 @@ This creates the Wazuh static IP, GCS evidence locker bucket, Prowler service ac
 
 ```bash
 cd tofu/runtime/gcp/infra
-
-# Set the spoke NAT CIDRs in your tfvars file.
-# These are the NAT gateway IPs of your spoke clusters that need to
-# reach the Wazuh Manager. Leave empty initially if spokes don't exist yet.
-#
-# spoke_nat_cidrs = ["34.x.x.x/32", "35.x.x.x/32"]
 
 tofu plan
 tofu apply
@@ -91,29 +85,24 @@ tofu output prowler_subscription_id
 
 ## Step 2 — Replace Placeholders
 
-Three sets of placeholders must be replaced before deploying ArgoCD apps.
+Two sets of placeholders must be replaced before deploying ArgoCD apps.
 
-### 2.1 Wazuh Static IP
+### 2.1 Wazuh Static IP (Helm values only)
 
-Replace `${WAZUH_STATIC_IP}` with the IP from Step 1.1 in these files:
+Replace `${WAZUH_STATIC_IP}` with the IP from Step 1.1 in the Wazuh Manager Helm Application files:
 
 | File | Purpose |
 |------|---------|
 | `argocd/apps/ctrl-plane/dev/wazuh.yaml` | LoadBalancer IP |
 | `argocd/apps/ctrl-plane/prod/wazuh.yaml` | LoadBalancer IP |
-| `argocd/kustomize/wazuh-agent/overlays/dev/kustomization.yaml` | Agent → Manager IP |
-| `argocd/kustomize/wazuh-agent/overlays/prod/kustomization.yaml` | Agent → Manager IP |
-| `argocd/kustomize/wazuh-agent/overlays/app-plane-dev/kustomization.yaml` | Agent → Manager IP |
-| `argocd/kustomize/wazuh-agent/overlays/app-plane-prod/kustomization.yaml` | Agent → Manager IP |
 
-### 2.2 Slack Webhook URL
+> **Note:** The agent `manager-ip` is now a SealedSecret (see Step 4). Only the Helm LoadBalancer IP requires a direct placeholder replacement — Helm values cannot reference K8s secrets.
 
-Replace `${WAZUH_SLACK_WEBHOOK_URL}` with your Slack incoming webhook:
+### 2.2 Google Chat Webhook URL
 
-| File |
-|------|
-| `argocd/apps/ctrl-plane/dev/wazuh.yaml` |
-| `argocd/apps/ctrl-plane/prod/wazuh.yaml` |
+The webhook URL is now managed as a SealedSecret (see Step 4). You no longer need to edit the Wazuh Helm values directly — the integration script reads `GOOGLE_CHAT_WEBHOOK_URL` from the sealed secret mounted as an environment variable.
+
+To create a webhook: Google Chat space → Apps & integrations → Webhooks → Create.
 
 ### 2.3 GCP Project ID
 
@@ -121,8 +110,6 @@ Replace `PROJECT_ID` in the Workload Identity annotation with your actual GCP pr
 
 | File |
 |------|
-| `argocd/kustomize/prowler/overlays/dev/wi-patch.yaml` |
-| `argocd/kustomize/prowler/overlays/prod/wi-patch.yaml` |
 | `argocd/kustomize/prowler/overlays/gcp-dev/wi-patch.yaml` |
 | `argocd/kustomize/prowler/overlays/gcp-prod/wi-patch.yaml` |
 
@@ -137,99 +124,229 @@ iam.gke.io/gcp-service-account: prowler-uploader@<YOUR_PROJECT_ID>.iam.gservicea
 
 Spoke clusters registered in ArgoCD must have the following labels for ApplicationSets to target them:
 
+The ArgoCD cluster secrets already carry `cloud_provider` and `host_mode` labels. Verify they are set:
+
 ```bash
-# For each spoke cluster:
-argocd cluster set <CLUSTER_NAME> \
-  --label role=app-plane \
-  --label cloud=gcp      # or "aws" or "azure"
+# Check existing labels on a cluster
+argocd cluster get <CLUSTER_NAME> -o json | jq '.labels'
+
+# Expected labels:
+#   role: app-plane
+#   cloud_provider: gcp   (or aws, azure)
+#   host_mode: managed    (or byoa)
 ```
 
 | Label | Required By | Values |
 |-------|-------------|--------|
 | `role: app-plane` | All spoke ApplicationSets | `app-plane` |
-| `cloud` | Prowler ApplicationSet (routes to cloud-specific overlay) | `gcp`, `aws`, `azure` |
+| `cloud_provider` | Prowler ApplicationSet (routes to cloud-specific overlay) | `gcp`, `aws`, `azure` |
+| `host_mode` | Informational (not used by security stack selectors) | `managed`, `byoa` |
 
-Without these labels, the ApplicationSets will not generate any Applications for the cluster.
+Without `role: app-plane` and `cloud_provider`, the ApplicationSets will not generate Applications for the cluster.
 
 ---
 
-## Step 4 — Create Secrets
+## Step 3.5 — IAP (Identity-Aware Proxy) for Security Dashboards
 
-All secrets go in the `security` namespace. Use SealedSecrets for GitOps:
+The Wazuh Dashboard and ThreatMapper Console are internet-facing via nginx ingress. Access is restricted to the `devops@falkordb.com` Google Group through **oauth2-proxy** with Google OIDC.
+
+> **App-plane security services** (agents, sensors, Prowler) have **no** ingress or LoadBalancer — they are outbound-only and require no IAP.
+
+### 3.5.1 OpenTofu — OAuth Client
+
+The OAuth client and IAP brand are created by `tofu/runtime/gcp/infra/security.tf`:
 
 ```bash
-# Create the secret locally, seal it, then commit the SealedSecret
-kubectl create secret generic <NAME> -n security \
-  --from-literal=<KEY>=<VALUE> \
-  --dry-run=client -o yaml \
-  | kubeseal --format yaml > sealed-<NAME>.yaml
+cd tofu/runtime/gcp/infra
+tofu apply
 ```
 
-### 4.1 Wazuh Agent Enrollment Key (all clusters)
-
-The Wazuh Manager generates an enrollment password on first boot. Retrieve it from the Manager config or set one explicitly in the Wazuh Helm values.
-
+Capture outputs:
 ```bash
-kubectl create secret generic wazuh-agent-key -n security \
-  --from-literal=enrollment-key=<ENROLLMENT_PASSWORD>
+tofu output -raw security_oauth_client_id
+tofu output -raw security_oauth_client_secret
 ```
 
-This secret must exist on **every cluster** where Wazuh agents run (control plane + all spokes).
+### 3.5.2 Google Workspace Admin — Service Account
 
-### 4.2 ThreatMapper Sensor API Key (all clusters)
+oauth2-proxy needs a Google Workspace admin API service account to verify group membership. In the Google Cloud Console:
 
-The API key is generated from the ThreatMapper Console UI after first boot (Step 5.3). Create this secret **after** the Console is running.
+1. Create a service account (e.g., `oauth2-proxy-groups@<PROJECT>.iam.gserviceaccount.com`)
+2. Enable domain-wide delegation
+3. Grant the scope `https://www.googleapis.com/auth/admin.directory.group.readonly`
+4. In Google Workspace Admin → Security → API controls → Domain-wide delegation, add the client ID with the same scope
+5. Export the SA key as JSON — this goes into the `google-admin-sa-json` field in `secrets.env`
+
+### 3.5.3 Cookie Secret
+
+Generate a random cookie encryption secret:
 
 ```bash
-kubectl create secret generic threatmapper-sensor-key -n security \
-  --from-literal=api-key=<API_KEY>
+openssl rand -base64 32
 ```
 
-This secret must exist on **every cluster** where ThreatMapper sensors run.
-
-### 4.3 Prowler AWS Credentials (AWS spokes only)
+### 3.5.4 Seal OAuth Credentials
 
 ```bash
-kubectl create secret generic prowler-aws-credentials -n security \
-  --from-literal=role-arn=arn:aws:iam::123456789012:role/prowler-soc2-scanner \
-  --from-literal=region=us-east-1
+vi argocd/kustomize/oauth2-proxy/overlays/dev/secrets.env
+# Set: client-id=<from Step 3.5.1>
+# Set: client-secret=<from Step 3.5.1>
+# Set: cookie-secret=<from Step 3.5.3>
+# Set: google-admin-sa-json=<SA key JSON from Step 3.5.2>
+
+./scripts/seal_env.sh argocd/kustomize/oauth2-proxy/overlays/dev/secrets.env security \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
 ```
 
-### 4.4 Prowler Azure Credentials (Azure spokes only)
+### 3.5.5 DNS
+
+Create DNS records pointing to the nginx LB static IP:
+
+| Record | Dev | Prod |
+|--------|-----|------|
+| `auth.security.dev.internal.falkordb.cloud` | nginx LB IP | — |
+| `auth.security.internal.falkordb.cloud` | — | nginx LB IP |
+
+### 3.5.6 Authorized Redirect URIs
+
+In the Google Cloud Console, add the OAuth2 callback URL to the client's authorized redirect URIs:
+
+- Dev: `https://auth.security.dev.internal.falkordb.cloud/oauth2/callback`
+- Prod: `https://auth.security.internal.falkordb.cloud/oauth2/callback`
+
+---
+
+## Step 4 — Seal Secrets
+
+All secrets are managed as **SealedSecrets** via `.env` files committed to Git.
+Each kustomize overlay has a `secrets.env` file with `REPLACE_ME` placeholders.
+The workflow:
+
+1. Edit `secrets.env` — replace `REPLACE_ME` with real values
+2. Run `./scripts/seal_env.sh` — produces `secrets-env-secret.yaml` (SealedSecret YAML)
+3. Commit the sealed YAML (never commit plaintext values to Git)
+4. ArgoCD syncs the SealedSecret to the cluster
 
 ```bash
-kubectl create secret generic prowler-azure-credentials -n security \
-  --from-literal=client-id=<CLIENT_ID> \
-  --from-literal=client-secret=<CLIENT_SECRET> \
-  --from-literal=tenant-id=<TENANT_ID> \
-  --from-literal=subscription-id=<SUBSCRIPTION_ID>
+# Generic sealing command (ctrl-plane secrets → ctrl-plane cert)
+./scripts/seal_env.sh <path>/secrets.env security \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
+
+# App-plane secrets → app-plane cert
+./scripts/seal_env.sh <path>/secrets.env security \
+  certs/app-plane/sealed-secrets/dev/pub-cert.pem
 ```
 
-### 4.5 Prowler GCS Credentials (AWS + Azure spokes only)
-
-Non-GCP spokes need a GCS service account key to upload scan results to the evidence locker. GCP spokes use Workload Identity instead.
+### 4.1 Google Chat Webhook (ctrl-plane only)
 
 ```bash
-# Generate a key for the Prowler uploader SA
-gcloud iam service-accounts keys create /tmp/prowler-gcs-key.json \
-  --iam-account=$(tofu -chdir=tofu/runtime/gcp/infra output -raw prowler_uploader_email)
+# Edit the webhook URL
+vi argocd/kustomize/wazuh-rules/secrets.env
+# Set: WAZUH_GOOGLE_CHAT_WEBHOOK_URL=https://chat.googleapis.com/v1/spaces/...
 
-kubectl create secret generic prowler-gcs-credentials -n security \
-  --from-file=sa-key.json=/tmp/prowler-gcs-key.json
+./scripts/seal_env.sh argocd/kustomize/wazuh-rules/secrets.env security \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
+```
 
-# Clean up local key
-rm /tmp/prowler-gcs-key.json
+### 4.2 ThreatMapper Console API Key (ctrl-plane only)
+
+Generate a random API key that will be shared between the Console and all Sensors:
+
+```bash
+DEEPFENCE_KEY=$(openssl rand -hex 32)
+
+# Seal for console
+vi argocd/kustomize/threatmapper-console/overlays/dev/secrets.env
+# Set: DEEPFENCE_KEY=<generated key>
+./scripts/seal_env.sh argocd/kustomize/threatmapper-console/overlays/dev/secrets.env security \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
+
+# Use the SAME key for all sensor overlays (Step 4.4)
+```
+
+### 4.3 Wazuh Agent Enrollment Key + Manager IP (all clusters)
+
+The Wazuh Manager generates an enrollment password on first boot. The manager IP is the static IP from Step 1.1. Set both in all overlays:
+
+```bash
+# ctrl-plane
+vi argocd/kustomize/wazuh-agent/overlays/ctrl-plane-dev/secrets.env
+# Set: enrollment-key=<ENROLLMENT_PASSWORD>
+# Set: manager-ip=<WAZUH_STATIC_IP from Step 1.1>
+./scripts/seal_env.sh argocd/kustomize/wazuh-agent/overlays/ctrl-plane-dev/secrets.env security \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
+
+# app-plane (seal with app-plane cert)
+vi argocd/kustomize/wazuh-agent/overlays/app-plane-dev/secrets.env
+./scripts/seal_env.sh argocd/kustomize/wazuh-agent/overlays/app-plane-dev/secrets.env security \
+  certs/app-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+### 4.4 ThreatMapper Sensor API Key + Console URL (all clusters)
+
+Use the **same** `DEEPFENCE_KEY` generated in Step 4.2. Also set the Console URL:
+
+```bash
+# ctrl-plane
+vi argocd/kustomize/threatmapper-sensor/overlays/dev/secrets.env
+# Set: api-key=<same key from Step 4.2>
+# Set: console-url=threatmapper.security.dev.internal.falkordb.cloud
+./scripts/seal_env.sh argocd/kustomize/threatmapper-sensor/overlays/dev/secrets.env security \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
+
+# Repeat for app-plane overlays with app-plane cert
+```
+
+### 4.5 Prowler AWS Credentials (AWS spokes only)
+
+```bash
+vi argocd/kustomize/prowler/overlays/aws-dev/secrets.env
+# Set: role-arn=arn:aws:iam::123456789012:role/prowler-soc2-scanner
+# Set: region=us-east-1
+# Set: sa-key.json=<contents of GCS service account key JSON>
+# Set: evidence-bucket=falkordb-evidence-locker-dev
+
+./scripts/seal_env.sh argocd/kustomize/prowler/overlays/aws-dev/secrets.env security \
+  certs/app-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+### 4.6 Prowler Azure Credentials (Azure spokes only)
+
+```bash
+vi argocd/kustomize/prowler/overlays/azure-dev/secrets.env
+# Set all fields from tofu output (Step 1.3)
+# Set: sa-key.json=<contents of GCS service account key JSON>
+# Set: evidence-bucket=falkordb-evidence-locker-dev
+
+./scripts/seal_env.sh argocd/kustomize/prowler/overlays/azure-dev/secrets.env security \
+  certs/app-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+### 4.7 Prowler GCP Evidence Bucket (GCP spokes only)
+
+GCP spokes use Workload Identity for GCS access but still need the bucket name sealed:
+
+```bash
+vi argocd/kustomize/prowler/overlays/gcp-dev/secrets.env
+# Set: evidence-bucket=falkordb-evidence-locker-dev
+
+./scripts/seal_env.sh argocd/kustomize/prowler/overlays/gcp-dev/secrets.env security \
+  certs/app-plane/sealed-secrets/dev/pub-cert.pem
 ```
 
 ### Secret Summary
 
-| Secret | Clusters | Keys |
-|--------|----------|------|
-| `wazuh-agent-key` | All | `enrollment-key` |
-| `threatmapper-sensor-key` | All | `api-key` |
-| `prowler-aws-credentials` | AWS spokes | `role-arn`, `region` |
-| `prowler-azure-credentials` | Azure spokes | `client-id`, `client-secret`, `tenant-id`, `subscription-id` |
-| `prowler-gcs-credentials` | AWS + Azure spokes | `sa-key.json` |
+| Secret | `.env` Location | Clusters | Keys |
+|--------|----------------|----------|------|
+| `oauth2-proxy-credentials` | `oauth2-proxy/overlays/*/secrets.env` | Ctrl-plane | `client-id`, `client-secret`, `cookie-secret`, `google-admin-sa-json` |
+| `wazuh-google-chat-webhook` | `wazuh-rules/secrets.env` | Ctrl-plane | `WAZUH_GOOGLE_CHAT_WEBHOOK_URL` |
+| `threatmapper-console-key` | `threatmapper-console/overlays/*/secrets.env` | Ctrl-plane | `DEEPFENCE_KEY` |
+| `wazuh-agent-key` | `wazuh-agent/overlays/*/secrets.env` | All | `enrollment-key`, `manager-ip` |
+| `threatmapper-sensor-key` | `threatmapper-sensor/overlays/*/secrets.env` | All | `api-key`, `console-url` |
+| `prowler-aws-credentials` | `prowler/overlays/aws-*/secrets.env` | AWS spokes | `role-arn`, `region` |
+| `prowler-azure-credentials` | `prowler/overlays/azure-*/secrets.env` | Azure spokes | `client-id`, `client-secret`, `tenant-id`, `subscription-id` |
+| `prowler-gcs-credentials` | `prowler/overlays/{aws,azure}-*/secrets.env` | AWS + Azure spokes | `sa-key.json` |
+| `prowler-infra` | `prowler/overlays/*/secrets.env` | All spokes | `evidence-bucket` |
 
 TLS secrets (`wazuh-dashboard-tls`, `threatmapper-tls`) are auto-provisioned by cert-manager via the `letsencrypt-prod` ClusterIssuer.
 
@@ -238,6 +355,22 @@ TLS secrets (`wazuh-dashboard-tls`, `threatmapper-tls`) are auto-provisioned by 
 ## Step 5 — Deploy ArgoCD Applications (Ordered)
 
 Deploy in this order. Wait for each component to be healthy before proceeding.
+
+### 5.0 OAuth2 Proxy (must be first)
+
+```bash
+kubectl apply -f argocd/apps/ctrl-plane/dev/oauth2-proxy.yaml
+```
+
+Wait until oauth2-proxy pods are Running and the ingress is responding:
+
+```bash
+kubectl get pods -n security -l app=oauth2-proxy
+curl -sI "https://auth.security.dev.internal.falkordb.cloud/oauth2/auth" | head -1
+# Expected: HTTP/2 401 (unauthenticated — this is correct)
+```
+
+The Wazuh Dashboard and ThreatMapper Console ingresses reference this endpoint via `auth-url`. It must be healthy **before** deploying those services.
 
 ### 5.1 Wazuh Manager
 
@@ -267,15 +400,18 @@ Deploys the custom rules ConfigMap and dashboard saved objects. The Manager auto
 ### 5.3 ThreatMapper Console
 
 ```bash
+kubectl apply -f argocd/apps/ctrl-plane/dev/threatmapper-console-secrets.yaml
 kubectl apply -f argocd/apps/ctrl-plane/dev/threatmapper.yaml
 ```
 
-Wait until Console is accessible via ingress. Then:
+The Console secrets Application (sync-wave -1) deploys the `threatmapper-console-key` SealedSecret before the Console Helm chart starts. The Console reads the pre-set `DEEPFENCE_KEY` from the sealed secret — no manual API key generation needed.
 
-1. Log in to the ThreatMapper Console UI
-2. Navigate to **Settings → User Management → API Keys**
-3. Generate a new API key for the sensor agents
-4. Use this key to create the `threatmapper-sensor-key` secret (Step 4.2)
+Wait until Console is accessible via ingress, then verify the API key works:
+
+```bash
+curl -s -k -H "Authorization: Bearer <DEEPFENCE_KEY>" \
+  "https://threatmapper.security.dev.internal.falkordb.cloud/deepfence/v2/topology" | head
+```
 
 ### 5.4 Wazuh Agents (Control Plane)
 
@@ -370,7 +506,7 @@ export THREATMAPPER_CA_BUNDLE="/path/to/threatmapper-ca.pem"  # optional
 - [ ] Prowler results visible in GCS evidence locker
 - [ ] Grafana SOC 2 dashboard showing data
 - [ ] VMRule alerts loaded (no `ProwlerScanStale` firing)
-- [ ] Slack integration receives Wazuh alerts
+- [ ] Google Chat integration receives Wazuh alerts
 
 ---
 
@@ -381,8 +517,11 @@ Repeat Steps 2–6 using the `prod` variants:
 - Replace placeholders in prod files
 - Use `argocd/apps/ctrl-plane/prod/*.yaml`
 - Use `argocd/apps/app-plane/prod/*.yaml`
+- Seal secrets with `certs/ctrl-plane/sealed-secrets/prod/pub-cert.pem`
 
 Key differences in prod:
 - Wazuh Manager: `ssl_verify_host: "yes"` (strict mTLS)
 - ThreatMapper Console: 2 replicas (HA)
 - Domain: `*.security.internal.falkordb.cloud` (no `dev` subdomain)
+- oauth2-proxy: callback URL is `https://auth.security.internal.falkordb.cloud/oauth2/callback`
+- Auth annotations on ingresses point to `auth.security.internal.falkordb.cloud`

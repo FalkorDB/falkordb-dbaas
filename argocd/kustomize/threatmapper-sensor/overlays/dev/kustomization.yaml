@@ -3,11 +3,11 @@ kind: Kustomization
 namespace: security
 resources:
   - ../../base
+  - secrets-env-secret.yaml
 configMapGenerator:
   - name: threatmapper-sensor-config
     behavior: create
     literals:
-      - console-url=threatmapper.security.dev.internal.falkordb.cloud
       - cluster-name=ctrl-plane-dev
 generatorOptions:
   disableNameSuffixHash: true

@@ -6,4 +6,4 @@ metadata:
   name: prowler
   namespace: security
   annotations:
-    iam.gke.io/gcp-service-account: prowler-uploader@PROJECT_ID.iam.gserviceaccount.com
+    iam.gke.io/gcp-service-account: prowler-uploader@ctrl-plane-prod-b1b92df2.iam.gserviceaccount.com

@@ -30,7 +30,7 @@ Hub-spoke security monitoring architecture providing continuous compliance scann
     │  ● Wazuh Agent (DS)  │    │  ● Wazuh Agent (DS)  │    │  ● Wazuh Agent (DS)  │
     │  ● TM Sensor (DS)   │    │  ● TM Sensor (DS)   │    │  ● TM Sensor (DS)   │
     │  ● Prowler (CJ)     │    │  ● Prowler (CJ)     │    │  ● Prowler (CJ)     │
-    │    (Workload Identity)│    │    (IRSA + GCS key)  │    │    (SP + GCS key)    │
+    │   (Workload Identity) │    │    (IRSA + GCS key)  │    │    (SP + GCS key)    │
     └──────────────────────┘    └──────────────────────┘    └──────────────────────┘
 ```
 

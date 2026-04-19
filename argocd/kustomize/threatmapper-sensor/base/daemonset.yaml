@@ -44,8 +44,8 @@ spec:
           env:
             - name: MGMT_CONSOLE_URL
               valueFrom:
-                configMapKeyRef:
-                  name: threatmapper-sensor-config
+                secretKeyRef:
+                  name: threatmapper-sensor-key
                   key: console-url
             - name: MGMT_CONSOLE_PORT
               value: "443"

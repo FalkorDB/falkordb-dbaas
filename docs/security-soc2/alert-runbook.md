@@ -2,7 +2,7 @@
 
 Response procedures for each VMRule alert defined in `observability/rules/soc2-security.rules.yml`.
 
-All alerts route through VictoriaMetrics → Alertmanager → PagerDuty / Slack.
+All alerts route through VictoriaMetrics → Alertmanager → PagerDuty / Google Chat.
 
 ---
 

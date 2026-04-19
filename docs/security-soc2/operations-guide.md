@@ -34,7 +34,7 @@ The security stack is designed to run autonomously. The following occur automati
 
 1. Verify the Grafana **SOC 2 Compliance** dashboard shows no red panels
 2. Check that no `ProwlerScanStale` or `WazuhManagerDown` alerts are firing
-3. If on-call, review Slack channel for Wazuh rule 100101+ alerts (Prowler FAIL findings)
+3. If on-call, review Google Chat space for Wazuh rule 100101+ alerts (Prowler FAIL findings)
 
 ---
 
@@ -47,20 +47,11 @@ When a new app-plane cluster is provisioned:
 ```bash
 argocd cluster add <CONTEXT_NAME> \
   --label role=app-plane \
-  --label cloud=gcp  # or aws / azure
+  --label cloud_provider=gcp \
+  --label host_mode=managed  # or byoa
 ```
 
-### 2. Add NAT IP to firewall allowlist
-
-Get the cluster's NAT gateway IP and add it to `spoke_nat_cidrs` in [tofu/runtime/gcp/infra/variables.tf](../../tofu/runtime/gcp/infra/variables.tf):
-
-```bash
-cd tofu/runtime/gcp/infra
-# Add the new IP to spoke_nat_cidrs tfvar
-tofu apply
-```
-
-### 3. Create required Secrets
+### 2. Create required Secrets
 
 On the new cluster, create secrets in the `security` namespace:
 
@@ -94,7 +85,7 @@ kubectl create secret generic prowler-gcs-credentials -n security \
   --from-file=sa-key.json=<GCS_KEY_FILE>
 ```
 
-### 4. Verify
+### 3. Verify
 
 The ApplicationSets will automatically detect the new cluster and deploy:
 - Wazuh Agent DaemonSet
@@ -139,16 +130,7 @@ argocd app delete <cluster>-wazuh-agent
 argocd app delete <cluster>-threatmapper-sensor
 ```
 
-### 2. Remove NAT IP from firewall
-
-Remove the cluster's NAT IP from `spoke_nat_cidrs` and apply:
-
-```bash
-cd tofu/runtime/gcp/infra
-tofu apply
-```
-
-### 3. Deregister Wazuh agent
+### 2. Deregister Wazuh agent
 
 ```bash
 # Find the agent IDs
@@ -317,9 +299,9 @@ Custom rules are in `argocd/kustomize/wazuh-rules/wazuh-custom-rules.yaml`.
 | Rule ID | Level | Description |
 |---------|-------|-------------|
 | 100100 | 3 | Prowler result received (base) |
-| 100101 | 10 | Prowler FAIL detected → Slack alert |
+| 100101 | 10 | Prowler FAIL detected → Google Chat alert |
 | 100102 | 13 | Prowler critical severity FAIL |
-| 100200 | 12 | FIM critical path modified → Slack alert |
+| 100200 | 12 | FIM critical path modified → Google Chat alert |
 | 100300 | 10 | Auth anomaly: brute force detection |
 | 100301 | 12 | Auth anomaly: privilege escalation |
 | 100302 | 10 | Auth anomaly: after-hours access |
@@ -415,7 +397,7 @@ gsutil ls "gs://<BUCKET>/prowler/$(date +%Y/%m/%d)/"
 |---------|-------|-----|
 | Agent pod CrashLoopBackOff | Manager not reachable | Check `WAZUH_MANAGER` IP is correct; verify firewall rules allow spoke NAT IPs |
 | Agent shows "disconnected" | Enrollment key mismatch | Verify `wazuh-agent-key` secret matches Manager enrollment password |
-| Agent shows "never_connected" | Firewall blocking 1514/1515 | Add spoke NAT IP to `spoke_nat_cidrs` and `tofu apply` |
+| Agent shows "never_connected" | Firewall blocking 1514/1515 | Verify GCP firewall rule `allow-wazuh-agent-ingress` exists and is not disabled |
 
 ```bash
 # Debug connectivity from agent pod
@@ -472,18 +454,10 @@ kubectl get pods -n observability -l app.kubernetes.io/name=kube-state-metrics
 
 ## Firewall Rules
 
-Wazuh Manager ports are protected by two GCP firewall rules:
+Wazuh Manager ports are open to all sources. Agents authenticate via enrollment keys managed as SealedSecrets.
 
 | Rule | Priority | Action | Source | Ports |
 |------|----------|--------|--------|-------|
-| `allow-wazuh-agent-ingress` | 900 | Allow | `spoke_nat_cidrs` | 1514, 1515, 55000 |
-| `deny-wazuh-ports-all` | 1000 | Deny | `0.0.0.0/0` | 1514, 1515, 55000 |
+| `allow-wazuh-agent-ingress` | 900 | Allow | `0.0.0.0/0` | 1514, 1515, 55000 |
 
-The allow rule has higher priority (lower number), so only whitelisted IPs can reach the Manager. All other traffic on those ports is denied.
-
-To add a new spoke IP:
-```bash
-cd tofu/runtime/gcp/infra
-# Add IP to spoke_nat_cidrs variable
-tofu apply
-```
+Since spoke clusters are created dynamically, the firewall does not restrict by source IP. The Wazuh Manager enforces agent authentication via enrollment keys.

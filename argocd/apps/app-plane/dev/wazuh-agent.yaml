@@ -1,6 +1,9 @@
 # Wazuh Agent — deployed to all app-plane clusters via ApplicationSet.
 # Each spoke cluster gets a Wazuh Agent DaemonSet that reports to the
 # central Wazuh Manager on the GCP control plane.
+#
+# Security: No Services or Ingresses — agent-only workload with no
+# internet-facing endpoints. Outbound-only connection to Manager.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:

@@ -3,11 +3,11 @@ kind: Kustomization
 namespace: security
 resources:
   - ../../base
+  - secrets-env-secret.yaml
 configMapGenerator:
   - name: prowler-config
     behavior: create
     literals:
-      - evidence-bucket=falkordb-evidence-locker-dev
       - cloud-provider=aws
       - cluster-name=app-plane-aws-dev
 generatorOptions:

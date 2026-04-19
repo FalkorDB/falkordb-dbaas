@@ -3,11 +3,11 @@ kind: Kustomization
 namespace: security
 resources:
   - ../../base
+  - secrets-env-secret.yaml
 configMapGenerator:
   - name: wazuh-agent-config
     behavior: create
     literals:
-      - manager-ip=${WAZUH_STATIC_IP}
       - agent-group=app-plane-prod
 generatorOptions:
   disableNameSuffixHash: true

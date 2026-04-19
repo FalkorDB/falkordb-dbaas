@@ -1,4 +1,5 @@
 # Wazuh Agent — production app-plane spoke clusters.
+# Security: No internet-facing endpoints — outbound-only.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
