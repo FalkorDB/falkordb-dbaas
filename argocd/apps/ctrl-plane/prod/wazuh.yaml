@@ -72,6 +72,8 @@ spec:
             extraEnvFrom:
               - secretRef:
                   name: wazuh-google-chat-webhook
+              - secretRef:
+                  name: wazuh-manager-authd
             extraVolumes:
               - name: custom-rules
                 configMap:

@@ -72,6 +72,13 @@ resource "google_service_account_iam_member" "prowler_workload_identity" {
   member             = "serviceAccount:${var.project_id}.svc.id.goog[security/prowler]"
 }
 
+# Static JSON key for non-GCP spokes (AWS/Azure) that cannot use Workload Identity.
+# Sealed into prowler-gcs-credentials as sa-key.json.
+# Rotate by tainting this resource and re-applying.
+resource "google_service_account_key" "prowler_uploader_key" {
+  service_account_id = google_service_account.prowler_uploader.name
+}
+
 # -----------------------------------------------------------------------
 # Firewall: allow Wazuh agent traffic from any source.
 # Spoke clusters are created dynamically so their NAT IPs are not known
@@ -96,6 +103,26 @@ resource "google_compute_firewall" "wazuh_agent_ingress" {
   target_tags   = ["wazuh-manager"]
 
   description = "Allow Wazuh agent traffic from any source. Agents authenticate via enrollment keys."
+}
+
+# -----------------------------------------------------------------------
+# oauth2-proxy Google Groups service account.
+#
+# Used by oauth2-proxy to verify that the authenticated user belongs to
+# the devops@falkordb.com Google Group via the Directory API.
+# Requires domain-wide delegation — see deployment-runbook.md Step 3.5.2.
+# -----------------------------------------------------------------------
+
+resource "google_service_account" "oauth2_proxy_groups" {
+  account_id   = "oauth2-proxy-groups"
+  display_name = "oauth2-proxy Google Groups lookup"
+  project      = var.project_id
+}
+
+# Static JSON key — sealed into oauth2-proxy-credentials as google-admin-sa-json.
+# Rotate by tainting this resource and re-applying.
+resource "google_service_account_key" "oauth2_proxy_groups_key" {
+  service_account_id = google_service_account.oauth2_proxy_groups.name
 }
 
 # -----------------------------------------------------------------------
