@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations: {}
+  labels:
+    app.kubernetes.io/managed-by: alert-silence-syncer
+  name: alert-silence-syncer-rolebinding
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: alert-silence-syncer-role
+subjects:
+- kind: ServiceAccount
+  name: alert-silence-syncer-sa
+  namespace: observability
+
