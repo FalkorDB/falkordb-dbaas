@@ -6,7 +6,7 @@ export const ExportRDBRequestBodySchema = Type.Object({
     pattern: "^[a-zA-Z0-9._-]+$",
   })),
   password: Type.Optional(Type.String({
-    pattern: "^[a-zA-Z0-9._!\@\#\$\%\^\&\*]+$"
+    pattern: "^[a-zA-Z0-9._!\@\#\$\%\^\&\*-]+$"
   })),
 });
 
