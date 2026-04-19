@@ -52,3 +52,18 @@ resource "google_service_account" "ldap_api_admin_sa" {
   account_id   = "ldap-api-admin"
   display_name = "LDAP API Admin Service Account"
 }
+
+# ── ArgoCD Image Updater ───────────────────────────────────────────────────────
+
+resource "google_service_account" "argocd_image_updater" {
+  project      = var.project_id
+  account_id   = "argocd-image-updater"
+  display_name = "ArgoCD Image Updater Service Account"
+}
+
+# Bind the KSA argocd/argocd-image-updater to this GSA via Workload Identity.
+resource "google_service_account_iam_member" "argocd_image_updater_workload" {
+  service_account_id = google_service_account.argocd_image_updater.id
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[argocd/argocd-image-updater]"
+}

@@ -4,12 +4,8 @@ namespace: customer-observability
 
 resources:
   - ../../base
+  - auth-proxy-env-secret.yaml
 
-patches:
-  - target:
-      kind: Deployment
-      name: auth-proxy
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: "us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/frontend/auth-proxy-web:latest"
+images:
+  - name: us-central1-docker.pkg.dev/PROJECT/frontend/auth-proxy-web
+    newName: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/frontend/auth-proxy-web

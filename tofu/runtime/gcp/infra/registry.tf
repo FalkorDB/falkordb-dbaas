@@ -42,6 +42,13 @@ resource "google_project_iam_member" "frontend" {
   member  = "serviceAccount:${module.gke.service_account}"
 }
 
+# Allow the ArgoCD Image Updater SA to pull images via Workload Identity.
+resource "google_project_iam_member" "argocd_image_updater_registry" {
+  project = var.project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${google_service_account.argocd_image_updater.email}"
+}
+
 # Allow the db-exporter SA to pull specifically from the backend repo.
 resource "google_artifact_registry_repository_iam_member" "db_exporter_sa" {
   repository = google_artifact_registry_repository.backend.id

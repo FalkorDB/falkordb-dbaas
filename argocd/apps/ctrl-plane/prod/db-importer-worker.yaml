@@ -7,7 +7,7 @@ metadata:
     argocd-image-updater.argoproj.io/image-list: "worker=us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer-worker"
     argocd-image-updater.argoproj.io/worker.update-strategy: semver
     argocd-image-updater.argoproj.io/worker.allow-tags: regexp:^[0-9]+\.[0-9]+\.[0-9]+$
-    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/argocd-image-updater-git-secret
     argocd-image-updater.argoproj.io/git-branch: main
 spec:
   project: default

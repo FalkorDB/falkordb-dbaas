@@ -125,7 +125,7 @@ extraObjects:
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: main
-        path: argocd/ctrl_plane/prod
+        path: argocd/apps/ctrl-plane/prod
       destination:
         server: https://kubernetes.default.svc
       syncPolicy:
@@ -140,7 +140,7 @@ extraObjects:
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: main
-        path: argocd/app_plane/prod
+        path: argocd/apps/app-plane/prod
       destination:
         server: https://kubernetes.default.svc
       syncPolicy:

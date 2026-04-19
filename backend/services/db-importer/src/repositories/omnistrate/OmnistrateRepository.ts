@@ -151,6 +151,7 @@ export class OmnistrateRepository {
     userId: string,
     instance?: OmnistrateInstanceSchemaType,
     instanceId?: string,
+    roles: ('root' | 'writer' | 'reader')[] = ['reader'],
   ): Promise<boolean> {
     assert(instance || instanceId, 'OmnistrateRepository: Instance or Instance ID is required');
     assert(userId, 'OmnistrateRepository: User ID is required');
@@ -171,7 +172,7 @@ export class OmnistrateRepository {
       return false;
     }
 
-    if (['root', 'writer', 'reader'].includes(user.role)) {
+    if (roles.includes(user.role)) {
       return true;
     }
 

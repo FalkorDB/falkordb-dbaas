@@ -67,19 +67,22 @@ const _makePodJob = (node: { podId: string, partFileName: string }): FlowJob => 
     },
     [
       makeJobNode(
-        RdbExportRequestReadSignedURLProcessor,
+        RdbExportMonitorSaveProgressProcessor,
         {
           taskId: task.taskId,
-          bucketName: task.payload.destination.bucketName,
-          fileName: node.partFileName,
-          expiresIn: task.payload.destination.expiresIn,
+          podId: node.podId,
+          cloudProvider: task.payload.cloudProvider,
+          clusterId: task.payload.clusterId,
+          region: task.payload.region,
+          instanceId: task.payload.instanceId,
+          hasTLS: task.payload.hasTLS,
         },
         {
           failParentOnFailure: true,
         },
         [
           makeJobNode(
-            RdbExportMonitorSaveProgressProcessor,
+            RdbExportSendSaveCommandProcessor,
             {
               taskId: task.taskId,
               podId: node.podId,
@@ -91,24 +94,7 @@ const _makePodJob = (node: { podId: string, partFileName: string }): FlowJob => 
             },
             {
               failParentOnFailure: true,
-            },
-            [
-              makeJobNode(
-                RdbExportSendSaveCommandProcessor,
-                {
-                  taskId: task.taskId,
-                  podId: node.podId,
-                  cloudProvider: task.payload.cloudProvider,
-                  clusterId: task.payload.clusterId,
-                  region: task.payload.region,
-                  instanceId: task.payload.instanceId,
-                  hasTLS: task.payload.hasTLS,
-                },
-                {
-                  failParentOnFailure: true,
-                }
-              )
-            ]
+            }
           )
         ]
       )

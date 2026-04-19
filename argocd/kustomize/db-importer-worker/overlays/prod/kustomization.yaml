@@ -4,12 +4,8 @@ namespace: api
 
 resources:
   - ../../base
+  - db-importer-worker-env-secret.yaml
 
-patches:
-  - target:
-      kind: Deployment
-      name: db-importer-worker
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: "us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer-worker:1.0.0"
+images:
+  - name: us-central1-docker.pkg.dev/PROJECT/backend/db-importer-worker
+    newName: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/db-importer-worker

@@ -84,7 +84,7 @@ controller:
     - name: ARGOCD_CONTROLLER_REPLICAS
       value: "1"
   extraArgs:
-    - --sharding-method=consistent-hashing
+    - --sharding-method=round-robin
   metrics:
     enabled: true
   serviceAccount:
@@ -109,7 +109,7 @@ extraObjects:
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: dev
-        path: argocd/ctrl_plane/dev
+        path: argocd/apps/ctrl-plane/dev
       destination:
         server: https://kubernetes.default.svc
       syncPolicy:
@@ -124,7 +124,7 @@ extraObjects:
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: dev
-        path: argocd/app_plane/dev
+        path: argocd/apps/app-plane/dev
       destination:
         server: https://kubernetes.default.svc
       syncPolicy:

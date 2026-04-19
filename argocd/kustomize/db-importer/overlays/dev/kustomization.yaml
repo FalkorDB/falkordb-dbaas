@@ -5,11 +5,6 @@ namespace: api
 resources:
   - ../../base
 
-patches:
-  - target:
-      kind: Deployment
-      name: db-importer
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: "us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/db-importer:1.1.0"
+images:
+  - name: us-central1-docker.pkg.dev/PROJECT/backend/db-importer
+    newName: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/db-importer

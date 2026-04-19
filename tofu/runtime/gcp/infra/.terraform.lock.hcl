@@ -6,7 +6,6 @@ provider "registry.opentofu.org/hashicorp/google" {
   constraints = ">= 3.33.0, >= 3.53.0, >= 3.83.0, >= 4.25.0, >= 4.64.0, >= 5.0.0, 5.45.0, < 6.0.0, < 7.0.0"
   hashes = [
     "h1:5yNsxer0hDyiDkwmaqR6biJXaKO78GRYH1qbaTG9YyE=",
-    "h1:i+v9EZbFRgLj1/Q+j71Z/V79ghSJnINQFq+uZEzDvTg=",
     "zh:3abbc9944211da9027c69dde78b00430a7e2171ceb0c725c5b0d095f3f47f116",
     "zh:42e4f1ccde4798b0ef769931f64fdc72ee6b6da33e560d697bd11ce2a94a973a",
     "zh:56bb20c9ecfb4f8bd54b0673ec98798fbcebd9523503715ab7717160f3ed443d",

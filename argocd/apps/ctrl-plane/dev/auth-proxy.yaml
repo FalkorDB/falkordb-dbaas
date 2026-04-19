@@ -7,7 +7,7 @@ metadata:
     argocd-image-updater.argoproj.io/image-list: "web=us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/frontend/auth-proxy-web"
     argocd-image-updater.argoproj.io/web.update-strategy: semver
     argocd-image-updater.argoproj.io/web.allow-tags: regexp:^[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]+$
-    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/argocd-image-updater-git-secret
     argocd-image-updater.argoproj.io/git-branch: dev
 spec:
   project: default
