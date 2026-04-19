@@ -5,7 +5,7 @@
 # Metrics strategy:
 #   - Prowler: uses kube-state-metrics CronJob/Job metrics (available by default)
 #   - Wazuh:   uses up{} service monitor + Wazuh Prometheus exporter if deployed
-#   - ThreatMapper: uses up{} service monitor for sensor liveness
+
 apiVersion: operator.victoriametrics.com/v1beta1
 kind: VMRule
 metadata:
@@ -87,26 +87,4 @@ spec:
             summary: "Wazuh agent pod(s) misscheduled"
             description: "Wazuh agent DaemonSet has misscheduled pods. Investigate node scheduling."
 
-    - name: soc2.threatmapper
-      interval: 5m
-      rules:
-        - alert: ThreatMapperConsoleDown
-          expr: up{job="threatmapper-console"} == 0
-          for: 10m
-          labels:
-            severity: critical
-            team: security
-          annotations:
-            summary: "ThreatMapper Console is unreachable"
-            description: "The ThreatMapper management console has been down for >10 minutes. Vulnerability scanning visibility is lost."
 
-        - alert: ThreatMapperSensorDaemonSetUnavailable
-          expr: |
-            kube_daemonset_status_number_unavailable{daemonset="threatmapper-sensor"} > 0
-          for: 15m
-          labels:
-            severity: warning
-            team: security
-          annotations:
-            summary: "{{ $value }} ThreatMapper sensor pod(s) unavailable"
-            description: "ThreatMapper sensor DaemonSet has unavailable pods for >15 minutes. Runtime vulnerability detection coverage is degraded."

@@ -183,79 +183,13 @@ All alerts route through VictoriaMetrics → Alertmanager → PagerDuty / Google
 
 ---
 
-## ThreatMapper Alerts
-
-### ThreatMapperConsoleDown
-
-| Field | Value |
-|-------|-------|
-| **Severity** | critical |
-| **Fires when** | ThreatMapper Console is unreachable for >10 minutes |
-| **Expression** | `up{job="threatmapper-console"} == 0` |
-| **Impact** | Vulnerability scanning visibility is lost. Sensors continue collecting data but cannot report. |
-
-**Response:**
-
-1. Check Console pods:
-   ```bash
-   kubectl get pods -n security -l app=deepfence-console
-   kubectl get pods -n security -l app=deepfence-router
-   ```
-
-2. The Console depends on several backing services. Check all:
-   ```bash
-   kubectl get pods -n security | grep deepfence
-   # Should see: console, router, postgres, redis, neo4j, kafka, worker
-   ```
-
-3. Check PVC usage (Postgres, Neo4j, Kafka all use persistent storage):
-   ```bash
-   kubectl get pvc -n security | grep deepfence
-   ```
-
-4. Common causes:
-   - **Postgres crash**: Console depends on Postgres. Check PG pod logs.
-   - **Kafka volume full**: Kafka stores event data. Check PVC utilization.
-   - **Node pool at capacity**: All ThreatMapper pods run on the `security` node pool.
-
-5. **SOC 2 implication**: Document the outage. Sensors buffer locally but may lose data if the outage is prolonged.
-
----
-
-### ThreatMapperSensorDaemonSetUnavailable
-
-| Field | Value |
-|-------|-------|
-| **Severity** | warning |
-| **Fires when** | ThreatMapper Sensor DaemonSet has unavailable pods for >15 minutes |
-| **Expression** | `kube_daemonset_status_number_unavailable{daemonset="threatmapper-sensor"} > 0` |
-| **Impact** | Some nodes are not being scanned. Runtime vulnerability detection coverage gap. |
-
-**Response:**
-
-1. Identify failing pods:
-   ```bash
-   kubectl get pods -n security -l app=threatmapper-sensor -o wide | grep -v Running
-   kubectl describe pod <POD_NAME> -n security
-   ```
-
-2. Common causes:
-   - **API key invalid**: Regenerate in Console, update `threatmapper-sensor-key` secret
-   - **Console unreachable**: Check Console health first (see ThreatMapperConsoleDown)
-   - **Privileged container denied**: Sensors require `privileged: true`. Check PodSecurityPolicy/Admission
-   - **Docker/containerd socket missing**: Sensor needs `/var/run/docker.sock` or `/run/containerd/containerd.sock`
-
----
-
 ## Alert Escalation Matrix
 
 | Alert | Severity | On-Call Response Time | Escalation |
 |-------|----------|----------------------|------------|
 | WazuhManagerDown | Critical | 15 minutes | Page infrastructure + security team |
-| ThreatMapperConsoleDown | Critical | 30 minutes | Page infrastructure team |
 | WazuhAgentDaemonSetUnavailable | Warning | 1 hour | Notify security team |
 | WazuhAgentDaemonSetMisscheduled | Warning | 4 hours | Notify security team |
-| ThreatMapperSensorDaemonSetUnavailable | Warning | 1 hour | Notify security team |
 | ProwlerScanFailing | Warning | 4 hours | Notify security team |
 | ProwlerScanStale | Warning | 8 hours | Notify security + compliance team |
 | ProwlerCronJobSuspended | Warning | 4 hours | Notify security team |

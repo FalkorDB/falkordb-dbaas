@@ -197,7 +197,7 @@ Without `role: app-plane` and `cloud_provider`, the ApplicationSets will not gen
 
 ## Step 5 — IAP (Identity-Aware Proxy) for Security Dashboards
 
-The Wazuh Dashboard and ThreatMapper Console are internet-facing via nginx ingress. Access is restricted to the `devops@falkordb.com` Google Group through **oauth2-proxy** with Google OIDC.
+The Wazuh Dashboard is internet-facing via nginx ingress. Access is restricted to the `devops@falkordb.com` Google Group through **oauth2-proxy** with Google OIDC.
 
 > **App-plane security services** (agents, sensors, Prowler) have **no** ingress or LoadBalancer — they are outbound-only and require no IAP.
 
@@ -294,23 +294,7 @@ vi argocd/kustomize/wazuh-rules/secrets.env
   certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
 ```
 
-### 6.2 ThreatMapper Console API Key (ctrl-plane only)
-
-Generate a random API key that will be shared between the Console and all Sensors:
-
-```bash
-DEEPFENCE_KEY=$(openssl rand -hex 32)
-
-# Seal for console
-vi argocd/kustomize/threatmapper-console/overlays/dev/secrets.env
-# Set: DEEPFENCE_KEY=<generated key>
-./scripts/seal_env.sh argocd/kustomize/threatmapper-console/overlays/dev/secrets.env security \
-  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
-
-# Use the SAME key for all sensor overlays (Step 6.4)
-```
-
-### 6.3 Wazuh Manager Enrollment Password (ctrl-plane only)
+### 6.2 Wazuh Manager Enrollment Password (ctrl-plane only)
 
 Generate a random enrollment password and seal it for the Manager. The Wazuh Docker image reads `WAZUH_AUTHD_PASS` at startup and writes it to `/var/ossec/etc/authd.pass` — no need to retrieve it after boot.
 
@@ -331,7 +315,7 @@ Deploy the secret before the Wazuh Manager:
 kubectl apply -f argocd/apps/ctrl-plane/dev/wazuh-manager-secrets.yaml
 ```
 
-### 6.4 Wazuh Agent Enrollment Key + Manager IP (all clusters)
+### 6.3 Wazuh Agent Enrollment Key + Manager IP (all clusters)
 
 Use the **same** `ENROLLMENT_PASS` from Step 6.3. The manager IP is the static IP from Step 1.1. Set both in all overlays:
 
@@ -349,22 +333,7 @@ vi argocd/kustomize/wazuh-agent/overlays/app-plane-dev/secrets.env
   certs/app-plane/sealed-secrets/dev/pub-cert.pem
 ```
 
-### 6.5 ThreatMapper Sensor API Key + Console URL (all clusters)
-
-Use the **same** `DEEPFENCE_KEY` generated in Step 6.2. Also set the Console URL:
-
-```bash
-# ctrl-plane
-vi argocd/kustomize/threatmapper-sensor/overlays/dev/secrets.env
-# Set: api-key=<same key from Step 6.2>
-# Set: console-url=threatmapper.security.dev.internal.falkordb.cloud
-./scripts/seal_env.sh argocd/kustomize/threatmapper-sensor/overlays/dev/secrets.env security \
-  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
-
-# Repeat for app-plane overlays with app-plane cert
-```
-
-### 6.6 Prowler AWS Credentials (AWS spokes only)
+### 6.4 Prowler AWS Credentials (AWS spokes only)
 
 ```bash
 vi argocd/kustomize/prowler/overlays/aws-dev/secrets.env
@@ -377,7 +346,7 @@ vi argocd/kustomize/prowler/overlays/aws-dev/secrets.env
   certs/app-plane/sealed-secrets/dev/pub-cert.pem
 ```
 
-### 6.7 Prowler Azure Credentials (Azure spokes only)
+### 6.5 Prowler Azure Credentials (Azure spokes only)
 
 ```bash
 vi argocd/kustomize/prowler/overlays/azure-dev/secrets.env
@@ -389,7 +358,7 @@ vi argocd/kustomize/prowler/overlays/azure-dev/secrets.env
   certs/app-plane/sealed-secrets/dev/pub-cert.pem
 ```
 
-### 6.8 Prowler GCP Evidence Bucket (GCP spokes only)
+### 6.6 Prowler GCP Evidence Bucket (GCP spokes only)
 
 GCP spokes use Workload Identity for GCS access but still need the bucket name sealed:
 
@@ -408,16 +377,14 @@ vi argocd/kustomize/prowler/overlays/gcp-dev/secrets.env
 | `oauth2-proxy-credentials` | `oauth2-proxy/overlays/*/secrets.env` | Ctrl-plane | `client-id`, `client-secret`, `cookie-secret`, `google-admin-sa-json` |
 | `wazuh-google-chat-webhook` | `wazuh-rules/secrets.env` | Ctrl-plane | `WAZUH_GOOGLE_CHAT_WEBHOOK_URL` |
 | `wazuh-manager-authd` | `wazuh-manager/overlays/*/secrets.env` | Ctrl-plane | `WAZUH_AUTHD_PASS` |
-| `threatmapper-console-key` | `threatmapper-console/overlays/*/secrets.env` | Ctrl-plane | `DEEPFENCE_KEY` |
 | `wazuh-agent-key` | `wazuh-agent/overlays/*/secrets.env` | All | `enrollment-key`, `manager-ip` |
-| `threatmapper-sensor-key` | `threatmapper-sensor/overlays/*/secrets.env` | All | `api-key`, `console-url` |
 | `prowler-aws-credentials` | `prowler/overlays/aws-*/secrets.env` | AWS spokes | `role-arn`, `region` |
 | `prowler-azure-credentials` | `prowler/overlays/azure-*/secrets.env` | Azure spokes | `client-id`, `client-secret`, `tenant-id`, `subscription-id` |
 | `prowler-gcs-credentials` | `prowler/overlays/{aws,azure}-*/secrets.env` | AWS + Azure spokes | `sa-key.json` |
 | `prowler-infra` | `prowler/overlays/*/secrets.env` | All spokes | `evidence-bucket` |
 | `sealed-secrets-app-plane-key` | `cluster-discovery/overlays/*/sealed-secrets-key.env` | Ctrl-plane (injected to app-plane by cluster-discovery) | `SEALED_SECRETS_TLS_CRT`, `SEALED_SECRETS_TLS_KEY` |
 
-TLS secrets (`wazuh-dashboard-tls`, `threatmapper-tls`) are auto-provisioned by cert-manager via the `letsencrypt-prod` ClusterIssuer.
+TLS secrets (`wazuh-dashboard-tls`) are auto-provisioned by cert-manager via the `letsencrypt-prod` ClusterIssuer.
 
 ---
 
@@ -439,7 +406,7 @@ curl -sI "https://auth.security.dev.internal.falkordb.cloud/oauth2/auth" | head 
 # Expected: HTTP/2 401 (unauthenticated — this is correct)
 ```
 
-The Wazuh Dashboard and ThreatMapper Console ingresses reference this endpoint via `auth-url`. It must be healthy **before** deploying those services.
+The Wazuh Dashboard ingress references this endpoint via `auth-url`. It must be healthy **before** deploying that service.
 
 ### 7.1 Wazuh Manager
 
@@ -471,19 +438,7 @@ Deploys the custom rules ConfigMap and dashboard saved objects. The Manager auto
 
 ### 7.3 ThreatMapper Console
 
-```bash
-kubectl apply -f argocd/apps/ctrl-plane/dev/threatmapper-console-secrets.yaml
-kubectl apply -f argocd/apps/ctrl-plane/dev/threatmapper.yaml
-```
-
-The Console secrets Application (sync-wave -1) deploys the `threatmapper-console-key` SealedSecret before the Console Helm chart starts. The Console reads the pre-set `DEEPFENCE_KEY` from the sealed secret — no manual API key generation needed.
-
-Wait until Console is accessible via ingress, then verify the API key works:
-
-```bash
-curl -s -k -H "Authorization: Bearer <DEEPFENCE_KEY>" \
-  "https://threatmapper.security.dev.internal.falkordb.cloud/deepfence/v2/topology" | head
-```
+> **Removed.** ThreatMapper has been decommissioned (project abandoned, Helm charts no longer available).
 
 ### 7.4 Wazuh Agents (Control Plane)
 
@@ -511,12 +466,7 @@ The ApplicationSet will generate one Application per cluster labeled `role: app-
 
 ### 7.6 ThreatMapper Sensors (Control Plane + Spokes)
 
-```bash
-kubectl apply -f argocd/apps/ctrl-plane/dev/threatmapper-sensor.yaml
-kubectl apply -f argocd/apps/app-plane/dev/threatmapper-sensor.yaml
-```
-
-Verify sensors appear in the ThreatMapper Console UI under **Topology**.
+> **Removed.** ThreatMapper has been decommissioned.
 
 ### 7.7 Prowler (Spoke Clusters)
 
@@ -558,10 +508,7 @@ Run the on-demand evidence collection script:
 ```bash
 export WAZUH_API_URL="https://wazuh.security.dev.internal.falkordb.cloud:55000"
 export WAZUH_API_TOKEN="<TOKEN>"
-export THREATMAPPER_API_URL="https://threatmapper.security.dev.internal.falkordb.cloud"
-export THREATMAPPER_API_KEY="<API_KEY>"
 export WAZUH_CA_BUNDLE="/path/to/wazuh-ca.pem"         # optional
-export THREATMAPPER_CA_BUNDLE="/path/to/threatmapper-ca.pem"  # optional
 
 ./scripts/generate_compliance_report.sh \
   --bucket "$(tofu -chdir=tofu/runtime/gcp/infra output -raw evidence_locker_bucket)" \
@@ -573,7 +520,6 @@ export THREATMAPPER_CA_BUNDLE="/path/to/threatmapper-ca.pem"  # optional
 - [ ] Wazuh Manager healthy, LoadBalancer IP assigned
 - [ ] Wazuh Dashboard accessible via ingress
 - [ ] Wazuh Agents registered from all clusters
-- [ ] ThreatMapper Console accessible, sensors connected
 - [ ] Prowler CronJob completed at least one run
 - [ ] Prowler results visible in GCS evidence locker
 - [ ] Grafana SOC 2 dashboard showing data
@@ -593,7 +539,6 @@ Repeat Steps 2–6 using the `prod` variants:
 
 Key differences in prod:
 - Wazuh Manager: `ssl_verify_host: "yes"` (strict mTLS)
-- ThreatMapper Console: 2 replicas (HA)
 - Domain: `*.security.internal.falkordb.cloud` (no `dev` subdomain)
 - oauth2-proxy: callback URL is `https://auth.security.internal.falkordb.cloud/oauth2/callback`
 - Auth annotations on ingresses point to `auth.security.internal.falkordb.cloud`

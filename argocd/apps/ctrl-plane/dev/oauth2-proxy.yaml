@@ -1,9 +1,9 @@
 # OAuth2 Proxy — Identity-Aware Proxy for security dashboards.
-# Protects Wazuh Dashboard and ThreatMapper Console behind Google OIDC,
+# Protects Wazuh Dashboard behind Google OIDC,
 # restricted to the devops@falkordb.com Google Group.
 #
-# Must be deployed BEFORE Wazuh and ThreatMapper so the auth-url
-# endpoint is available when their ingresses are created.
+# Must be deployed BEFORE Wazuh so the auth-url
+# endpoint is available when its ingress is created.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

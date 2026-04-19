@@ -3,7 +3,7 @@
 # wazuh-ip          — Regional static IP for Wazuh Agent enrollment (port 1514)
 #                     and Wazuh API (port 55000). Agents in spoke clusters connect here.
 # evidence-locker   — GCS bucket for centralized SOC 2 compliance evidence
-#                     (Prowler reports, Wazuh exports, ThreatMapper diagrams).
+#                     (Prowler reports, Wazuh exports).
 
 module "wazuh_ip" {
   source  = "terraform-google-modules/address/google"
