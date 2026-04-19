@@ -1,10 +1,25 @@
-# Terragrunt shim for org/aws/org
-# (was tofu/aws/2-org)
+# Terragrunt shim for org/gcp/workloads
+# (was tofu/gcp/org/workloads)
 #
-# Manages AWS org-level resources.
+# Manages GCP workloads folder structure: control plane, application plane,
+# and optional pipelines-development projects.
 # Apply manually; it is NOT part of the CI runtime pipeline.
-#
-# AWS stacks use an S3 backend (credentials and config passed via -backend-config
-# at init time).  They do NOT include the root Terragrunt config so no GCS backend
-# is generated.  Future: add include "root" + generate backend when centralizing
-# state to GCS.
+
+include "root" {
+  path   = find_in_parent_folders("terragrunt.hcl")
+  expose = true
+}
+
+# Pin to the historical GCS prefix so no state migration is needed.
+generate "backend" {
+  path      = "backend_override.tf"
+  if_exists = "overwrite_terragrunt"
+  contents  = <<-EOF
+    terraform {
+      backend "gcs" {
+        bucket = "${include.root.locals.tf_state_bucket}"
+        prefix = "aws/org"
+      }
+    }
+  EOF
+}

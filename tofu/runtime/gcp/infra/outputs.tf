@@ -48,3 +48,17 @@ output "evidence_locker_bucket" {
 output "prowler_uploader_email" {
   value = google_service_account.prowler_uploader.email
 }
+
+output "prowler_uploader_sa_key" {
+  value     = google_service_account_key.prowler_uploader_key.private_key
+  sensitive = true
+}
+
+output "oauth2_proxy_groups_email" {
+  value = google_service_account.oauth2_proxy_groups.email
+}
+
+output "oauth2_proxy_groups_sa_key" {
+  value     = google_service_account_key.oauth2_proxy_groups_key.private_key
+  sensitive = true
+}

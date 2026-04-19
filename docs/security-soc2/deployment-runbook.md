@@ -168,13 +168,18 @@ Create the OAuth2 client manually in the Google Cloud Console:
 
 ### 3.5.2 Google Workspace Admin — Service Account
 
-oauth2-proxy needs a Google Workspace admin API service account to verify group membership. In the Google Cloud Console:
+oauth2-proxy needs a Google Workspace admin API service account to verify group membership. The service account is created by `tofu/runtime/gcp/infra/security.tf` (Step 1.1):
 
-1. Create a service account (e.g., `oauth2-proxy-groups@<PROJECT>.iam.gserviceaccount.com`)
-2. Enable domain-wide delegation
-3. Grant the scope `https://www.googleapis.com/auth/admin.directory.group.readonly`
-4. In Google Workspace Admin → Security → API controls → Domain-wide delegation, add the client ID with the same scope
-5. Export the SA key as JSON — this goes into the `google-admin-sa-json` field in `secrets.env`
+```bash
+tofu output oauth2_proxy_groups_email  # → oauth2-proxy-groups@<PROJECT>.iam.gserviceaccount.com
+tofu output -raw oauth2_proxy_groups_sa_key | base64 -d > oauth2-proxy-groups-key.json
+```
+
+Then configure domain-wide delegation manually:
+
+1. In the Google Cloud Console → IAM & Admin → Service Accounts → `oauth2-proxy-groups` → Enable **domain-wide delegation**
+2. In Google Workspace Admin → Security → API controls → Domain-wide delegation, add the SA's client ID with scope `https://www.googleapis.com/auth/admin.directory.group.readonly`
+3. The JSON key (from `tofu output` above) goes into the `google-admin-sa-json` field in `secrets.env`
 
 ### 3.5.3 Cookie Secret
 
@@ -256,14 +261,35 @@ vi argocd/kustomize/threatmapper-console/overlays/dev/secrets.env
 # Use the SAME key for all sensor overlays (Step 4.4)
 ```
 
-### 4.3 Wazuh Agent Enrollment Key + Manager IP (all clusters)
+### 4.3 Wazuh Manager Enrollment Password (ctrl-plane only)
 
-The Wazuh Manager generates an enrollment password on first boot. The manager IP is the static IP from Step 1.1. Set both in all overlays:
+Generate a random enrollment password and seal it for the Manager. The Wazuh Docker image reads `WAZUH_AUTHD_PASS` at startup and writes it to `/var/ossec/etc/authd.pass` — no need to retrieve it after boot.
+
+```bash
+ENROLLMENT_PASS=$(openssl rand -hex 32)
+echo "$ENROLLMENT_PASS"  # Save this — agents need the same value
+
+vi argocd/kustomize/wazuh-manager/overlays/dev/secrets.env
+# Set: WAZUH_AUTHD_PASS=<generated password>
+
+./scripts/seal_env.sh argocd/kustomize/wazuh-manager/overlays/dev/secrets.env security \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+Deploy the secret before the Wazuh Manager:
+
+```bash
+kubectl apply -f argocd/apps/ctrl-plane/dev/wazuh-manager-secrets.yaml
+```
+
+### 4.4 Wazuh Agent Enrollment Key + Manager IP (all clusters)
+
+Use the **same** `ENROLLMENT_PASS` from Step 4.3. The manager IP is the static IP from Step 1.1. Set both in all overlays:
 
 ```bash
 # ctrl-plane
 vi argocd/kustomize/wazuh-agent/overlays/ctrl-plane-dev/secrets.env
-# Set: enrollment-key=<ENROLLMENT_PASSWORD>
+# Set: enrollment-key=<same password from Step 4.3>
 # Set: manager-ip=<WAZUH_STATIC_IP from Step 1.1>
 ./scripts/seal_env.sh argocd/kustomize/wazuh-agent/overlays/ctrl-plane-dev/secrets.env security \
   certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
@@ -274,7 +300,7 @@ vi argocd/kustomize/wazuh-agent/overlays/app-plane-dev/secrets.env
   certs/app-plane/sealed-secrets/dev/pub-cert.pem
 ```
 
-### 4.4 ThreatMapper Sensor API Key + Console URL (all clusters)
+### 4.5 ThreatMapper Sensor API Key + Console URL (all clusters)
 
 Use the **same** `DEEPFENCE_KEY` generated in Step 4.2. Also set the Console URL:
 
@@ -289,7 +315,7 @@ vi argocd/kustomize/threatmapper-sensor/overlays/dev/secrets.env
 # Repeat for app-plane overlays with app-plane cert
 ```
 
-### 4.5 Prowler AWS Credentials (AWS spokes only)
+### 4.6 Prowler AWS Credentials (AWS spokes only)
 
 ```bash
 vi argocd/kustomize/prowler/overlays/aws-dev/secrets.env
@@ -302,7 +328,7 @@ vi argocd/kustomize/prowler/overlays/aws-dev/secrets.env
   certs/app-plane/sealed-secrets/dev/pub-cert.pem
 ```
 
-### 4.6 Prowler Azure Credentials (Azure spokes only)
+### 4.7 Prowler Azure Credentials (Azure spokes only)
 
 ```bash
 vi argocd/kustomize/prowler/overlays/azure-dev/secrets.env
@@ -314,7 +340,7 @@ vi argocd/kustomize/prowler/overlays/azure-dev/secrets.env
   certs/app-plane/sealed-secrets/dev/pub-cert.pem
 ```
 
-### 4.7 Prowler GCP Evidence Bucket (GCP spokes only)
+### 4.8 Prowler GCP Evidence Bucket (GCP spokes only)
 
 GCP spokes use Workload Identity for GCS access but still need the bucket name sealed:
 
@@ -332,6 +358,7 @@ vi argocd/kustomize/prowler/overlays/gcp-dev/secrets.env
 |--------|----------------|----------|------|
 | `oauth2-proxy-credentials` | `oauth2-proxy/overlays/*/secrets.env` | Ctrl-plane | `client-id`, `client-secret`, `cookie-secret`, `google-admin-sa-json` |
 | `wazuh-google-chat-webhook` | `wazuh-rules/secrets.env` | Ctrl-plane | `WAZUH_GOOGLE_CHAT_WEBHOOK_URL` |
+| `wazuh-manager-authd` | `wazuh-manager/overlays/*/secrets.env` | Ctrl-plane | `WAZUH_AUTHD_PASS` |
 | `threatmapper-console-key` | `threatmapper-console/overlays/*/secrets.env` | Ctrl-plane | `DEEPFENCE_KEY` |
 | `wazuh-agent-key` | `wazuh-agent/overlays/*/secrets.env` | All | `enrollment-key`, `manager-ip` |
 | `threatmapper-sensor-key` | `threatmapper-sensor/overlays/*/secrets.env` | All | `api-key`, `console-url` |
@@ -366,7 +393,10 @@ The Wazuh Dashboard and ThreatMapper Console ingresses reference this endpoint v
 
 ### 5.1 Wazuh Manager
 
+Deploy the manager secrets first (enrollment password), then the manager itself:
+
 ```bash
+kubectl apply -f argocd/apps/ctrl-plane/dev/wazuh-manager-secrets.yaml
 kubectl apply -f argocd/apps/ctrl-plane/dev/wazuh.yaml
 ```
 

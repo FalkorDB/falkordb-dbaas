@@ -89,6 +89,8 @@ spec:
             extraEnvFrom:
               - secretRef:
                   name: wazuh-google-chat-webhook
+              - secretRef:
+                  name: wazuh-manager-authd
             extraVolumes:
               - name: custom-rules
                 configMap:
@@ -116,7 +118,7 @@ spec:
               size: 50Gi
             service:
               type: LoadBalancer
-              loadBalancerIP: "${WAZUH_STATIC_IP}"
+              loadBalancerIP: "34.46.116.195"
               annotations:
                 # Regional external LB for agent enrollment
                 cloud.google.com/load-balancer-type: "External"
