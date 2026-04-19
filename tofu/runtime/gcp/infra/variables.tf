@@ -49,13 +49,3 @@ variable "omnistrate_environment_id" {
   description = "Omnistrate environment ID used to tag the alert-reaction workflow."
 }
 
-variable "environment" {
-  type        = string
-  description = "Environment name (dev or prod). Used to name IAP OAuth clients."
-}
-
-variable "iap_support_email" {
-  type        = string
-  description = "Support email shown on the OAuth consent screen for security dashboard IAP."
-  default     = "devops@falkordb.com"
-}

@@ -99,18 +99,17 @@ resource "google_compute_firewall" "wazuh_agent_ingress" {
 }
 
 # -----------------------------------------------------------------------
-# OAuth2 client for security dashboard IAP (oauth2-proxy).
-# Protects Wazuh Dashboard + ThreatMapper Console behind Google OIDC,
-# restricted to the devops@falkordb.com Google Group.
+# OAuth2 client for oauth2-proxy (security dashboard access control).
+#
+# The google_iap_brand and google_iap_client resources were removed because
+# the IAP OAuth Admin APIs were permanently shut down on 2026-03-19.
+#
+# Create the OAuth2 client manually in the Google Cloud Console:
+#   APIs & Services → Credentials → Create OAuth client ID → Web application
+#   Authorized redirect URIs:
+#     - https://auth.security.dev.internal.falkordb.cloud/oauth2/callback
+#     - https://auth.security.internal.falkordb.cloud/oauth2/callback
+#
+# Place the client-id and client-secret into the oauth2-proxy secrets.env
+# and seal with seal_env.sh.
 # -----------------------------------------------------------------------
-
-resource "google_iap_brand" "security" {
-  project           = var.project_id
-  support_email     = var.iap_support_email
-  application_title = "FalkorDB Security Dashboards"
-}
-
-resource "google_iap_client" "security_oauth2_proxy" {
-  brand        = google_iap_brand.security.name
-  display_name = "security-oauth2-proxy-${var.environment}"
-}

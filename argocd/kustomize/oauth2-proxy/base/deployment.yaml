@@ -34,6 +34,7 @@ spec:
             - --email-domain=falkordb.com
             - --allowed-group=devops@falkordb.com
             - --google-group=devops@falkordb.com
+            - --google-admin-email=$(OAUTH2_PROXY_GOOGLE_ADMIN_EMAIL)
             - --http-address=0.0.0.0:4180
             - --reverse-proxy=true
             - --set-xauthrequest=true
@@ -63,6 +64,11 @@ spec:
                   key: cookie-secret
             - name: OAUTH2_PROXY_GOOGLE_SERVICE_ACCOUNT_JSON
               value: /var/run/secrets/google/sa-key.json
+            - name: OAUTH2_PROXY_GOOGLE_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: oauth2-proxy-credentials
+                  key: google-admin-email
           ports:
             - name: http
               containerPort: 4180

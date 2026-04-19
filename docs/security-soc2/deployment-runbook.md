@@ -152,20 +152,19 @@ The Wazuh Dashboard and ThreatMapper Console are internet-facing via nginx ingre
 
 > **App-plane security services** (agents, sensors, Prowler) have **no** ingress or LoadBalancer — they are outbound-only and require no IAP.
 
-### 3.5.1 OpenTofu — OAuth Client
+### 3.5.1 Google Cloud Console — OAuth Client
 
-The OAuth client and IAP brand are created by `tofu/runtime/gcp/infra/security.tf`:
+Create the OAuth2 client manually in the Google Cloud Console:
 
-```bash
-cd tofu/runtime/gcp/infra
-tofu apply
-```
+1. Navigate to **APIs & Services → Credentials → Create Credentials → OAuth client ID**
+2. Application type: **Web application**
+3. Name: `security-oauth2-proxy`
+4. Authorized redirect URIs:
+   - Dev: `https://auth.security.dev.internal.falkordb.cloud/oauth2/callback`
+   - Prod: `https://auth.security.internal.falkordb.cloud/oauth2/callback`
+5. Copy the **Client ID** and **Client Secret** — these go into `secrets.env`
 
-Capture outputs:
-```bash
-tofu output -raw security_oauth_client_id
-tofu output -raw security_oauth_client_secret
-```
+> **Note:** The `google_iap_brand` / `google_iap_client` Terraform resources were removed because the IAP OAuth Admin APIs were permanently shut down on 2026-03-19.
 
 ### 3.5.2 Google Workspace Admin — Service Account
 
@@ -206,13 +205,6 @@ Create DNS records pointing to the nginx LB static IP:
 |--------|-----|------|
 | `auth.security.dev.internal.falkordb.cloud` | nginx LB IP | — |
 | `auth.security.internal.falkordb.cloud` | — | nginx LB IP |
-
-### 3.5.6 Authorized Redirect URIs
-
-In the Google Cloud Console, add the OAuth2 callback URL to the client's authorized redirect URIs:
-
-- Dev: `https://auth.security.dev.internal.falkordb.cloud/oauth2/callback`
-- Prod: `https://auth.security.internal.falkordb.cloud/oauth2/callback`
 
 ---
 

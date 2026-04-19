@@ -34,8 +34,8 @@ spec:
                 purge: "yes"
                 use_password: "yes"
                 ssl_agent_ca: /var/ossec/etc/sslmanager.ca
-                ssl_verify_host: \"yes\"
-                ssl_auto_negotiate: \"yes\"
+                ssl_verify_host: "yes"
+                ssl_auto_negotiate: "yes"
               vulnerability-detector:
                 enabled: "yes"
                 interval: 5m

@@ -16,7 +16,7 @@ resource "aws_iam_role" "prowler_scanner" {
       {
         Effect = "Allow"
         Principal = {
-          Federated = "arn:aws:iam::oidc-provider/${var.eks_oidc_issuer}"
+          Federated = "arn:aws:iam::${aws_organizations_account.account.id}:oidc-provider/${var.eks_oidc_issuer}"
         }
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
