@@ -1,26 +1,32 @@
 # ArgoCD Image Updater — Sealed Secrets (dev)
 #
-# Before the ArgoCD Image Updater Application can sync, two secrets must be
-# manually created and sealed for the dev cluster:
+# Secrets are managed via seal_env.sh. Fill in the placeholder values in:
+#   argocd/kustomize/argocd-image-updater/overlays/dev/secrets.env
+# then run:
+#   ./scripts/seal_env.sh \
+#     argocd/kustomize/argocd-image-updater/overlays/dev/secrets.env \
+#     argocd
+# This outputs:
+#   argocd/kustomize/argocd-image-updater/overlays/dev/secrets-env-secret.yaml
+# Commit the sealed file (the .env is gitignored).
 #
-# 1. argocd-image-updater-pull-secret
-#    Used to pull images from us-central1-docker.pkg.dev (GCR json key or WI token).
+# Secrets managed:
+#
+# 1. argocd-image-updater-git-secret
+#    GitHub token for git write-back (repo write permission).
+#    Set in secrets.env:
+#      username=falkordb-bot
+#      password=<GITHUB_TOKEN_WITH_REPO_WRITE>
+#
+# 2. argocd-image-updater-pull-secret (docker-registry type — NOT via seal_env.sh)
+#    Required to pull from us-central1-docker.pkg.dev.
+#    Create and seal manually:
 #    kubectl create secret docker-registry argocd-image-updater-pull-secret \
 #      -n argocd \
 #      --docker-server=us-central1-docker.pkg.dev \
 #      --docker-username=_json_key \
-#      --docker-password="$(cat sa-key.json)"
-#    kubeseal --controller-name=sealed-secrets -o yaml > \
-#      argocd/ctrl_plane/dev/manifests/argocd-image-updater-pull-secret.yaml
-#
-# 2. argocd-image-updater-git-secret
-#    Used for git write-back (GitHub token with repo write permission).
-#    kubectl create secret generic argocd-image-updater-git-secret \
-#      -n argocd \
-#      --from-literal=username=falkordb-bot \
-#      --from-literal=password=<GH_TOKEN>
-#    kubeseal --controller-name=sealed-secrets -o yaml > \
-#      argocd/ctrl_plane/dev/manifests/argocd-image-updater-git-secret.yaml
-#
-# Then git add + commit those sealed secret files and apply them to the cluster.
-# Once sealed, they can be committed safely.
+#      --docker-password="$(cat sa-key.json)" \
+#      --dry-run=client -o yaml \
+#    | kubeseal --cert ./certs/observability/sealed-secrets/dev/pub-cert.pem \
+#        -o yaml > argocd/kustomize/argocd-image-updater/overlays/dev/pull-secret.yaml
+#    Add pull-secret.yaml to the kustomization.yaml resources list and commit.
