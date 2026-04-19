@@ -8,24 +8,24 @@ spec:
   source:
     repoURL: https://argoproj.github.io/argo-helm
     chart: argocd-image-updater
-    targetRevision: "0.12.x"
+    targetRevision: "1.1.5"
     helm:
       valuesObject:
         config:
-          argocd:
-            serverAddress: argocd-server
-            grpcWeb: true
-            insecure: true
-            plaintext: true
+          # Flat dotted keys become direct ConfigMap entries in chart 1.1.5
+          # (0.12.x used nested config.argocd / config.gitCommitUser; 1.1.5 uses range iteration)
+          argocd.server_addr: argocd-server
+          argocd.grpc_web: "true"
+          argocd.insecure: "true"
+          argocd.plaintext: "true"
+          git.user: argocd-image-updater
+          git.email: argocd-image-updater@falkordb.com
           registries:
             - name: GCP Artifact Registry
               api_url: https://us-central1-docker.pkg.dev
               credentials: ext:/scripts/gcp-creds.sh
               credsexpire: 45m
               default: true
-        git:
-          email: argocd-image-updater@falkordb.com
-          username: argocd-image-updater
         extraEnv:
           - name: ARGOCD_IMAGE_UPDATER_GITCREDS_USERNAME
             valueFrom:
@@ -44,7 +44,15 @@ spec:
             iam.gke.io/gcp-service-account: argocd-image-updater@ctrl-plane-prod-b1b92df2.iam.gserviceaccount.com
         authScripts:
           enabled: true
-          name: argocd-image-updater-gcp-auth
+          scripts:
+            gcp-creds.sh: |
+              #!/bin/sh
+              set -e
+              RESPONSE=$(wget -q -O - \
+                --header "Metadata-Flavor: Google" \
+                "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token")
+              TOKEN=$(printf '%s' "$RESPONSE" | sed 's/.*"access_token":"\([^"]*\)".*/\1/')
+              printf 'oauth2accesstoken:%s\n' "$TOKEN"
   destination:
     namespace: argocd
     server: https://kubernetes.default.svc

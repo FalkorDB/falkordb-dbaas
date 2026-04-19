@@ -4,4 +4,3 @@ namespace: argocd
 
 resources:
   - secrets-env-secret.yaml
-  - gcp-auth-configmap.yaml
