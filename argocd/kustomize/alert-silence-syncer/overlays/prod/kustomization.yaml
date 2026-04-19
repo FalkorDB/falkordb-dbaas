@@ -4,6 +4,7 @@ namespace: observability
 
 resources:
   - ../../base
+  - alert-silence-syncer-env-secret.yaml
 
 images:
   - name: us-central1-docker.pkg.dev/PROJECT/backend/alert-silence-syncer

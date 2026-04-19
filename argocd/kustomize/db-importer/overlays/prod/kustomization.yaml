@@ -4,6 +4,7 @@ namespace: api
 
 resources:
   - ../../base
+  - db-importer-env-secret.yaml
 
 images:
   - name: us-central1-docker.pkg.dev/PROJECT/backend/db-importer

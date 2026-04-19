@@ -4,6 +4,7 @@ namespace: customer-observability
 
 resources:
   - ../../base
+  - auth-proxy-env-secret.yaml
 
 images:
   - name: us-central1-docker.pkg.dev/PROJECT/frontend/auth-proxy-web
