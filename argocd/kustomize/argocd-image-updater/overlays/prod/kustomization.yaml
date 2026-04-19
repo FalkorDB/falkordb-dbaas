@@ -4,3 +4,4 @@ namespace: argocd
 
 resources:
   - secrets-env-secret.yaml
+  - imageupdater-cr.yaml
