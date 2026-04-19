@@ -20,6 +20,7 @@ spec:
           argocd.plaintext: "true"
           git.user: argocd-image-updater
           git.email: argocd-image-updater@falkordb.com
+          git.commit-message-template: "build: automatic update of {{ .AppName }} [skip ci]"
           registries:
             - name: GCP Artifact Registry
               api_url: https://us-central1-docker.pkg.dev
