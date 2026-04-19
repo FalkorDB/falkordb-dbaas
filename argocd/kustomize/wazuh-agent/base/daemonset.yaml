@@ -34,7 +34,7 @@ spec:
           effect: NoExecute
       containers:
         - name: wazuh-agent
-          image: wazuh/wazuh-agent:4.9.2
+          image: opennix/wazuh-agent:4.11.1
           resources:
             requests:
               cpu: "50m"

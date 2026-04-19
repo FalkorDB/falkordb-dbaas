@@ -31,7 +31,7 @@ spec:
           effect: NoExecute
       containers:
         - name: sensor
-          image: deepfenceio/deepfence_agent_ce:2.4.0
+          image: deepfenceio/deepfence_agent_ce:3.0.0-mahanth
           resources:
             requests:
               cpu: "100m"

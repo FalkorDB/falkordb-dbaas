@@ -157,7 +157,7 @@ All alerts route through VictoriaMetrics → Alertmanager → PagerDuty / Google
 
 3. Common causes:
    - **Node pressure**: Agent pod evicted due to resource pressure (DaemonSet has low priority)
-   - **Image pull failure**: Check if `wazuh/wazuh-agent:4.9.2` is pullable
+   - **Image pull failure**: Check if `opennix/wazuh-agent:4.11.1` is pullable
    - **Enrollment failure**: Agent can't register with Manager (check `wazuh-agent-key` secret)
    - **New node with taints**: The DaemonSet has `operator: Exists` tolerations; this shouldn't happen unless custom taints were added after deployment
 
