@@ -124,7 +124,7 @@ extraObjects:
       source:
         repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
         targetRevision: dev
-        path: argocd/apps/app_plane/dev
+        path: argocd/apps/app-plane/dev
       destination:
         server: https://kubernetes.default.svc
       syncPolicy:
