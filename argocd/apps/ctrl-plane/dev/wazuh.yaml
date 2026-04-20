@@ -194,6 +194,9 @@ spec:
           enabled: true
           replicas: 3
           cred:
+            # existingSecret provides INDEXER_USERNAME/INDEXER_PASSWORD env vars at runtime.
+            # Hashes for internal_users.yml are applied by our custom securityadmin-patch
+            # PostSync job (reads from sealed secrets, not from Helm values).
             existingSecret: "wazuh-indexer-cred"
           resources:
             requests:
@@ -218,6 +221,7 @@ spec:
           replicas: 1
           cred:
             existingSecret: "wazuh-dashboard-cred"
+            username: "kibanaserver"
           resources:
             requests:
               cpu: "500m"

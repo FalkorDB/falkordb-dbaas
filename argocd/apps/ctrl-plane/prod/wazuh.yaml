@@ -200,6 +200,7 @@ spec:
           replicas: 2
           cred:
             existingSecret: "wazuh-dashboard-cred"
+            username: "kibanaserver"
           resources:
             requests:
               cpu: "500m"
