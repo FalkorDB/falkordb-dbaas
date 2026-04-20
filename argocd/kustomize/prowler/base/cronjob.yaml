@@ -92,7 +92,7 @@ spec:
                   # Run Prowler compliance scan
                   prowler "$CLOUD_PROVIDER" \
                     --compliance "$COMPLIANCE" \
-                    --output-formats json-ocsf json html csv \
+                    --output-formats json-ocsf html csv \
                     --output-directory "$OUTPUT_DIR" \
                     $EXTRA_ARGS \
                     --ignore-exit-code-3 \

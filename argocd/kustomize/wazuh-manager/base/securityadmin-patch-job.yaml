@@ -70,12 +70,8 @@ spec:
 
               # Create default action_groups.yml if not provided by the chart.
               if [ ! -f /security-config/action_groups.yml ]; then
-                cat > /security-config/action_groups.yml <<'AGEOF'
-              ---
-              _meta:
-                type: "actiongroups"
-                config_version: 2
-              AGEOF
+                printf '%s\n' '---' '_meta:' '  type: "actiongroups"' '  config_version: 2' \
+                  > /security-config/action_groups.yml
               fi
 
               # Convert $2b$ (Python bcrypt) to $2a$ (Java-compatible bcrypt).
