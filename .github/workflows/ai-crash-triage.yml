@@ -131,7 +131,7 @@ jobs:
       - name: Install Copilot CLI and Python deps
         run: |
           npm install -g @github/copilot
-          pip install github-copilot-sdk requests pydantic
+          pip install github-copilot-sdk requests pydantic google-cloud-storage
 
       - name: Authenticate to GCP
         if: ${{ startsWith(inputs.rdb_url, 'gs://') || startsWith(inputs.aof_url, 'gs://') }}
