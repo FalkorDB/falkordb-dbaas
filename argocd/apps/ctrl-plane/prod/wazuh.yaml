@@ -286,11 +286,9 @@ spec:
           ingress:
             enabled: true
             className: nginx
-            annotations:
-              cert-manager.io/cluster-issuer: "letsencrypt-prod"
             host: "wazuh.security.internal.falkordb.cloud"
             tls:
-              - secretName: wazuh-dashboard-tls
+              - secretName: dashboard-tls
                 hosts:
                   - wazuh.security.internal.falkordb.cloud
           extraSpec:
