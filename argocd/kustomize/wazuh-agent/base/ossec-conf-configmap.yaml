@@ -22,8 +22,7 @@ data:
       <auth>
         <disabled>no</disabled>
         <remote_enrollment>yes</remote_enrollment>
-        <manager_address>CHANGE_ENROLL_IP</manager_address>
-        <port>CHANGE_ENROLL_PORT</port>
+        <port>1514</port>
         <use_source_ip>no</use_source_ip>
         <force>
           <enabled>yes</enabled>
@@ -33,11 +32,6 @@ data:
           <purge>yes</purge>
         </force>
       </auth>
-
-      <enrollment>
-        <agent_name>CHANGE_AGENT_NAME</agent_name>
-        <groups>CHANGE_AGENT_GROUPS</groups>
-      </enrollment>
 
       <client_buffer>
         <disabled>no</disabled>

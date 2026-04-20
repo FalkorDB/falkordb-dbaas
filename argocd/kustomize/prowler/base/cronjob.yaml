@@ -140,6 +140,18 @@ spec:
 
                   output_dir = os.environ['OUTPUT_DIR']
                   cluster = os.environ['CLUSTER_NAME']
+
+                  def safe_get(obj, *keys, default=''):
+                      """Safely navigate nested dicts/lists."""
+                      for k in keys:
+                          if isinstance(obj, dict):
+                              obj = obj.get(k, default)
+                          elif isinstance(obj, (list, tuple)) and isinstance(k, int):
+                              obj = obj[k] if len(obj) > k else default
+                          else:
+                              return default
+                      return obj if obj is not None else default
+
                   # OCSF JSON files (.ocsf.json)
                   json_files = sorted(
                       glob.glob(os.path.join(output_dir, '**', '*.ocsf.json'), recursive=True)
@@ -148,7 +160,6 @@ spec:
                       print('No Prowler OCSF JSON files found, skipping syslog forwarding')
                       exit(0)
 
-                  # OCSF status_id: 1=Pass, 2=Fail, 3=Manual, 99=Other
                   fail_count = 0
                   try:
                       sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -164,20 +175,30 @@ spec:
                                       finding = json.loads(line)
                                   except json.JSONDecodeError:
                                       continue
+                                  if not isinstance(finding, dict):
+                                      continue
                                   # OCSF uses status_id=2 for FAIL
-                                  if finding.get('status_id') != 2 and finding.get('status') != 'Fail':
+                                  status = str(finding.get('status', ''))
+                                  status_id = finding.get('status_id')
+                                  if status_id != 2 and status.lower() != 'fail':
                                       continue
                                   # Map OCSF fields to Prowler-native names for Wazuh rules
+                                  resources_0 = {}
+                                  res = finding.get('resources')
+                                  if isinstance(res, list) and len(res) > 0 and isinstance(res[0], dict):
+                                      resources_0 = res[0]
+                                  sev = finding.get('severity')
+                                  severity_str = sev if isinstance(sev, str) else safe_get(sev, 'name', default='')
                                   mapped = {
                                       'Status': 'FAIL',
-                                      'Provider': finding.get('cloud', {}).get('provider', ''),
-                                      'CheckTitle': finding.get('finding_info', {}).get('title', finding.get('metadata', {}).get('product', {}).get('name', '')),
-                                      'CheckID': finding.get('finding_info', {}).get('uid', ''),
-                                      'Severity': finding.get('severity', ''),
-                                      'StatusExtended': finding.get('status_detail', finding.get('message', '')),
-                                      'ServiceName': finding.get('resources', [{}])[0].get('type', '') if finding.get('resources') else '',
-                                      'ResourceId': finding.get('resources', [{}])[0].get('uid', '') if finding.get('resources') else '',
-                                      'Region': finding.get('resources', [{}])[0].get('region', '') if finding.get('resources') else '',
+                                      'Provider': safe_get(finding, 'cloud', 'provider'),
+                                      'CheckTitle': safe_get(finding, 'finding_info', 'title') or safe_get(finding, 'metadata', 'product', 'name'),
+                                      'CheckID': safe_get(finding, 'finding_info', 'uid'),
+                                      'Severity': severity_str,
+                                      'StatusExtended': str(finding.get('status_detail', finding.get('message', ''))),
+                                      'ServiceName': resources_0.get('type', ''),
+                                      'ResourceId': resources_0.get('uid', ''),
+                                      'Region': resources_0.get('region', ''),
                                       'ClusterName': cluster,
                                   }
                                   ts = time.strftime('%b %d %H:%M:%S')
