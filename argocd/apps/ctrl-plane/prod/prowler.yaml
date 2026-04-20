@@ -9,7 +9,7 @@ spec:
   source:
     repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
     targetRevision: main
-    path: argocd/kustomize/prowler/overlays/gcp-prod
+    path: argocd/kustomize/prowler/overlays/ctrl-plane-prod
   destination:
     server: https://kubernetes.default.svc
     namespace: security
