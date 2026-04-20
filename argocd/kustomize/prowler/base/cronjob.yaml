@@ -36,6 +36,7 @@ spec:
                   memory: "1Gi"
               securityContext:
                 runAsNonRoot: true
+                runAsUser: 1000
                 allowPrivilegeEscalation: false
                 capabilities:
                   drop:
@@ -56,6 +57,11 @@ spec:
                     configMapKeyRef:
                       name: prowler-config
                       key: cluster-name
+                - name: COMPLIANCE
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: compliance
               command:
                 - /bin/sh
                 - -c
@@ -65,10 +71,10 @@ spec:
                   OUTPUT_DIR="/tmp/prowler-output"
                   mkdir -p "$OUTPUT_DIR"
 
-                  # Run Prowler SOC 2 compliance scan
+                  # Run Prowler compliance scan
                   prowler "$CLOUD_PROVIDER" \
-                    --compliance soc2 \
-                    --output-formats json,html,csv \
+                    --compliance "$COMPLIANCE" \
+                    --output-formats json-ocsf html csv \
                     --output-directory "$OUTPUT_DIR" \
                     --verbose
 

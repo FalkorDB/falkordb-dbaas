@@ -10,6 +10,7 @@ configMapGenerator:
     literals:
       - cloud-provider=azure
       - cluster-name=app-plane-azure-dev
+      - compliance=cis_2.0_azure
 generatorOptions:
   disableNameSuffixHash: true
 patches:

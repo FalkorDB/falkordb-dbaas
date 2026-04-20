@@ -10,6 +10,7 @@ configMapGenerator:
     literals:
       - cloud-provider=aws
       - cluster-name=app-plane-aws-prod
+      - compliance=soc2_aws
 generatorOptions:
   disableNameSuffixHash: true
 patches:

@@ -8,10 +8,10 @@ configMapGenerator:
   - name: prowler-config
     behavior: create
     literals:
-      - cloud-provider=azure
-      - cluster-name=app-plane-azure-prod
-      - compliance=cis_2.0_azure
+      - cloud-provider=gcp
+      - cluster-name=ctrl-plane-prod
+      - compliance=cis_2.0_gcp
 generatorOptions:
   disableNameSuffixHash: true
 patches:
-  - path: azure-credentials-patch.yaml
+  - path: wi-patch.yaml
