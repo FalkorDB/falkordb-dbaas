@@ -42,7 +42,6 @@ spec:
           # Password-based agent registration
           authd:
             enabled: true
-            existingSecret: "wazuh-manager-authd"
           # LoadBalancer managed separately via kustomize (wazuh-manager)
           # to allow setting loadBalancerIP for the tofu-provisioned static IP.
           apiCred:
@@ -82,10 +81,17 @@ spec:
                 configMap:
                   name: wazuh-google-chat-integration
                   defaultMode: 0755
+              - name: authd-pass
+                secret:
+                  secretName: wazuh-manager-authd
             additionalVolumeMounts:
               - name: custom-rules
                 mountPath: /wazuh-config-mount/etc/rules/local_rules.xml
                 subPath: local_rules.xml
+                readOnly: true
+              - name: authd-pass
+                mountPath: /wazuh-config-mount/etc/authd.pass
+                subPath: authd.pass
                 readOnly: true
               - name: google-chat-integration
                 mountPath: /var/ossec/integrations/custom-google-chat
@@ -97,15 +103,9 @@ spec:
                 readOnly: true
             # Appended to the template-generated ossec.conf
             extraConf: |
-              <vulnerability-detector>
+              <vulnerability-detection>
                 <enabled>yes</enabled>
-                <interval>5m</interval>
-                <run_on_start>yes</run_on_start>
-                <provider name="canonical"><enabled>yes</enabled></provider>
-                <provider name="debian"><enabled>yes</enabled></provider>
-                <provider name="redhat"><enabled>yes</enabled></provider>
-                <provider name="nvd"><enabled>yes</enabled></provider>
-              </vulnerability-detector>
+              </vulnerability-detection>
               <syscheck>
                 <frequency>43200</frequency>
                 <scan_on_start>yes</scan_on_start>
@@ -193,11 +193,17 @@ spec:
                 - name: soc2-dashboard
                   configMap:
                     name: wazuh-dashboard-soc2
+                - name: api-cred
+                  secret:
+                    secretName: wazuh-api-cred
             container:
               volumeMounts:
                 - name: soc2-dashboard
                   mountPath: /usr/share/wazuh-dashboard/config/soc2-dashboard.ndjson
                   subPath: soc2-dashboard.ndjson
+                  readOnly: true
+                - name: api-cred
+                  mountPath: /run/secrets/api-cred
                   readOnly: true
               lifecycle:
                 postStart:
@@ -206,6 +212,13 @@ spec:
                       - /bin/sh
                       - -c
                       - |
+                        API_USER=$(cat /run/secrets/api-cred/API_USERNAME)
+                        API_PASS=$(cat /run/secrets/api-cred/API_PASSWORD)
+                        WAZUH_YML=/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml
+                        if [ -f "$WAZUH_YML" ]; then
+                          sed -i "s|username:.*|username: $API_USER|" "$WAZUH_YML"
+                          sed -i "s|password:.*|password: $API_PASS|" "$WAZUH_YML"
+                        fi
                         sleep 30 && curl -sS -k -XPOST \
                           "https://localhost:5601/api/saved_objects/_import?overwrite=true" \
                           -H "osd-xsrf: true" \
