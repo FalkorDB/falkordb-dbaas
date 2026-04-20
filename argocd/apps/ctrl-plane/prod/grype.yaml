@@ -1,0 +1,21 @@
+# Grype CVE vulnerability scanner — daily CronJob for production.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grype
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+    targetRevision: main
+    path: argocd/kustomize/grype/overlays/ctrl-plane-prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: security
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true

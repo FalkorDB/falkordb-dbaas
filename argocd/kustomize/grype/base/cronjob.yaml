@@ -1,0 +1,231 @@
+# Grype daily CronJob — scans all running container images for known CVEs,
+# uploads JSON reports to the central GCS Evidence Locker, and forwards
+# critical/high findings to Wazuh Manager via syslog for alerting.
+#
+# Runs at 04:00 UTC daily (after Prowler at 02:00).
+# Results are stored as: gs://BUCKET/grype/YYYY/MM/DD/<cluster>/
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: grype-cve-scan
+  namespace: security
+spec:
+  schedule: "0 4 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 14400  # 4h max (many images to scan)
+      template:
+        spec:
+          serviceAccountName: grype
+          restartPolicy: Never
+          nodeSelector:
+            node_pool: security
+          containers:
+            - name: grype
+              image: python:3.12-slim
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "2"
+                  memory: "2Gi"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: GRYPE_VERSION
+                  value: "0.86.1"
+                - name: GRYPE_DB_CACHE_DIR
+                  value: /tmp/grype-db
+                - name: EVIDENCE_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: grype-infra
+                      key: evidence-bucket
+                - name: CLUSTER_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: grype-config
+                      key: cluster-name
+                - name: WAZUH_SYSLOG_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: grype-config
+                      key: wazuh-syslog-host
+                      optional: true
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+
+                  # Install Python dependencies (non-root, user-local)
+                  pip install --quiet --no-cache-dir --user \
+                    google-cloud-storage kubernetes
+
+                  # Run the scanner
+                  export PATH="$HOME/.local/bin:$PATH"
+                  python3 <<'PYEOF'
+                  import os, sys, json, subprocess, socket, time, glob, tarfile, stat
+                  import urllib.request
+
+                  cluster = os.environ['CLUSTER_NAME']
+                  grype_version = os.environ.get('GRYPE_VERSION', '0.86.1')
+                  output_dir = '/tmp/grype-output'
+                  os.makedirs(output_dir, exist_ok=True)
+                  os.makedirs('/tmp/grype-db', exist_ok=True)
+
+                  # ── Download grype binary ──────────────────────────────────
+                  grype_bin = '/tmp/grype'
+                  url = (
+                      f'https://github.com/anchore/grype/releases/download/'
+                      f'v{grype_version}/grype_{grype_version}_linux_amd64.tar.gz'
+                  )
+                  print(f'Downloading grype v{grype_version}...')
+                  urllib.request.urlretrieve(url, '/tmp/grype.tar.gz')
+                  with tarfile.open('/tmp/grype.tar.gz') as tar:
+                      tar.extract('grype', '/tmp', filter='data')
+                  os.chmod(grype_bin, 0o755)
+
+                  # Verify install
+                  result = subprocess.run([grype_bin, 'version'], capture_output=True, text=True)
+                  print(f'grype: {result.stdout.strip()}')
+
+                  # ── Discover running container images ──────────────────────
+                  from kubernetes import client, config
+                  config.load_incluster_config()
+                  v1 = client.CoreV1Api()
+
+                  images = set()
+                  pods = v1.list_pod_for_all_namespaces(timeout_seconds=30)
+                  for pod in pods.items:
+                      for cs in (pod.status.container_statuses or []):
+                          if cs.image:
+                              images.add(cs.image)
+                      for cs in (pod.status.init_container_statuses or []):
+                          if cs.image:
+                              images.add(cs.image)
+
+                  print(f'Discovered {len(images)} unique container images')
+
+                  # ── Scan each image ────────────────────────────────────────
+                  all_vulns = []
+                  scan_errors = []
+
+                  for img in sorted(images):
+                      print(f'Scanning: {img}')
+                      safe_name = img.replace('/', '__').replace(':', '_')[:200]
+                      result_file = os.path.join(output_dir, f'{safe_name}.json')
+                      try:
+                          result = subprocess.run(
+                              [grype_bin, img, '-o', 'json', '--file', result_file],
+                              capture_output=True, text=True, timeout=600,
+                          )
+                          if result.returncode != 0 and not os.path.exists(result_file):
+                              scan_errors.append({'image': img, 'error': result.stderr[:500]})
+                              continue
+                          if not os.path.exists(result_file):
+                              continue
+                          with open(result_file) as f:
+                              data = json.load(f)
+                          for m in data.get('matches', []):
+                              vuln = m.get('vulnerability', {})
+                              artifact = m.get('artifact', {})
+                              sev = (vuln.get('severity') or '').lower()
+                              fix_obj = vuln.get('fix', {}) or {}
+                              fix_versions = fix_obj.get('versions') or []
+                              all_vulns.append({
+                                  'Scanner': 'grype',
+                                  'ImageName': img,
+                                  'VulnerabilityID': vuln.get('id', ''),
+                                  'Severity': sev,
+                                  'Package': artifact.get('name', ''),
+                                  'InstalledVersion': artifact.get('version', ''),
+                                  'FixedVersions': ','.join(str(v) for v in fix_versions),
+                                  'ClusterName': cluster,
+                              })
+                      except subprocess.TimeoutExpired:
+                          scan_errors.append({'image': img, 'error': 'timeout (600s)'})
+                      except Exception as e:
+                          scan_errors.append({'image': img, 'error': str(e)[:500]})
+
+                  # ── Write summary report ───────────────────────────────────
+                  summary = {
+                      'scan_date': time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                      'cluster': cluster,
+                      'images_scanned': len(images),
+                      'scan_errors': len(scan_errors),
+                      'total_vulnerabilities': len(all_vulns),
+                      'by_severity': {
+                          'critical': sum(1 for v in all_vulns if v['Severity'] == 'critical'),
+                          'high': sum(1 for v in all_vulns if v['Severity'] == 'high'),
+                          'medium': sum(1 for v in all_vulns if v['Severity'] == 'medium'),
+                          'low': sum(1 for v in all_vulns if v['Severity'] == 'low'),
+                          'negligible': sum(1 for v in all_vulns if v['Severity'] == 'negligible'),
+                      },
+                      'errors': scan_errors,
+                  }
+                  with open(os.path.join(output_dir, 'summary.json'), 'w') as f:
+                      json.dump(summary, f, indent=2)
+                  with open(os.path.join(output_dir, 'all-vulnerabilities.json'), 'w') as f:
+                      json.dump(all_vulns, f, indent=2)
+
+                  sev = summary['by_severity']
+                  print(f'Scan complete: {len(images)} images, {len(all_vulns)} vulns '
+                        f'(C:{sev["critical"]} H:{sev["high"]} M:{sev["medium"]} L:{sev["low"]}), '
+                        f'{len(scan_errors)} errors')
+
+                  # ── Upload to GCS evidence locker ──────────────────────────
+                  try:
+                      from google.cloud import storage as gcs
+                      bucket_name = os.environ['EVIDENCE_BUCKET']
+                      date_path = time.strftime('%Y/%m/%d')
+                      prefix = f'grype/{date_path}/{cluster}'
+                      gclient = gcs.Client()
+                      bucket = gclient.bucket(bucket_name)
+                      for f_path in glob.glob(os.path.join(output_dir, '*.json')):
+                          if os.path.isfile(f_path):
+                              blob = bucket.blob(f'{prefix}/{os.path.basename(f_path)}')
+                              blob.upload_from_filename(f_path)
+                              print(f'  Uploaded {os.path.basename(f_path)}')
+                      print(f'Results uploaded to gs://{bucket_name}/{prefix}/')
+                  except Exception as e:
+                      print(f'WARNING: GCS upload failed: {e}')
+                      print('Scan completed but evidence upload failed.')
+
+                  # ── Forward critical/high CVEs to Wazuh via syslog ────────
+                  syslog_host = os.environ.get('WAZUH_SYSLOG_HOST', '')
+                  if not syslog_host:
+                      print('WAZUH_SYSLOG_HOST not set, skipping syslog forwarding')
+                      sys.exit(0)
+
+                  fwd_count = 0
+                  try:
+                      sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                      sock.settimeout(10)
+                      sock.connect((syslog_host, 514))
+                      for v in all_vulns:
+                          if v['Severity'] in ('critical', 'high'):
+                              ts = time.strftime('%b %d %H:%M:%S')
+                              msg = '<134>{} {} grype: {}\n'.format(
+                                  ts, cluster, json.dumps(v, separators=(',', ':'))
+                              )
+                              sock.sendall(msg.encode())
+                              fwd_count += 1
+                      sock.close()
+                      print(f'Forwarded {fwd_count} critical/high CVEs to Wazuh at {syslog_host}:514')
+                  except Exception as e:
+                      print(f'WARNING: Syslog forwarding failed: {e}')
+                      print('Scan and GCS upload succeeded; syslog is best-effort.')
+                  PYEOF

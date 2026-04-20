@@ -1,0 +1,8 @@
+# Patch ServiceAccount with GCP Workload Identity annotation.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grype
+  namespace: security
+  annotations:
+    iam.gke.io/gcp-service-account: prowler-uploader@ctrl-plane-prod-b1b92df2.iam.gserviceaccount.com

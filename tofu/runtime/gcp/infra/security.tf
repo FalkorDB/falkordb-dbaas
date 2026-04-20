@@ -93,8 +93,15 @@ resource "google_service_account_iam_member" "prowler_workload_identity" {
   member             = "serviceAccount:${var.project_id}.svc.id.goog[security/prowler]"
 }
 
+# Grype CVE scanner reuses the same SA for uploading evidence to GCS.
+resource "google_service_account_iam_member" "grype_workload_identity" {
+  service_account_id = google_service_account.prowler_uploader.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[security/grype]"
+}
+
 # Static JSON key for non-GCP spokes (AWS/Azure) that cannot use Workload Identity.
-# Sealed into prowler-gcs-credentials as sa-key.json.
+# Sealed into prowler-gcs-credentials / grype-gcs-credentials as sa-key.json.
 # Rotate by tainting this resource and re-applying.
 resource "google_service_account_key" "prowler_uploader_key" {
   service_account_id = google_service_account.prowler_uploader.name
