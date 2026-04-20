@@ -37,13 +37,13 @@ spec:
               <rule id="100100" level="3">
                 <decoded_as>json</decoded_as>
                 <field name="Provider">\.+</field>
-                <field name="Status">\.+</field>
+                <regex>"Status":\s*"\w+"</regex>
                 <description>Prowler compliance check result received.</description>
                 <group>prowler_compliance</group>
               </rule>
               <rule id="100101" level="10">
                 <if_sid>100100</if_sid>
-                <field name="Status">FAIL</field>
+                <regex>"Status":\s*"FAIL"</regex>
                 <description>Prowler SOC 2 compliance check FAILED: $(CheckTitle) — $(StatusExtended)</description>
                 <group>prowler_compliance,soc2_fail</group>
                 <options>alert_by_email</options>
@@ -94,6 +94,53 @@ spec:
                 <group>soc2_auth,privilege_escalation</group>
               </rule>
             </group>
+          # Pre-create agent groups so the register_agent.py script can assign
+          # agents immediately without a 404 "group does not exist" error.
+          agentGroupConf:
+            - name: ctrl-plane-prod
+              agent: |
+                <agent_config>
+                  <localfile>
+                    <location>journald</location>
+                    <log_format>journald</log_format>
+                  </localfile>
+                </agent_config>
+            - name: app-plane-prod
+              agent: |
+                <agent_config>
+                  <localfile>
+                    <location>journald</location>
+                    <log_format>journald</log_format>
+                  </localfile>
+                </agent_config>
+          # Raise the Wazuh API rate limit so all agents can register
+          # concurrently without hitting 429 "Too Many Requests".
+          extraInitContainers:
+            - name: api-rate-limit
+              image: alpine
+              command: ["sh", "-c"]
+              args:
+                - |
+                  API_YAML=/var/ossec/api/configuration/api.yaml
+                  if ! grep -q 'max_request_per_minute' "$API_YAML" 2>/dev/null; then
+                    cat > "$API_YAML" <<'EOF'
+                  access:
+                    max_login_attempts: 50
+                    block_time: 300
+                    max_request_per_minute: 1000
+                  EOF
+                  fi
+              volumeMounts:
+                - name: wazuh-manager-master
+                  mountPath: /var/ossec/api/configuration
+                  subPath: wazuh/var/ossec/api/configuration
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 16Mi
+                limits:
+                  cpu: 10m
+                  memory: 16Mi
           # LoadBalancer managed separately via kustomize (wazuh-manager)
           apiCred:
             existingSecret: "wazuh-api-cred"

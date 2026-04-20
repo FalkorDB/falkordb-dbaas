@@ -29,9 +29,6 @@ spec:
         - name: node-certs
           secret:
             secretName: node-tls
-        - name: indexer-conf
-          configMap:
-            name: wazuh-indexer-config
         - name: security-config
           emptyDir: {}
       containers:
@@ -55,13 +52,7 @@ spec:
             - /bin/bash
             - -ec
             - |
-              # Copy security config files from the chart's ConfigMap
-              for f in roles.yml roles_mapping.yml config.yml tenants.yml nodes_dn.yml whitelist.yml; do
-                cp "/config-source/$f" "/security-config/$f"
-              done
-
               # Generate internal_users.yml with hashes from sealed secrets.
-              # Using printf to avoid shell expansion issues with $ in bcrypt hashes.
               printf '%s\n' \
                 '---' \
                 '_meta:' \
@@ -83,9 +74,11 @@ spec:
               echo "admin hash: ${INDEXER_PASSWORD_HASH:0:20}..."
               echo "kibanaserver hash: ${DASHBOARD_PASSWORD_HASH:0:20}..."
 
-              # Apply security configuration to the indexer
+              # Apply only internal_users.yml to the security index (not -cd which
+              # requires all config files including action_groups.yml)
               /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh \
-                -cd /security-config/ \
+                -f /security-config/internal_users.yml \
+                -t internalusers \
                 -nhnv \
                 -cacert /certs/root-ca.pem \
                 -cert /certs/admin.pem \
@@ -94,9 +87,6 @@ spec:
                 -icl \
                 -h wazuh-indexer
           volumeMounts:
-            - name: indexer-conf
-              mountPath: /config-source
-              readOnly: true
             - name: security-config
               mountPath: /security-config
             - name: node-certs
