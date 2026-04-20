@@ -129,11 +129,15 @@ for secret_dir in "$TMP_DIR"/*/; do
 
   # shellcheck disable=SC2086
   kubectl create secret generic "$secret_name" --dry-run=client -n "$NAMESPACE" $from_file_args -o yaml >"$secret_yaml"
+  sealed=$(kubeseal --cert "$CERT_FILE" -o yaml -n "$NAMESPACE" -f "$secret_yaml")
   if [ "$doc_count" -gt 0 ]; then
-    printf '%s\n' '---' >>"$OUTPUT_FILE"
+    # Only add separator if kubeseal output doesn't already start with one
+    case "$sealed" in
+      ---*) ;;
+      *) printf '%s\n' '---' >>"$OUTPUT_FILE" ;;
+    esac
   fi
-  kubeseal --cert "$CERT_FILE" -o yaml -n "$NAMESPACE" -f "$secret_yaml" >>"$OUTPUT_FILE"
-  printf '\n' >>"$OUTPUT_FILE"
+  printf '%s\n' "$sealed" >>"$OUTPUT_FILE"
   doc_count=$((doc_count + 1))
 done
 

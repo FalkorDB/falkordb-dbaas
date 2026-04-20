@@ -5,6 +5,7 @@ namespace: argocd
 resources:
   - ../../base/
   - cluster-discovery-env-secret.yaml
+  - sealed-secrets-key-env-secret.yaml
 
 images:
   - name: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery
@@ -21,6 +22,11 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: "IfNotPresent"
+      - op: add
+        path: /spec/template/spec/containers/0/envFrom/-
+        value:
+          secretRef:
+            name: sealed-secrets-app-plane-key
   - target:
       kind: Ingress
       name: cluster-discovery-ingress

@@ -47,6 +47,10 @@ export const EnvSchema = Type.Object({
   // PagerDuty configuration
   PAGERDUTY_INTEGRATION_KEY: Type.String(),
 
+  // Sealed-secrets app-plane key pair
+  SEALED_SECRETS_TLS_CRT: Type.Optional(Type.String()),
+  SEALED_SECRETS_TLS_KEY: Type.Optional(Type.String()),
+
   // Discovery configuration
   WHITELIST_CLUSTERS: Type.Optional(Type.String()),
   BLACKLIST_CLUSTERS: Type.Optional(Type.String()),

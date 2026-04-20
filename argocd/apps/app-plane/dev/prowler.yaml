@@ -1,0 +1,39 @@
+# Prowler SOC 2 scanner — deployed to all app-plane clusters via ApplicationSet.
+# Each spoke cluster runs a daily CronJob scanning its cloud environment and
+# uploading results to the central GCS Evidence Locker.
+#
+# Security: No Services or Ingresses — batch workload with no
+# internet-facing endpoints. Outbound-only to GCS for uploads.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: prowler
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: app-plane
+        values:
+          cloud: '{{ index .metadata.labels "cloud_provider" }}'
+  template:
+    metadata:
+      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-prowler'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: dev
+        path: 'argocd/kustomize/prowler/overlays/{{ .values.cloud }}-dev'
+      destination:
+        server: "{{.server}}"
+        namespace: security
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          prune: true
+          selfHeal: true

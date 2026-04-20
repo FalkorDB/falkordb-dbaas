@@ -1,0 +1,119 @@
+# Wazuh Agent DaemonSet — runs on every node to stream security events
+# (host logs, file integrity changes, vulnerability data) to the central
+# Wazuh Manager on the GCP control plane.
+#
+# Communication: outbound TCP/1514 (TLS) from agent → manager.
+# Enrollment: outbound TCP/1515 (authd) with registration password.
+# The enrollment credentials are stored in a Sealed Secret (wazuh-agent-key).
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: wazuh-agent
+  namespace: security
+  labels:
+    app: wazuh-agent
+spec:
+  selector:
+    matchLabels:
+      app: wazuh-agent
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: wazuh-agent
+    spec:
+      serviceAccountName: wazuh-agent
+      hostPID: true
+      hostNetwork: true
+      # Required: hostNetwork uses host DNS by default, which can't resolve
+      # *.svc.cluster.local names. This policy falls back to cluster DNS.
+      dnsPolicy: ClusterFirstWithHostNet
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+        - operator: Exists
+          effect: NoExecute
+      # Stagger agent registration to avoid authd rate limiting.
+      # Each pod sleeps 0-15s before starting the main container.
+      initContainers:
+        - name: stagger-start
+          image: busybox:1.36
+          command: ["sh", "-c", "DELAY=$((RANDOM % 16)); echo \"Sleeping ${DELAY}s to stagger registration\"; sleep $DELAY"]
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "16Mi"
+            limits:
+              cpu: "10m"
+              memory: "16Mi"
+      containers:
+        - name: wazuh-agent
+          image: wazuh/wazuh-agent:4.14.4
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          securityContext:
+            privileged: true
+          env:
+            - name: WAZUH_MANAGER
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-agent-key
+                  key: wazuh-manager
+            - name: WAZUH_REGISTRATION_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-agent-key
+                  key: registration-password
+            - name: WAZUH_AGENT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: WAZUH_AGENT_GROUP
+              valueFrom:
+                configMapKeyRef:
+                  name: wazuh-agent-config
+                  key: agent-group
+          volumeMounts:
+            - name: var-log
+              mountPath: /var/log
+              readOnly: true
+            - name: etc
+              mountPath: /host/etc
+              readOnly: true
+            - name: var-ossec-data
+              mountPath: /var/ossec/data
+          livenessProbe:
+            exec:
+              command:
+                - /var/ossec/bin/wazuh-control
+                - status
+            initialDelaySeconds: 120
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+                - /var/ossec/bin/wazuh-control
+                - status
+            initialDelaySeconds: 90
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+      volumes:
+        - name: var-log
+          hostPath:
+            path: /var/log
+        - name: etc
+          hostPath:
+            path: /etc
+        - name: var-ossec-data
+          emptyDir: {}

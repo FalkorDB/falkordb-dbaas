@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: security
+resources:
+  - ../../base
+  - secrets-env-secret.yaml
+configMapGenerator:
+  - name: prowler-config
+    behavior: create
+    literals:
+      - cloud-provider=gcp
+      - cluster-name=app-plane-gcp-prod
+      - compliance=cis_2.0_gcp
+      - gcp-project-id=ctrl-plane-prod-b1b92df2
+      - wazuh-syslog-host=REPLACE_WITH_PROD_WAZUH_IP
+generatorOptions:
+  disableNameSuffixHash: true
+patches:
+  - path: wi-patch.yaml

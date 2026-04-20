@@ -171,3 +171,23 @@ jobs:
       rdb_url: ${{ needs.upload-rdb.result == 'success' && needs.upload-rdb.outputs.rdb_url || '' }}
       aof_url: ${{ needs.upload-rdb.result == 'success' && needs.upload-rdb.outputs.aof_url || '' }}
       falkordb_version: ${{ needs.upload-rdb.result == 'success' && needs.upload-rdb.outputs.falkordb_version || '' }}
+
+  label-version:
+    needs: [analyze-crash, upload-rdb]
+    if: ${{ needs.upload-rdb.result == 'success' && needs.upload-rdb.outputs.falkordb_version != '' && needs.analyze-crash.outputs.issue_number != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add version label to crash issue
+        env:
+          GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          ISSUE_REPO: ${{ env.ISSUE_REPO }}
+        run: |
+          VERSION="${{ needs.upload-rdb.outputs.falkordb_version }}"
+          ISSUE="${{ needs.analyze-crash.outputs.issue_number }}"
+          LABEL="version:${VERSION}"
+
+          # Ensure the label exists (create if missing)
+          gh label create "$LABEL" --repo "$ISSUE_REPO" --color "0e8a16" --description "FalkorDB version" 2>/dev/null || true
+
+          # Add to issue
+          gh issue edit "$ISSUE" --repo "$ISSUE_REPO" --add-label "$LABEL"

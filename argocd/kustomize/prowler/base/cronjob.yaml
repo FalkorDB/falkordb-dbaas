@@ -1,0 +1,183 @@
+# Prowler daily CronJob — runs SOC 2 compliance checks against the cloud
+# provider and Kubernetes cluster, then uploads results to the central
+# GCS Evidence Locker bucket.
+#
+# Runs at 02:00 UTC daily (after the GKE backup at 01:00).
+# Results are stored as: gs://BUCKET/prowler/YYYY/MM/DD/<cloud>-<cluster>/
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: prowler-soc2-scan
+  namespace: security
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 7200  # 2h max
+      template:
+        spec:
+          serviceAccountName: prowler
+          restartPolicy: Never
+          nodeSelector:
+            node_pool: security
+          containers:
+            - name: prowler
+              image: toniblyx/prowler:4.6.1
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "1"
+                  memory: "1Gi"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+              env:
+                - name: EVIDENCE_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: prowler-infra
+                      key: evidence-bucket
+                - name: CLOUD_PROVIDER
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: cloud-provider
+                - name: CLUSTER_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: cluster-name
+                - name: COMPLIANCE
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: compliance
+                - name: GCP_PROJECT_ID
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: gcp-project-id
+                      optional: true
+                - name: WAZUH_SYSLOG_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: wazuh-syslog-host
+                      optional: true
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  DATE_PATH=$(date +%Y/%m/%d)
+                  OUTPUT_DIR="/tmp/prowler-output"
+                  mkdir -p "$OUTPUT_DIR"
+
+                  # Build provider-specific flags
+                  EXTRA_ARGS=""
+                  if [ "$CLOUD_PROVIDER" = "gcp" ] && [ -n "$GCP_PROJECT_ID" ]; then
+                    EXTRA_ARGS="--project-id $GCP_PROJECT_ID"
+                  fi
+
+                  # Run Prowler compliance scan
+                  prowler "$CLOUD_PROVIDER" \
+                    --compliance "$COMPLIANCE" \
+                    --output-formats json-ocsf json html csv \
+                    --output-directory "$OUTPUT_DIR" \
+                    $EXTRA_ARGS \
+                    --ignore-exit-code-3 \
+                    --verbose
+
+                  # Upload results to the central GCS evidence locker.
+                  # Uses google-cloud-storage SDK (bundled in Prowler image).
+                  # On GCP spokes, Workload Identity provides credentials.
+                  # On AWS/Azure spokes, GOOGLE_APPLICATION_CREDENTIALS env
+                  # is injected by the cloud-specific overlay patches.
+                  export DATE_PATH OUTPUT_DIR
+                  python3 <<'PYEOF'
+                  import os, glob
+                  from google.cloud import storage
+                  bucket_name = os.environ['EVIDENCE_BUCKET']
+                  cloud = os.environ['CLOUD_PROVIDER']
+                  cluster = os.environ['CLUSTER_NAME']
+                  date_path = os.environ['DATE_PATH']
+                  output_dir = os.environ['OUTPUT_DIR']
+                  prefix = f'prowler/{date_path}/{cloud}-{cluster}'
+                  client = storage.Client()
+                  bucket = client.bucket(bucket_name)
+                  for f in glob.glob(os.path.join(output_dir, '**', '*'), recursive=True):
+                      if os.path.isfile(f):
+                          blob = bucket.blob(prefix + '/' + os.path.basename(f))
+                          blob.upload_from_filename(f)
+                          print(f'Uploaded {os.path.basename(f)}')
+                  PYEOF
+
+                  echo "Prowler scan complete. Results uploaded to gs://${EVIDENCE_BUCKET}/prowler/${DATE_PATH}/${CLOUD_PROVIDER}-${CLUSTER_NAME}/"
+
+                  # Forward FAIL findings to Wazuh Manager via TCP syslog.
+                  # This bridges the Prowler→Wazuh gap so rules 100100-100103
+                  # trigger real-time alerts and Google Chat notifications.
+                  # Uses Prowler-native JSON (not OCSF) to match rule field names
+                  # (Status, Provider, CheckTitle, Severity, StatusExtended).
+                  python3 <<'SYSLOG_EOF'
+                  import os, glob, json, socket, time
+
+                  syslog_host = os.environ.get('WAZUH_SYSLOG_HOST', '')
+                  syslog_port = 514
+                  if not syslog_host:
+                      print('WAZUH_SYSLOG_HOST not set, skipping syslog forwarding')
+                      exit(0)
+
+                  output_dir = os.environ['OUTPUT_DIR']
+                  cluster = os.environ['CLUSTER_NAME']
+                  # Prowler-native JSON files (exclude .ocsf.json)
+                  json_files = sorted(
+                      f for f in glob.glob(os.path.join(output_dir, '**', '*.json'), recursive=True)
+                      if not f.endswith('.ocsf.json')
+                  )
+                  if not json_files:
+                      print('No Prowler JSON files found, skipping syslog forwarding')
+                      exit(0)
+
+                  fail_count = 0
+                  try:
+                      sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                      sock.settimeout(10)
+                      sock.connect((syslog_host, syslog_port))
+                      for f in json_files:
+                          with open(f) as fh:
+                              for line in fh:
+                                  line = line.strip()
+                                  if not line:
+                                      continue
+                                  try:
+                                      finding = json.loads(line)
+                                  except json.JSONDecodeError:
+                                      continue
+                                  if finding.get('Status') != 'FAIL':
+                                      continue
+                                  finding['ClusterName'] = cluster
+                                  ts = time.strftime('%b %d %H:%M:%S')
+                                  # RFC 3164: <priority>timestamp hostname tag: message
+                                  msg = '<134>{} {} prowler: {}\n'.format(
+                                      ts, cluster, json.dumps(finding, separators=(',', ':'))
+                                  )
+                                  sock.sendall(msg.encode())
+                                  fail_count += 1
+                      sock.close()
+                      print('Forwarded {} FAIL findings to Wazuh syslog at {}:{}'.format(
+                          fail_count, syslog_host, syslog_port))
+                  except Exception as e:
+                      print('WARNING: Syslog forwarding failed: {}'.format(e))
+                      print('Scan and GCS upload succeeded; syslog is best-effort.')
+                  SYSLOG_EOF
