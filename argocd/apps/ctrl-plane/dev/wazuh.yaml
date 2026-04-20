@@ -84,7 +84,7 @@ spec:
                   defaultMode: 0755
             additionalVolumeMounts:
               - name: custom-rules
-                mountPath: /var/ossec/etc/rules/local_rules.xml
+                mountPath: /wazuh-config-mount/etc/rules/local_rules.xml
                 subPath: local_rules.xml
                 readOnly: true
               - name: google-chat-integration
