@@ -12,6 +12,7 @@ configMapGenerator:
       - cluster-name=app-plane-gcp-dev
       - compliance=cis_2.0_gcp
       - gcp-project-id=ctrl-plane-dev-f7a2434f
+      - wazuh-syslog-host=34.46.116.195
 generatorOptions:
   disableNameSuffixHash: true
 patches:

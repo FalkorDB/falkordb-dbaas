@@ -23,7 +23,7 @@ Before starting, ensure the following are available:
 
 ### 1.1 GCP Control Plane
 
-This creates the Wazuh static IP, GCS evidence locker bucket, Prowler service account, Workload Identity binding, and firewall rules.
+This creates the Wazuh static IP, GCS evidence locker bucket, Prowler service account, and Workload Identity binding.
 
 ```bash
 cd tofu/runtime/gcp/infra
@@ -195,70 +195,18 @@ Without `role: app-plane` and `cloud_provider`, the ApplicationSets will not gen
 
 ---
 
-## Step 5 — IAP (Identity-Aware Proxy) for Security Dashboards
+## Step 5 — DNS for Wazuh Dashboard
 
-The Wazuh Dashboard is internet-facing via nginx ingress. Access is restricted to the `devops@falkordb.com` Google Group through **oauth2-proxy** with Google OIDC.
+The Wazuh Dashboard is exposed via nginx ingress on the same DNS as the Wazuh Manager.
 
-> **App-plane security services** (agents, sensors, Prowler) have **no** ingress or LoadBalancer — they are outbound-only and require no IAP.
-
-### 5.1 Google Cloud Console — OAuth Client
-
-Create the OAuth2 client manually in the Google Cloud Console:
-
-1. Navigate to **APIs & Services → Credentials → Create Credentials → OAuth client ID**
-2. Application type: **Web application**
-3. Name: `security-oauth2-proxy`
-4. Authorized redirect URIs:
-   - Dev: `https://auth.security.dev.internal.falkordb.cloud/oauth2/callback`
-   - Prod: `https://auth.security.internal.falkordb.cloud/oauth2/callback`
-5. Copy the **Client ID** and **Client Secret** — these go into `secrets.env`
-
-> **Note:** The `google_iap_brand` / `google_iap_client` Terraform resources were removed because the IAP OAuth Admin APIs were permanently shut down on 2026-03-19.
-
-### 5.2 Google Workspace Admin — Service Account
-
-oauth2-proxy needs a Google Workspace admin API service account to verify group membership. The service account is created by `tofu/runtime/gcp/infra/security.tf` (Step 1.1):
-
-```bash
-tofu output oauth2_proxy_groups_email  # → oauth2-proxy-groups@<PROJECT>.iam.gserviceaccount.com
-tofu output -raw oauth2_proxy_groups_sa_key | base64 -d > oauth2-proxy-groups-key.json
-```
-
-Then configure domain-wide delegation manually:
-
-1. In the Google Cloud Console → IAM & Admin → Service Accounts → `oauth2-proxy-groups` → Enable **domain-wide delegation**
-2. In Google Workspace Admin → Security → API controls → Domain-wide delegation, add the SA's client ID with scope `https://www.googleapis.com/auth/admin.directory.group.readonly`
-3. The JSON key (from `tofu output` above) goes into the `google-admin-sa-json` field in `secrets.env`
-
-### 5.3 Cookie Secret
-
-Generate a random cookie encryption secret:
-
-```bash
-openssl rand -base64 32
-```
-
-### 5.4 Seal OAuth Credentials
-
-```bash
-vi argocd/kustomize/oauth2-proxy/overlays/dev/secrets.env
-# Set: client-id=<from Step 5.1>
-# Set: client-secret=<from Step 5.1>
-# Set: cookie-secret=<from Step 5.3>
-# Set: google-admin-sa-json=<SA key JSON from Step 5.2>
-
-./scripts/seal_env.sh argocd/kustomize/oauth2-proxy/overlays/dev/secrets.env security \
-  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
-```
-
-### 5.5 DNS
+> **App-plane security services** (agents, sensors, Prowler) have **no** ingress or LoadBalancer — they are outbound-only.
 
 Create DNS records pointing to the nginx LB static IP:
 
 | Record | Dev | Prod |
 |--------|-----|------|
-| `auth.security.dev.internal.falkordb.cloud` | nginx LB IP | — |
-| `auth.security.internal.falkordb.cloud` | — | nginx LB IP |
+| `wazuh.security.dev.internal.falkordb.cloud` | nginx LB IP | — |
+| `wazuh.security.internal.falkordb.cloud` | — | nginx LB IP |
 
 ---
 
@@ -374,7 +322,6 @@ vi argocd/kustomize/prowler/overlays/gcp-dev/secrets.env
 
 | Secret | `.env` Location | Clusters | Keys |
 |--------|----------------|----------|------|
-| `oauth2-proxy-credentials` | `oauth2-proxy/overlays/*/secrets.env` | Ctrl-plane | `client-id`, `client-secret`, `cookie-secret`, `google-admin-sa-json` |
 | `wazuh-google-chat-webhook` | `wazuh-rules/secrets.env` | Ctrl-plane | `WAZUH_GOOGLE_CHAT_WEBHOOK_URL` |
 | `wazuh-manager-authd` | `wazuh-manager/overlays/*/secrets.env` | Ctrl-plane | `WAZUH_AUTHD_PASS` |
 | `wazuh-agent-key` | `wazuh-agent/overlays/*/secrets.env` | All | `enrollment-key`, `manager-ip` |
@@ -391,22 +338,6 @@ TLS secrets (`wazuh-dashboard-tls`) are auto-provisioned by cert-manager via the
 ## Step 7 — Deploy ArgoCD Applications (Ordered)
 
 Deploy in this order. Wait for each component to be healthy before proceeding.
-
-### 7.0 OAuth2 Proxy (must be first)
-
-```bash
-kubectl apply -f argocd/apps/ctrl-plane/dev/oauth2-proxy.yaml
-```
-
-Wait until oauth2-proxy pods are Running and the ingress is responding:
-
-```bash
-kubectl get pods -n security -l app=oauth2-proxy
-curl -sI "https://auth.security.dev.internal.falkordb.cloud/oauth2/auth" | head -1
-# Expected: HTTP/2 401 (unauthenticated — this is correct)
-```
-
-The Wazuh Dashboard ingress references this endpoint via `auth-url`. It must be healthy **before** deploying that service.
 
 ### 7.1 Wazuh Manager
 
@@ -540,5 +471,3 @@ Repeat Steps 2–6 using the `prod` variants:
 Key differences in prod:
 - Wazuh Manager: `ssl_verify_host: "yes"` (strict mTLS)
 - Domain: `*.security.internal.falkordb.cloud` (no `dev` subdomain)
-- oauth2-proxy: callback URL is `https://auth.security.internal.falkordb.cloud/oauth2/callback`
-- Auth annotations on ingresses point to `auth.security.internal.falkordb.cloud`
