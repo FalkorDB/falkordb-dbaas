@@ -163,6 +163,9 @@ spec:
                 configMap:
                   name: wazuh-google-chat-integration
                   defaultMode: 0755
+              - name: google-chat-webhook
+                secret:
+                  secretName: wazuh-google-chat-webhook
             additionalVolumeMounts:
               - name: google-chat-integration
                 mountPath: /var/ossec/integrations/custom-google-chat
@@ -171,6 +174,9 @@ spec:
               - name: google-chat-integration
                 mountPath: /var/ossec/integrations/custom-google-chat.py
                 subPath: custom-google-chat.py
+                readOnly: true
+              - name: google-chat-webhook
+                mountPath: /var/ossec/etc/secrets/google-chat
                 readOnly: true
             extraConf: |
               <remote>
@@ -222,11 +228,6 @@ spec:
                       limits:
                         cpu: 10m
                         memory: 16Mi
-              container:
-                envFrom:
-                  - secretRef:
-                      name: wazuh-google-chat-webhook
-
           worker:
             enabled: true
             replicas: 2

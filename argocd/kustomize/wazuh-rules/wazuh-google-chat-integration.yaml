@@ -25,10 +25,16 @@ data:
     import urllib.error
 
     ALERT_FILE = sys.argv[1]
-    # Prefer the env var (injected from a SealedSecret) over the ossec.conf
-    # hook_url placeholder passed as argv[3].
+    # Read the webhook URL from the mounted secret file (preferred),
+    # then try env var, then the ossec.conf hook_url arg.
+    SECRET_PATH = "/var/ossec/etc/secrets/google-chat/WAZUH_GOOGLE_CHAT_WEBHOOK_URL"
     _arg_url = sys.argv[3] if len(sys.argv) > 3 else ""
-    HOOK_URL = os.environ.get("GOOGLE_CHAT_WEBHOOK_URL") or _arg_url
+    HOOK_URL = ""
+    if os.path.isfile(SECRET_PATH):
+        with open(SECRET_PATH) as _sf:
+            HOOK_URL = _sf.read().strip()
+    if not HOOK_URL:
+        HOOK_URL = os.environ.get("WAZUH_GOOGLE_CHAT_WEBHOOK_URL") or _arg_url
     if not HOOK_URL or HOOK_URL == "FROM_SECRET":
         print("ERROR: No webhook URL provided", file=sys.stderr)
         sys.exit(1)
