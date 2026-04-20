@@ -113,34 +113,6 @@ spec:
                     <log_format>journald</log_format>
                   </localfile>
                 </agent_config>
-          # Raise the Wazuh API rate limit so all agents can register
-          # concurrently without hitting 429 "Too Many Requests".
-          extraInitContainers:
-            - name: api-rate-limit
-              image: alpine
-              command: ["sh", "-c"]
-              args:
-                - |
-                  API_YAML=/var/ossec/api/configuration/api.yaml
-                  if ! grep -q 'max_request_per_minute' "$API_YAML" 2>/dev/null; then
-                    cat > "$API_YAML" <<'EOF'
-                  access:
-                    max_login_attempts: 50
-                    block_time: 300
-                    max_request_per_minute: 1000
-                  EOF
-                  fi
-              volumeMounts:
-                - name: wazuh-manager-master
-                  mountPath: /var/ossec/api/configuration
-                  subPath: wazuh/var/ossec/api/configuration
-              resources:
-                requests:
-                  cpu: 10m
-                  memory: 16Mi
-                limits:
-                  cpu: 10m
-                  memory: 16Mi
           # LoadBalancer managed separately via kustomize (wazuh-manager)
           apiCred:
             existingSecret: "wazuh-api-cred"
@@ -201,6 +173,34 @@ spec:
                 <alert_format>json</alert_format>
               </integration>
             extraSpec:
+              # Raise the Wazuh API rate limit so all agents can register
+              # concurrently without hitting 429 "Too Many Requests".
+              pod:
+                initContainers:
+                  - name: api-rate-limit
+                    image: alpine
+                    command: ["sh", "-c"]
+                    args:
+                      - |
+                        API_YAML=/mnt/master/wazuh/var/ossec/api/configuration/api.yaml
+                        if ! grep -q 'max_request_per_minute' "$API_YAML" 2>/dev/null; then
+                          cat > "$API_YAML" <<'EOF'
+                        access:
+                          max_login_attempts: 50
+                          block_time: 300
+                          max_request_per_minute: 1000
+                        EOF
+                        fi
+                    volumeMounts:
+                      - name: wazuh-manager-master
+                        mountPath: /mnt/master
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 16Mi
+                      limits:
+                        cpu: 10m
+                        memory: 16Mi
               container:
                 envFrom:
                   - secretRef:
