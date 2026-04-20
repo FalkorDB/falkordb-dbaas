@@ -2,8 +2,9 @@
 # (host logs, file integrity changes, vulnerability data) to the central
 # Wazuh Manager on the GCP control plane.
 #
-# Communication: outbound TCP/1514 (TLS) from agent → manager static IP.
-# The enrollment key is stored in a Sealed Secret (wazuh-agent-key).
+# Communication: outbound TCP/1514 (TLS) from agent → manager.
+# Enrollment: outbound TCP/1515 (authd) with registration password.
+# The enrollment credentials are stored in a Sealed Secret (wazuh-agent-key).
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -35,7 +36,7 @@ spec:
           effect: NoSchedule
         - operator: Exists
           effect: NoExecute
-      # Stagger agent registration to avoid Wazuh API rate limiting (429).
+      # Stagger agent registration to avoid authd rate limiting.
       # Each pod sleeps 0-15s before starting the main container.
       initContainers:
         - name: stagger-start
@@ -50,7 +51,7 @@ spec:
               memory: "16Mi"
       containers:
         - name: wazuh-agent
-          image: opennix/wazuh-agent:4.11.1
+          image: wazuh/wazuh-agent:4.14.4
           resources:
             requests:
               cpu: "50m"
@@ -61,37 +62,21 @@ spec:
           securityContext:
             privileged: true
           env:
-            - name: JOIN_MANAGER_MASTER_HOST
+            - name: WAZUH_MANAGER
               valueFrom:
                 secretKeyRef:
                   name: wazuh-agent-key
-                  key: master-host
-            - name: JOIN_MANAGER_WORKER_HOST
+                  key: wazuh-manager
+            - name: WAZUH_REGISTRATION_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: wazuh-agent-key
-                  key: worker-host
-            - name: JOIN_MANAGER_USER
-              valueFrom:
-                secretKeyRef:
-                  name: wazuh-agent-key
-                  key: api-user
-            - name: JOIN_MANAGER_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: wazuh-agent-key
-                  key: api-password
-            - name: JOIN_MANAGER_PROTOCOL
-              value: "https"
-            - name: JOIN_MANAGER_API_PORT
-              value: "55000"
-            - name: JOIN_MANAGER_PORT
-              value: "1514"
-            - name: NODE_NAME
+                  key: registration-password
+            - name: WAZUH_AGENT_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: WAZUH_GROUPS
+            - name: WAZUH_AGENT_GROUP
               valueFrom:
                 configMapKeyRef:
                   name: wazuh-agent-config
