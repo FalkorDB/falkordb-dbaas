@@ -66,6 +66,19 @@ resource "google_storage_bucket_iam_member" "prowler_writer" {
   member = "serviceAccount:${google_service_account.prowler_uploader.email}"
 }
 
+# Read-only project access for Prowler CIS compliance scanning.
+resource "google_project_iam_member" "prowler_viewer" {
+  project = var.project_id
+  role    = "roles/viewer"
+  member  = "serviceAccount:${google_service_account.prowler_uploader.email}"
+}
+
+resource "google_project_iam_member" "prowler_security_reviewer" {
+  project = var.project_id
+  role    = "roles/iam.securityReviewer"
+  member  = "serviceAccount:${google_service_account.prowler_uploader.email}"
+}
+
 resource "google_service_account_iam_member" "prowler_workload_identity" {
   service_account_id = google_service_account.prowler_uploader.name
   role               = "roles/iam.workloadIdentityUser"

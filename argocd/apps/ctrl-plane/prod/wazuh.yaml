@@ -100,6 +100,12 @@ spec:
             - name: ctrl-plane-prod
               agent: |
                 <agent_config>
+                  <labels>
+                    <label key="cluster_id">ctrl-plane-prod</label>
+                    <label key="plane">ctrl-plane</label>
+                    <label key="env">prod</label>
+                    <label key="cloud">gcp</label>
+                  </labels>
                   <localfile>
                     <location>journald</location>
                     <log_format>journald</log_format>
@@ -108,6 +114,11 @@ spec:
             - name: app-plane-prod
               agent: |
                 <agent_config>
+                  <labels>
+                    <label key="cluster_id">app-plane-prod</label>
+                    <label key="plane">app-plane</label>
+                    <label key="env">prod</label>
+                  </labels>
                   <localfile>
                     <location>journald</location>
                     <log_format>journald</log_format>
