@@ -237,9 +237,13 @@ spec:
           storageClass: "standard-rwo"
           env:
             OPENSEARCH_JAVA_OPTS: "-Xms4g -Xmx4g -Dlog4j2.formatMsgNoLookups=true"
+          # Chart's built-in securityadmin job is disabled (PostDelete = only runs
+          # on app deletion). Our securityadmin-patch job in wazuh-manager-secrets
+          # handles security index initialization with correct hashes from sealed
+          # secrets, preventing the chart's lookup() fallback to default passwords.
           job:
             annotations:
-              argocd.argoproj.io/hook: PostSync
+              argocd.argoproj.io/hook: PostDelete
               argocd.argoproj.io/hook-delete-policy: HookSucceeded,BeforeHookCreation
 
         dashboard:

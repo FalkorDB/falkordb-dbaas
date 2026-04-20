@@ -1,11 +1,15 @@
-# Custom securityadmin job that applies password hashes from sealed secrets
-# to the OpenSearch security index.
+# Custom securityadmin job that initialises the OpenSearch security index.
 #
 # Why: The chart's ConfigMap renders internal_users.yml at Helm template time.
 # ArgoCD renders client-side, so Helm lookup() can't read K8s secrets.
-# The chart falls back to default hashes (WazuhSecretPassword / kibanaserver).
-# This job runs AFTER the chart's PostSync securityadmin job (sync-wave "1")
-# and overwrites the security index with the correct hashes from our sealed secrets.
+# The chart falls back to default password hashes.
+# The chart's own securityadmin PostSync job is disabled (set to PostDelete).
+# This job is the ONLY one that applies security config to the index.
+#
+# It copies the chart's ConfigMap configs (roles, roles_mapping, config, etc.)
+# into a scratch dir, overlays internal_users.yml with hashes from sealed
+# secrets (converting Python $2b$ to Java-compatible $2a$), then runs
+# securityadmin.sh -cd against the full config directory.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -29,6 +33,9 @@ spec:
         - name: node-certs
           secret:
             secretName: node-tls
+        - name: indexer-conf
+          configMap:
+            name: wazuh-indexer-config
         - name: security-config
           emptyDir: {}
       containers:
@@ -52,33 +59,43 @@ spec:
             - /bin/bash
             - -ec
             - |
-              # Generate internal_users.yml with hashes from sealed secrets.
-              printf '%s\n' \
-                '---' \
-                '_meta:' \
-                '  type: "internalusers"' \
-                '  config_version: 2' \
-                'admin:' \
-                "  hash: \"${INDEXER_PASSWORD_HASH}\"" \
-                '  reserved: true' \
-                '  backend_roles:' \
-                '    - "admin"' \
-                '  description: "Admin user"' \
-                'kibanaserver:' \
-                "  hash: \"${DASHBOARD_PASSWORD_HASH}\"" \
-                '  reserved: true' \
-                '  description: "Kibana server user"' \
-                > /security-config/internal_users.yml
+              # Copy security config files from the chart's ConfigMap into the
+              # scratch dir (skip opensearch.yml — not a security config).
+              for f in /indexer-conf/*.yml; do
+                case "$(basename "$f")" in
+                  opensearch.yml) continue ;;
+                esac
+                cp "$f" /security-config/
+              done
 
-              echo "Generated internal_users.yml with sealed secret hashes"
-              echo "admin hash: ${INDEXER_PASSWORD_HASH:0:20}..."
-              echo "kibanaserver hash: ${DASHBOARD_PASSWORD_HASH:0:20}..."
+              # Convert $2b$ (Python bcrypt) to $2a$ (Java-compatible bcrypt).
+              ADMIN_HASH=$(echo "${INDEXER_PASSWORD_HASH}" | sed 's/\$2b\$/\$2a\$/')
+              DASHBOARD_HASH=$(echo "${DASHBOARD_PASSWORD_HASH}" | sed 's/\$2b\$/\$2a\$/')
 
-              # Apply only internal_users.yml to the security index (not -cd which
-              # requires all config files including action_groups.yml)
+              # Overlay internal_users.yml with hashes from sealed secrets.
+              cat > /security-config/internal_users.yml <<EOF
+              ---
+              _meta:
+                type: "internalusers"
+                config_version: 2
+              admin:
+                hash: "${ADMIN_HASH}"
+                reserved: true
+                backend_roles:
+                  - "admin"
+                description: "Admin user"
+              kibanaserver:
+                hash: "${DASHBOARD_HASH}"
+                reserved: true
+                description: "Kibana server user"
+              EOF
+
+              echo "admin hash: ${ADMIN_HASH:0:20}..."
+              echo "kibanaserver hash: ${DASHBOARD_HASH:0:20}..."
+
+              # Apply ALL security configs to the index.
               /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh \
-                -f /security-config/internal_users.yml \
-                -t internalusers \
+                -cd /security-config/ \
                 -nhnv \
                 -cacert /certs/root-ca.pem \
                 -cert /certs/admin.pem \
@@ -89,6 +106,9 @@ spec:
           volumeMounts:
             - name: security-config
               mountPath: /security-config
+            - name: indexer-conf
+              mountPath: /indexer-conf
+              readOnly: true
             - name: node-certs
               mountPath: /certs/root-ca.pem
               subPath: ca.crt
