@@ -6,3 +6,4 @@ namespace: security
 resources:
   - serviceaccount.yaml
   - daemonset.yaml
+  - ossec-conf-configmap.yaml

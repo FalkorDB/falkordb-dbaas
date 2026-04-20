@@ -99,10 +99,9 @@ spec:
                     --verbose
 
                   # Upload results to the central GCS evidence locker.
-                  # Uses google-cloud-storage SDK (bundled in Prowler image).
-                  # On GCP spokes, Workload Identity provides credentials.
-                  # On AWS/Azure spokes, GOOGLE_APPLICATION_CREDENTIALS env
-                  # is injected by the cloud-specific overlay patches.
+                  # google-cloud-storage is not bundled in the Prowler image.
+                  pip install --quiet --user google-cloud-storage
+
                   export DATE_PATH OUTPUT_DIR
                   python3 <<'PYEOF'
                   import os, glob
@@ -127,8 +126,9 @@ spec:
                   # Forward FAIL findings to Wazuh Manager via TCP syslog.
                   # This bridges the Prowler→Wazuh gap so rules 100100-100103
                   # trigger real-time alerts and Google Chat notifications.
-                  # Uses Prowler-native JSON (not OCSF) to match rule field names
-                  # (Status, Provider, CheckTitle, Severity, StatusExtended).
+                  # Uses OCSF JSON output format. Maps OCSF fields to the
+                  # field names expected by Wazuh rules (Status, Provider,
+                  # CheckTitle, Severity, StatusExtended).
                   python3 <<'SYSLOG_EOF'
                   import os, glob, json, socket, time
 
@@ -140,15 +140,15 @@ spec:
 
                   output_dir = os.environ['OUTPUT_DIR']
                   cluster = os.environ['CLUSTER_NAME']
-                  # Prowler-native JSON files (exclude .ocsf.json)
+                  # OCSF JSON files (.ocsf.json)
                   json_files = sorted(
-                      f for f in glob.glob(os.path.join(output_dir, '**', '*.json'), recursive=True)
-                      if not f.endswith('.ocsf.json')
+                      glob.glob(os.path.join(output_dir, '**', '*.ocsf.json'), recursive=True)
                   )
                   if not json_files:
-                      print('No Prowler JSON files found, skipping syslog forwarding')
+                      print('No Prowler OCSF JSON files found, skipping syslog forwarding')
                       exit(0)
 
+                  # OCSF status_id: 1=Pass, 2=Fail, 3=Manual, 99=Other
                   fail_count = 0
                   try:
                       sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -164,13 +164,25 @@ spec:
                                       finding = json.loads(line)
                                   except json.JSONDecodeError:
                                       continue
-                                  if finding.get('Status') != 'FAIL':
+                                  # OCSF uses status_id=2 for FAIL
+                                  if finding.get('status_id') != 2 and finding.get('status') != 'Fail':
                                       continue
-                                  finding['ClusterName'] = cluster
+                                  # Map OCSF fields to Prowler-native names for Wazuh rules
+                                  mapped = {
+                                      'Status': 'FAIL',
+                                      'Provider': finding.get('cloud', {}).get('provider', ''),
+                                      'CheckTitle': finding.get('finding_info', {}).get('title', finding.get('metadata', {}).get('product', {}).get('name', '')),
+                                      'CheckID': finding.get('finding_info', {}).get('uid', ''),
+                                      'Severity': finding.get('severity', ''),
+                                      'StatusExtended': finding.get('status_detail', finding.get('message', '')),
+                                      'ServiceName': finding.get('resources', [{}])[0].get('type', '') if finding.get('resources') else '',
+                                      'ResourceId': finding.get('resources', [{}])[0].get('uid', '') if finding.get('resources') else '',
+                                      'Region': finding.get('resources', [{}])[0].get('region', '') if finding.get('resources') else '',
+                                      'ClusterName': cluster,
+                                  }
                                   ts = time.strftime('%b %d %H:%M:%S')
-                                  # RFC 3164: <priority>timestamp hostname tag: message
                                   msg = '<134>{} {} prowler: {}\n'.format(
-                                      ts, cluster, json.dumps(finding, separators=(',', ':'))
+                                      ts, cluster, json.dumps(mapped, separators=(',', ':'))
                                   )
                                   sock.sendall(msg.encode())
                                   fail_count += 1

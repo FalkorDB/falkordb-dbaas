@@ -62,7 +62,7 @@ spec:
           securityContext:
             privileged: true
           env:
-            - name: WAZUH_MANAGER
+            - name: WAZUH_MANAGER_SERVER
               valueFrom:
                 secretKeyRef:
                   name: wazuh-agent-key
@@ -76,7 +76,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: WAZUH_AGENT_GROUP
+            - name: WAZUH_AGENT_GROUPS
               valueFrom:
                 configMapKeyRef:
                   name: wazuh-agent-config
@@ -90,6 +90,10 @@ spec:
               readOnly: true
             - name: var-ossec-data
               mountPath: /var/ossec/data
+            - name: ossec-conf
+              mountPath: /wazuh-config-mount/etc/ossec.conf
+              subPath: ossec.conf
+              readOnly: true
           livenessProbe:
             exec:
               command:
@@ -117,3 +121,6 @@ spec:
             path: /etc
         - name: var-ossec-data
           emptyDir: {}
+        - name: ossec-conf
+          configMap:
+            name: wazuh-agent-ossec-conf
