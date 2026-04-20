@@ -8,7 +8,9 @@
 #   1514  — agent event forwarding  (workers)
 #   1515  — agent registration/authd (master)
 #   55000 — Wazuh API               (master)
-#   514   — syslog (UDP)
+#
+# Note: syslog UDP/514 removed — GCP LoadBalancers do not support
+# mixed TCP+UDP protocols on the same service.
 apiVersion: v1
 kind: Service
 metadata:
@@ -33,7 +35,3 @@ spec:
       protocol: TCP
       port: 55000
       targetPort: 55000
-    - name: syslog
-      protocol: UDP
-      port: 514
-      targetPort: 514

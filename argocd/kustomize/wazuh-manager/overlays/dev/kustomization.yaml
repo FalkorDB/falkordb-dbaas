@@ -5,5 +5,7 @@ resources:
   - ../../base
   - secrets-env-secret.yaml
   - api-cred-env-secret.yaml
+  - indexer-cred-env-secret.yaml
+  - dashboard-cred-env-secret.yaml
 patches:
   - path: service-lb-patch.yaml
