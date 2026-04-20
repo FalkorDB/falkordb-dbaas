@@ -1,0 +1,113 @@
+# Custom securityadmin job that applies password hashes from sealed secrets
+# to the OpenSearch security index.
+#
+# Why: The chart's ConfigMap renders internal_users.yml at Helm template time.
+# ArgoCD renders client-side, so Helm lookup() can't read K8s secrets.
+# The chart falls back to default hashes (WazuhSecretPassword / kibanaserver).
+# This job runs AFTER the chart's PostSync securityadmin job (sync-wave "1")
+# and overwrites the security index with the correct hashes from our sealed secrets.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: wazuh-securityadmin-patch
+  namespace: security
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded,BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 6
+  template:
+    spec:
+      restartPolicy: OnFailure
+      nodeSelector:
+        node_pool: security
+      volumes:
+        - name: admin-certs
+          secret:
+            secretName: admin-tls
+        - name: node-certs
+          secret:
+            secretName: node-tls
+        - name: indexer-conf
+          configMap:
+            name: wazuh-indexer-config
+        - name: security-config
+          emptyDir: {}
+      containers:
+        - name: securityadmin
+          image: "wazuh/wazuh-indexer:4.14.1"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: JAVA_HOME
+              value: /usr/share/wazuh-indexer/jdk/
+            - name: INDEXER_PASSWORD_HASH
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-indexer-cred
+                  key: INDEXER_PASSWORD_HASH
+            - name: DASHBOARD_PASSWORD_HASH
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-dashboard-cred
+                  key: DASHBOARD_PASSWORD_HASH
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              # Copy security config files from the chart's ConfigMap
+              for f in roles.yml roles_mapping.yml config.yml tenants.yml nodes_dn.yml whitelist.yml; do
+                cp "/config-source/$f" "/security-config/$f"
+              done
+
+              # Generate internal_users.yml with hashes from sealed secrets.
+              # Using printf to avoid shell expansion issues with $ in bcrypt hashes.
+              printf '%s\n' \
+                '---' \
+                '_meta:' \
+                '  type: "internalusers"' \
+                '  config_version: 2' \
+                'admin:' \
+                "  hash: \"${INDEXER_PASSWORD_HASH}\"" \
+                '  reserved: true' \
+                '  backend_roles:' \
+                '    - "admin"' \
+                '  description: "Admin user"' \
+                'kibanaserver:' \
+                "  hash: \"${DASHBOARD_PASSWORD_HASH}\"" \
+                '  reserved: true' \
+                '  description: "Kibana server user"' \
+                > /security-config/internal_users.yml
+
+              echo "Generated internal_users.yml with sealed secret hashes"
+              echo "admin hash: ${INDEXER_PASSWORD_HASH:0:20}..."
+              echo "kibanaserver hash: ${DASHBOARD_PASSWORD_HASH:0:20}..."
+
+              # Apply security configuration to the indexer
+              /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh \
+                -cd /security-config/ \
+                -nhnv \
+                -cacert /certs/root-ca.pem \
+                -cert /certs/admin.pem \
+                -key /certs/admin-key.pem \
+                -p 9200 \
+                -icl \
+                -h wazuh-indexer
+          volumeMounts:
+            - name: indexer-conf
+              mountPath: /config-source
+              readOnly: true
+            - name: security-config
+              mountPath: /security-config
+            - name: node-certs
+              mountPath: /certs/root-ca.pem
+              subPath: ca.crt
+              readOnly: true
+            - name: admin-certs
+              mountPath: /certs/admin.pem
+              subPath: tls.crt
+              readOnly: true
+            - name: admin-certs
+              mountPath: /certs/admin-key.pem
+              subPath: tls.key
+              readOnly: true
