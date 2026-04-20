@@ -89,6 +89,7 @@ spec:
                     --output-formats json-ocsf html csv \
                     --output-directory "$OUTPUT_DIR" \
                     $EXTRA_ARGS \
+                    --ignore-exit-code-3 \
                     --verbose
 
                   # Upload results to the central GCS evidence locker.
