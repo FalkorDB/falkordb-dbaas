@@ -117,3 +117,47 @@ data:
       </rule>
 
     </group>
+
+    <group name="grype_vuln,soc2">
+
+      <!-- ====================================================
+           Grype CVE Vulnerability Detection
+           Matches JSON log lines from Grype scanner results forwarded
+           via syslog containing "Scanner": "grype".
+           ==================================================== -->
+
+      <!-- Base rule: any Grype CVE result ingested -->
+      <rule id="100400" level="3">
+        <decoded_as>json</decoded_as>
+        <field name="Scanner">grype</field>
+        <field name="VulnerabilityID">\.+</field>
+        <description>Grype CVE scan result: $(VulnerabilityID) in $(Package) on $(ImageName).</description>
+        <group>grype_vuln</group>
+      </rule>
+
+      <!-- Any vulnerability found — triggers Google Chat (level >= 10) -->
+      <rule id="100401" level="10">
+        <if_sid>100400</if_sid>
+        <field name="Severity">critical|high</field>
+        <description>Grype CVE $(VulnerabilityID) [$(Severity)] in $(Package) on $(ImageName) — $(ClusterName)</description>
+        <group>grype_vuln,soc2_fail</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- Critical CVE -->
+      <rule id="100402" level="13">
+        <if_sid>100401</if_sid>
+        <field name="Severity">critical</field>
+        <description>CRITICAL CVE $(VulnerabilityID) in $(Package) ($(InstalledVersion)) on $(ImageName) — $(ClusterName)</description>
+        <group>grype_vuln,soc2_fail,soc2_critical</group>
+      </rule>
+
+      <!-- High CVE -->
+      <rule id="100403" level="12">
+        <if_sid>100401</if_sid>
+        <field name="Severity">high</field>
+        <description>HIGH CVE $(VulnerabilityID) in $(Package) ($(InstalledVersion)) on $(ImageName) — $(ClusterName)</description>
+        <group>grype_vuln,soc2_fail</group>
+      </rule>
+
+    </group>

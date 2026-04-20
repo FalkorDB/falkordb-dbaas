@@ -21,7 +21,10 @@ resource "aws_iam_role" "prowler_scanner" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringEquals = {
-            "${var.eks_oidc_issuer}:sub" = "system:serviceaccount:security:prowler"
+            "${var.eks_oidc_issuer}:sub" = [
+              "system:serviceaccount:security:prowler",
+              "system:serviceaccount:security:grype",
+            ]
             "${var.eks_oidc_issuer}:aud" = "sts.amazonaws.com"
           }
         }
