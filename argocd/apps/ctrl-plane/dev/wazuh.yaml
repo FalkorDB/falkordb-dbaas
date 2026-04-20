@@ -307,11 +307,9 @@ spec:
           ingress:
             enabled: true
             className: nginx
-            annotations:
-              cert-manager.io/cluster-issuer: "letsencrypt-prod"
             host: "wazuh.security.dev.internal.falkordb.cloud"
             tls:
-              - secretName: wazuh-dashboard-tls
+              - secretName: dashboard-tls
                 hosts:
                   - wazuh.security.dev.internal.falkordb.cloud
           # SOC 2 dashboard import on startup
