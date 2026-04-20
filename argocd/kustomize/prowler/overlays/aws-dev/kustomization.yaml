@@ -11,6 +11,7 @@ configMapGenerator:
       - cloud-provider=aws
       - cluster-name=app-plane-aws-dev
       - compliance=soc2_aws
+      - wazuh-syslog-host=34.46.116.195
 generatorOptions:
   disableNameSuffixHash: true
 patches:

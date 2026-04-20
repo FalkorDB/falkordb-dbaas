@@ -11,6 +11,7 @@ configMapGenerator:
       - cloud-provider=azure
       - cluster-name=app-plane-azure-dev
       - compliance=cis_2.0_azure
+      - wazuh-syslog-host=34.46.116.195
 generatorOptions:
   disableNameSuffixHash: true
 patches:

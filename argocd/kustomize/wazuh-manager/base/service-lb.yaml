@@ -5,12 +5,10 @@
 # (module.wazuh_ip in tofu/runtime/gcp/infra/security.tf).
 #
 # Ports:
-#   1514  — agent event forwarding  (workers)
+#   514   — syslog ingestion (TCP)  (master: Prowler compliance findings)
+#   1514  — agent event forwarding   (workers)
 #   1515  — agent registration/authd (master)
 #   55000 — Wazuh API               (master)
-#
-# Note: syslog UDP/514 removed — GCP LoadBalancers do not support
-# mixed TCP+UDP protocols on the same service.
 apiVersion: v1
 kind: Service
 metadata:
@@ -23,6 +21,10 @@ spec:
   selector:
     app: wazuh-manager
   ports:
+    - name: syslog
+      protocol: TCP
+      port: 514
+      targetPort: 514
     - name: agents-events
       protocol: TCP
       port: 1514

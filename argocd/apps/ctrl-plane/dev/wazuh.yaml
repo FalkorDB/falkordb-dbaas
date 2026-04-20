@@ -4,7 +4,7 @@
 # Architecture: 1 master + N workers + indexer cluster + dashboard.
 # Agents in spoke clusters connect via the LoadBalancer service.
 #
-# The Wazuh Dashboard is exposed via nginx ingress with oauth2-proxy.
+# The Wazuh Dashboard is exposed via nginx ingress with TLS.
 #
 # Persistent storage:
 #   - Wazuh Master data: 50Gi (standard-rwo)
@@ -169,6 +169,10 @@ spec:
                   protocol: TCP
                   port: 55000
                   targetPort: 55000
+                - name: syslog
+                  protocol: TCP
+                  port: 514
+                  targetPort: 514
             # Google Chat integration scripts
             additionalVolumes:
               - name: google-chat-integration
@@ -186,6 +190,12 @@ spec:
                 readOnly: true
             # Appended to the template-generated ossec.conf
             extraConf: |
+              <remote>
+                <connection>syslog</connection>
+                <port>514</port>
+                <protocol>tcp</protocol>
+                <allowed-ips>0.0.0.0/0</allowed-ips>
+              </remote>
               <syscheck>
                 <frequency>43200</frequency>
                 <scan_on_start>yes</scan_on_start>
@@ -298,9 +308,6 @@ spec:
             className: nginx
             annotations:
               cert-manager.io/cluster-issuer: "letsencrypt-prod"
-              nginx.ingress.kubernetes.io/auth-url: "https://auth.security.dev.internal.falkordb.cloud/oauth2/auth"
-              nginx.ingress.kubernetes.io/auth-signin: "https://auth.security.dev.internal.falkordb.cloud/oauth2/start?rd=$scheme://$host$escaped_request_uri"
-              nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-Request-User,X-Auth-Request-Email"
             host: "wazuh.security.dev.internal.falkordb.cloud"
             tls:
               - secretName: wazuh-dashboard-tls
