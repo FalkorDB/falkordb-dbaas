@@ -45,30 +45,37 @@ spec:
           securityContext:
             privileged: true
           env:
-            - name: WAZUH_MANAGER
+            - name: JOIN_MANAGER_MASTER_HOST
               valueFrom:
                 secretKeyRef:
                   name: wazuh-agent-key
-                  key: manager-ip
-            - name: WAZUH_MANAGER_PORT
+                  key: master-host
+            - name: JOIN_MANAGER_WORKER_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-agent-key
+                  key: worker-host
+            - name: JOIN_MANAGER_USER
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-agent-key
+                  key: api-user
+            - name: JOIN_MANAGER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-agent-key
+                  key: api-password
+            - name: JOIN_MANAGER_PROTOCOL
+              value: "https"
+            - name: JOIN_MANAGER_API_PORT
+              value: "55000"
+            - name: JOIN_MANAGER_PORT
               value: "1514"
-            - name: WAZUH_REGISTRATION_SERVER
-              valueFrom:
-                secretKeyRef:
-                  name: wazuh-agent-key
-                  key: manager-ip
-            - name: WAZUH_REGISTRATION_PORT
-              value: "1515"
-            - name: WAZUH_REGISTRATION_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: wazuh-agent-key
-                  key: enrollment-key
-            - name: WAZUH_AGENT_NAME
+            - name: NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: WAZUH_AGENT_GROUP
+            - name: WAZUH_GROUPS
               valueFrom:
                 configMapKeyRef:
                   name: wazuh-agent-config
