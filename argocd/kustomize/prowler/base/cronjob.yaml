@@ -142,7 +142,6 @@ spec:
                   cluster = os.environ['CLUSTER_NAME']
 
                   def safe_get(obj, *keys, default=''):
-                      """Safely navigate nested dicts/lists."""
                       for k in keys:
                           if isinstance(obj, dict):
                               obj = obj.get(k, default)
@@ -152,7 +151,8 @@ spec:
                               return default
                       return obj if obj is not None else default
 
-                  # OCSF JSON files (.ocsf.json)
+                  # OCSF JSON files (.ocsf.json) - Prowler 4.x writes a JSON
+                  # array (pretty-printed), not NDJSON.
                   json_files = sorted(
                       glob.glob(os.path.join(output_dir, '**', '*.ocsf.json'), recursive=True)
                   )
@@ -160,53 +160,52 @@ spec:
                       print('No Prowler OCSF JSON files found, skipping syslog forwarding')
                       exit(0)
 
+                  # Load all findings from all OCSF files
+                  findings = []
+                  for f in json_files:
+                      with open(f) as fh:
+                          data = json.load(fh)
+                      if isinstance(data, list):
+                          findings.extend(data)
+                      elif isinstance(data, dict):
+                          findings.append(data)
+
                   fail_count = 0
                   try:
                       sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                       sock.settimeout(10)
                       sock.connect((syslog_host, syslog_port))
-                      for f in json_files:
-                          with open(f) as fh:
-                              for line in fh:
-                                  line = line.strip()
-                                  if not line:
-                                      continue
-                                  try:
-                                      finding = json.loads(line)
-                                  except json.JSONDecodeError:
-                                      continue
-                                  if not isinstance(finding, dict):
-                                      continue
-                                  # OCSF uses status_id=2 for FAIL
-                                  status = str(finding.get('status', ''))
-                                  status_id = finding.get('status_id')
-                                  if status_id != 2 and status.lower() != 'fail':
-                                      continue
-                                  # Map OCSF fields to Prowler-native names for Wazuh rules
-                                  resources_0 = {}
-                                  res = finding.get('resources')
-                                  if isinstance(res, list) and len(res) > 0 and isinstance(res[0], dict):
-                                      resources_0 = res[0]
-                                  sev = finding.get('severity')
-                                  severity_str = sev if isinstance(sev, str) else safe_get(sev, 'name', default='')
-                                  mapped = {
-                                      'Status': 'FAIL',
-                                      'Provider': safe_get(finding, 'cloud', 'provider'),
-                                      'CheckTitle': safe_get(finding, 'finding_info', 'title') or safe_get(finding, 'metadata', 'product', 'name'),
-                                      'CheckID': safe_get(finding, 'finding_info', 'uid'),
-                                      'Severity': severity_str,
-                                      'StatusExtended': str(finding.get('status_detail', finding.get('message', ''))),
-                                      'ServiceName': resources_0.get('type', ''),
-                                      'ResourceId': resources_0.get('uid', ''),
-                                      'Region': resources_0.get('region', ''),
-                                      'ClusterName': cluster,
-                                  }
-                                  ts = time.strftime('%b %d %H:%M:%S')
-                                  msg = '<134>{} {} prowler: {}\n'.format(
-                                      ts, cluster, json.dumps(mapped, separators=(',', ':'))
-                                  )
-                                  sock.sendall(msg.encode())
-                                  fail_count += 1
+                      for finding in findings:
+                          if not isinstance(finding, dict):
+                              continue
+                          # Prowler OCSF: status_code="PASS"|"FAIL", status is always "New"
+                          status_code = str(finding.get('status_code', ''))
+                          if status_code.upper() != 'FAIL':
+                              continue
+                          resources_0 = {}
+                          res = finding.get('resources')
+                          if isinstance(res, list) and res and isinstance(res[0], dict):
+                              resources_0 = res[0]
+                          sev = finding.get('severity', '')
+                          severity_str = sev if isinstance(sev, str) else safe_get(sev, 'name', default='')
+                          mapped = {
+                              'Status': 'FAIL',
+                              'Provider': safe_get(finding, 'cloud', 'provider'),
+                              'CheckTitle': safe_get(finding, 'finding_info', 'title') or safe_get(finding, 'metadata', 'product', 'name'),
+                              'CheckID': safe_get(finding, 'finding_info', 'uid'),
+                              'Severity': severity_str,
+                              'StatusExtended': str(finding.get('status_detail', finding.get('message', ''))),
+                              'ServiceName': safe_get(resources_0, 'group', 'name') or resources_0.get('type', ''),
+                              'ResourceId': resources_0.get('uid', ''),
+                              'Region': resources_0.get('region', ''),
+                              'ClusterName': cluster,
+                          }
+                          ts = time.strftime('%b %d %H:%M:%S')
+                          msg = '<134>{} {} prowler: {}\n'.format(
+                              ts, cluster, json.dumps(mapped, separators=(',', ':'))
+                          )
+                          sock.sendall(msg.encode())
+                          fail_count += 1
                       sock.close()
                       print('Forwarded {} FAIL findings to Wazuh syslog at {}:{}'.format(
                           fail_count, syslog_host, syslog_port))
