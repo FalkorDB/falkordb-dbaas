@@ -15,6 +15,7 @@ import os
 import re
 import json
 import subprocess
+import tarfile
 import tempfile
 import base64
 from typing import Optional
@@ -60,13 +61,36 @@ def _download_gcs_or_url(url: str, dest: str) -> Optional[str]:
             bucket = client.bucket(bucket_name)
             bucket.blob(blob_name).download_to_filename(dest)
         else:
-            resp = requests.get(url, timeout=300)
-            if resp.status_code != 200:
-                return f"ERROR: Failed to download {url} (HTTP {resp.status_code})"
-            with open(dest, "wb") as f:
-                f.write(resp.content)
+            with requests.get(url, timeout=300, stream=True) as resp:
+                resp.raise_for_status()
+                with open(dest, "wb") as f:
+                    for chunk in resp.iter_content(chunk_size=8 * 1024 * 1024):
+                        f.write(chunk)
     except Exception as exc:
         return f"ERROR: Failed to download {url}: {exc}"
+    return None
+
+
+def _safe_extract_tar(tar_path: str, dest_dir: str) -> Optional[str]:
+    """Safely extract a tar archive, rejecting path-traversal attempts.
+
+    Returns an error string if any member is unsafe, or None on success.
+    """
+    real_dest = os.path.realpath(dest_dir)
+    try:
+        with tarfile.open(tar_path, "r:gz") as tf:
+            for member in tf.getmembers():
+                member_path = os.path.realpath(os.path.join(dest_dir, member.name))
+                if not member_path.startswith(real_dest + os.sep) and member_path != real_dest:
+                    return f"ERROR: Tar member escapes target directory: {member.name}"
+                if member.issym() or member.islnk():
+                    link_target = os.path.realpath(os.path.join(dest_dir, member.linkname))
+                    if not link_target.startswith(real_dest + os.sep) and link_target != real_dest:
+                        return f"ERROR: Tar symlink escapes target directory: {member.name} -> {member.linkname}"
+            # All members validated — extract
+            tf.extractall(path=dest_dir)
+    except Exception as exc:
+        return f"ERROR: Failed to extract {tar_path}: {exc}"
     return None
 
 
@@ -331,7 +355,7 @@ async def search_crashes_by_signature(params: SearchCrashesBySignatureParams) ->
 
     # Build version correlation summary
     summary = f"### Version Correlation for `{params.function_name}`\n"
-    summary += f"Total matching crashes: {data['total_count']}\n\n"
+    summary += f"Total matching crashes: {data['total_count']} (showing {len(items)})\n\n"
     summary += "| Version | Crash Count | Issues |\n|---------|-------------|--------|\n"
     for ver in sorted(version_map.keys()):
         issues = ", ".join(version_map[ver])
@@ -672,7 +696,9 @@ async def run_falkordb_local(params: RunFalkorDBLocalParams) -> str:
         err = _download_gcs_or_url(params.aof_url, aof_tar)
         if err:
             return err
-        subprocess.run(["tar", "xzf", aof_tar, "-C", data_dir], check=True)
+        err = _safe_extract_tar(aof_tar, data_dir)
+        if err:
+            return err
 
     image = f"falkordb/falkordb:{params.version}"
     result = subprocess.run(
