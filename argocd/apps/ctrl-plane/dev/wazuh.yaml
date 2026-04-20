@@ -45,6 +45,8 @@ spec:
             existingSecret: "wazuh-manager-authd"
           # LoadBalancer managed separately via kustomize (wazuh-manager)
           # to allow setting loadBalancerIP for the tofu-provisioned static IP.
+          apiCred:
+            existingSecret: "wazuh-api-cred"
           loadBalancer:
             enabled: false
 

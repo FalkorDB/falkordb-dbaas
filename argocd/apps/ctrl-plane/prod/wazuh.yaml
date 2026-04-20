@@ -29,6 +29,8 @@ spec:
             enabled: true
             existingSecret: "wazuh-manager-authd"
           # LoadBalancer managed separately via kustomize (wazuh-manager)
+          apiCred:
+            existingSecret: "wazuh-api-cred"
           loadBalancer:
             enabled: false
 
