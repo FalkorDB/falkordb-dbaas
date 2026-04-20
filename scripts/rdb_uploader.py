@@ -180,10 +180,18 @@ def parse_falkordb_version(module_list_output: str) -> str | None:
 
 
 def detect_falkordb_version(namespace: str, pod: str, container: str) -> str:
-    """Run MODULE LIST on the pod and return the FalkorDB version string."""
+    """Run MODULE LIST on the pod and return the FalkorDB version string.
+
+    If the first attempt fails (e.g. Redis is down after a crash), waits for
+    the pod to become Ready and retries once.
+    """
     output = kubectl_exec_output(namespace, pod, container, ["redis-cli", "MODULE", "LIST"])
     if not output:
-        print("  ⚠️  Could not retrieve MODULE LIST — version unknown")
+        print("  ⚠️  Could not retrieve MODULE LIST — waiting for pod to be Ready and retrying...")
+        kubectl_wait_pod_ready(namespace, pod)
+        output = kubectl_exec_output(namespace, pod, container, ["redis-cli", "MODULE", "LIST"])
+    if not output:
+        print("  ⚠️  Could not retrieve MODULE LIST after retry — version unknown")
         return ""
     version = parse_falkordb_version(output)
     if version:
