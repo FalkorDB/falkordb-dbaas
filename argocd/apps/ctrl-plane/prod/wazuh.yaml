@@ -304,8 +304,8 @@ spec:
             container:
               volumeMounts:
                 - name: soc2-dashboard
-                  mountPath: /usr/share/wazuh-dashboard/config/soc2-dashboard.ndjson
-                  subPath: soc2-dashboard.ndjson
+                  mountPath: /usr/share/wazuh-dashboard/config/security-dashboards.ndjson
+                  subPath: security-dashboards.ndjson
                   readOnly: true
                 - name: api-cred
                   mountPath: /run/secrets/api-cred
@@ -331,7 +331,7 @@ spec:
                         sleep 30 && curl -sS -k -XPOST \
                           "https://localhost:5601/api/saved_objects/_import?overwrite=true" \
                           -H "osd-xsrf: true" \
-                          --form file=@/usr/share/wazuh-dashboard/config/soc2-dashboard.ndjson \
+                          --form file=@/usr/share/wazuh-dashboard/config/security-dashboards.ndjson \
                           || true
 
   destination:
