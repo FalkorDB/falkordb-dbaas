@@ -135,8 +135,6 @@ spec:
           storageClass: "standard-rwo"
           env:
             OPENSEARCH_JAVA_OPTS: "-Xms4g -Xmx4g -Dlog4j2.formatMsgNoLookups=true"
-          sysctlImage:
-            enabled: true
           job:
             annotations:
               argocd.argoproj.io/hook: PostSync
