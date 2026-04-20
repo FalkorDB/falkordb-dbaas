@@ -133,6 +133,15 @@ module "gke" {
       "goog-gke-node-pool-provisioning-model" = "on-demand"
     }
   }
+
+  # OpenSearch / Wazuh Indexer requires vm.max_map_count >= 262144.
+  # Set at node pool level so it persists across reboots and pod restarts.
+  node_pools_linux_node_configs_sysctls = {
+    "security" = {
+      "net.core.somaxconn"    = "65535"
+      "vm.max_map_count"      = "262144"
+    }
+  }
 }
 
 # Public node pool — separate resource so enable_private_nodes can be false.
