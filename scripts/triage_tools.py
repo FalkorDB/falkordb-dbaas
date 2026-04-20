@@ -238,6 +238,109 @@ async def fetch_previous_crashes(params: FetchPreviousCrashesParams) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Tool: search_crashes_by_signature
+# ---------------------------------------------------------------------------
+
+class SearchCrashesBySignatureParams(BaseModel):
+    function_name: str = Field(description="Primary crashing function name (e.g. 'AlgebraicExpression_Dest')")
+    max_results: int = Field(default=20, description="Max issues to return")
+
+
+@define_tool(
+    name="search_crashes_by_signature",
+    description=(
+        "Search ALL crash issues across every instance for a specific crashing "
+        "function or signature. Unlike fetch_previous_crashes (which is scoped to "
+        "one namespace), this searches globally to determine if the crash is "
+        "version-related or instance-specific. Returns issues with their FalkorDB "
+        "version, namespace, state, and fix status."
+    ),
+    skip_permission=True,
+)
+async def search_crashes_by_signature(params: SearchCrashesBySignatureParams) -> str:
+    import re as _re
+
+    resp = _github_get(
+        f"{GITHUB_API}/search/issues",
+        params={
+            "q": f"{params.function_name} repo:{PRIVATE_REPO} label:crash",
+            "per_page": params.max_results,
+            "sort": "created",
+            "order": "desc",
+        },
+    )
+    if resp.status_code != 200:
+        return f"ERROR: GitHub search returned {resp.status_code}: {resp.text[:500]}"
+
+    data = resp.json()
+    items = data.get("items", [])
+    if not items:
+        return f"No crash issues found matching '{params.function_name}' across all instances"
+
+    # Extract version and namespace from issue labels and body
+    version_label_pattern = _re.compile(r"^version:v?(.+)$")
+    namespace_pattern = _re.compile(r"(?:Namespace|namespace|Instance)[:\s]*(instance-[a-z0-9]+)")
+    # Fallback patterns for version in body (older issues without label)
+    version_body_patterns = [
+        _re.compile(r"(?:FalkorDB|falkordb)[- _]?[Vv]ersion[:\s*]*v?([\d]+\.[\d]+\.[\d]+)"),
+        _re.compile(r"falkordb/falkordb:v?([\d]+\.[\d]+\.[\d]+)"),
+    ]
+
+    version_map: dict[str, list[str]] = {}  # version -> [issue refs]
+    results = []
+    for item in items:
+        body = item.get("body", "") or ""
+        labels = [l["name"] for l in item.get("labels", [])]
+        state = item["state"]
+
+        # Check if PR was merged
+        if "pull_request" in item and state == "closed":
+            pr_data = item["pull_request"]
+            if pr_data.get("merged_at"):
+                state = "merged"
+
+        # Extract version — prefer label (fast), fall back to body text
+        version = "unknown"
+        for label in labels:
+            lbl_match = version_label_pattern.match(label)
+            if lbl_match:
+                version = lbl_match.group(1)
+                break
+        if version == "unknown":
+            for pattern in version_body_patterns:
+                ver_match = pattern.search(body)
+                if ver_match:
+                    version = ver_match.group(1)
+                    break
+
+        # Extract namespace
+        ns_match = namespace_pattern.search(body)
+        namespace = ns_match.group(1) if ns_match else "unknown"
+
+        # Track version correlation
+        ref = f"#{item['number']}"
+        version_map.setdefault(version, []).append(ref)
+
+        results.append(
+            f"- **#{item['number']}** [{state}] {item['title']}\n"
+            f"  Namespace: {namespace} | Version: {version} | Created: {item['created_at']}\n"
+            f"  Labels: {', '.join(labels) or 'none'}\n"
+            f"  URL: {item['html_url']}\n"
+            f"  {body[:400]}"
+        )
+
+    # Build version correlation summary
+    summary = f"### Version Correlation for `{params.function_name}`\n"
+    summary += f"Total matching crashes: {data['total_count']}\n\n"
+    summary += "| Version | Crash Count | Issues |\n|---------|-------------|--------|\n"
+    for ver in sorted(version_map.keys()):
+        issues = ", ".join(version_map[ver])
+        summary += f"| {ver} | {len(version_map[ver])} | {issues} |\n"
+
+    return summary + "\n\n" + "\n\n".join(results)
+
+
+# ---------------------------------------------------------------------------
 # Tool: search_falkordb_issues
 # ---------------------------------------------------------------------------
 
@@ -539,9 +642,10 @@ class RunFalkorDBLocalParams(BaseModel):
     name="run_falkordb_local",
     description=(
         "Start a local FalkorDB Docker container, optionally loading an RDB dump "
-        "and/or AOF directory from GCS paths (gs://...). Downloads use gsutil with "
-        "Application Default Credentials (IAM-authenticated). Returns the container ID "
-        "and connection details. Use this to reproduce crashes locally."
+        "and/or AOF directory from GCS paths (gs://...). Downloads use the "
+        "google-cloud-storage Python SDK with Application Default Credentials "
+        "(IAM-authenticated). Returns the container ID and connection details. "
+        "Use this to reproduce crashes locally."
     ),
 )
 async def run_falkordb_local(params: RunFalkorDBLocalParams) -> str:
@@ -639,6 +743,7 @@ async def execute_query(params: ExecuteQueryParams) -> str:
 ALL_TOOLS = [
     fetch_crash_logs,
     fetch_previous_crashes,
+    search_crashes_by_signature,
     search_falkordb_issues,
     read_falkordb_source,
     search_falkordb_code,
