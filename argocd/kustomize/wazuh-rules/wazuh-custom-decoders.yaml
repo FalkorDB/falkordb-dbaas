@@ -1,0 +1,35 @@
+# Custom Wazuh decoders for SOC 2 compliance monitoring.
+#
+# Deployed as a ConfigMap and mounted into the Wazuh Manager container
+# at /var/ossec/etc/decoders/local_decoder.xml.
+#
+# Decoders:
+#   grype   — Matches syslog program_name "grype", extracts JSON fields
+#   prowler — Matches syslog program_name "prowler", extracts JSON fields
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wazuh-custom-decoders
+  namespace: security
+  labels:
+    app: wazuh
+    component: decoders
+data:
+  local_decoder.xml: |
+    <!-- SOC 2 Evidence Engine — Custom Decoders -->
+
+    <!-- Grype CVE scanner: syslog messages with program_name "grype"
+         containing a JSON body. JSON_Decoder plugin extracts all fields
+         (Scanner, ImageName, VulnerabilityID, Severity, Package, etc.) -->
+    <decoder name="grype">
+        <program_name>grype</program_name>
+        <plugin_decoder>JSON_Decoder</plugin_decoder>
+    </decoder>
+
+    <!-- Prowler compliance scanner: syslog messages with program_name "prowler"
+         containing a JSON body. JSON_Decoder plugin extracts all fields
+         (Provider, CheckTitle, StatusExtended, Severity, etc.) -->
+    <decoder name="prowler">
+        <program_name>prowler</program_name>
+        <plugin_decoder>JSON_Decoder</plugin_decoder>
+    </decoder>

@@ -4,6 +4,7 @@ metadata:
   name: wazuh-rules-kustomization
 namespace: security
 resources:
+  - wazuh-custom-decoders.yaml
   - wazuh-custom-rules.yaml
   - wazuh-dashboard-soc2.yaml
   - wazuh-google-chat-integration.yaml
