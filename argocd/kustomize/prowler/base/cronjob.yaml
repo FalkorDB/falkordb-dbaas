@@ -57,6 +57,11 @@ spec:
                     configMapKeyRef:
                       name: prowler-config
                       key: cluster-name
+                - name: COMPLIANCE
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: compliance
               command:
                 - /bin/sh
                 - -c
@@ -66,9 +71,9 @@ spec:
                   OUTPUT_DIR="/tmp/prowler-output"
                   mkdir -p "$OUTPUT_DIR"
 
-                  # Run Prowler SOC 2 compliance scan
+                  # Run Prowler compliance scan
                   prowler "$CLOUD_PROVIDER" \
-                    --compliance soc2 \
+                    --compliance "$COMPLIANCE" \
                     --output-formats json,html,csv \
                     --output-directory "$OUTPUT_DIR" \
                     --verbose

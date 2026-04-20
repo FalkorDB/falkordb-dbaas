@@ -10,6 +10,7 @@ configMapGenerator:
     literals:
       - cloud-provider=gcp
       - cluster-name=ctrl-plane-dev
+      - compliance=cis_2.0_gcp
 generatorOptions:
   disableNameSuffixHash: true
 patches:
