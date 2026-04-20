@@ -11,6 +11,7 @@ configMapGenerator:
       - cloud-provider=gcp
       - cluster-name=app-plane-gcp-prod
       - compliance=cis_2.0_gcp
+      - gcp-project-id=ctrl-plane-prod-b1b92df2
 generatorOptions:
   disableNameSuffixHash: true
 patches:
