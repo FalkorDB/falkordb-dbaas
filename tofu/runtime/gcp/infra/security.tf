@@ -62,7 +62,7 @@ resource "google_service_account" "prowler_uploader" {
 
 resource "google_storage_bucket_iam_member" "prowler_writer" {
   bucket = google_storage_bucket.evidence_locker.name
-  role   = "roles/storage.objectCreator"
+  role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.prowler_uploader.email}"
 }
 

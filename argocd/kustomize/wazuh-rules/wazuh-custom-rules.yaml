@@ -26,11 +26,12 @@ data:
            "Status": "FAIL" that are forwarded via syslog or API.
            ==================================================== -->
 
-      <!-- Base rule: any Prowler result ingested -->
+      <!-- Base rule: any Prowler result ingested
+           NOTE: Wazuh reserves "Status" as a static field, so we use
+           decoded_as prowler + match on the raw JSON instead of <field>. -->
       <rule id="100100" level="3">
-        <decoded_as>json</decoded_as>
+        <decoded_as>prowler</decoded_as>
         <field name="Provider">\.+</field>
-        <field name="Status">\.+</field>
         <description>Prowler compliance check result received.</description>
         <group>prowler_compliance</group>
       </rule>
@@ -38,7 +39,7 @@ data:
       <!-- Prowler FAIL — triggers Google Chat notification (level ≥ 10) -->
       <rule id="100101" level="10">
         <if_sid>100100</if_sid>
-        <field name="Status">FAIL</field>
+        <match>"Status":"FAIL"</match>
         <description>Prowler SOC 2 compliance check FAILED: $(CheckTitle) — $(StatusExtended)</description>
         <group>prowler_compliance,soc2_fail</group>
         <options>alert_by_email</options>
@@ -126,9 +127,11 @@ data:
            via syslog containing "Scanner": "grype".
            ==================================================== -->
 
-      <!-- Base rule: any Grype CVE result ingested -->
+      <!-- Base rule: any Grype CVE result ingested
+           Uses the custom "grype" decoder (program_name match + JSON_Decoder plugin)
+           so JSON fields are extracted under their original names. -->
       <rule id="100400" level="3">
-        <decoded_as>json</decoded_as>
+        <decoded_as>grype</decoded_as>
         <field name="Scanner">grype</field>
         <field name="VulnerabilityID">\.+</field>
         <description>Grype CVE scan result: $(VulnerabilityID) in $(Package) on $(ImageName).</description>
@@ -139,7 +142,7 @@ data:
       <rule id="100401" level="10">
         <if_sid>100400</if_sid>
         <field name="Severity">critical|high</field>
-        <description>Grype CVE $(VulnerabilityID) [$(Severity)] in $(Package) on $(ImageName) — $(ClusterName)</description>
+        <description>Grype CVE $(VulnerabilityID) [$(Severity)] in $(Package) on $(ImageName) — $(Cluster)</description>
         <group>grype_vuln,soc2_fail</group>
         <options>alert_by_email</options>
       </rule>
@@ -148,7 +151,7 @@ data:
       <rule id="100402" level="13">
         <if_sid>100401</if_sid>
         <field name="Severity">critical</field>
-        <description>CRITICAL CVE $(VulnerabilityID) in $(Package) ($(InstalledVersion)) on $(ImageName) — $(ClusterName)</description>
+        <description>CRITICAL CVE $(VulnerabilityID) in $(Package) ($(InstalledVersion)) on $(ImageName) — $(Cluster)</description>
         <group>grype_vuln,soc2_fail,soc2_critical</group>
       </rule>
 
@@ -156,7 +159,7 @@ data:
       <rule id="100403" level="12">
         <if_sid>100401</if_sid>
         <field name="Severity">high</field>
-        <description>HIGH CVE $(VulnerabilityID) in $(Package) ($(InstalledVersion)) on $(ImageName) — $(ClusterName)</description>
+        <description>HIGH CVE $(VulnerabilityID) in $(Package) ($(InstalledVersion)) on $(ImageName) — $(Cluster)</description>
         <group>grype_vuln,soc2_fail</group>
       </rule>
 

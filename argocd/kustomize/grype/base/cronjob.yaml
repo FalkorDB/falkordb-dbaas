@@ -30,10 +30,10 @@ spec:
               resources:
                 requests:
                   cpu: "500m"
-                  memory: "512Mi"
+                  memory: "1Gi"
                 limits:
                   cpu: "2"
-                  memory: "2Gi"
+                  memory: "6Gi"
               securityContext:
                 runAsNonRoot: true
                 runAsUser: 1000
@@ -129,7 +129,7 @@ spec:
                       result_file = os.path.join(output_dir, f'{safe_name}.json')
                       try:
                           result = subprocess.run(
-                              [grype_bin, img, '-o', 'json', '--file', result_file],
+                              [grype_bin, img, '-o', 'json', '--file', result_file, '--by-cve'],
                               capture_output=True, text=True, timeout=600,
                           )
                           if result.returncode != 0 and not os.path.exists(result_file):
@@ -153,7 +153,7 @@ spec:
                                   'Package': artifact.get('name', ''),
                                   'InstalledVersion': artifact.get('version', ''),
                                   'FixedVersions': ','.join(str(v) for v in fix_versions),
-                                  'ClusterName': cluster,
+                                  'Cluster': cluster,
                               })
                       except subprocess.TimeoutExpired:
                           scan_errors.append({'image': img, 'error': 'timeout (600s)'})
