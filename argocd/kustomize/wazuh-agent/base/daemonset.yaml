@@ -27,6 +27,9 @@ spec:
       serviceAccountName: wazuh-agent
       hostPID: true
       hostNetwork: true
+      # Required: hostNetwork uses host DNS by default, which can't resolve
+      # *.svc.cluster.local names. This policy falls back to cluster DNS.
+      dnsPolicy: ClusterFirstWithHostNet
       tolerations:
         - operator: Exists
           effect: NoSchedule

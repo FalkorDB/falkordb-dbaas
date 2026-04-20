@@ -39,6 +39,8 @@ spec:
           enabled: true
           nodeSelector:
             node_pool: security
+          # Cluster communication key (no existingSecret support)
+          key: "c58253e9a1d5a527ac715f5853942d9d"
           # Password-based agent registration
           authd:
             enabled: true
@@ -103,9 +105,6 @@ spec:
                 readOnly: true
             # Appended to the template-generated ossec.conf
             extraConf: |
-              <vulnerability-detection>
-                <enabled>yes</enabled>
-              </vulnerability-detection>
               <syscheck>
                 <frequency>43200</frequency>
                 <scan_on_start>yes</scan_on_start>
@@ -143,6 +142,8 @@ spec:
         indexer:
           enabled: true
           replicas: 3
+          cred:
+            existingSecret: "wazuh-indexer-cred"
           resources:
             requests:
               cpu: "1"
@@ -164,6 +165,8 @@ spec:
         dashboard:
           enabled: true
           replicas: 1
+          cred:
+            existingSecret: "wazuh-dashboard-cred"
           resources:
             requests:
               cpu: "500m"
@@ -212,12 +215,16 @@ spec:
                       - /bin/sh
                       - -c
                       - |
-                        API_USER=$(cat /run/secrets/api-cred/API_USERNAME)
-                        API_PASS=$(cat /run/secrets/api-cred/API_PASSWORD)
                         WAZUH_YML=/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml
+                        # Wait for wazuh.yml to be created by the plugin (up to 120s)
+                        for i in $(seq 1 60); do
+                          [ -f "$WAZUH_YML" ] && break
+                          sleep 2
+                        done
                         if [ -f "$WAZUH_YML" ]; then
-                          sed -i "s|username:.*|username: $API_USER|" "$WAZUH_YML"
-                          sed -i "s|password:.*|password: $API_PASS|" "$WAZUH_YML"
+                          API_USER=$(cat /run/secrets/api-cred/API_USERNAME)
+                          API_PASS=$(cat /run/secrets/api-cred/API_PASSWORD)
+                          sed -i "/hosts:/,/password:/{s|username:.*|username: $API_USER|;s|password:.*|password: $API_PASS|}" "$WAZUH_YML"
                         fi
                         sleep 30 && curl -sS -k -XPOST \
                           "https://localhost:5601/api/saved_objects/_import?overwrite=true" \
