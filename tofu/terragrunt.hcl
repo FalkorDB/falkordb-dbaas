@@ -21,7 +21,9 @@ locals {
 
   state_buckets = {
     dev  = "falkordb-dev-state-4620"
+    development = "falkordb-dev-state-4620" # alias for backward compatibility
     prod = "falkordb-prod-state-c49b"
+    production = "falkordb-prod-state-c49b" # alias for backward compatibility
   }
 
   # TF_STATE_BUCKET overrides the env-mapped bucket for backward compatibility

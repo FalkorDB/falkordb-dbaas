@@ -1,0 +1,22 @@
+# Wazuh Agent — DaemonSet that runs on every node, streaming security
+# events to the central Wazuh Manager via TLS on port 1514.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wazuh-agent
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+    targetRevision: dev
+    path: argocd/kustomize/wazuh-agent/overlays/ctrl-plane-dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: security
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true

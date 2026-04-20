@@ -17,4 +17,12 @@ resource "aws_organizations_account" "account" {
   lifecycle {
     ignore_changes = [role_name, name]
   }
+
+  tags = {
+    "env" = var.environment
+  }
+  
+  tags_all = {
+    "env" = var.environment
+  }
 }

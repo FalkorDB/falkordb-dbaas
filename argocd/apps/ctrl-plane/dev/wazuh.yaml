@@ -1,0 +1,229 @@
+# Wazuh Manager — central SIEM/XDR hub for multi-cloud security monitoring.
+#
+# Deployed via the morgoved/wazuh-helm chart (appVersion 4.14.1).
+# Architecture: 1 master + N workers + indexer cluster + dashboard.
+# Agents in spoke clusters connect via the LoadBalancer service.
+#
+# The Wazuh Dashboard is exposed via nginx ingress with oauth2-proxy.
+#
+# Persistent storage:
+#   - Wazuh Master data: 50Gi (standard-rwo)
+#   - Wazuh Worker data: 50Gi (standard-rwo)
+#   - Wazuh Indexer data: 100Gi (standard-rwo)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wazuh
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: wazuh
+    repoURL: https://morgoved.github.io/wazuh-helm/
+    targetRevision: 1.0.22
+    helm:
+      releaseName: wazuh
+      valuesObject:
+        # cert-manager sub-chart — disabled (already deployed in cluster)
+        cert-manager:
+          enabled: false
+        # Internal TLS certificates via cert-manager (self-signed issuer)
+        certificates:
+          enabled: true
+
+        # Agents deployed separately via our DaemonSet
+        agent:
+          enabled: false
+
+        wazuh:
+          enabled: true
+          nodeSelector:
+            node_pool: security
+          # Password-based agent registration
+          authd:
+            enabled: true
+            existingSecret: "wazuh-manager-authd"
+          # LoadBalancer managed separately via kustomize (wazuh-manager)
+          # to allow setting loadBalancerIP for the tofu-provisioned static IP.
+          apiCred:
+            existingSecret: "wazuh-api-cred"
+          loadBalancer:
+            enabled: false
+
+          master:
+            enabled: true
+            resources:
+              requests:
+                cpu: "1"
+                memory: "2Gi"
+              limits:
+                cpu: "2"
+                memory: "4Gi"
+            storageSize: 50Gi
+            storageClass: "standard-rwo"
+            service:
+              type: ClusterIP
+              annotations: {}
+              ports:
+                - name: registration
+                  protocol: TCP
+                  port: 1515
+                  targetPort: 1515
+                - name: api
+                  protocol: TCP
+                  port: 55000
+                  targetPort: 55000
+            # Custom SOC 2 rules and Google Chat integration
+            additionalVolumes:
+              - name: custom-rules
+                configMap:
+                  name: wazuh-custom-rules
+              - name: google-chat-integration
+                configMap:
+                  name: wazuh-google-chat-integration
+                  defaultMode: 0755
+            additionalVolumeMounts:
+              - name: custom-rules
+                mountPath: /wazuh-config-mount/etc/rules/local_rules.xml
+                subPath: local_rules.xml
+                readOnly: true
+              - name: google-chat-integration
+                mountPath: /var/ossec/integrations/custom-google-chat
+                subPath: custom-google-chat
+                readOnly: true
+              - name: google-chat-integration
+                mountPath: /var/ossec/integrations/custom-google-chat.py
+                subPath: custom-google-chat.py
+                readOnly: true
+            # Appended to the template-generated ossec.conf
+            extraConf: |
+              <vulnerability-detector>
+                <enabled>yes</enabled>
+                <interval>5m</interval>
+                <run_on_start>yes</run_on_start>
+                <provider name="canonical"><enabled>yes</enabled></provider>
+                <provider name="debian"><enabled>yes</enabled></provider>
+                <provider name="redhat"><enabled>yes</enabled></provider>
+                <provider name="nvd"><enabled>yes</enabled></provider>
+              </vulnerability-detector>
+              <syscheck>
+                <frequency>43200</frequency>
+                <scan_on_start>yes</scan_on_start>
+                <directories check_all="yes" realtime="yes">/etc</directories>
+                <directories check_all="yes">/usr/bin</directories>
+                <directories check_all="yes">/usr/sbin</directories>
+                <directories check_all="yes">/bin</directories>
+              </syscheck>
+              <integration>
+                <name>custom-google-chat</name>
+                <hook_url>FROM_SECRET</hook_url>
+                <level>10</level>
+                <alert_format>json</alert_format>
+              </integration>
+            # Inject Google Chat webhook URL from sealed secret
+            extraSpec:
+              container:
+                envFrom:
+                  - secretRef:
+                      name: wazuh-google-chat-webhook
+
+          worker:
+            enabled: true
+            replicas: 1
+            resources:
+              requests:
+                cpu: "1"
+                memory: "2Gi"
+              limits:
+                cpu: "2"
+                memory: "4Gi"
+            storageSize: 50Gi
+            storageClass: "standard-rwo"
+
+        indexer:
+          enabled: true
+          replicas: 3
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          nodeSelector:
+            node_pool: security
+          storageSize: 100Gi
+          storageClass: "standard-rwo"
+          env:
+            OPENSEARCH_JAVA_OPTS: "-Xms2g -Xmx2g -Dlog4j2.formatMsgNoLookups=true"
+          job:
+            annotations:
+              argocd.argoproj.io/hook: PostSync
+              argocd.argoproj.io/hook-delete-policy: HookSucceeded,BeforeHookCreation
+
+        dashboard:
+          enabled: true
+          replicas: 1
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          nodeSelector:
+            node_pool: security
+          ingress:
+            enabled: true
+            className: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-prod"
+              nginx.ingress.kubernetes.io/auth-url: "https://auth.security.dev.internal.falkordb.cloud/oauth2/auth"
+              nginx.ingress.kubernetes.io/auth-signin: "https://auth.security.dev.internal.falkordb.cloud/oauth2/start?rd=$scheme://$host$escaped_request_uri"
+              nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-Request-User,X-Auth-Request-Email"
+            host: "wazuh.security.dev.internal.falkordb.cloud"
+            tls:
+              - secretName: wazuh-dashboard-tls
+                hosts:
+                  - wazuh.security.dev.internal.falkordb.cloud
+          # SOC 2 dashboard import on startup
+          extraSpec:
+            pod:
+              volumes:
+                - name: soc2-dashboard
+                  configMap:
+                    name: wazuh-dashboard-soc2
+            container:
+              volumeMounts:
+                - name: soc2-dashboard
+                  mountPath: /usr/share/wazuh-dashboard/config/soc2-dashboard.ndjson
+                  subPath: soc2-dashboard.ndjson
+                  readOnly: true
+              lifecycle:
+                postStart:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - |
+                        sleep 30 && curl -sS -k -XPOST \
+                          "https://localhost:5601/api/saved_objects/_import?overwrite=true" \
+                          -H "osd-xsrf: true" \
+                          --form file=@/usr/share/wazuh-dashboard/config/soc2-dashboard.ndjson \
+                          || true
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: security
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+    automated:
+      prune: true
+      selfHeal: true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data

@@ -1,0 +1,10 @@
+# Patch: pin LoadBalancer to the dev static IP from OpenTofu.
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-manager-lb
+  namespace: security
+  annotations:
+    cloud.google.com/load-balancer-type: "External"
+spec:
+  loadBalancerIP: "34.46.116.195"

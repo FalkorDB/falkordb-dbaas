@@ -18,6 +18,9 @@ export const VMUSER_SECRET_NAMESPACE = 'observability';
 export const VMUSER_SOURCE_SECRET_NAME = (clusterId: string) => `${clusterId}-vmuser`;
 export const VMUSER_TARGET_SECRET_NAME = 'vmuser';
 
+export const SEALED_SECRETS_KEY_SECRET_NAME = 'sealed-secrets-app-plane-key';
+export const SEALED_SECRETS_KEY_SECRET_NAMESPACE = 'sealed-secrets';
+
 // Cloud providers
 export const CLOUD_PROVIDER = {
   GCP: 'gcp',

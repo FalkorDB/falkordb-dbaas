@@ -1,0 +1,33 @@
+# Wazuh Agent — production app-plane spoke clusters.
+# Security: No internet-facing endpoints — outbound-only.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: wazuh-agent
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: app-plane
+  template:
+    metadata:
+      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-wazuh-agent'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: main
+        path: argocd/kustomize/wazuh-agent/overlays/app-plane-prod
+      destination:
+        server: "{{.server}}"
+        namespace: security
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          prune: true
+          selfHeal: true
