@@ -79,6 +79,14 @@ resource "google_project_iam_member" "prowler_security_reviewer" {
   member  = "serviceAccount:${google_service_account.prowler_uploader.email}"
 }
 
+# Browser role grants resourcemanager.projects.list which Prowler needs
+# to discover projects (projects().list() API call).
+resource "google_project_iam_member" "prowler_browser" {
+  project = var.project_id
+  role    = "roles/browser"
+  member  = "serviceAccount:${google_service_account.prowler_uploader.email}"
+}
+
 resource "google_service_account_iam_member" "prowler_workload_identity" {
   service_account_id = google_service_account.prowler_uploader.name
   role               = "roles/iam.workloadIdentityUser"
