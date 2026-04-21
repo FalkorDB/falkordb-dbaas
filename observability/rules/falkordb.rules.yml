@@ -30,6 +30,7 @@ spec:
 
         - alert: FalkorDBMultiplePodsDown
           # Logic: More than one 'mature' pod in the same namespace reporting 0
+          # ignore free tier for this alert
           expr: >
             sum by (namespace, cluster, environment) (
               (redis_up{container="service", pod!="node-f-0"} == 0)
