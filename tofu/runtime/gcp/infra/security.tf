@@ -124,7 +124,7 @@ resource "google_compute_firewall" "wazuh_agent_ingress" {
 
   allow {
     protocol = "tcp"
-    ports    = ["1514", "1515", "55000"]
+    ports    = ["1514", "1515"]
   }
 
   source_ranges = ["0.0.0.0/0"]

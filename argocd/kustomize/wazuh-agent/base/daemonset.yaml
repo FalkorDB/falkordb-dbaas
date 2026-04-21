@@ -42,6 +42,14 @@ spec:
         - name: stagger-start
           image: busybox:1.36
           command: ["sh", "-c", "DELAY=$((RANDOM % 16)); echo \"Sleeping ${DELAY}s to stagger registration\"; sleep $DELAY"]
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               cpu: "10m"

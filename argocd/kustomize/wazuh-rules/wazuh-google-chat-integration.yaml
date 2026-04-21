@@ -64,7 +64,7 @@ data:
         f"*Timestamp:* {alert.get('timestamp', 'N/A')}"
     )
 
-    full_description = alert.get("full_log", alert.get("data", {}).get("title", ""))
+    full_description = alert.get("data", {}).get("title", "") or rule.get("description", "")
     if full_description:
         # Truncate to avoid exceeding Google Chat message limit (4096 chars)
         if len(full_description) > 500:

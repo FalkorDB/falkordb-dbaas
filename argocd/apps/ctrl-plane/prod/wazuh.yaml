@@ -25,7 +25,9 @@ spec:
           enabled: true
           nodeSelector:
             node_pool: security
-          # Cluster communication key (no existingSecret support)
+          # TODO(security): Move cluster key to SealedSecret. The chart does not
+          # support existingSecret for the cluster key — requires a kustomize
+          # patch or post-renderer to inject from a Kubernetes Secret.
           key: "3689236e86827eb977577f17f8a3d310"
           authd:
             enabled: true
@@ -36,7 +38,7 @@ spec:
             <group name="prowler_compliance,soc2">
               <rule id="100100" level="3">
                 <decoded_as>json</decoded_as>
-                <field name="Provider">\.+</field>
+                <field name="Provider">\w+</field>
                 <regex>"Status":\s*"\w+"</regex>
                 <description>Prowler compliance check result received.</description>
                 <group>prowler_compliance</group>
@@ -210,7 +212,13 @@ spec:
                     args:
                       - |
                         API_YAML=/mnt/master/wazuh/var/ossec/api/configuration/api.yaml
-                        if ! grep -q 'max_request_per_minute' "$API_YAML" 2>/dev/null; then
+                        mkdir -p "$(dirname "$API_YAML")"
+                        if grep -q 'max_request_per_minute' "$API_YAML" 2>/dev/null; then
+                          # Update existing values
+                          sed -i 's/max_login_attempts:.*/max_login_attempts: 50/' "$API_YAML"
+                          sed -i 's/block_time:.*/block_time: 300/' "$API_YAML"
+                          sed -i 's/max_request_per_minute:.*/max_request_per_minute: 1000/' "$API_YAML"
+                        else
                           cat > "$API_YAML" <<'EOF'
                         access:
                           max_login_attempts: 50
@@ -325,13 +333,15 @@ spec:
                         if [ -f "$WAZUH_YML" ]; then
                           API_USER=$(cat /run/secrets/api-cred/API_USERNAME)
                           API_PASS=$(cat /run/secrets/api-cred/API_PASSWORD)
-                          sed -i "/hosts:/,/password:/{s|username:.*|username: $API_USER|;s|password:.*|password: $API_PASS|}" "$WAZUH_YML"
+                          # Escape sed-special characters in credentials
+                          ESC_USER=$(printf '%s' "$API_USER" | sed 's/[&|\\]/\\&/g')
+                          ESC_PASS=$(printf '%s' "$API_PASS" | sed 's/[&|\\]/\\&/g')
+                          sed -i "/hosts:/,/password:/{s|username:.*|username: $ESC_USER|;s|password:.*|password: $ESC_PASS|}" "$WAZUH_YML"
                         fi
-                        sleep 30 && curl -sS -k -XPOST \
+                        sleep 30 && curl -sS -k --fail -XPOST \
                           "https://localhost:5601/api/saved_objects/_import?overwrite=true" \
                           -H "osd-xsrf: true" \
-                          --form file=@/usr/share/wazuh-dashboard/config/security-dashboards.ndjson \
-                          || true
+                          --form file=@/usr/share/wazuh-dashboard/config/security-dashboards.ndjson
 
   destination:
     server: https://kubernetes.default.svc
@@ -346,5 +356,6 @@ spec:
   ignoreDifferences:
     - group: ""
       kind: Secret
+      name: wazuh-dashboard-tls
       jsonPointers:
         - /data

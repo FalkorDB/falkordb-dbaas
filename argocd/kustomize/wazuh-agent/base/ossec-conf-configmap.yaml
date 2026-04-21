@@ -88,26 +88,24 @@ data:
         <frequency>900</frequency>
         <scan_on_start>yes</scan_on_start>
 
-        <directories>/etc,/usr/bin,/usr/sbin</directories>
-        <directories>/bin,/sbin,/boot</directories>
-        <directories check_all="yes" realtime="yes">/home</directories>
-        <directories check_all="yes" realtime="yes">/etc</directories>
+        <directories check_all=\"yes\" realtime=\"yes\">/host/etc</directories>
+        <directories>/usr/bin,/usr/sbin</directories>
 
-        <ignore>/etc/mtab</ignore>
-        <ignore>/etc/hosts.deny</ignore>
-        <ignore>/etc/mail/statistics</ignore>
-        <ignore>/etc/random-seed</ignore>
-        <ignore>/etc/random.seed</ignore>
-        <ignore>/etc/adjtime</ignore>
-        <ignore>/etc/httpd/logs</ignore>
-        <ignore>/etc/utmpx</ignore>
-        <ignore>/etc/wtmpx</ignore>
-        <ignore>/etc/cups/certs</ignore>
-        <ignore>/etc/dumpdates</ignore>
-        <ignore>/etc/svc/volatile</ignore>
+        <ignore>/host/etc/mtab</ignore>
+        <ignore>/host/etc/hosts.deny</ignore>
+        <ignore>/host/etc/mail/statistics</ignore>
+        <ignore>/host/etc/random-seed</ignore>
+        <ignore>/host/etc/random.seed</ignore>
+        <ignore>/host/etc/adjtime</ignore>
+        <ignore>/host/etc/httpd/logs</ignore>
+        <ignore>/host/etc/utmpx</ignore>
+        <ignore>/host/etc/wtmpx</ignore>
+        <ignore>/host/etc/cups/certs</ignore>
+        <ignore>/host/etc/dumpdates</ignore>
+        <ignore>/host/etc/svc/volatile</ignore>
         <ignore type="sregex">.log$|.swp$</ignore>
 
-        <nodiff>/etc/ssl/private.key</nodiff>
+        <nodiff>/host/etc/ssl/private.key</nodiff>
 
         <skip_nfs>yes</skip_nfs>
         <skip_dev>yes</skip_dev>

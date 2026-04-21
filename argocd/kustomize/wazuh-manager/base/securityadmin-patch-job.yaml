@@ -24,15 +24,22 @@ spec:
   template:
     spec:
       restartPolicy: OnFailure
+      automountServiceAccountToken: false
       nodeSelector:
         node_pool: security
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: admin-certs
           secret:
             secretName: admin-tls
+            defaultMode: 0400
         - name: node-certs
           secret:
             secretName: node-tls
+            defaultMode: 0400
         - name: indexer-conf
           configMap:
             name: wazuh-indexer-config
@@ -42,6 +49,13 @@ spec:
         - name: securityadmin
           image: "wazuh/wazuh-indexer:4.14.1"
           imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: JAVA_HOME
               value: /usr/share/wazuh-indexer/jdk/
@@ -96,8 +110,8 @@ spec:
                 description: "Kibana server user"
               EOF
 
-              echo "admin hash: ${ADMIN_HASH:0:20}..."
-              echo "kibanaserver hash: ${DASHBOARD_HASH:0:20}..."
+              echo "admin password hash set"
+              echo "kibanaserver password hash set"
 
               # Apply ALL security configs to the index.
               /usr/share/wazuh-indexer/plugins/opensearch-security/tools/securityadmin.sh \

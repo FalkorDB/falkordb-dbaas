@@ -11,6 +11,7 @@ metadata:
   namespace: security
 spec:
   schedule: "0 2 * * *"
+  timeZone: "Etc/UTC"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 7
   failedJobsHistoryLimit: 3
@@ -24,6 +25,12 @@ spec:
           restartPolicy: Never
           nodeSelector:
             node_pool: security
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          volumes:
+            - name: prowler-tmp
+              emptyDir: {}
           containers:
             - name: prowler
               image: toniblyx/prowler:4.6.1
@@ -38,9 +45,13 @@ spec:
                 runAsNonRoot: true
                 runAsUser: 1000
                 allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
                 capabilities:
                   drop:
                     - ALL
+              volumeMounts:
+                - name: prowler-tmp
+                  mountPath: /tmp
               env:
                 - name: EVIDENCE_BUCKET
                   valueFrom:
@@ -79,7 +90,7 @@ spec:
                 - -c
                 - |
                   set -e
-                  DATE_PATH=$(date +%Y/%m/%d)
+                  DATE_PATH=$(date -u +%Y/%m/%d)
                   OUTPUT_DIR="/tmp/prowler-output"
                   mkdir -p "$OUTPUT_DIR"
 
@@ -90,13 +101,16 @@ spec:
                   fi
 
                   # Run Prowler compliance scan
+                  set +e
                   prowler "$CLOUD_PROVIDER" \
                     --compliance "$COMPLIANCE" \
-                    --output-formats json-ocsf html csv \
+                    --output-formats json-ocsf csv \
                     --output-directory "$OUTPUT_DIR" \
                     $EXTRA_ARGS \
                     --ignore-exit-code-3 \
                     --verbose
+                  PROWLER_EXIT=$?
+                  set -e
 
                   # Upload results to the central GCS evidence locker.
                   # google-cloud-storage is not bundled in the Prowler image.
@@ -116,12 +130,16 @@ spec:
                   bucket = client.bucket(bucket_name)
                   for f in glob.glob(os.path.join(output_dir, '**', '*'), recursive=True):
                       if os.path.isfile(f):
-                          blob = bucket.blob(prefix + '/' + os.path.basename(f))
+                          rel = os.path.relpath(f, output_dir)
+                          blob = bucket.blob(prefix + '/' + rel)
                           blob.upload_from_filename(f)
-                          print(f'Uploaded {os.path.basename(f)}')
+                          print(f'Uploaded {rel}')
                   PYEOF
 
                   echo "Prowler scan complete. Results uploaded to gs://${EVIDENCE_BUCKET}/prowler/${DATE_PATH}/${CLOUD_PROVIDER}-${CLUSTER_NAME}/"
+
+                  # Exit with prowler's original exit code after uploads complete
+                  SYSLOG_EXIT=0
 
                   # Forward FAIL findings to Wazuh Manager via TCP syslog.
                   # This bridges the Prowler→Wazuh gap so rules 100100-100103
@@ -213,3 +231,6 @@ spec:
                       print('WARNING: Syslog forwarding failed: {}'.format(e))
                       print('Scan and GCS upload succeeded; syslog is best-effort.')
                   SYSLOG_EOF
+
+                  # Propagate prowler's exit code so the Job status reflects scan result
+                  exit $PROWLER_EXIT
