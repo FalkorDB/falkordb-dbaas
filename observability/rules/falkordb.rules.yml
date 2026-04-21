@@ -10,8 +10,13 @@ spec:
     - name: falkordb.rules.general
       rules:
         - alert: FalkorDBDown
-        # ignore free tier for this alert
-          expr: redis_up{container="service",pod!="node-f-0"} == 0
+          # Only alert if the instance is down AND has been known to Prometheus for at least 5 minutes.
+          # This prevents false positives during the initial container startup/probing phase.
+          # ignore free tier for this alert
+          expr: >
+            (redis_up{container="service", pod!="node-f-0"} == 0)
+            and
+            (time() - first_over_time(timestamp(redis_up{container="service", pod!="node-f-0"})[30m:]) > 300)
           for: 30s
           labels:
             severity: critical
