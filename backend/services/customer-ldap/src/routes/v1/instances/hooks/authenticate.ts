@@ -29,7 +29,7 @@ declare module 'fastify' {
   }
 }
 
-export function createAuthenticateHook(requiredPermission: 'reader' | 'writer'): preHandlerHookHandler {
+export function createAuthenticateHook(requiredPermission: 'reader' | 'editor'): preHandlerHookHandler {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     const opts = { logger: request.log };
     const { instanceId } = request.params as { instanceId: string };

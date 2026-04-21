@@ -146,7 +146,7 @@ export class ExportRDBController {
 
     const hasAccess = await this.omnistrateRepository.checkIfUserHasAccessToInstance(requestorId, instance, undefined, [
       'root',
-      'writer',
+      'editor',
       'reader',
     ]);
 

@@ -11,7 +11,7 @@ export interface SessionData {
   cloudProvider: 'gcp' | 'aws' | 'azure';
   region: string;
   k8sClusterName: string;
-  role: 'root' | 'writer' | 'reader';
+  role: 'root' | 'editor' | 'reader';
 }
 
 export const ISessionRepository = {

@@ -89,7 +89,7 @@ export class SessionRepository implements ISessionRepository {
         cloudProvider: decoded.cloudProvider as 'gcp' | 'aws' | 'azure',
         region: decoded.region as string,
         k8sClusterName: decoded.k8sClusterName as string,
-        role: decoded.role as 'root' | 'writer' | 'reader',
+        role: decoded.role as 'root' | 'editor' | 'reader',
       };
     } catch (error) {
       this._options.logger.debug({ error }, 'Error decoding session cookie');
