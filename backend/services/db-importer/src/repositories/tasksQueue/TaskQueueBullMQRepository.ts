@@ -46,30 +46,30 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
   ): FlowJob {
     this._opts.logger.debug(`Creating single shard RDB export flow for task: ${task.taskId}`);
     return this._makeJobNode(
-      RdbExportTaskNames.RdbExportCopyRdbToBucket,
-      ProcessorsSchemaMap[RdbExportTaskNames.RdbExportCopyRdbToBucket],
+      RdbExportTaskNames.RdbExportRequestReadSignedURL,
+      ProcessorsSchemaMap[RdbExportTaskNames.RdbExportRequestReadSignedURL],
       {
         taskId: task.taskId,
-        cloudProvider: task.payload.cloudProvider,
-        clusterId: task.payload.clusterId,
-        region: task.payload.region,
-        instanceId: task.payload.instanceId,
-        podId: task.payload.podId,
         bucketName: task.payload.destination.bucketName,
         fileName: task.payload.destination.fileName,
+        expiresIn: task.payload.destination.expiresIn,
       },
       {
         failParentOnFailure: true,
       },
       [
         this._makeJobNode(
-          RdbExportTaskNames.RdbExportRequestReadSignedURL,
-          ProcessorsSchemaMap[RdbExportTaskNames.RdbExportRequestReadSignedURL],
+          RdbExportTaskNames.RdbExportCopyRdbToBucket,
+          ProcessorsSchemaMap[RdbExportTaskNames.RdbExportCopyRdbToBucket],
           {
             taskId: task.taskId,
+            cloudProvider: task.payload.cloudProvider,
+            clusterId: task.payload.clusterId,
+            region: task.payload.region,
+            instanceId: task.payload.instanceId,
+            podId: task.payload.podId,
             bucketName: task.payload.destination.bucketName,
             fileName: task.payload.destination.fileName,
-            expiresIn: task.payload.destination.expiresIn,
           },
           {
             failParentOnFailure: true,
@@ -141,21 +141,24 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
         },
         [
           this._makeJobNode(
-            RdbExportTaskNames.RdbExportRequestReadSignedURL,
-            ProcessorsSchemaMap[RdbExportTaskNames.RdbExportRequestReadSignedURL],
+            RdbExportTaskNames.RdbExportMonitorSaveProgress,
+            ProcessorsSchemaMap[RdbExportTaskNames.RdbExportMonitorSaveProgress],
             {
               taskId: task.taskId,
-              bucketName: task.payload.destination.bucketName,
-              fileName: node.partFileName,
-              expiresIn: task.payload.destination.expiresIn,
+              podId: node.podId,
+              cloudProvider: task.payload.cloudProvider,
+              clusterId: task.payload.clusterId,
+              region: task.payload.region,
+              instanceId: task.payload.instanceId,
+              hasTLS: task.payload.hasTLS,
             },
             {
               failParentOnFailure: true,
             },
             [
               this._makeJobNode(
-                RdbExportTaskNames.RdbExportMonitorSaveProgress,
-                ProcessorsSchemaMap[RdbExportTaskNames.RdbExportMonitorSaveProgress],
+                RdbExportTaskNames.RdbExportSendSaveCommand,
+                ProcessorsSchemaMap[RdbExportTaskNames.RdbExportSendSaveCommand],
                 {
                   taskId: task.taskId,
                   podId: node.podId,
@@ -167,25 +170,7 @@ export class TaskQueueBullMQRepository implements ITaskQueueRepository {
                 },
                 {
                   failParentOnFailure: true,
-                },
-                [
-                  this._makeJobNode(
-                    RdbExportTaskNames.RdbExportSendSaveCommand,
-                    ProcessorsSchemaMap[RdbExportTaskNames.RdbExportSendSaveCommand],
-                    {
-                      taskId: task.taskId,
-                      podId: node.podId,
-                      cloudProvider: task.payload.cloudProvider,
-                      clusterId: task.payload.clusterId,
-                      region: task.payload.region,
-                      instanceId: task.payload.instanceId,
-                      hasTLS: task.payload.hasTLS,
-                    },
-                    {
-                      failParentOnFailure: true,
-                    }
-                  )
-                ]
+                }
               )
             ]
           )

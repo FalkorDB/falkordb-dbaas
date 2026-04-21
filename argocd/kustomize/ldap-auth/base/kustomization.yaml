@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - create-admin-job.yaml
   - secret.yaml
+ 

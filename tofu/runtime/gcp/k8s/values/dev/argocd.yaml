@@ -1,0 +1,131 @@
+global:
+  image:
+    tag: "v2.13.3"
+  logging:
+    format: json
+  domain: "argocd.observability.dev.internal.falkordb.cloud"
+server:
+  extraArgs:
+    - --insecure
+  ingress:
+    enabled: true
+    controller: gke
+    tls: true
+    gke:
+      managedCertificate:
+        create: true
+    annotations:
+      kubernetes.io/ingress.global-static-ip-name: "argocd-ip"
+  serviceAccount:
+    annotations:
+      iam.gke.io/gcp-service-account: "argocd-sa@ctrl-plane-dev-f7a2434f.iam.gserviceaccount.com"
+  volumes:
+    - name: aws-profile
+      secret:
+        secretName: aws-profile
+  volumeMounts:
+    - name: aws-profile
+      mountPath: /home/argocd/.aws
+      readOnly: true
+
+cmp:
+  repositories:
+    falkordb-dbaas:
+      url: https://github.com/FalkorDB/falkordb-dbaas
+
+configs:
+  secret:
+    createSecret: false
+  cm:
+    url: https://argocd.observability.dev.internal.falkordb.cloud
+    dex.config: |
+      connectors:
+      - config:
+          issuer: https://accounts.google.com
+          clientID: $dex.google.clientId
+          clientSecret: $dex.google.clientSecret
+          serviceAccountFilePath: /tmp/oidc/googleAuth.json
+          adminEmail: $dex.google.adminEmail
+          domainToAdminEmail: 
+            falkordb.com: $dex.google.adminEmail
+          groups:
+            - devops@falkordb.com
+          fetchTransitiveGroupMembership: True
+          scopes:
+            - openid
+            - email
+            - profile
+            - https://www.googleapis.com/auth/admin.directory.group.readonly
+            - https://www.googleapis.com/auth/admin.directory.user.readonly
+        type: google
+        id: google
+        name: Google
+  rbac:
+    create: true
+    policy.default: role:readonly
+    policy.csv: |
+      g, devops@falkordb.com, role:admin
+    scopes: "[groups, email]"
+
+dex:
+  volumeMounts:
+    - mountPath: /tmp/oidc
+      name: google-json
+      readOnly: true
+  volumes:
+    - name: google-json
+      secret:
+        defaultMode: 420
+        secretName: argocd-google-groups
+
+controller:
+  replicas: 1
+  env:
+    - name: ARGOCD_CONTROLLER_REPLICAS
+      value: "1"
+  extraArgs:
+    - --sharding-method=round-robin
+  metrics:
+    enabled: true
+  serviceAccount:
+    annotations:
+      iam.gke.io/gcp-service-account: "argocd-sa@ctrl-plane-dev-f7a2434f.iam.gserviceaccount.com"
+  volumes:
+    - name: aws-profile
+      secret:
+        secretName: aws-profile
+  volumeMounts:
+    - name: aws-profile
+      mountPath: /home/argocd/.aws
+      readOnly: true
+
+extraObjects:
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: ctrl-plane-observability-stack
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: dev
+        path: argocd/apps/ctrl-plane/dev
+      destination:
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        automated: {}
+
+  - apiVersion: argoproj.io/v1alpha1
+    kind: Application
+    metadata:
+      name: app-plane-observability-stack
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: dev
+        path: argocd/apps/app-plane/dev
+      destination:
+        server: https://kubernetes.default.svc
+      syncPolicy:
+        automated: {}

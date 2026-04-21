@@ -19,7 +19,7 @@ export class AuthService {
     token: string,
     instanceId: string,
     subscriptionId: string,
-    minRole: 'root' | 'writer' | 'reader' = 'reader',
+    minRole: 'root' | 'editor' | 'reader' = 'reader',
   ): Promise<{ session: string; sessionData: SessionData; instance: OmnistrateInstance }> {
     assert.ok(token, 'AuthService: Token is required');
     assert.ok(instanceId, 'AuthService: Instance ID is required');
@@ -90,8 +90,8 @@ export class AuthService {
     return this._sessionRepository.decodeSession(cookie);
   }
 
-  static checkPermission(role: 'root' | 'writer' | 'reader', requiredRole: 'writer' | 'reader'): boolean {
-    const roleHierarchy = { root: 3, writer: 2, reader: 1 };
+  static checkPermission(role: 'root' | 'editor' | 'reader', requiredRole: 'editor' | 'reader'): boolean {
+    const roleHierarchy = { root: 3, editor: 2, reader: 1 };
     return roleHierarchy[role] >= roleHierarchy[requiredRole];
   }
 

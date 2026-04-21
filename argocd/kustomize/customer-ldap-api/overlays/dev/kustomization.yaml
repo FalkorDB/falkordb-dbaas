@@ -15,9 +15,6 @@ patches:
         path: /spec/replicas
         value: 1
       - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: "us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/customer-ldap:dev"
-      - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: "Always"
       - op: add

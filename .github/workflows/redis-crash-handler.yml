@@ -157,77 +157,37 @@ jobs:
 
   ai-triage:
     needs: [analyze-crash, upload-rdb]
+    if: ${{ always() && needs.analyze-crash.outputs.issue_number != '' }}
+    uses: ./.github/workflows/ai-crash-triage.yml
+    secrets: inherit
+    with:
+      issue_number: ${{ needs.analyze-crash.outputs.issue_number }}
+      pod: ${{ needs.analyze-crash.outputs.pod }}
+      namespace: ${{ needs.analyze-crash.outputs.namespace }}
+      cluster: ${{ needs.analyze-crash.outputs.cluster }}
+      container: ${{ inputs.container }}
+      vmauth_url: ${{ inputs.vmauth_url }}
+      environment: ${{ inputs.environment }}
+      rdb_url: ${{ needs.upload-rdb.result == 'success' && needs.upload-rdb.outputs.rdb_url || '' }}
+      aof_url: ${{ needs.upload-rdb.result == 'success' && needs.upload-rdb.outputs.aof_url || '' }}
+      falkordb_version: ${{ needs.upload-rdb.result == 'success' && needs.upload-rdb.outputs.falkordb_version || '' }}
+
+  label-version:
+    needs: [analyze-crash, upload-rdb]
+    if: ${{ needs.upload-rdb.result == 'success' && needs.upload-rdb.outputs.falkordb_version != '' && needs.analyze-crash.outputs.issue_number != '' }}
     runs-on: ubuntu-latest
-    if: ${{ needs.analyze-crash.outputs.issue_number != '' }}
-
     steps:
-      - name: Check authorised actor
+      - name: Add version label to crash issue
         env:
-          ACTOR: ${{ github.actor }}
-        run: |
-          ALLOWED_USERS=("swilly22" "MuhammadQadora" "dudizimber" "AviAvni" "barakb")
-          for user in "${ALLOWED_USERS[@]}"; do
-            if [[ "$ACTOR" == "$user" ]]; then
-              echo "Actor '$ACTOR' is authorised. Proceeding."
-              exit 0
-            fi
-          done
-          echo "Actor '$ACTOR' is not authorised to run this workflow."
-          exit 1
-
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-
-      - name: Set up Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v5
-        with:
-          python-version: '3.11'
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Copilot CLI and Python deps
-        run: |
-          npm install -g @github/copilot
-          pip install github-copilot-sdk requests pydantic
-
-      - name: Set environment variables
-        env:
-          ENVIRONMENT: ${{ inputs.environment }}
-          VMAUTH_PASS_DEV: ${{ secrets.VMAUTH_PASSWORD_DEV }}
-          VMAUTH_PASS_PROD: ${{ secrets.VMAUTH_PASSWORD_PROD }}
-        run: |
-          if [ "$ENVIRONMENT" = "dev" ]; then
-            echo "VMAUTH_PASSWORD=$VMAUTH_PASS_DEV" >> $GITHUB_ENV
-          else
-            echo "VMAUTH_PASSWORD=$VMAUTH_PASS_PROD" >> $GITHUB_ENV
-          fi
-
-      - name: Run AI crash triage
-        env:
-          ENVIRONMENT: ${{ inputs.environment }}
           GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
           ISSUE_REPO: ${{ env.ISSUE_REPO }}
-          VMAUTH_URL: ${{ inputs.vmauth_url }}
-          VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
-          VMAUTH_PASSWORD: ${{ env.VMAUTH_PASSWORD }}
-          ISSUE_NUMBER: ${{ needs.analyze-crash.outputs.issue_number }}
-          POD: ${{ needs.analyze-crash.outputs.pod }}
-          NAMESPACE: ${{ needs.analyze-crash.outputs.namespace }}
-          CLUSTER: ${{ needs.analyze-crash.outputs.cluster }}
-          CONTAINER: ${{ inputs.container }}
-          RDB_URL: ${{ needs.upload-rdb.outputs.rdb_url }}
-          AOF_URL: ${{ needs.upload-rdb.outputs.aof_url }}
         run: |
-          cd scripts
-          python ai_crash_triage.py \
-            --issue-number "$ISSUE_NUMBER" \
-            --pod "$POD" \
-            --namespace "$NAMESPACE" \
-            --cluster "$CLUSTER" \
-            --container "$CONTAINER" \
-            --vmauth-url "$VMAUTH_URL" \
-            ${RDB_URL:+--rdb-url "$RDB_URL"} \
-            ${AOF_URL:+--aof-url "$AOF_URL"}
+          VERSION="${{ needs.upload-rdb.outputs.falkordb_version }}"
+          ISSUE="${{ needs.analyze-crash.outputs.issue_number }}"
+          LABEL="version:${VERSION}"
+
+          # Ensure the label exists (create if missing)
+          gh label create "$LABEL" --repo "$ISSUE_REPO" --color "0e8a16" --description "FalkorDB version" 2>/dev/null || true
+
+          # Add to issue
+          gh issue edit "$ISSUE" --repo "$ISSUE_REPO" --add-label "$LABEL"

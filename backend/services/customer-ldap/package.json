@@ -1,6 +1,6 @@
 {
   "name": "customer-ldap",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "",
   "main": "dist/index.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "format": "eslint src/**/*.ts --fix",
     "start": "nodemon",
     "jest": "jest",
-    "test": "dotenv -e .env.test jest",
+    "test": "dotenv -e .env.test -- jest",
     "build": "tsc",
     "serve": "node ./dist/index.js",
     "docker": "docker build -t falkordb/customer-ldap --build-arg PROJECT=customer-ldap ../.."

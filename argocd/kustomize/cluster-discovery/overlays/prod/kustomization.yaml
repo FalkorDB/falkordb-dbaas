@@ -6,6 +6,10 @@ resources:
   - ../../base/
   - cluster-discovery-env-secret.yaml
 
+images:
+  - name: us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/backend/cluster-discovery
+    newName: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/cluster-discovery
+
 patches:
   - target:
       kind: Deployment
@@ -14,9 +18,6 @@ patches:
       - op: replace
         path: /spec/replicas
         value: 1
-      - op: replace
-        path: /spec/template/spec/containers/0/image
-        value: "us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/backend/cluster-discovery:1.2.2"
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: "IfNotPresent"

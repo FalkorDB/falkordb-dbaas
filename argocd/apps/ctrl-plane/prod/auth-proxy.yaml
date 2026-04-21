@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: auth-proxy
+  namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: "web=us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/frontend/auth-proxy-web"
+    argocd-image-updater.argoproj.io/web.update-strategy: semver
+    argocd-image-updater.argoproj.io/web.allow-tags: regexp:^[0-9]+\.[0-9]+\.[0-9]+$
+    argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/argocd-image-updater-git-secret
+    argocd-image-updater.argoproj.io/git-branch: main
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+    targetRevision: main
+    path: argocd/kustomize/auth-proxy/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: customer-observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

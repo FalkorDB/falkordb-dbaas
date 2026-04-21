@@ -46,9 +46,17 @@ jobs:
           context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
           push: false
-          tags: |
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:${{ github.sha }}
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:latest
+          # load into the local daemon so Grype can inspect the image
+          load: true
+          tags: us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:sha-${{ github.sha }}
+
+      - name: Grype image scan
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+        with:
+          image: us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:sha-${{ github.sha }}
+          fail-build: "false"
+          severity-cutoff: high
+          output-format: table
 
   push:
     runs-on: ubuntu-latest
@@ -93,6 +101,19 @@ jobs:
         id: version
         run: echo "VERSION=$(node -p "require('./frontend/apps/auth-proxy/package.json').version")" >> "$GITHUB_OUTPUT"
 
+      - name: Set tags
+        id: set-tags
+        run: |
+          BASE_IMAGE="us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            echo "TAGS=${BASE_IMAGE}:${{ steps.version.outputs.VERSION }}-dev.${{ github.run_number }},${BASE_IMAGE}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "TAGS=${BASE_IMAGE}:${{ steps.version.outputs.VERSION }},${BASE_IMAGE}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          else
+            echo "TAGS=${BASE_IMAGE}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create .env
         working-directory: frontend/apps/auth-proxy
         run: |
@@ -110,7 +131,16 @@ jobs:
           context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
           push: true
-          tags: |
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:${{ github.sha }}
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:${{ steps.version.outputs.VERSION }}
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:latest
+          tags: ${{ steps.set-tags.outputs.TAGS }}
+
+      - name: Extract primary tag for scan
+        id: primary-tag
+        run: echo "TAG=$(echo '${{ steps.set-tags.outputs.TAGS }}' | cut -d',' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Grype image scan
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+        with:
+          image: ${{ steps.primary-tag.outputs.TAG }}
+          fail-build: "false"
+          severity-cutoff: high
+          output-format: table

@@ -129,8 +129,8 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   async checkIfUserHasAccessToInstance(
     userId: string,
     instanceId: string,
-    minRole?: 'root' | 'writer' | 'reader',
-  ): Promise<{ hasAccess: boolean; role?: 'root' | 'writer' | 'reader' }> {
+    minRole?: 'root' | 'editor' | 'reader',
+  ): Promise<{ hasAccess: boolean; role?: 'root' | 'editor' | 'reader' }> {
     assert(instanceId, 'OmnistrateRepository: Instance ID is required');
     assert(userId, 'OmnistrateRepository: User ID is required');
 
@@ -145,7 +145,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       return { hasAccess: false };
     }
 
-    const roleHierarchy = { root: 3, writer: 2, reader: 1 };
+    const roleHierarchy = { root: 3, editor: 2, reader: 1 };
     const userRoleLevel = roleHierarchy[user.role];
     const minRoleLevel = minRole ? roleHierarchy[minRole] : 1;
 

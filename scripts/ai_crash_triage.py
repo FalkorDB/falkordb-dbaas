@@ -56,12 +56,15 @@ You have access to tools that give you the same data a human engineer uses.
 - Trace the call path from the stack trace — read each calling function
 - Determine what could cause the crash: NULL dereference, use-after-free, buffer overflow, etc.
 
-### Step 3: Cross-Reference Issues
+### Step 3: Cross-Reference Issues & Crash History
 - Use `search_falkordb_issues` to search FalkorDB/FalkorDB for the crashing function name
 - Also search FalkorDB/private for similar crashes
-- Use `fetch_previous_crashes` to get crash history for this namespace
+- Use `fetch_previous_crashes` to get crash history for THIS namespace
+- Use `search_crashes_by_signature` with the primary crashing function to find crashes
+  across ALL instances — this reveals whether the bug is version-related or instance-specific
 - Use `search_git_commits` to check if the crashing code was recently changed (regression)
 - Use `get_git_blame` if you find the problematic lines
+- If the function was fixed in a PR, identify which release version includes the fix
 
 ### Step 4: Analyze the Query/Command
 - From the crash logs, identify the client command (GRAPH.QUERY, etc.)
@@ -92,22 +95,37 @@ After completing your analysis, output EXACTLY this structured report:
 and what specifically could cause this crash type]
 
 ### Related Issues
-[List any related GitHub issues found, with URLs and relevance]
+[List any related GitHub issues and PRs found, with URLs.
+For each, include the status in brackets: [open], [closed], [merged].
+Example: [FalkorDB/FalkorDB#1234](url) [merged] — description]
 
 ### Previous Crash History
 [Summary of previous crashes for this namespace/signature if any.
 What new evidence does this occurrence add?]
 
+### Version & Instance Impact
+- **Scope:** [Version-specific bug / Instance-specific / Widespread across versions]
+- **Affected versions:** [List versions where this crash has been observed]
+- **Fixed in:** [Version/PR where the fix was merged, or "Not yet fixed"]
+- **Instances affected:** [Number of distinct instances that hit this crash]
+[Explain whether upgrading to a specific version would resolve the issue,
+or if the bug is still open and needs a fix.]
+
 ### Reproduction Results
 [Whether reproduction was attempted, succeeded, and what was observed]
 
 ### Root Cause Hypothesis
-[Your best theory for why this crash happens, with supporting evidence.
-Rate confidence: High / Medium / Low]
+[Your best theory for why this crash happens, with supporting evidence.]
+
+**Confidence:** [High / Medium / Low] — [one-sentence justification for the confidence level]
+
+**Status:** [New bug / Known issue (link) / Fixed in (version/PR link) but not deployed]
 
 ### Suggested Fix
 [Specific code change suggestion if you have enough evidence.
-File, function, and what to change.]
+File, function, and what to change.
+SKIP this section if the bug is already fixed in a merged PR — instead,
+state which PR/version contains the fix and recommend upgrading.]
 
 ### Recommended Next Steps
 [Ordered list of what the team should do next]
@@ -164,9 +182,11 @@ Start with Step 1: fetch the crash logs for this pod/namespace, then proceed thr
 
 def _post_report_to_issue(report: str, issue_number: int, issue_repo: str):
     """Post the triage report as a comment on the GitHub issue."""
-    token = os.environ.get("GITHUB_TOKEN", "")
+    # Prefer PRIVATE_REPO_TOKEN (PAT with cross-repo access) for posting
+    # to FalkorDB/private; fall back to GITHUB_TOKEN if unavailable.
+    token = os.environ.get("PRIVATE_REPO_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
     if not token:
-        print("WARNING: GITHUB_TOKEN not set, cannot post report to issue", file=sys.stderr)
+        print("WARNING: No token available, cannot post report to issue", file=sys.stderr)
         print(report)
         return
 

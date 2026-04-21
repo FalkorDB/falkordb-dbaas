@@ -16,6 +16,7 @@ jest.mock('bullmq', () => {
     add: jest.fn().mockResolvedValue({ id: 'test-job-id' }),
     close: jest.fn().mockResolvedValue(undefined),
     on: jest.fn(),
+    name: 'mock-queue',
   };
 
   const mockWorker = {
@@ -27,8 +28,14 @@ jest.mock('bullmq', () => {
   return {
     Queue: jest.fn(() => mockQueue),
     Worker: jest.fn(() => mockWorker),
+    QueueEvents: jest.fn(() => ({ on: jest.fn(), close: jest.fn() })),
   };
 });
+
+// Mock QueueDash — it tries to introspect real BullMQ connections which hangs in tests
+jest.mock('@queuedash/api', () => ({
+  fastifyQueueDashPlugin: (fastify: any, _opts: any, done: () => void) => done(),
+}));
 
 describe('Server Startup Integration Test', () => {
   let server: FastifyInstance;
