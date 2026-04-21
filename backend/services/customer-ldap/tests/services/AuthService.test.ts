@@ -65,7 +65,7 @@ describe('AuthService', () => {
       mockOmnistrateRepo.validate.mockResolvedValue(true);
       mockOmnistrateRepo.checkIfUserHasAccessToInstance.mockResolvedValue({
         hasAccess: true,
-        role: 'writer',
+        role: 'editor',
       });
       mockOmnistrateRepo.getInstance.mockResolvedValue({
         id: 'instance-789',
@@ -91,7 +91,7 @@ describe('AuthService', () => {
       expect(result.sessionData.userId).toBe('user-123');
       expect(result.sessionData.instanceId).toBe('instance-789');
       expect(result.sessionData.subscriptionId).toBe('sub-456');
-      expect(result.sessionData.role).toBe('writer');
+      expect(result.sessionData.role).toBe('editor');
     });
 
     it('should throw error when user does not have access', async () => {
@@ -135,7 +135,7 @@ describe('AuthService', () => {
         cloudProvider: 'gcp' as const,
         region: 'us-central1',
         k8sClusterName: 'c-test',
-        role: 'writer' as const,
+        role: 'editor' as const,
       };
       
       mockSessionRepo.decodeSession.mockReturnValue(mockSessionData);
@@ -150,16 +150,16 @@ describe('AuthService', () => {
   describe('checkPermission', () => {
     it('should return true when user has root role', () => {
       expect(AuthService.checkPermission('root', 'reader')).toBe(true);
-      expect(AuthService.checkPermission('root', 'writer')).toBe(true);
+      expect(AuthService.checkPermission('root', 'editor')).toBe(true);
     });
 
-    it('should return true when user has writer role for writer requirement', () => {
-      expect(AuthService.checkPermission('writer', 'writer')).toBe(true);
-      expect(AuthService.checkPermission('writer', 'reader')).toBe(true);
+    it('should return true when user has editor role for editor requirement', () => {
+      expect(AuthService.checkPermission('editor', 'editor')).toBe(true);
+      expect(AuthService.checkPermission('editor', 'reader')).toBe(true);
     });
 
-    it('should return false when user has reader role for writer requirement', () => {
-      expect(AuthService.checkPermission('reader', 'writer')).toBe(false);
+    it('should return false when user has reader role for editor requirement', () => {
+      expect(AuthService.checkPermission('reader', 'editor')).toBe(false);
     });
 
     it('should return true when user has reader role for reader requirement', () => {

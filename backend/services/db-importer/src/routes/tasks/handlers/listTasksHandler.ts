@@ -29,7 +29,7 @@ export const listTasksHandler: RouteHandlerMethod<
     ) as JwtPayload;
     const hasAccess = await omnistrateRepository.checkIfUserHasAccessToInstance(userID, undefined, instanceId, [
       'root',
-      'writer',
+      'editor',
       'reader',
     ]);
     if (!hasAccess) {
