@@ -285,18 +285,3 @@ spec:
           annotations:
             summary: FalkorDB cluster flapping (instance {{ $labels.namespace }})
             description: "[cluster={{ $labels.cluster }}] Changes have been detected in FalkorDB replica connection. This can occur when replica nodes lose connection to the master and reconnect (a.k.a flapping).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
-
-        - alert: RedisClusterJoinStuck
-          # Fires when "Waiting for the cluster to join" is detected in logs (via recording rule)
-          # but no "CONFIG REWRITE executed with success" follows within the same 15m window.
-          # Recording rules are evaluated by vmalert-logs in vl-logs.rules.yml.
-          expr: redis_cluster_join_waiting > 0 unless on(pod, namespace) redis_cluster_join_success > 0
-          for: 10m
-          labels:
-            severity: warning
-            cluster: '{{ $labels.cluster }}'
-            environment: '{{ $labels.environment }}'
-          annotations:
-            summary: "Redis cluster join stuck in {{ $labels.pod }} ({{ $labels.namespace }})"
-            description: "[cluster={{ $labels.cluster }}] The pod '{{ $labels.pod }}' in namespace '{{ $labels.namespace }}' has been stuck in \"Waiting for the cluster to join\" for over 10 minutes. The CLUSTER MEET operation is not completing, which prevents the cluster from becoming operational. This typically requires manual investigation of network connectivity between nodes."
-            view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
