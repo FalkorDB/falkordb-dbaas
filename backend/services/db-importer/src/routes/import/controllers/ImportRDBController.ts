@@ -117,7 +117,7 @@ export class ImportRDBController {
 
     const hasAccess = await this.omnistrateRepository.checkIfUserHasAccessToInstance(requestorId, instance, undefined, [
       'root',
-      'writer',
+      'editor',
     ]);
 
     if (!hasAccess) {
@@ -237,7 +237,7 @@ export class ImportRDBController {
 
     const hasAccess = await this.omnistrateRepository.checkIfUserHasAccessToInstance(requestorId, instance, undefined, [
       'root',
-      'writer',
+      'editor',
     ]);
     if (!hasAccess) {
       throw ApiError.unauthorized('User does not have access to this instance', 'USER_NOT_AUTHORIZED');

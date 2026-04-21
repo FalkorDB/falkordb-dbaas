@@ -35,7 +35,7 @@ describe('SessionRepository', () => {
         cloudProvider: 'gcp',
         region: 'us-central1',
         k8sClusterName: 'c-test',
-        role: 'writer',
+        role: 'editor',
       };
 
       const token = repository.createSession(sessionData);
@@ -62,7 +62,7 @@ describe('SessionRepository', () => {
         cloudProvider: 'gcp',
         region: 'us-central1',
         k8sClusterName: 'c-test',
-        role: 'writer',
+        role: 'editor',
       };
 
       const token = repository.createSession(sessionData);
@@ -82,7 +82,7 @@ describe('SessionRepository', () => {
         cloudProvider: 'gcp',
         region: 'us-central1',
         k8sClusterName: 'c-test',
-        role: 'writer',
+        role: 'editor',
       };
 
       const token = shortExpiryRepo.createSession(sessionData);
@@ -111,7 +111,7 @@ describe('SessionRepository', () => {
         cloudProvider: 'gcp',
         region: 'us-central1',
         k8sClusterName: 'c-test',
-        role: 'writer',
+        role: 'editor',
       };
 
       const token = repository.createSession(sessionData);

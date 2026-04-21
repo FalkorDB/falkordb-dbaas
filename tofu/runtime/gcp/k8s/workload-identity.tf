@@ -19,7 +19,7 @@ resource "kubernetes_namespace" "api" {
   metadata {
     name = "api"
     labels = {
-      "argocd.argoproj.io/instance" = "observability-stack"
+      "argocd.argoproj.io/instance" = "api-services"
     }
   }
 }

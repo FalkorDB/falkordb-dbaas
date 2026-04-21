@@ -160,7 +160,7 @@ describe('createAuthenticateHook with GCP service account', () => {
       mockOmnistrateRepository.validate.mockResolvedValue(true);
       mockOmnistrateRepository.checkIfUserHasAccessToInstance.mockResolvedValue({
         hasAccess: true,
-        role: 'writer',
+        role: 'editor',
       });
       mockOmnistrateRepository.getInstance.mockResolvedValue({
         id: 'instance-123',
@@ -202,11 +202,11 @@ describe('createAuthenticateHook with GCP service account', () => {
         }),
       );
 
-      // Verify session was created with writer role (not root)
+      // Verify session was created with editor role (not root)
       expect((mockRequest as FastifyRequest).sessionData).toEqual(
         expect.objectContaining({
           userId: 'user-123',
-          role: 'writer',
+          role: 'editor',
         }),
       );
     });
