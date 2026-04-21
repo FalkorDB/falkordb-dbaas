@@ -118,16 +118,3 @@ spec:
               This requires immediate attention to prevent service disruption.
             view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
-        # Recording rule: counts "Waiting for the cluster to join" log lines per pod in the last 15m.
-        # Used by the RedisClusterJoinStuck PromQL alert in falkordb.rules.yml.
-        - record: redis_cluster_join_waiting
-          expr: |
-            ~"Waiting for the cluster to join" and namespace:~"instance-.*" and _time:15m |
-            stats by (pod, namespace, cluster, environment) count() as join_wait_count
-
-        # Recording rule: counts "CONFIG REWRITE executed with success" log lines per pod in the last 15m.
-        # Presence of this line indicates the cluster join completed successfully.
-        - record: redis_cluster_join_success
-          expr: |
-            ~"CONFIG REWRITE executed with success" and namespace:~"instance-.*" and _time:15m |
-            stats by (pod, namespace, cluster, environment) count() as success_count
