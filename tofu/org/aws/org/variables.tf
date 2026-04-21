@@ -17,15 +17,3 @@ variable "app_plane_account_email" {
   type        = string
   description = "Email of the application plane account"
 }
-
-variable "eks_oidc_issuer" {
-  type        = string
-  description = "OIDC issuer URL for the EKS cluster (without https://) used by Prowler IRSA"
-  default     = ""
-}
-
-variable "environment" {
-  type        = string
-  description = "Environment name (dev/prod)"
-  default     = "dev"
-}

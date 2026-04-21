@@ -36,15 +36,3 @@ output "argocd_dwd_sa_key" {
 output "customer_observability_ip" {
   value = module.customer_observability_ip.addresses[0]
 }
-
-output "wazuh_ip" {
-  value = module.wazuh_ip.addresses[0]
-}
-
-output "evidence_locker_bucket" {
-  value = google_storage_bucket.evidence_locker.name
-}
-
-output "prowler_uploader_email" {
-  value = google_service_account.prowler_uploader.email
-}
