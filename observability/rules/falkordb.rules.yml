@@ -28,6 +28,24 @@ spec:
             runbook_url: "https://runbooks.falkordb.cloud/alerts/falkordbdownrunbook/"
             view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
 
+        - alert: FalkorDBMultiplePodsDown
+          # Logic: More than one 'mature' pod in the same namespace reporting 0
+          expr: >
+            sum by (namespace, cluster, environment) (
+              (redis_up{container="service", pod!="node-f-0"} == 0)
+              and
+              (time() - first_over_time(timestamp(redis_up{container="service", pod!="node-f-0"})[30m:]) > 120)
+            ) > 1
+          for: 30s
+          labels:
+            severity: critical
+            cluster: '{{ $labels.cluster }}'
+            environment: '{{ $labels.environment }}'
+          annotations:
+            summary: "MULTIPLE FalkorDB pods down in {{ $labels.namespace }}"
+            description: "Critical failure: {{ $value }} pods are currently down in namespace {{ $labels.namespace }} after being established for >2m."
+            runbook_url: "https://runbooks.falkordb.cloud/alerts/falkordbdownrunbook/"
+
         - alert: FalkorDBDownLoop
           expr: changes(redis_up{container="service"}[1m]) >= 2 and redis_up{container="service"} == 0
           for: 0m
