@@ -31,13 +31,12 @@ spec:
 
         - alert: FalkorDBMultiplePodsDown
           # Logic: More than one 'mature' pod in the same namespace reporting 0
-          # Ignore free-tier pod node-f-0 to avoid tenant-wide paging noise from the shared free tier.
           # Pod maturity is computed as: now - first_seen_timestamp_in_last_30m, and must be >120s.
           expr: >
-            sum by (namespace, cluster, environment) (
-              (redis_up{container="service", pod!="node-f-0"} == 0)
+            count by (namespace, cluster, environment) (
+              (redis_up{container="service"} == 0)
               and
-              (time() - first_over_time(timestamp(redis_up{container="service", pod!="node-f-0"})[30m:]) > 120)
+              (time() - first_over_time(timestamp(redis_up{container="service"})[30m:]) > 120)
             ) > 1
           for: 30s
           labels:

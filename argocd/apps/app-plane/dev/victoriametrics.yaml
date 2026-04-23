@@ -85,6 +85,12 @@ spec:
                     target_match_re:
                       alertname: (FalkorDBDown|FalkorDBMultiplePodsDown|FalkorDBDownLoop|SustainedErrorLogInK8s)
                     equal: ["namespace", "cluster"]
+                  # When namespace-wide multi-pod outage is active, suppress per-pod FalkorDBDown alerts
+                  - source_match:
+                      alertname: FalkorDBMultiplePodsDown
+                    target_match:
+                      alertname: FalkorDBDown
+                    equal: ["namespace", "cluster", "environment"]
                 route:
                   group_by: ["alertname", "namespace", "pod"]
                   group_wait: 30s
