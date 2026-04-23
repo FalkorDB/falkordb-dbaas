@@ -7,3 +7,4 @@ resources:
   - rbac.yaml
   - falco-config.yaml
   - pdb.yaml
+  - priorityclass.yaml

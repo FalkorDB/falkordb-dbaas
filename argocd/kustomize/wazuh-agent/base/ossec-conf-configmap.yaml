@@ -83,14 +83,42 @@ data:
         <skip_nfs>yes</skip_nfs>
       </sca>
 
-      <!-- File integrity monitoring -->
+      <!-- File integrity monitoring — SOC 2 CC6.1 -->
       <syscheck>
         <disabled>no</disabled>
         <frequency>900</frequency>
         <scan_on_start>yes</scan_on_start>
 
-        <directories check_all=\"yes\" realtime=\"yes\">/host/etc</directories>
-        <directories>/usr/bin,/usr/sbin</directories>
+        <!-- Host OS critical configs (realtime inotify) -->
+        <directories check_all="yes" realtime="yes">/host/etc</directories>
+        <directories check_all="yes" realtime="yes">/usr/bin,/usr/sbin</directories>
+
+        <!-- Kubernetes PKI and configuration -->
+        <directories check_all="yes" realtime="yes">/host/etc/kubernetes</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/cni</directories>
+
+        <!-- Container runtime configuration -->
+        <directories check_all="yes" realtime="yes">/host/etc/containerd</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/docker</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/crictl.yaml</directories>
+
+        <!-- Authentication and authorisation -->
+        <directories check_all="yes" realtime="yes">/host/etc/pam.d</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/sudoers.d</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/security</directories>
+
+        <!-- Scheduled tasks (persistence detection) -->
+        <directories check_all="yes" realtime="yes">/host/etc/cron.d</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/cron.daily</directories>
+        <directories check_all="yes">/host/etc/crontab</directories>
+
+        <!-- Systemd units (persistence / service tampering) -->
+        <directories check_all="yes">/host/etc/systemd/system</directories>
+
+        <!-- Cloud provider agent configs -->
+        <directories check_all="yes">/host/etc/google_cloud_ops</directories>
+        <directories check_all="yes">/host/etc/amazon</directories>
+        <directories check_all="yes">/host/etc/waagent.conf</directories>
 
         <ignore>/host/etc/mtab</ignore>
         <ignore>/host/etc/hosts.deny</ignore>
@@ -104,9 +132,12 @@ data:
         <ignore>/host/etc/cups/certs</ignore>
         <ignore>/host/etc/dumpdates</ignore>
         <ignore>/host/etc/svc/volatile</ignore>
+        <ignore>/host/etc/resolv.conf</ignore>
         <ignore type="sregex">.log$|.swp$</ignore>
 
         <nodiff>/host/etc/ssl/private.key</nodiff>
+        <nodiff>/host/etc/kubernetes/pki/*.key</nodiff>
+        <nodiff>/host/etc/shadow</nodiff>
 
         <skip_nfs>yes</skip_nfs>
         <skip_dev>yes</skip_dev>

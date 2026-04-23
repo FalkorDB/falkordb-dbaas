@@ -396,3 +396,90 @@ data:
       </rule>
 
     </group>
+
+    <!-- ================================================================
+         Cross-Tool SIEM Correlation Rules (109000-109099)
+         Composite rules that fire when multiple security tools detect
+         related events within a time window, indicating higher-confidence
+         threats than any single tool alone.
+         ================================================================ -->
+    <group name="siem_correlation,soc2">
+
+      <!-- ── Falco runtime + Grype CVE on same cluster ──────────
+           A container with known critical CVEs is also triggering
+           runtime threat alerts → possible active exploitation. -->
+      <rule id="109000" level="14" frequency="2" timeframe="3600">
+        <if_matched_group>falco_runtime</if_matched_group>
+        <same_field>Cluster</same_field>
+        <description>CORRELATION: Falco runtime threat + active CVEs on same cluster $(Cluster) — possible exploitation in progress</description>
+        <group>siem_correlation,soc2_critical,active_exploitation</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── Grype critical CVE + Falco container escape ────────
+           Critical CVE found and a container escape attempt detected
+           in the same timeframe → high-confidence attack chain. -->
+      <rule id="109001" level="15" frequency="2" timeframe="1800">
+        <if_matched_group>soc2_critical</if_matched_group>
+        <if_matched_group>container_escape</if_matched_group>
+        <description>CORRELATION: Container escape + critical finding on same cluster — active attack chain</description>
+        <group>siem_correlation,soc2_critical,attack_chain</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── TruffleHog secret leak + Prowler auth failure ──────
+           A leaked secret was found and cloud authentication config
+           is failing → credential may be in active misuse. -->
+      <rule id="109002" level="14" frequency="2" timeframe="7200">
+        <if_matched_group>secret_leak</if_matched_group>
+        <same_field>Cluster</same_field>
+        <description>CORRELATION: Secret leak + auth/compliance failure on $(Cluster) — credential exposure risk</description>
+        <group>siem_correlation,soc2_critical,credential_exposure</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── FIM change + privilege escalation ──────────────────
+           A critical system file was modified and a privilege
+           escalation was detected within 30 minutes → tampering. -->
+      <rule id="109003" level="14" frequency="2" timeframe="1800">
+        <if_matched_group>fim_critical</if_matched_group>
+        <same_agent>yes</same_agent>
+        <description>CORRELATION: Critical file modification + privilege escalation on same host — possible system tampering</description>
+        <group>siem_correlation,soc2_critical,system_tampering</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── kube-bench CIS FAIL + KubeScape MITRE finding ─────
+           Both CIS benchmark and MITRE ATT&CK frameworks flag the
+           same cluster → systemic misconfiguration. -->
+      <rule id="109004" level="13" frequency="3" timeframe="86400">
+        <if_matched_group>cis_fail</if_matched_group>
+        <same_field>Cluster</same_field>
+        <description>CORRELATION: CIS benchmark failures + MITRE ATT&CK findings on $(Cluster) — systemic misconfiguration</description>
+        <group>siem_correlation,soc2_fail,systemic_misconfig</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── Multi-tool critical alert storm ────────────────────
+           3+ critical alerts from different tools within 1 hour
+           on the same cluster → coordinated attack or major incident. -->
+      <rule id="109005" level="15" frequency="3" timeframe="3600">
+        <if_matched_group>soc2_critical</if_matched_group>
+        <same_field>Cluster</same_field>
+        <description>CRITICAL CORRELATION: 3+ critical alerts across tools on $(Cluster) — potential coordinated attack</description>
+        <group>siem_correlation,soc2_critical,coordinated_attack</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── Crypto mining + reverse shell on same cluster ──────
+           Both crypto mining and reverse shell detected → compromised
+           workload being used for profit + C2 access. -->
+      <rule id="109006" level="15" frequency="2" timeframe="3600">
+        <if_matched_group>crypto_mining</if_matched_group>
+        <same_field>Cluster</same_field>
+        <description>CORRELATION: Crypto mining + reverse shell on $(Cluster) — fully compromised workload</description>
+        <group>siem_correlation,soc2_critical,full_compromise</group>
+        <options>alert_by_email</options>
+      </rule>
+
+    </group>

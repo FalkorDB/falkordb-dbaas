@@ -8,3 +8,4 @@ resources:
   - daemonset.yaml
   - ossec-conf-configmap.yaml
   - pdb.yaml
+  - priorityclass.yaml

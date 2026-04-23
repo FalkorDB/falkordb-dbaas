@@ -26,6 +26,7 @@ spec:
         app: wazuh-agent
     spec:
       serviceAccountName: wazuh-agent
+      priorityClassName: security-monitoring
       hostPID: true
       hostNetwork: true
       # Required: hostNetwork uses host DNS by default, which can't resolve
@@ -39,14 +40,22 @@ spec:
                   - key: node.kubernetes.io/instance-type
                     operator: NotIn
                     values:
+                      # GCP burstable / shared-core
                       - e2-small
                       - e2-medium
+                      # AWS burstable
                       - t2.small
                       - t2.medium
                       - t3.small
                       - t3a.small
                       - t3.medium
                       - t3a.medium
+                      # Azure burstable
+                      - Standard_B1s
+                      - Standard_B1ms
+                      - Standard_B2s
+                      - Standard_B2als_v2
+                      - Standard_B2as_v2
       tolerations:
         - operator: Exists
           effect: NoSchedule
