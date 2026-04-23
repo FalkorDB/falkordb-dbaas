@@ -13,8 +13,8 @@ spec:
   schedule: "0 3 * * 0"
   timeZone: "Etc/UTC"
   concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 4
-  failedJobsHistoryLimit: 2
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
   jobTemplate:
     spec:
       backoffLimit: 1
