@@ -309,8 +309,4 @@ spec:
             cluster: '{{ $labels.cluster }}'
           annotations:
             summary: FalkorDB cluster flapping (instance {{ $labels.namespace }})
-<<<<<<< HEAD
             description: "[cluster={{ $labels.cluster }}] Changes have been detected in FalkorDB replica connection. This can occur when replica nodes lose connection to the master and reconnect (a.k.a flapping).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
-=======
-            description: "[cluster={{ $labels.cluster }}] Changes have been detected in FalkorDB replica connection. This can occur when replica nodes lose connection to the master and reconnect (a.k.a flapping).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"
->>>>>>> 97bb4c40f61bf0da05782b4d7723986dd5479526
