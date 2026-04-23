@@ -1051,7 +1051,7 @@ class GoogleChatNotifier:
     ):
         """Send error notification to Google Chat"""
         payload = {
-            "text": "❌ Redis Crash Handler Failed @Roi Lipman @Avi Avni",
+            "text": "❌ Redis Crash Handler Failed <users/roi.lipman@falkordb.com> <users/avi.avni@falkordb.com>",
             "cards": [{
                 "header": {
                     "title": "❌ Redis Crash Handler Failed",
@@ -1113,7 +1113,7 @@ class GoogleChatNotifier:
             subtitle = f"Customer: {customer_email}"
         
         payload = {
-            "text": f"{crash_type} <users/41mghml0hxc75e> <users/2xcytpi2tpey8y>",
+            "text": f"{crash_type} <users/roi.lipman@falkordb.com> <users/avi.avni@falkordb.com>",
             "cards": [{
                 "header": {
                     "title": crash_type,
@@ -1199,7 +1199,7 @@ class GoogleChatNotifier:
         crash notifications.
         """
         payload = {
-            "text": "🔁 Recurring Redis Crash @Roi Lipman @Avi Avni",
+            "text": "🔁 Recurring Redis Crash <users/roi.lipman@falkordb.com> <users/avi.avni@falkordb.com>",
             "cards": [{
                 "header": {
                     "title": "🔁 Recurring Redis Crash",

@@ -15,6 +15,7 @@ import os
 import re
 import json
 import subprocess
+import tarfile
 import tempfile
 import base64
 from typing import Optional
@@ -22,6 +23,7 @@ from typing import Optional
 import requests
 from pydantic import BaseModel, Field
 from copilot import define_tool
+from google.cloud import storage as gcs_storage
 
 
 # ---------------------------------------------------------------------------
@@ -43,6 +45,53 @@ PRIVATE_REPO = os.environ.get("ISSUE_REPO", "FalkorDB/private")
 # Shared mutable state for local reproduction
 _local_container_id: Optional[str] = None
 _work_dir: Optional[str] = None
+
+
+def _download_gcs_or_url(url: str, dest: str) -> Optional[str]:
+    """Download a file from a gs:// path (using ADC) or HTTPS URL.
+
+    Returns an error string on failure, or None on success.
+    """
+    try:
+        if url.startswith("gs://"):
+            # Parse gs://bucket/object/path
+            without_scheme = url[len("gs://"):]
+            bucket_name, _, blob_name = without_scheme.partition("/")
+            client = gcs_storage.Client()
+            bucket = client.bucket(bucket_name)
+            bucket.blob(blob_name).download_to_filename(dest)
+        else:
+            with requests.get(url, timeout=300, stream=True) as resp:
+                resp.raise_for_status()
+                with open(dest, "wb") as f:
+                    for chunk in resp.iter_content(chunk_size=8 * 1024 * 1024):
+                        f.write(chunk)
+    except Exception as exc:
+        return f"ERROR: Failed to download {url}: {exc}"
+    return None
+
+
+def _safe_extract_tar(tar_path: str, dest_dir: str) -> Optional[str]:
+    """Safely extract a tar archive, rejecting path-traversal attempts.
+
+    Returns an error string if any member is unsafe, or None on success.
+    """
+    real_dest = os.path.realpath(dest_dir)
+    try:
+        with tarfile.open(tar_path, "r:gz") as tf:
+            for member in tf.getmembers():
+                member_path = os.path.realpath(os.path.join(dest_dir, member.name))
+                if not member_path.startswith(real_dest + os.sep) and member_path != real_dest:
+                    return f"ERROR: Tar member escapes target directory: {member.name}"
+                if member.issym() or member.islnk():
+                    link_target = os.path.realpath(os.path.join(dest_dir, member.linkname))
+                    if not link_target.startswith(real_dest + os.sep) and link_target != real_dest:
+                        return f"ERROR: Tar symlink escapes target directory: {member.name} -> {member.linkname}"
+            # All members validated — extract
+            tf.extractall(path=dest_dir)
+    except Exception as exc:
+        return f"ERROR: Failed to extract {tar_path}: {exc}"
+    return None
 
 
 def _github_get(url: str, params: dict | None = None, accept: str | None = None) -> requests.Response:
@@ -210,6 +259,109 @@ async def fetch_previous_crashes(params: FetchPreviousCrashesParams) -> str:
         results.append(result)
 
     return "\n\n" + "=" * 60 + "\n\n".join(results)
+
+
+# ---------------------------------------------------------------------------
+# Tool: search_crashes_by_signature
+# ---------------------------------------------------------------------------
+
+class SearchCrashesBySignatureParams(BaseModel):
+    function_name: str = Field(description="Primary crashing function name (e.g. 'AlgebraicExpression_Dest')")
+    max_results: int = Field(default=20, description="Max issues to return")
+
+
+@define_tool(
+    name="search_crashes_by_signature",
+    description=(
+        "Search ALL crash issues across every instance for a specific crashing "
+        "function or signature. Unlike fetch_previous_crashes (which is scoped to "
+        "one namespace), this searches globally to determine if the crash is "
+        "version-related or instance-specific. Returns issues with their FalkorDB "
+        "version, namespace, state, and fix status."
+    ),
+    skip_permission=True,
+)
+async def search_crashes_by_signature(params: SearchCrashesBySignatureParams) -> str:
+    import re as _re
+
+    resp = _github_get(
+        f"{GITHUB_API}/search/issues",
+        params={
+            "q": f"{params.function_name} repo:{PRIVATE_REPO} label:crash",
+            "per_page": params.max_results,
+            "sort": "created",
+            "order": "desc",
+        },
+    )
+    if resp.status_code != 200:
+        return f"ERROR: GitHub search returned {resp.status_code}: {resp.text[:500]}"
+
+    data = resp.json()
+    items = data.get("items", [])
+    if not items:
+        return f"No crash issues found matching '{params.function_name}' across all instances"
+
+    # Extract version and namespace from issue labels and body
+    version_label_pattern = _re.compile(r"^version:v?(.+)$")
+    namespace_pattern = _re.compile(r"(?:Namespace|namespace|Instance)[:\s]*(instance-[a-z0-9]+)")
+    # Fallback patterns for version in body (older issues without label)
+    version_body_patterns = [
+        _re.compile(r"(?:FalkorDB|falkordb)[- _]?[Vv]ersion[:\s*]*v?([\d]+\.[\d]+\.[\d]+)"),
+        _re.compile(r"falkordb/falkordb:v?([\d]+\.[\d]+\.[\d]+)"),
+    ]
+
+    version_map: dict[str, list[str]] = {}  # version -> [issue refs]
+    results = []
+    for item in items:
+        body = item.get("body", "") or ""
+        labels = [l["name"] for l in item.get("labels", [])]
+        state = item["state"]
+
+        # Check if PR was merged
+        if "pull_request" in item and state == "closed":
+            pr_data = item["pull_request"]
+            if pr_data.get("merged_at"):
+                state = "merged"
+
+        # Extract version — prefer label (fast), fall back to body text
+        version = "unknown"
+        for label in labels:
+            lbl_match = version_label_pattern.match(label)
+            if lbl_match:
+                version = lbl_match.group(1)
+                break
+        if version == "unknown":
+            for pattern in version_body_patterns:
+                ver_match = pattern.search(body)
+                if ver_match:
+                    version = ver_match.group(1)
+                    break
+
+        # Extract namespace
+        ns_match = namespace_pattern.search(body)
+        namespace = ns_match.group(1) if ns_match else "unknown"
+
+        # Track version correlation
+        ref = f"#{item['number']}"
+        version_map.setdefault(version, []).append(ref)
+
+        results.append(
+            f"- **#{item['number']}** [{state}] {item['title']}\n"
+            f"  Namespace: {namespace} | Version: {version} | Created: {item['created_at']}\n"
+            f"  Labels: {', '.join(labels) or 'none'}\n"
+            f"  URL: {item['html_url']}\n"
+            f"  {body[:400]}"
+        )
+
+    # Build version correlation summary
+    summary = f"### Version Correlation for `{params.function_name}`\n"
+    summary += f"Total matching crashes: {data['total_count']} (showing {len(items)})\n\n"
+    summary += "| Version | Crash Count | Issues |\n|---------|-------------|--------|\n"
+    for ver in sorted(version_map.keys()):
+        issues = ", ".join(version_map[ver])
+        summary += f"| {ver} | {len(version_map[ver])} | {issues} |\n"
+
+    return summary + "\n\n" + "\n\n".join(results)
 
 
 # ---------------------------------------------------------------------------
@@ -514,9 +666,10 @@ class RunFalkorDBLocalParams(BaseModel):
     name="run_falkordb_local",
     description=(
         "Start a local FalkorDB Docker container, optionally loading an RDB dump "
-        "and/or AOF directory from GCS paths (gs://...). Downloads use gsutil with "
-        "Application Default Credentials (IAM-authenticated). Returns the container ID "
-        "and connection details. Use this to reproduce crashes locally."
+        "and/or AOF directory from GCS paths (gs://...). Downloads use the "
+        "google-cloud-storage Python SDK with Application Default Credentials "
+        "(IAM-authenticated). Returns the container ID and connection details. "
+        "Use this to reproduce crashes locally."
     ),
 )
 async def run_falkordb_local(params: RunFalkorDBLocalParams) -> str:
@@ -533,39 +686,19 @@ async def run_falkordb_local(params: RunFalkorDBLocalParams) -> str:
     # Download RDB if provided
     if params.rdb_url:
         rdb_path = os.path.join(data_dir, "dump.rdb")
-        if params.rdb_url.startswith("gs://"):
-            result = subprocess.run(
-                ["gsutil", "cp", params.rdb_url, rdb_path],
-                capture_output=True, text=True,
-            )
-            if result.returncode != 0:
-                return f"ERROR: gsutil failed to download RDB: {result.stderr}"
-        else:
-            # Fallback: treat as a plain HTTPS URL (legacy signed URLs)
-            resp = requests.get(params.rdb_url, timeout=300)
-            if resp.status_code != 200:
-                return f"ERROR: Failed to download RDB (HTTP {resp.status_code})"
-            with open(rdb_path, "wb") as f:
-                f.write(resp.content)
+        err = _download_gcs_or_url(params.rdb_url, rdb_path)
+        if err:
+            return err
 
     # Download and extract AOF if provided
     if params.aof_url:
         aof_tar = os.path.join(_work_dir, "appendonlydir.tar.gz")
-        if params.aof_url.startswith("gs://"):
-            result = subprocess.run(
-                ["gsutil", "cp", params.aof_url, aof_tar],
-                capture_output=True, text=True,
-            )
-            if result.returncode != 0:
-                return f"ERROR: gsutil failed to download AOF: {result.stderr}"
-        else:
-            # Fallback: treat as a plain HTTPS URL (legacy signed URLs)
-            resp = requests.get(params.aof_url, timeout=300)
-            if resp.status_code != 200:
-                return f"ERROR: Failed to download AOF (HTTP {resp.status_code})"
-            with open(aof_tar, "wb") as f:
-                f.write(resp.content)
-        subprocess.run(["tar", "xzf", aof_tar, "-C", data_dir], check=True)
+        err = _download_gcs_or_url(params.aof_url, aof_tar)
+        if err:
+            return err
+        err = _safe_extract_tar(aof_tar, data_dir)
+        if err:
+            return err
 
     image = f"falkordb/falkordb:{params.version}"
     result = subprocess.run(
@@ -636,6 +769,7 @@ async def execute_query(params: ExecuteQueryParams) -> str:
 ALL_TOOLS = [
     fetch_crash_logs,
     fetch_previous_crashes,
+    search_crashes_by_signature,
     search_falkordb_issues,
     read_falkordb_source,
     search_falkordb_code,

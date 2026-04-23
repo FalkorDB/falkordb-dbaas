@@ -105,16 +105,6 @@ module "gke" {
       initial_node_count = 0
       max_pods_per_node  = 25
     },
-    {
-      name               = "security"
-      machine_type       = "e2-standard-4"
-      disk_size_gb       = 50
-      min_count          = 0
-      max_count          = 10
-      image_type         = "COS_CONTAINERD"
-      initial_node_count = 0
-      max_pods_per_node  = 25
-    },
   ]
   node_pools_resource_labels = {
     "default-pool" = {
@@ -127,9 +117,6 @@ module "gke" {
       "goog-gke-node-pool-provisioning-model" = "on-demand"
     }
     "backend" = {
-      "goog-gke-node-pool-provisioning-model" = "on-demand"
-    }
-    "security" = {
       "goog-gke-node-pool-provisioning-model" = "on-demand"
     }
   }
@@ -213,7 +200,6 @@ resource "google_gke_backup_backup_plan" "backup_plan" {
         "customer-observability",
         "crossplane-system",
         "sealed-secrets",
-        "security",
       ]
     }
   }

@@ -104,10 +104,10 @@ patches:
           targetPort: ldap
           protocol: TCP
 
-patches:
-  - patch: |-
-      apiVersion: monitoring.coreos.com/v1
-      kind: ServiceMonitor
-      metadata:
-        name: ldap-auth-metrics
-      $patch: delete
+patchesStrategicMerge:
+  - |-
+    apiVersion: monitoring.coreos.com/v1
+    kind: ServiceMonitor
+    metadata:
+      name: ldap-auth-metrics
+    $patch: delete
