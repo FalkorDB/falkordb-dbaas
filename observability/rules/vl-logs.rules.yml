@@ -101,10 +101,11 @@ spec:
           # During cluster creation, redis-cli prints dots while waiting for nodes to join.
           # A normal join completes in seconds. If lines consisting entirely of dots appear
           # and persist, the join is stuck at "Waiting for the cluster to join".
-          # The anchored regex ^\.{10,}$ avoids matching unrelated log lines that
-          # happen to contain dots embedded in other text.
+          # The anchored regex ^\\.{10,}$ avoids matching unrelated log lines that
+          # happen to contain dots embedded in other text. The double backslash is
+          # needed because the LogsQL double-quoted string consumes one level of escaping.
           expr: |
-            ~"^\.{10,}$" and namespace:~"instance-.*" and _time:5m |
+            ~"^\\.{10,}$" and namespace:~"instance-.*" and _time:5m |
             stats by (pod, namespace, cluster, environment) count() as dot_count |
             filter dot_count :> 0
           for: 2m
