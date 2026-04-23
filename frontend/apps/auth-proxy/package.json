@@ -20,7 +20,7 @@
     "@repo/ui": "workspace:*",
     "@tailwindcss/postcss": "^4.2.2",
     "@tanstack/react-query": "^5.99.0",
-    "axios": "^1.15.0",
+    "axios": "^1.15.2",
     "axios-curlirize": "^2.0.0",
     "formik": "^2.4.9",
     "js-cookie": "^3.0.5",
@@ -36,7 +36,7 @@
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.2",
     "tailwindcss-animate": "^1.0.7",
-    "uuid": "^11.1.0",
+    "uuid": "^14.0.0",
     "yup": "^1.7.1"
   },
   "devDependencies": {
