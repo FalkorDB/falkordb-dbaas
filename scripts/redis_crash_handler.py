@@ -1051,7 +1051,7 @@ class GoogleChatNotifier:
     ):
         """Send error notification to Google Chat"""
         payload = {
-            "text": "❌ Redis Crash Handler Failed <users/1> <users/2>",
+            "text": "❌ Redis Crash Handler Failed <users/116170488112818253188> <users/115942454099354054771>",
             "cards": [{
                 "header": {
                     "title": "❌ Redis Crash Handler Failed",
@@ -1113,7 +1113,7 @@ class GoogleChatNotifier:
             subtitle = f"Customer: {customer_email}"
         
         payload = {
-            "text": f"{crash_type} <users/1> <users/2>",
+            "text": f"{crash_type} <users/116170488112818253188> <users/115942454099354054771>",
             "cards": [{
                 "header": {
                     "title": crash_type,
@@ -1199,7 +1199,7 @@ class GoogleChatNotifier:
         crash notifications.
         """
         payload = {
-            "text": "🔁 Recurring Redis Crash <users/1> <users/2>",
+            "text": "🔁 Recurring Redis Crash <users/116170488112818253188> <users/115942454099354054771>",
             "cards": [{
                 "header": {
                     "title": "🔁 Recurring Redis Crash",

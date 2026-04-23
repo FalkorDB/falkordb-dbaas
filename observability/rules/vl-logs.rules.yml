@@ -102,8 +102,10 @@ spec:
           # A normal join completes in seconds. If lines with 10+ consecutive dots appear
           # and persist, the join is stuck at "Waiting for the cluster to join".
           # No anchors (^/$) because the log message may include a container runtime prefix.
+          # _time:1m keeps the window short so a single dot-line from a fast successful
+          # join cannot persist across the 2m `for` clause and cause a false positive.
           expr: |
-            ~"\\.{10,}" and namespace:~"instance-.*" and _time:5m |
+            ~"\\.{10,}" and namespace:~"instance-.*" and _time:1m |
             stats by (pod, namespace, cluster, environment) count() as dot_count |
             filter dot_count :> 0
           for: 2m
