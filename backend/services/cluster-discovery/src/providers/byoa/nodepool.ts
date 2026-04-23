@@ -1,9 +1,10 @@
 import { Cluster } from '../../types';
 import logger from '../../logger';
-import { EKSClient, DescribeClusterCommand, CreateNodegroupCommand } from '@aws-sdk/client-eks';
+import { EKSClient, DescribeClusterCommand, CreateNodegroupCommand, DescribeNodegroupCommand, UpdateNodegroupConfigCommand } from '@aws-sdk/client-eks';
 import { ClusterManagerClient } from '@google-cloud/container';
 import { ContainerServiceClient } from '@azure/arm-containerservice';
 import { getAWSBYOACredentials, getAzureBYOACredentials, getGCPBYOACredentials } from './credentials';
+import { GCP, AWS, AZURE } from '../../constants';
 
 export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Promise<void> {
   try {
@@ -53,10 +54,39 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
         throw error;
       });
 
-    const exists = nodePools.nodePools?.some((np) => np.name === 'observability');
+    const existingPool = nodePools.nodePools?.find((np) => np.name === 'observability');
 
-    if (exists) {
-      logger.info({ cluster: cluster.name }, 'Observability node pool already exists.');
+    if (existingPool) {
+      const parent = `projects/${cluster.gcpAccountID}/locations/${cluster.region}/clusters/${cluster.name}`;
+      const poolName = `${parent}/nodePools/observability`;
+      let updated = false;
+
+      if (existingPool.config?.machineType !== GCP.DEFAULT_MACHINE_TYPE) {
+        logger.info(
+          { cluster: cluster.name, current: existingPool.config?.machineType, desired: GCP.DEFAULT_MACHINE_TYPE },
+          'Updating BYOA GCP observability node pool machine type',
+        );
+        await client.updateNodePool({ name: poolName, machineType: GCP.DEFAULT_MACHINE_TYPE });
+        updated = true;
+      }
+
+      if (
+        !existingPool.autoscaling?.enabled ||
+        existingPool.autoscaling?.maxNodeCount !== GCP.DEFAULT_MAX_NODES ||
+        existingPool.autoscaling?.minNodeCount !== GCP.DEFAULT_MIN_NODES
+      ) {
+        await client.setNodePoolAutoscaling({
+          name: poolName,
+          autoscaling: { enabled: true, maxNodeCount: GCP.DEFAULT_MAX_NODES, minNodeCount: GCP.DEFAULT_MIN_NODES },
+        });
+        updated = true;
+      }
+
+      if (updated) {
+        logger.info({ cluster: cluster.name }, 'Observability node pool updated for BYOA GCP cluster.');
+      } else {
+        logger.info({ cluster: cluster.name }, 'Observability node pool already up to date for BYOA GCP cluster.');
+      }
       return;
     }
 
@@ -66,17 +96,17 @@ export async function createObservabilityNodePoolGCPBYOA(cluster: Cluster): Prom
         name: 'observability',
         initialNodeCount: 1,
         config: {
-          machineType: 'e2-standard-2',
-          diskSizeGb: 50,
+          machineType: GCP.DEFAULT_MACHINE_TYPE,
+          diskSizeGb: GCP.DEFAULT_DISK_SIZE_GB,
           labels: { node_pool: 'observability' },
         },
         autoscaling: {
           enabled: true,
-          maxNodeCount: 10,
-          minNodeCount: 1,
+          maxNodeCount: GCP.DEFAULT_MAX_NODES,
+          minNodeCount: GCP.DEFAULT_MIN_NODES,
         },
         maxPodsConstraint: {
-          maxPodsPerNode: 25,
+          maxPodsPerNode: GCP.DEFAULT_MAX_PODS_PER_NODE,
         },
       },
     });
@@ -124,7 +154,55 @@ export async function createObservabilityNodePoolAWSBYOA(cluster: Cluster): Prom
     const nodePools = awsCluster.computeConfig?.nodePools || [];
 
     if (nodePools.includes('observability')) {
-      logger.info({ cluster: cluster.name }, 'Observability node pool already exists.');
+      // Node pool exists - check if scaling config needs updating
+      try {
+        const { nodegroup } = await eksClient.send(
+          new DescribeNodegroupCommand({
+            clusterName: cluster.name,
+            nodegroupName: 'observability',
+          })
+        );
+
+        let updated = false;
+
+        const scalingNeedsUpdate =
+          nodegroup?.scalingConfig?.minSize !== AWS.DEFAULT_MIN_NODES ||
+          nodegroup?.scalingConfig?.maxSize !== AWS.DEFAULT_MAX_NODES;
+
+        if (scalingNeedsUpdate) {
+          await eksClient.send(
+            new UpdateNodegroupConfigCommand({
+              clusterName: cluster.name,
+              nodegroupName: 'observability',
+              scalingConfig: {
+                minSize: AWS.DEFAULT_MIN_NODES,
+                maxSize: AWS.DEFAULT_MAX_NODES,
+                desiredSize: Math.max(nodegroup?.scalingConfig?.desiredSize ?? 1, AWS.DEFAULT_MIN_NODES),
+              },
+              labels: {
+                addOrUpdateLabels: { node_pool: 'observability' },
+              },
+            })
+          );
+          updated = true;
+        }
+
+        const currentInstanceTypes = nodegroup?.instanceTypes || [];
+        if (!currentInstanceTypes.includes(AWS.DEFAULT_INSTANCE_TYPE)) {
+          logger.warn(
+            { cluster: cluster.name, current: currentInstanceTypes, desired: AWS.DEFAULT_INSTANCE_TYPE },
+            'BYOA AWS observability node pool instance type mismatch - requires nodegroup recreation to change',
+          );
+        }
+
+        if (updated) {
+          logger.info({ cluster: cluster.name }, 'Observability node pool updated for BYOA AWS cluster.');
+        } else {
+          logger.info({ cluster: cluster.name }, 'Observability node pool already up to date for BYOA AWS cluster.');
+        }
+      } catch (describeError) {
+        logger.warn({ cluster: cluster.name, error: describeError }, 'Could not describe/update existing BYOA AWS observability nodegroup');
+      }
       return;
     }
 
@@ -138,11 +216,11 @@ export async function createObservabilityNodePoolAWSBYOA(cluster: Cluster): Prom
         nodegroupName: 'observability',
         subnets: subnetIds,
         nodeRole: nodeRole,
-        instanceTypes: ['m5.large'],
-        diskSize: 50,
+        instanceTypes: [AWS.DEFAULT_INSTANCE_TYPE],
+        diskSize: AWS.DEFAULT_DISK_SIZE_GB,
         scalingConfig: {
-          minSize: 1,
-          maxSize: 10,
+          minSize: AWS.DEFAULT_MIN_NODES,
+          maxSize: AWS.DEFAULT_MAX_NODES,
           desiredSize: 1,
         },
         labels: {
@@ -167,8 +245,8 @@ export async function createObservabilityNodePoolAWSBYOA(cluster: Cluster): Prom
 }
 
 // AKS agent pool names must be 1-12 chars, lowercase alphanumeric.
-const OBSERVABILITY_POOL_NAME = 'obsrv';
-const SECURITY_POOL_NAME = 'security';
+const OBSERVABILITY_POOL_NAME = AZURE.OBSERVABILITY_POOL_NAME;
+const SECURITY_POOL_NAME = AZURE.SECURITY_POOL_NAME;
 
 export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Promise<void> {
   try {
@@ -194,10 +272,9 @@ export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
     const client = new ContainerServiceClient(credential, cluster.azureSubscriptionId);
 
     // Check if the observability agent pool already exists
+    let existingPool = null;
     try {
-      await client.agentPools.get(cluster.azureResourceGroupName, cluster.name, OBSERVABILITY_POOL_NAME);
-      logger.info({ cluster: cluster.name }, 'Observability node pool already exists.');
-      return;
+      existingPool = await client.agentPools.get(cluster.azureResourceGroupName, cluster.name, OBSERVABILITY_POOL_NAME);
     } catch (error: any) {
       if (error.statusCode !== 404 && error.code !== 'ResourceNotFound' && error.code !== 'AgentPoolNotFound') {
         throw error;
@@ -205,13 +282,40 @@ export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
       // 404 / ResourceNotFound means the pool does not exist – proceed to create it
     }
 
+    if (existingPool) {
+      const needsScalingUpdate =
+        existingPool.minCount !== AZURE.DEFAULT_MIN_NODES ||
+        existingPool.maxCount !== AZURE.DEFAULT_MAX_NODES;
+
+      if (existingPool.vmSize !== AZURE.DEFAULT_MACHINE_TYPE) {
+        logger.warn(
+          { cluster: cluster.name, current: existingPool.vmSize, desired: AZURE.DEFAULT_MACHINE_TYPE },
+          'BYOA Azure observability node pool VM size mismatch - requires pool recreation to change',
+        );
+      }
+
+      if (needsScalingUpdate) {
+        await client.agentPools.beginCreateOrUpdateAndWait(cluster.azureResourceGroupName, cluster.name, OBSERVABILITY_POOL_NAME, {
+          ...existingPool,
+          enableAutoScaling: true,
+          minCount: AZURE.DEFAULT_MIN_NODES,
+          maxCount: AZURE.DEFAULT_MAX_NODES,
+          nodeLabels: { node_pool: 'observability' },
+        });
+        logger.info({ cluster: cluster.name }, 'Observability node pool updated for BYOA Azure cluster.');
+      } else {
+        logger.info({ cluster: cluster.name }, 'Observability node pool already up to date for BYOA Azure cluster.');
+      }
+      return;
+    }
+
     await client.agentPools.beginCreateOrUpdateAndWait(cluster.azureResourceGroupName, cluster.name, OBSERVABILITY_POOL_NAME, {
       count: 1,
-      vmSize: 'Standard_B2ms',
-      osDiskSizeGB: 50,
+      vmSize: AZURE.DEFAULT_MACHINE_TYPE,
+      osDiskSizeGB: AZURE.DEFAULT_DISK_SIZE_GB,
       enableAutoScaling: true,
-      minCount: 1,
-      maxCount: 10,
+      minCount: AZURE.DEFAULT_MIN_NODES,
+      maxCount: AZURE.DEFAULT_MAX_NODES,
       mode: 'User',
       nodeLabels: { node_pool: 'observability' },
       type: 'VirtualMachineScaleSets',
@@ -248,10 +352,38 @@ export async function createSecurityNodePoolGCPBYOA(cluster: Cluster): Promise<v
     const parent = `projects/${cluster.gcpAccountID}/locations/${cluster.region}/clusters/${cluster.name}`;
 
     const [nodePools] = await client.listNodePools({ parent });
-    const exists = nodePools.nodePools?.some((np) => np.name === 'security');
+    const existingPool = nodePools.nodePools?.find((np) => np.name === 'security');
 
-    if (exists) {
-      logger.info({ cluster: cluster.name }, 'Security node pool already exists.');
+    if (existingPool) {
+      const poolName = `${parent}/nodePools/security`;
+      let updated = false;
+
+      if (existingPool.config?.machineType !== GCP.SECURITY_MACHINE_TYPE) {
+        logger.info(
+          { cluster: cluster.name, current: existingPool.config?.machineType, desired: GCP.SECURITY_MACHINE_TYPE },
+          'Updating BYOA GCP security node pool machine type',
+        );
+        await client.updateNodePool({ name: poolName, machineType: GCP.SECURITY_MACHINE_TYPE });
+        updated = true;
+      }
+
+      if (
+        !existingPool.autoscaling?.enabled ||
+        existingPool.autoscaling?.maxNodeCount !== GCP.SECURITY_MAX_NODES ||
+        existingPool.autoscaling?.minNodeCount !== GCP.SECURITY_MIN_NODES
+      ) {
+        await client.setNodePoolAutoscaling({
+          name: poolName,
+          autoscaling: { enabled: true, maxNodeCount: GCP.SECURITY_MAX_NODES, minNodeCount: GCP.SECURITY_MIN_NODES },
+        });
+        updated = true;
+      }
+
+      if (updated) {
+        logger.info({ cluster: cluster.name }, 'Security node pool updated for BYOA GCP cluster.');
+      } else {
+        logger.info({ cluster: cluster.name }, 'Security node pool already up to date for BYOA GCP cluster.');
+      }
       return;
     }
 
@@ -261,16 +393,16 @@ export async function createSecurityNodePoolGCPBYOA(cluster: Cluster): Promise<v
         name: 'security',
         initialNodeCount: 0,
         config: {
-          machineType: 'e2-standard-4',
-          diskSizeGb: 50,
+          machineType: GCP.SECURITY_MACHINE_TYPE,
+          diskSizeGb: GCP.DEFAULT_DISK_SIZE_GB,
           labels: { node_pool: 'security' },
         },
         autoscaling: {
           enabled: true,
-          maxNodeCount: 3,
-          minNodeCount: 0,
+          maxNodeCount: GCP.SECURITY_MAX_NODES,
+          minNodeCount: GCP.SECURITY_MIN_NODES,
         },
-        maxPodsConstraint: { maxPodsPerNode: 25 },
+        maxPodsConstraint: { maxPodsPerNode: GCP.DEFAULT_MAX_PODS_PER_NODE },
       },
     });
 
@@ -308,7 +440,54 @@ export async function createSecurityNodePoolAWSBYOA(cluster: Cluster): Promise<v
     const nodePools = awsCluster.computeConfig?.nodePools || [];
 
     if (nodePools.includes('security')) {
-      logger.info({ cluster: cluster.name }, 'Security node pool already exists.');
+      try {
+        const { nodegroup } = await eksClient.send(
+          new DescribeNodegroupCommand({
+            clusterName: cluster.name,
+            nodegroupName: 'security',
+          })
+        );
+
+        let updated = false;
+
+        const scalingNeedsUpdate =
+          nodegroup?.scalingConfig?.minSize !== AWS.SECURITY_MIN_NODES ||
+          nodegroup?.scalingConfig?.maxSize !== AWS.SECURITY_MAX_NODES;
+
+        if (scalingNeedsUpdate) {
+          await eksClient.send(
+            new UpdateNodegroupConfigCommand({
+              clusterName: cluster.name,
+              nodegroupName: 'security',
+              scalingConfig: {
+                minSize: AWS.SECURITY_MIN_NODES,
+                maxSize: AWS.SECURITY_MAX_NODES,
+                desiredSize: Math.max(nodegroup?.scalingConfig?.desiredSize ?? 0, AWS.SECURITY_MIN_NODES),
+              },
+              labels: {
+                addOrUpdateLabels: { node_pool: 'security' },
+              },
+            })
+          );
+          updated = true;
+        }
+
+        const currentInstanceTypes = nodegroup?.instanceTypes || [];
+        if (!currentInstanceTypes.includes(AWS.SECURITY_INSTANCE_TYPE)) {
+          logger.warn(
+            { cluster: cluster.name, current: currentInstanceTypes, desired: AWS.SECURITY_INSTANCE_TYPE },
+            'BYOA AWS security node pool instance type mismatch - requires nodegroup recreation to change',
+          );
+        }
+
+        if (updated) {
+          logger.info({ cluster: cluster.name }, 'Security node pool updated for BYOA AWS cluster.');
+        } else {
+          logger.info({ cluster: cluster.name }, 'Security node pool already up to date for BYOA AWS cluster.');
+        }
+      } catch (describeError) {
+        logger.warn({ cluster: cluster.name, error: describeError }, 'Could not describe/update existing BYOA AWS security nodegroup');
+      }
       return;
     }
 
@@ -321,11 +500,11 @@ export async function createSecurityNodePoolAWSBYOA(cluster: Cluster): Promise<v
         nodegroupName: 'security',
         subnets: subnetIds,
         nodeRole: nodeRole,
-        instanceTypes: ['m5.xlarge'],
-        diskSize: 50,
+        instanceTypes: [AWS.SECURITY_INSTANCE_TYPE],
+        diskSize: AWS.DEFAULT_DISK_SIZE_GB,
         scalingConfig: {
-          minSize: 0,
-          maxSize: 3,
+          minSize: AWS.SECURITY_MIN_NODES,
+          maxSize: AWS.SECURITY_MAX_NODES,
           desiredSize: 0,
         },
         labels: { node_pool: 'security' },
@@ -357,27 +536,52 @@ export async function createSecurityNodePoolAzureBYOA(cluster: Cluster): Promise
 
     try {
       await client.agentPools.get(cluster.azureResourceGroupName, cluster.name, SECURITY_POOL_NAME);
-      logger.info({ cluster: cluster.name }, 'Security node pool already exists.');
-      return;
     } catch (error: any) {
       if (error.statusCode !== 404 && error.code !== 'ResourceNotFound' && error.code !== 'AgentPoolNotFound') {
         throw error;
       }
+      // 404 means doesn't exist - create below
+      await client.agentPools.beginCreateOrUpdateAndWait(cluster.azureResourceGroupName, cluster.name, SECURITY_POOL_NAME, {
+        count: 0,
+        vmSize: AZURE.SECURITY_MACHINE_TYPE,
+        osDiskSizeGB: AZURE.DEFAULT_DISK_SIZE_GB,
+        enableAutoScaling: true,
+        minCount: AZURE.SECURITY_MIN_NODES,
+        maxCount: AZURE.SECURITY_MAX_NODES,
+        mode: 'User',
+        nodeLabels: { node_pool: 'security' },
+        type: 'VirtualMachineScaleSets',
+      });
+
+      logger.info({ cluster: cluster.name }, 'Security node pool created for BYOA Azure cluster.');
+      return;
     }
 
-    await client.agentPools.beginCreateOrUpdateAndWait(cluster.azureResourceGroupName, cluster.name, SECURITY_POOL_NAME, {
-      count: 0,
-      vmSize: 'Standard_D4s_v3',
-      osDiskSizeGB: 50,
-      enableAutoScaling: true,
-      minCount: 0,
-      maxCount: 3,
-      mode: 'User',
-      nodeLabels: { node_pool: 'security' },
-      type: 'VirtualMachineScaleSets',
-    });
+    // Pool exists - check if update is needed
+    const existingSecPool = await client.agentPools.get(cluster.azureResourceGroupName, cluster.name, SECURITY_POOL_NAME);
+    const needsScalingUpdate =
+      existingSecPool.minCount !== AZURE.SECURITY_MIN_NODES ||
+      existingSecPool.maxCount !== AZURE.SECURITY_MAX_NODES;
 
-    logger.info({ cluster: cluster.name }, 'Security node pool created for BYOA Azure cluster.');
+    if (existingSecPool.vmSize !== AZURE.SECURITY_MACHINE_TYPE) {
+      logger.warn(
+        { cluster: cluster.name, current: existingSecPool.vmSize, desired: AZURE.SECURITY_MACHINE_TYPE },
+        'BYOA Azure security node pool VM size mismatch - requires pool recreation to change',
+      );
+    }
+
+    if (needsScalingUpdate) {
+      await client.agentPools.beginCreateOrUpdateAndWait(cluster.azureResourceGroupName, cluster.name, SECURITY_POOL_NAME, {
+        ...existingSecPool,
+        enableAutoScaling: true,
+        minCount: AZURE.SECURITY_MIN_NODES,
+        maxCount: AZURE.SECURITY_MAX_NODES,
+        nodeLabels: { node_pool: 'security' },
+      });
+      logger.info({ cluster: cluster.name }, 'Security node pool updated for BYOA Azure cluster.');
+    } else {
+      logger.info({ cluster: cluster.name }, 'Security node pool already up to date for BYOA Azure cluster.');
+    }
   } catch (error) {
     logger.error(
       { cluster: cluster.name, errorName: (error as any)?.name, errorMessage: (error as any)?.message, errorDetails: error },

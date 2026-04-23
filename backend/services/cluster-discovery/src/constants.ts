@@ -56,7 +56,7 @@ export const NODE_POOL_NAME = {
 // AWS specific constants
 export const AWS = {
   DEFAULT_ROLE_NAME: 'omnistrate-bootstrap-role',
-  DEFAULT_INSTANCE_TYPE: 'm5.large',
+  DEFAULT_INSTANCE_TYPE: 'm5.large', // 2 vCPU, 8 GB RAM
   SECURITY_INSTANCE_TYPE: 'm5.xlarge',
   DEFAULT_DISK_SIZE_GB: 50,
   DEFAULT_MIN_NODES: 1,
@@ -68,7 +68,7 @@ export const AWS = {
 
 // GCP specific constants
 export const GCP = {
-  DEFAULT_MACHINE_TYPE: 'e2-standard-2',
+  DEFAULT_MACHINE_TYPE: 'e2-standard-2', // 2 vCPU, 8 GB RAM
   SECURITY_MACHINE_TYPE: 'e2-standard-4',
   DEFAULT_DISK_SIZE_GB: 50,
   DEFAULT_MIN_NODES: 1,
@@ -79,6 +79,19 @@ export const GCP = {
   WORKLOAD_IDENTITY_POOL_PATH:
     'projects/{projectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov',
   SERVICE_ACCOUNT_TEMPLATE: 'bootstrap-{orgId}@{projectNumber}.iam.gserviceaccount.com',
+} as const;
+
+// Azure specific constants
+export const AZURE = {
+  DEFAULT_MACHINE_TYPE: 'Standard_B2ms', // 2 vCPU, 8 GB RAM
+  SECURITY_MACHINE_TYPE: 'Standard_D4s_v3',
+  OBSERVABILITY_POOL_NAME: 'obsrv',
+  SECURITY_POOL_NAME: 'security',
+  DEFAULT_DISK_SIZE_GB: 50,
+  DEFAULT_MIN_NODES: 1,
+  DEFAULT_MAX_NODES: 10,
+  SECURITY_MIN_NODES: 0,
+  SECURITY_MAX_NODES: 3,
 } as const;
 
 // Labels
