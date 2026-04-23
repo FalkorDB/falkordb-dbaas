@@ -7,6 +7,6 @@ resources:
 configMapGenerator:
   - name: compliance-report-script
     files:
-      - generate_compliance_report.sh=../../../../scripts/generate_compliance_report.sh
+      - generate_compliance_report.sh
 generatorOptions:
   disableNameSuffixHash: true
