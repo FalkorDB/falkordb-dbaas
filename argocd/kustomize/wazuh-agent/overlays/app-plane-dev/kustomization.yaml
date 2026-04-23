@@ -4,6 +4,7 @@ namespace: security
 resources:
   - ../../base
   - secrets-env-secret.yaml
+  - wazuh-manager-ca.yaml
 configMapGenerator:
   - name: wazuh-agent-config
     behavior: create

@@ -4,3 +4,6 @@ namespace: security
 resources:
   - service-lb.yaml
   - securityadmin-patch-job.yaml
+  - networkpolicy.yaml
+  - pdb.yaml
+  - syslog-tls.yaml

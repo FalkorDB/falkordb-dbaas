@@ -100,6 +100,27 @@ resource "google_service_account_iam_member" "grype_workload_identity" {
   member             = "serviceAccount:${var.project_id}.svc.id.goog[security/grype]"
 }
 
+# kube-bench CIS scanner — reuses the same SA for uploading evidence to GCS.
+resource "google_service_account_iam_member" "kube_bench_workload_identity" {
+  service_account_id = google_service_account.prowler_uploader.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[security/kube-bench]"
+}
+
+# TruffleHog secret scanner — reuses the same SA for uploading evidence to GCS.
+resource "google_service_account_iam_member" "trufflehog_workload_identity" {
+  service_account_id = google_service_account.prowler_uploader.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[security/trufflehog]"
+}
+
+# KubeScape scanner — reuses the same SA for uploading evidence to GCS.
+resource "google_service_account_iam_member" "kubescape_workload_identity" {
+  service_account_id = google_service_account.prowler_uploader.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "serviceAccount:${var.project_id}.svc.id.goog[security/kubescape]"
+}
+
 # Static JSON key for non-GCP spokes (AWS/Azure) that cannot use Workload Identity.
 # Sealed into prowler-gcs-credentials / grype-gcs-credentials as sa-key.json.
 # Rotate by tainting this resource and re-applying.

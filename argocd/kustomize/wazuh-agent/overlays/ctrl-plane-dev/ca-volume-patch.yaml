@@ -1,0 +1,16 @@
+# Patch: use the cert-manager root CA from the Wazuh Helm chart.
+# The node-tls Secret (created by cert-manager) contains ca.crt signed by the
+# same CA that signs the manager's authd certificate.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: wazuh-agent
+  namespace: security
+spec:
+  template:
+    spec:
+      volumes:
+        - name: manager-ca
+          secret:
+            secretName: node-tls
+            optional: true

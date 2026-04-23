@@ -1,0 +1,31 @@
+# NetworkPolicy — Prowler CronJob pods
+# Allows egress to: DNS, K8s API, GCS (googleapis.com), Wazuh syslog,
+# PyPI (pip install). Denies all ingress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: prowler-netpol
+  namespace: security
+spec:
+  podSelector:
+    matchLabels:
+      app: prowler
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []  # No inbound traffic needed
+  egress:
+    # DNS resolution
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # HTTPS — K8s API, GCS, PyPI, cloud provider APIs
+    - ports:
+        - protocol: TCP
+          port: 443
+    # Wazuh syslog forwarding
+    - ports:
+        - protocol: TCP
+          port: 514

@@ -1,0 +1,350 @@
+# kube-bench weekly CronJob — runs CIS Kubernetes Benchmark checks,
+# uploads JSON results to GCS Evidence Locker, and forwards FAIL/WARN
+# findings to Wazuh Manager via syslog.
+#
+# Runs at 03:00 UTC every Sunday.
+# Results: gs://BUCKET/kube-bench/YYYY/MM/DD/<cluster>/
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kube-bench-cis-scan
+  namespace: security
+spec:
+  schedule: "0 3 * * 0"
+  timeZone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 4
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 3600  # 1h max
+      template:
+        metadata:
+          labels:
+            app: kube-bench
+            component: soc2-evidence
+        spec:
+          serviceAccountName: kube-bench
+          restartPolicy: Never
+          hostPID: true
+          nodeSelector:
+            node_pool: security
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          volumes:
+            - name: var-lib-etcd
+              hostPath:
+                path: /var/lib/etcd
+                type: DirectoryOrCreate
+            - name: var-lib-kubelet
+              hostPath:
+                path: /var/lib/kubelet
+                type: DirectoryOrCreate
+            - name: var-lib-kube-scheduler
+              hostPath:
+                path: /var/lib/kube-scheduler
+                type: DirectoryOrCreate
+            - name: var-lib-kube-controller-manager
+              hostPath:
+                path: /var/lib/kube-controller-manager
+                type: DirectoryOrCreate
+            - name: etc-systemd
+              hostPath:
+                path: /etc/systemd
+                type: DirectoryOrCreate
+            - name: lib-systemd
+              hostPath:
+                path: /lib/systemd
+                type: DirectoryOrCreate
+            - name: srv-kubernetes
+              hostPath:
+                path: /srv/kubernetes
+                type: DirectoryOrCreate
+            - name: etc-kubernetes
+              hostPath:
+                path: /etc/kubernetes
+                type: DirectoryOrCreate
+            - name: etc-cni-netd
+              hostPath:
+                path: /etc/cni/net.d
+                type: DirectoryOrCreate
+            - name: opt-cni-bin
+              hostPath:
+                path: /opt/cni/bin
+                type: DirectoryOrCreate
+            - name: tmp
+              emptyDir: {}
+            - name: syslog-ca
+              secret:
+                secretName: wazuh-syslog-ca
+                optional: true
+          containers:
+            - name: kube-bench
+              image: python:3.12-slim@sha256:4386a385d81dba9f72ed72a6fe4237755d7f5440c84b417650f38336bbc43117
+              resources:
+                requests:
+                  cpu: "250m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "1"
+                  memory: "1Gi"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              volumeMounts:
+                - name: var-lib-etcd
+                  mountPath: /var/lib/etcd
+                  readOnly: true
+                - name: var-lib-kubelet
+                  mountPath: /var/lib/kubelet
+                  readOnly: true
+                - name: var-lib-kube-scheduler
+                  mountPath: /var/lib/kube-scheduler
+                  readOnly: true
+                - name: var-lib-kube-controller-manager
+                  mountPath: /var/lib/kube-controller-manager
+                  readOnly: true
+                - name: etc-systemd
+                  mountPath: /etc/systemd
+                  readOnly: true
+                - name: lib-systemd
+                  mountPath: /lib/systemd
+                  readOnly: true
+                - name: srv-kubernetes
+                  mountPath: /srv/kubernetes
+                  readOnly: true
+                - name: etc-kubernetes
+                  mountPath: /etc/kubernetes
+                  readOnly: true
+                - name: etc-cni-netd
+                  mountPath: /etc/cni/net.d
+                  readOnly: true
+                - name: opt-cni-bin
+                  mountPath: /opt/cni/bin
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+                - name: syslog-ca
+                  mountPath: /run/secrets/syslog-ca
+                  readOnly: true
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: KUBE_BENCH_VERSION
+                  value: "0.10.3"
+                - name: EVIDENCE_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: kube-bench-infra
+                      key: evidence-bucket
+                - name: CLUSTER_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: kube-bench-config
+                      key: cluster-name
+                - name: WAZUH_SYSLOG_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: kube-bench-config
+                      key: wazuh-syslog-host
+                      optional: true
+                - name: WAZUH_SYSLOG_CA_PATH
+                  value: /run/secrets/syslog-ca/ca.crt
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+
+                  pip install --quiet --no-cache-dir --user \
+                    google-cloud-storage
+
+                  export PATH="$HOME/.local/bin:$PATH"
+                  python3 <<'PYEOF'
+                  import os, sys, json, subprocess, socket, time, glob, tarfile, stat
+                  import urllib.request, hashlib
+
+                  def verify_checksum(filepath, checksums_url, expected_filename):
+                      """Download checksums file and verify the given file."""
+                      checksums_path = filepath + '.checksums'
+                      urllib.request.urlretrieve(checksums_url, checksums_path)
+                      expected_hash = None
+                      with open(checksums_path) as f:
+                          for line in f:
+                              parts = line.strip().split()
+                              if len(parts) == 2 and parts[1] == expected_filename:
+                                  expected_hash = parts[0]
+                                  break
+                      if not expected_hash:
+                          raise RuntimeError(f'Checksum not found for {expected_filename}')
+                      sha256 = hashlib.sha256()
+                      with open(filepath, 'rb') as f:
+                          for chunk in iter(lambda: f.read(8192), b''):
+                              sha256.update(chunk)
+                      actual = sha256.hexdigest()
+                      if actual != expected_hash:
+                          raise RuntimeError(
+                              f'Checksum mismatch for {expected_filename}: '
+                              f'expected {expected_hash}, got {actual}'
+                          )
+                      print(f'  Checksum verified: {expected_filename}')
+
+                  cluster = os.environ['CLUSTER_NAME']
+                  version = os.environ.get('KUBE_BENCH_VERSION', '0.10.3')
+                  output_dir = '/tmp/kube-bench-output'
+                  os.makedirs(output_dir, exist_ok=True)
+
+                  # ── Download kube-bench binary ─────────────────────────────
+                  kb_bin = '/tmp/kube-bench'
+                  tarball_name = f'kube-bench_{version}_linux_amd64.tar.gz'
+                  url = (
+                      f'https://github.com/aquasecurity/kube-bench/releases/download/'
+                      f'v{version}/{tarball_name}'
+                  )
+                  checksums_url = (
+                      f'https://github.com/aquasecurity/kube-bench/releases/download/'
+                      f'v{version}/kube-bench_{version}_checksums.txt'
+                  )
+                  print(f'Downloading kube-bench v{version}...')
+                  urllib.request.urlretrieve(url, '/tmp/kube-bench.tar.gz')
+                  verify_checksum('/tmp/kube-bench.tar.gz', checksums_url, tarball_name)
+                  with tarfile.open('/tmp/kube-bench.tar.gz') as tar:
+                      tar.extractall('/tmp/kube-bench-extract', filter='data')
+                  # Find the binary
+                  import shutil
+                  for root, dirs, files in os.walk('/tmp/kube-bench-extract'):
+                      if 'kube-bench' in files:
+                          shutil.move(os.path.join(root, 'kube-bench'), kb_bin)
+                          break
+                  os.chmod(kb_bin, 0o755)
+
+                  # Also extract config/cfg dir if present
+                  cfg_dir = '/tmp/kube-bench-extract/cfg'
+                  if not os.path.isdir(cfg_dir):
+                      for root, dirs, files in os.walk('/tmp/kube-bench-extract'):
+                          if 'cfg' in dirs:
+                              cfg_dir = os.path.join(root, 'cfg')
+                              break
+
+                  # ── Run kube-bench ─────────────────────────────────────────
+                  result_file = os.path.join(output_dir, 'kube-bench-results.json')
+                  cmd = [kb_bin, 'run', '--json', '--outputfile', result_file]
+                  if os.path.isdir(cfg_dir):
+                      cmd.extend(['--config-dir', cfg_dir])
+                  print(f'Running: {" ".join(cmd)}')
+                  result = subprocess.run(
+                      cmd, capture_output=True, text=True, timeout=600,
+                  )
+                  print(result.stdout[:2000] if result.stdout else '')
+                  if result.stderr:
+                      print(f'STDERR: {result.stderr[:1000]}')
+
+                  # ── Parse results ──────────────────────────────────────────
+                  findings = []
+                  summary = {
+                      'scan_date': time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                      'cluster': cluster,
+                      'total_pass': 0,
+                      'total_fail': 0,
+                      'total_warn': 0,
+                      'total_info': 0,
+                  }
+                  if os.path.exists(result_file):
+                      with open(result_file) as f:
+                          data = json.load(f)
+                      controls = data if isinstance(data, list) else data.get('Controls', [])
+                      for ctrl in controls:
+                          section = ctrl.get('id', '')
+                          section_text = ctrl.get('text', '')
+                          for test in ctrl.get('tests', []):
+                              for r in test.get('results', []):
+                                  status = r.get('status', '')
+                                  if status == 'PASS':
+                                      summary['total_pass'] += 1
+                                  elif status == 'FAIL':
+                                      summary['total_fail'] += 1
+                                  elif status == 'WARN':
+                                      summary['total_warn'] += 1
+                                  else:
+                                      summary['total_info'] += 1
+                                  if status in ('FAIL', 'WARN'):
+                                      findings.append({
+                                          'Scanner': 'kube-bench',
+                                          'Cluster': cluster,
+                                          'Section': section,
+                                          'SectionDesc': section_text,
+                                          'TestNumber': r.get('test_number', ''),
+                                          'TestDesc': r.get('test_desc', ''),
+                                          'Status': status,
+                                          'Remediation': r.get('remediation', ''),
+                                          'Scored': r.get('scored', True),
+                                      })
+                  else:
+                      print('WARNING: kube-bench produced no output file')
+
+                  summary['total_findings'] = len(findings)
+                  with open(os.path.join(output_dir, 'summary.json'), 'w') as f:
+                      json.dump(summary, f, indent=2)
+                  with open(os.path.join(output_dir, 'findings.json'), 'w') as f:
+                      json.dump(findings, f, indent=2)
+
+                  print(f'CIS Benchmark: PASS={summary["total_pass"]} FAIL={summary["total_fail"]} '
+                        f'WARN={summary["total_warn"]} INFO={summary["total_info"]}')
+
+                  # ── Upload to GCS ──────────────────────────────────────────
+                  try:
+                      from google.cloud import storage as gcs
+                      bucket_name = os.environ['EVIDENCE_BUCKET']
+                      date_path = time.strftime('%Y/%m/%d')
+                      prefix = f'kube-bench/{date_path}/{cluster}'
+                      gclient = gcs.Client()
+                      bucket = gclient.bucket(bucket_name)
+                      for f_path in glob.glob(os.path.join(output_dir, '*.json')):
+                          if os.path.isfile(f_path):
+                              blob = bucket.blob(f'{prefix}/{os.path.basename(f_path)}')
+                              blob.upload_from_filename(f_path)
+                              print(f'  Uploaded {os.path.basename(f_path)}')
+                      print(f'Results uploaded to gs://{bucket_name}/{prefix}/')
+                  except Exception as e:
+                      print(f'WARNING: GCS upload failed: {e}')
+
+                  # ── Forward FAIL findings to Wazuh via syslog ──────────────
+                  syslog_host = os.environ.get('WAZUH_SYSLOG_HOST', '')
+                  if not syslog_host:
+                      print('WAZUH_SYSLOG_HOST not set, skipping syslog forwarding')
+                      sys.exit(0)
+
+                  fwd_count = 0
+                  try:
+                      import ssl as _ssl
+                      ctx = _ssl.create_default_context()
+                      ca_path = os.environ.get('WAZUH_SYSLOG_CA_PATH', '')
+                      if ca_path and os.path.isfile(ca_path):
+                          ctx.load_verify_locations(ca_path)
+                      else:
+                          print('WARNING: WAZUH_SYSLOG_CA_PATH not set or missing, TLS verification disabled')
+                          ctx.check_hostname = False
+                          ctx.verify_mode = _ssl.CERT_NONE
+                      raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                      raw_sock.settimeout(10)
+                      sock = ctx.wrap_socket(raw_sock, server_hostname=syslog_host)
+                      sock.connect((syslog_host, 1516))
+                      for f in findings:
+                          ts = time.strftime('%b %d %H:%M:%S')
+                          msg = '<134>{} {} kube-bench: {}\n'.format(
+                              ts, cluster, json.dumps(f, separators=(',', ':'))
+                          )
+                          sock.sendall(msg.encode())
+                          fwd_count += 1
+                      sock.close()
+                      print(f'Forwarded {fwd_count} findings to Wazuh at {syslog_host}:1516 (TLS)')
+                  except Exception as e:
+                      print(f'WARNING: Syslog forwarding failed: {e}')
+                  PYEOF

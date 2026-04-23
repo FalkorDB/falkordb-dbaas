@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: security
+resources:
+  - ../../base
+configMapGenerator:
+  - name: falco-env
+    behavior: create
+    literals:
+      - cluster-name=app-plane-prod
+      - plane=app-plane
+      - env=prod
+generatorOptions:
+  disableNameSuffixHash: true

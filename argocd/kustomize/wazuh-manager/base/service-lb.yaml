@@ -25,6 +25,10 @@ spec:
       protocol: TCP
       port: 514
       targetPort: 514
+    - name: syslog-tls
+      protocol: TCP
+      port: 1516
+      targetPort: 1516
     - name: agents-events
       protocol: TCP
       port: 1514

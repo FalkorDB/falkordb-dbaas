@@ -41,7 +41,7 @@ module "gke" {
   service_account_name                 = "gke-obs-${random_string.cluster_suffix.result}-nodes-sa"
   remove_default_node_pool             = true
   gce_pd_csi_driver                    = true
-  network_policy                       = false
+  network_policy                       = true
   monitoring_enable_managed_prometheus = false
   enable_cost_allocation               = false
   horizontal_pod_autoscaling           = false
@@ -131,6 +131,24 @@ module "gke" {
     }
     "security" = {
       "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
+  }
+
+  node_pools_labels = {
+    "default-pool" = {
+      "node_pool" = "default"
+    }
+    "observability-resources" = {
+      "node_pool" = "observability"
+    }
+    "observability-resources-large" = {
+      "node_pool" = "observability-large"
+    }
+    "backend" = {
+      "node_pool" = "backend"
+    }
+    "security" = {
+      "node_pool" = "security"
     }
   }
 

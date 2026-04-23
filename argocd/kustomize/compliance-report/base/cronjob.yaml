@@ -1,0 +1,123 @@
+# Weekly SOC 2 compliance evidence collection CronJob.
+#
+# Collects Prowler reports from GCS, exports Wazuh API data (agents, CVEs,
+# FIM events), and uploads the evidence bundle to the GCS evidence locker.
+#
+# Schedule: Every Sunday at 02:00 UTC
+# Retention: Reports kept in GCS bucket under compliance-reports/YYYY/MM/DD/
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: compliance-report
+  namespace: security
+  labels:
+    app: compliance-report
+    component: soc2-evidence
+spec:
+  schedule: "0 2 * * 0"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1800
+      template:
+        metadata:
+          labels:
+            app: compliance-report
+        spec:
+          serviceAccountName: compliance-report
+          restartPolicy: OnFailure
+          nodeSelector:
+            node_pool: security
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: report
+              image: google/cloud-sdk:slim@sha256:b95d4a94d0f56298597e89926a7cccce2a2c7070b22b28a964247e36cced909c
+              command:
+                - /bin/bash
+                - -ec
+                - |
+                  # Install jq (not in slim image)
+                  apt-get update -qq && apt-get install -yqq jq >/dev/null 2>&1
+
+                  DATE=$(date +%Y-%m-%d)
+
+                  # Authenticate to Wazuh API and obtain JWT token
+                  WAZUH_API_URL="https://wazuh-manager-master.security.svc.cluster.local:55000"
+                  API_USER=$(cat /run/secrets/api-cred/API_USERNAME)
+                  API_PASS=$(cat /run/secrets/api-cred/API_PASSWORD)
+
+                  WAZUH_API_TOKEN=$(curl -sS --cacert /run/secrets/wazuh-api-ca/ca.crt \
+                    -u "${API_USER}:${API_PASS}" \
+                    -XGET "${WAZUH_API_URL}/security/user/authenticate?raw=true")
+
+                  export WAZUH_API_URL WAZUH_API_TOKEN
+                  export BUCKET="${EVIDENCE_BUCKET}"
+
+                  # Run the compliance report script
+                  bash /scripts/generate_compliance_report.sh \
+                    --date "${DATE}" \
+                    --bucket "${EVIDENCE_BUCKET}" \
+                    --output-dir /tmp/reports
+
+                  # Upload the generated report to the evidence locker
+                  DATE_PATH="${DATE//-//}"
+                  gcloud storage cp -r "/tmp/reports/compliance-report-${DATE}/" \
+                    "gs://${EVIDENCE_BUCKET}/compliance-reports/${DATE_PATH}/"
+
+                  echo "=== Compliance report uploaded to gs://${EVIDENCE_BUCKET}/compliance-reports/${DATE_PATH}/ ==="
+              env:
+                - name: EVIDENCE_BUCKET
+                  valueFrom:
+                    configMapKeyRef:
+                      name: compliance-report-config
+                      key: evidence-bucket
+              volumeMounts:
+                - name: script
+                  mountPath: /scripts
+                  readOnly: true
+                - name: api-cred
+                  mountPath: /run/secrets/api-cred
+                  readOnly: true
+                - name: wazuh-api-ca
+                  mountPath: /run/secrets/wazuh-api-ca
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+          volumes:
+            - name: script
+              configMap:
+                name: compliance-report-script
+                defaultMode: 0755
+            - name: api-cred
+              secret:
+                secretName: wazuh-api-cred
+            - name: wazuh-api-ca
+              secret:
+                secretName: wazuh-indexer-tls
+                items:
+                  - key: ca.crt
+                    path: ca.crt
+                optional: true
+            - name: tmp
+              emptyDir:
+                sizeLimit: 1Gi

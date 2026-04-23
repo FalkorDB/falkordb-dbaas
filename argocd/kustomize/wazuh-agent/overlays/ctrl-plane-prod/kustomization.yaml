@@ -4,6 +4,8 @@ namespace: security
 resources:
   - ../../base
   - secrets-env-secret.yaml
+patches:
+  - path: ca-volume-patch.yaml
 configMapGenerator:
   - name: wazuh-agent-config
     behavior: create

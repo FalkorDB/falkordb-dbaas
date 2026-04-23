@@ -7,6 +7,11 @@
 #   prowler_compliance  — Triggers on Prowler FAIL results pushed via syslog
 #   fim_critical        — High-severity FIM alerts for SOC 2 CC6.1
 #   soc2_auth           — Authentication anomaly detection for SOC 2 CC6.1/CC6.2
+#   grype_vuln          — CVE vulnerability detection from Grype scanner
+#   falco_runtime       — Runtime threat detection from Falco (100500-100599)
+#   trufflehog_secrets  — Secret leak detection from TruffleHog (100600-100699)
+#   kubebench_cis       — CIS benchmark findings from kube-bench (100700-100799)
+#   kubescape_attack    — Attack path findings from KubeScape (100800-100899)
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -161,6 +166,233 @@ data:
         <field name="Severity">high</field>
         <description>HIGH CVE $(VulnerabilityID) in $(Package) ($(InstalledVersion)) on $(ImageName) — $(Cluster)</description>
         <group>grype_vuln,soc2_fail</group>
+      </rule>
+
+    </group>
+
+    <!-- ================================================================
+         Falco Runtime Threat Detection (100500-100599)
+         Matches Falco syslog output with JSON body. Falco sends events
+         via syslog_output to Wazuh Manager at port 514.
+         ================================================================ -->
+    <group name="falco_runtime,soc2">
+
+      <!-- Base rule: any Falco event ingested -->
+      <rule id="100500" level="3">
+        <decoded_as>falco</decoded_as>
+        <field name="rule">\.+</field>
+        <description>Falco runtime event: $(rule) — $(output)</description>
+        <group>falco_runtime</group>
+      </rule>
+
+      <!-- Falco WARNING priority -->
+      <rule id="100501" level="8">
+        <if_sid>100500</if_sid>
+        <field name="priority">Warning</field>
+        <description>Falco WARNING: $(rule) — $(output)</description>
+        <group>falco_runtime</group>
+      </rule>
+
+      <!-- Falco ERROR priority — triggers notification (level >= 10) -->
+      <rule id="100502" level="10">
+        <if_sid>100500</if_sid>
+        <field name="priority">Error</field>
+        <description>Falco ERROR: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- Falco CRITICAL priority -->
+      <rule id="100503" level="13">
+        <if_sid>100500</if_sid>
+        <field name="priority">Critical</field>
+        <description>CRITICAL Falco: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail,soc2_critical</group>
+      </rule>
+
+      <!-- Falco ALERT (highest) priority -->
+      <rule id="100504" level="14">
+        <if_sid>100500</if_sid>
+        <field name="priority">Alert</field>
+        <description>ALERT Falco: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail,soc2_critical</group>
+      </rule>
+
+      <!-- Container escape detected -->
+      <rule id="100510" level="14">
+        <if_sid>100500</if_sid>
+        <match>Container Escape|nsenter|mount namespace</match>
+        <description>CONTAINER ESCAPE ATTEMPT: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail,soc2_critical,container_escape</group>
+      </rule>
+
+      <!-- Crypto mining detection -->
+      <rule id="100511" level="13">
+        <if_sid>100500</if_sid>
+        <match>Crypto Mining|stratum+tcp|xmr</match>
+        <description>CRYPTO MINING detected: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail,soc2_critical,crypto_mining</group>
+      </rule>
+
+      <!-- Reverse shell detection -->
+      <rule id="100512" level="14">
+        <if_sid>100500</if_sid>
+        <match>Reverse Shell</match>
+        <description>REVERSE SHELL detected: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail,soc2_critical,reverse_shell</group>
+      </rule>
+
+    </group>
+
+    <!-- ================================================================
+         TruffleHog Secret Scanning (100600-100699)
+         Matches TruffleHog syslog output from CronJob.
+         ================================================================ -->
+    <group name="trufflehog_secrets,soc2">
+
+      <!-- Base rule: any TruffleHog finding -->
+      <rule id="100600" level="3">
+        <decoded_as>trufflehog</decoded_as>
+        <field name="Scanner">trufflehog</field>
+        <description>TruffleHog secret finding: $(DetectorName) in $(ImageName) — $(Cluster)</description>
+        <group>trufflehog_secrets</group>
+      </rule>
+
+      <!-- Verified secret found — HIGH priority -->
+      <rule id="100601" level="12">
+        <if_sid>100600</if_sid>
+        <field name="Verified">true</field>
+        <description>VERIFIED SECRET leaked: $(DetectorName) in $(ImageName) — $(Cluster)</description>
+        <group>trufflehog_secrets,soc2_fail,secret_leak</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- Unverified secret found — MEDIUM priority -->
+      <rule id="100602" level="8">
+        <if_sid>100600</if_sid>
+        <field name="Verified">false</field>
+        <description>Possible secret leak: $(DetectorName) in $(ImageName) — $(Cluster)</description>
+        <group>trufflehog_secrets,secret_leak</group>
+      </rule>
+
+    </group>
+
+    <!-- ================================================================
+         kube-bench CIS Benchmark (100700-100799)
+         Matches kube-bench syslog output from CronJob.
+         ================================================================ -->
+    <group name="kubebench_cis,soc2">
+
+      <!-- Base rule: any kube-bench finding -->
+      <rule id="100700" level="3">
+        <decoded_as>kube-bench</decoded_as>
+        <field name="Scanner">kube-bench</field>
+        <description>kube-bench CIS finding: [$(TestNumber)] $(TestDesc) — $(Cluster)</description>
+        <group>kubebench_cis</group>
+      </rule>
+
+      <!-- FAIL finding — scored -->
+      <rule id="100701" level="11">
+        <if_sid>100700</if_sid>
+        <field name="Status">FAIL</field>
+        <field name="Scored">true</field>
+        <description>CIS Benchmark FAIL (scored): [$(TestNumber)] $(TestDesc) — $(Cluster)</description>
+        <group>kubebench_cis,soc2_fail,cis_fail</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- FAIL finding — not scored -->
+      <rule id="100702" level="8">
+        <if_sid>100700</if_sid>
+        <field name="Status">FAIL</field>
+        <field name="Scored">false</field>
+        <description>CIS Benchmark FAIL (unscored): [$(TestNumber)] $(TestDesc) — $(Cluster)</description>
+        <group>kubebench_cis,cis_fail</group>
+      </rule>
+
+      <!-- WARN finding -->
+      <rule id="100703" level="6">
+        <if_sid>100700</if_sid>
+        <field name="Status">WARN</field>
+        <description>CIS Benchmark WARN: [$(TestNumber)] $(TestDesc) — $(Cluster)</description>
+        <group>kubebench_cis,cis_warn</group>
+      </rule>
+
+    </group>
+
+    <!-- ================================================================
+         KubeScape Attack Path Analysis (100800-100899)
+         Matches KubeScape syslog output from CronJob.
+         ================================================================ -->
+    <group name="kubescape_attack,soc2">
+
+      <!-- Base rule: any KubeScape finding -->
+      <rule id="100800" level="3">
+        <decoded_as>kubescape</decoded_as>
+        <field name="Scanner">kubescape</field>
+        <description>KubeScape finding: [$(ControlID)] $(ControlName) — $(Cluster)</description>
+        <group>kubescape_attack</group>
+      </rule>
+
+      <!-- Critical severity finding -->
+      <rule id="100801" level="13">
+        <if_sid>100800</if_sid>
+        <field name="Severity">critical</field>
+        <description>CRITICAL KubeScape: [$(ControlID)] $(ControlName) in $(Framework) — $(Cluster)</description>
+        <group>kubescape_attack,soc2_fail,soc2_critical</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- High severity finding -->
+      <rule id="100802" level="12">
+        <if_sid>100800</if_sid>
+        <field name="Severity">high</field>
+        <description>HIGH KubeScape: [$(ControlID)] $(ControlName) in $(Framework) — $(Cluster)</description>
+        <group>kubescape_attack,soc2_fail</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- Medium severity finding -->
+      <rule id="100803" level="8">
+        <if_sid>100800</if_sid>
+        <field name="Severity">medium</field>
+        <description>MEDIUM KubeScape: [$(ControlID)] $(ControlName) in $(Framework) — $(Cluster)</description>
+        <group>kubescape_attack</group>
+      </rule>
+
+      <!-- MITRE ATT&CK specific findings -->
+      <rule id="100810" level="13">
+        <if_sid>100800</if_sid>
+        <field name="Framework">mitre</field>
+        <field name="Severity">critical|high</field>
+        <description>MITRE ATT&CK: [$(ControlID)] $(ControlName) — $(Cluster)</description>
+        <group>kubescape_attack,soc2_fail,mitre_attack</group>
+      </rule>
+
+    </group>
+
+    <!-- ================================================================
+         YARA Malware Detection (108000-108001)
+         Matches active-response output from yara.sh script
+         triggered by FIM events on Wazuh agents.
+         ================================================================ -->
+    <group name="yara_malware,soc2">
+
+      <!-- YARA scan result — malware match found -->
+      <rule id="108000" level="12">
+        <if_sid>657</if_sid>
+        <match>yara:</match>
+        <description>YARA malware match: $(yara_rule) detected in $(yara_scanned_file)</description>
+        <group>yara_malware,soc2_fail,malware_detection</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- YARA scan error -->
+      <rule id="108001" level="5">
+        <if_sid>657</if_sid>
+        <match>yara: error</match>
+        <description>YARA scan error during active response.</description>
+        <group>yara_malware</group>
       </rule>
 
     </group>

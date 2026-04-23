@@ -7,3 +7,4 @@ resources:
   - serviceaccount.yaml
   - cronjob.yaml
   - rbac.yaml
+  - networkpolicy.yaml

@@ -1,0 +1,160 @@
+# NetworkPolicy — Wazuh Manager (master + workers)
+# Allows ingress from:
+#   - Any source on 514 (syslog), 1514 (agent events), 1515 (authd)
+#     because spoke-cluster agents connect from dynamic NAT IPs.
+#   - Wazuh Dashboard on 55000 (API)
+#   - Wazuh Indexer cluster on 9300 (inter-node) is handled separately
+# Allows egress to: DNS, Wazuh Indexer (9200), HTTPS (external integrations)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: wazuh-manager-netpol
+  namespace: security
+spec:
+  podSelector:
+    matchLabels:
+      app: wazuh-manager
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Syslog + agent traffic from any source (spoke clusters)
+    - ports:
+        - protocol: TCP
+          port: 514
+        - protocol: TCP
+          port: 1514
+        - protocol: TCP
+          port: 1515
+    # Wazuh API — from dashboard and CronJobs
+    - ports:
+        - protocol: TCP
+          port: 55000
+      from:
+        - podSelector:
+            matchLabels:
+              app: wazuh-dashboard
+        - podSelector:
+            matchLabels:
+              app: compliance-report
+  egress:
+    # DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Wazuh Indexer
+    - ports:
+        - protocol: TCP
+          port: 9200
+      to:
+        - podSelector:
+            matchLabels:
+              app: wazuh-indexer
+    # HTTPS — external integrations (Google Chat webhook, etc.)
+    - ports:
+        - protocol: TCP
+          port: 443
+---
+# NetworkPolicy — Wazuh Indexer (OpenSearch)
+# Only Wazuh Manager and Dashboard should access it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: wazuh-indexer-netpol
+  namespace: security
+spec:
+  podSelector:
+    matchLabels:
+      app: wazuh-indexer
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Wazuh Manager → Indexer (data ingestion)
+    - ports:
+        - protocol: TCP
+          port: 9200
+      from:
+        - podSelector:
+            matchLabels:
+              app: wazuh-manager
+        - podSelector:
+            matchLabels:
+              app: wazuh-dashboard
+    # Inter-node transport (indexer cluster)
+    - ports:
+        - protocol: TCP
+          port: 9300
+      from:
+        - podSelector:
+            matchLabels:
+              app: wazuh-indexer
+  egress:
+    # DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Inter-node transport
+    - ports:
+        - protocol: TCP
+          port: 9300
+      to:
+        - podSelector:
+            matchLabels:
+              app: wazuh-indexer
+    # Indexer → Manager (cluster state)
+    - ports:
+        - protocol: TCP
+          port: 9200
+      to:
+        - podSelector:
+            matchLabels:
+              app: wazuh-indexer
+---
+# NetworkPolicy — Wazuh Dashboard (OpenSearch Dashboards)
+# Allows ingress from ingress controller on 5601.
+# Egress to Wazuh Indexer (9200) and Wazuh Manager API (55000).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: wazuh-dashboard-netpol
+  namespace: security
+spec:
+  podSelector:
+    matchLabels:
+      app: wazuh-dashboard
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Ingress controller → Dashboard UI
+    - ports:
+        - protocol: TCP
+          port: 5601
+  egress:
+    # DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Wazuh Indexer
+    - ports:
+        - protocol: TCP
+          port: 9200
+      to:
+        - podSelector:
+            matchLabels:
+              app: wazuh-indexer
+    # Wazuh Manager API
+    - ports:
+        - protocol: TCP
+          port: 55000
+      to:
+        - podSelector:
+            matchLabels:
+              app: wazuh-manager

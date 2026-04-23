@@ -20,6 +20,10 @@ spec:
       backoffLimit: 2
       activeDeadlineSeconds: 7200  # 2h max
       template:
+        metadata:
+          labels:
+            app: prowler
+            component: soc2-evidence
         spec:
           serviceAccountName: prowler
           restartPolicy: Never
@@ -31,9 +35,13 @@ spec:
           volumes:
             - name: prowler-tmp
               emptyDir: {}
+            - name: syslog-ca
+              secret:
+                secretName: wazuh-syslog-ca
+                optional: true
           containers:
             - name: prowler
-              image: toniblyx/prowler:4.6.1
+              image: toniblyx/prowler:4.6.1@sha256:04bbabd0a66bc0e9d68b3065524ad36df8c2886aab9bbbfef2f80464b026d2b1
               resources:
                 requests:
                   cpu: "500m"
@@ -52,6 +60,9 @@ spec:
               volumeMounts:
                 - name: prowler-tmp
                   mountPath: /tmp
+                - name: syslog-ca
+                  mountPath: /run/secrets/syslog-ca
+                  readOnly: true
               env:
                 - name: EVIDENCE_BUCKET
                   valueFrom:
@@ -85,6 +96,8 @@ spec:
                       name: prowler-config
                       key: wazuh-syslog-host
                       optional: true
+                - name: WAZUH_SYSLOG_CA_PATH
+                  value: /run/secrets/syslog-ca/ca.crt
               command:
                 - /bin/sh
                 - -c
@@ -149,9 +162,10 @@ spec:
                   # CheckTitle, Severity, StatusExtended).
                   python3 <<'SYSLOG_EOF'
                   import os, glob, json, socket, time
+                  import ssl as _ssl
 
                   syslog_host = os.environ.get('WAZUH_SYSLOG_HOST', '')
-                  syslog_port = 514
+                  syslog_port = 1516  # TLS syslog (stunnel)
                   if not syslog_host:
                       print('WAZUH_SYSLOG_HOST not set, skipping syslog forwarding')
                       exit(0)
@@ -190,8 +204,17 @@ spec:
 
                   fail_count = 0
                   try:
-                      sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                      sock.settimeout(10)
+                      ctx = _ssl.create_default_context()
+                      ca_path = os.environ.get('WAZUH_SYSLOG_CA_PATH', '')
+                      if ca_path and os.path.isfile(ca_path):
+                          ctx.load_verify_locations(ca_path)
+                      else:
+                          print('WARNING: WAZUH_SYSLOG_CA_PATH not set or missing, TLS verification disabled')
+                          ctx.check_hostname = False
+                          ctx.verify_mode = _ssl.CERT_NONE
+                      raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                      raw_sock.settimeout(10)
+                      sock = ctx.wrap_socket(raw_sock, server_hostname=syslog_host)
                       sock.connect((syslog_host, syslog_port))
                       for finding in findings:
                           if not isinstance(finding, dict):

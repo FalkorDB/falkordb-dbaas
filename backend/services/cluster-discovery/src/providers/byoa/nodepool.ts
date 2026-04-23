@@ -168,6 +168,7 @@ export async function createObservabilityNodePoolAWSBYOA(cluster: Cluster): Prom
 
 // AKS agent pool names must be 1-12 chars, lowercase alphanumeric.
 const OBSERVABILITY_POOL_NAME = 'obsrv';
+const SECURITY_POOL_NAME = 'security';
 
 export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Promise<void> {
   try {
@@ -227,6 +228,160 @@ export async function createObservabilityNodePoolAzureBYOA(cluster: Cluster): Pr
         errorDetails: error,
       },
       'Failed to create observability node pool for BYOA Azure cluster',
+    );
+  }
+}
+
+export async function createSecurityNodePoolGCPBYOA(cluster: Cluster): Promise<void> {
+  try {
+    if (!cluster.gcpAccountID || !cluster.gcpAccountNumber) {
+      logger.error({ cluster: cluster.name }, 'Missing gcpAccountID or gcpAccountNumber for BYOA cluster');
+      return;
+    }
+
+    const { authClient } = await getGCPBYOACredentials(cluster).catch((error) => {
+      logger.error({ cluster: cluster.name, errorName: error?.name, errorMessage: error?.message }, 'Failed to get GCP BYOA credentials');
+      throw error;
+    });
+
+    const client = new ClusterManagerClient({ authClient: authClient as any });
+    const parent = `projects/${cluster.gcpAccountID}/locations/${cluster.region}/clusters/${cluster.name}`;
+
+    const [nodePools] = await client.listNodePools({ parent });
+    const exists = nodePools.nodePools?.some((np) => np.name === 'security');
+
+    if (exists) {
+      logger.info({ cluster: cluster.name }, 'Security node pool already exists.');
+      return;
+    }
+
+    await client.createNodePool({
+      parent,
+      nodePool: {
+        name: 'security',
+        initialNodeCount: 0,
+        config: {
+          machineType: 'e2-standard-4',
+          diskSizeGb: 50,
+          labels: { node_pool: 'security' },
+        },
+        autoscaling: {
+          enabled: true,
+          maxNodeCount: 3,
+          minNodeCount: 0,
+        },
+        maxPodsConstraint: { maxPodsPerNode: 25 },
+      },
+    });
+
+    logger.info({ cluster: cluster.name }, 'Security node pool created for BYOA GCP cluster.');
+  } catch (error) {
+    logger.error(
+      { cluster: cluster.name, errorName: (error as any)?.name, errorMessage: (error as any)?.message, errorDetails: error },
+      'Failed to create security node pool for BYOA GCP cluster',
+    );
+  }
+}
+
+export async function createSecurityNodePoolAWSBYOA(cluster: Cluster): Promise<void> {
+  try {
+    if (!cluster.awsAccountID) {
+      logger.error({ cluster: cluster.name }, 'Missing awsAccountID for BYOA cluster');
+      return;
+    }
+
+    const credentials = await getAWSBYOACredentials(cluster);
+
+    const eksClient = new EKSClient({
+      credentials: {
+        accessKeyId: credentials.accessKeyId,
+        secretAccessKey: credentials.secretAccessKey,
+        sessionToken: credentials.sessionToken,
+      },
+      region: cluster.region,
+    });
+
+    const { cluster: awsCluster } = await eksClient.send(
+      new DescribeClusterCommand({ name: cluster.name }),
+    );
+
+    const nodePools = awsCluster.computeConfig?.nodePools || [];
+
+    if (nodePools.includes('security')) {
+      logger.info({ cluster: cluster.name }, 'Security node pool already exists.');
+      return;
+    }
+
+    const subnetIds = awsCluster.resourcesVpcConfig.subnetIds;
+    const nodeRole = awsCluster.computeConfig.nodeRoleArn;
+
+    await eksClient.send(
+      new CreateNodegroupCommand({
+        clusterName: cluster.name,
+        nodegroupName: 'security',
+        subnets: subnetIds,
+        nodeRole: nodeRole,
+        instanceTypes: ['m5.xlarge'],
+        diskSize: 50,
+        scalingConfig: {
+          minSize: 0,
+          maxSize: 3,
+          desiredSize: 0,
+        },
+        labels: { node_pool: 'security' },
+      }),
+    );
+
+    logger.info({ cluster: cluster.name }, 'Security node pool created for BYOA AWS cluster.');
+  } catch (error) {
+    logger.error(
+      { cluster: cluster.name, errorName: (error as any)?.name, errorMessage: (error as any)?.message, errorDetails: error },
+      'Failed to create security node pool for BYOA AWS cluster',
+    );
+  }
+}
+
+export async function createSecurityNodePoolAzureBYOA(cluster: Cluster): Promise<void> {
+  try {
+    if (!cluster.azureClientId || !cluster.azureTenantId || !cluster.azureResourceGroupName) {
+      logger.error({ cluster: cluster.name }, 'Missing Azure credentials for BYOA Azure cluster');
+      return;
+    }
+
+    const { credential } = await getAzureBYOACredentials(cluster).catch((error) => {
+      logger.error({ cluster: cluster.name, errorName: error?.name, errorMessage: error?.message }, 'Failed to get Azure BYOA credentials');
+      throw error;
+    });
+
+    const client = new ContainerServiceClient(credential, cluster.azureSubscriptionId);
+
+    try {
+      await client.agentPools.get(cluster.azureResourceGroupName, cluster.name, SECURITY_POOL_NAME);
+      logger.info({ cluster: cluster.name }, 'Security node pool already exists.');
+      return;
+    } catch (error: any) {
+      if (error.statusCode !== 404 && error.code !== 'ResourceNotFound' && error.code !== 'AgentPoolNotFound') {
+        throw error;
+      }
+    }
+
+    await client.agentPools.beginCreateOrUpdateAndWait(cluster.azureResourceGroupName, cluster.name, SECURITY_POOL_NAME, {
+      count: 0,
+      vmSize: 'Standard_D4s_v3',
+      osDiskSizeGB: 50,
+      enableAutoScaling: true,
+      minCount: 0,
+      maxCount: 3,
+      mode: 'User',
+      nodeLabels: { node_pool: 'security' },
+      type: 'VirtualMachineScaleSets',
+    });
+
+    logger.info({ cluster: cluster.name }, 'Security node pool created for BYOA Azure cluster.');
+  } catch (error) {
+    logger.error(
+      { cluster: cluster.name, errorName: (error as any)?.name, errorMessage: (error as any)?.message, errorDetails: error },
+      'Failed to create security node pool for BYOA Azure cluster',
     );
   }
 }

@@ -1,0 +1,551 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Security Operations — health and findings for Falco, Grype, TruffleHog, kube-bench, KubeScape, and Kyverno.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Tool Health",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false
+    },
+    {
+      "title": "Falco DaemonSet — Ready / Desired",
+      "description": "Ratio of ready Falco pods vs desired across the cluster",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 80 },
+              { "color": "green", "value": 100 }
+            ]
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(kube_daemonset_status_number_ready{daemonset=\"falco\"}) / sum(kube_daemonset_status_desired_number_scheduled{daemonset=\"falco\"})",
+          "legendFormat": "Ready %"
+        }
+      ]
+    },
+    {
+      "title": "Grype Last Scan Age",
+      "description": "Time since the last successful Grype vulnerability scan",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 4, "x": 4, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 86400 },
+              { "color": "red", "value": 172800 }
+            ]
+          },
+          "unit": "s",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "time() - max(kube_cronjob_status_last_successful_time{cronjob=\"grype-vulnerability-scan\"})",
+          "legendFormat": "Grype"
+        }
+      ]
+    },
+    {
+      "title": "TruffleHog Last Scan Age",
+      "description": "Time since the last successful TruffleHog secret scan",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 4, "x": 8, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 86400 },
+              { "color": "red", "value": 172800 }
+            ]
+          },
+          "unit": "s",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "time() - max(kube_cronjob_status_last_successful_time{cronjob=\"trufflehog-secret-scan\"})",
+          "legendFormat": "TruffleHog"
+        }
+      ]
+    },
+    {
+      "title": "kube-bench Last Scan Age",
+      "description": "Time since the last successful CIS benchmark scan (weekly)",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 4, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 604800 },
+              { "color": "red", "value": 1209600 }
+            ]
+          },
+          "unit": "s",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "time() - max(kube_cronjob_status_last_successful_time{cronjob=\"kube-bench-cis-scan\"})",
+          "legendFormat": "kube-bench"
+        }
+      ]
+    },
+    {
+      "title": "KubeScape Last Scan Age",
+      "description": "Time since the last successful KubeScape MITRE/NSA scan",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 4, "x": 16, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 86400 },
+              { "color": "red", "value": 172800 }
+            ]
+          },
+          "unit": "s",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "expr": "time() - max(kube_cronjob_status_last_successful_time{cronjob=\"kubescape-scan\"})",
+          "legendFormat": "KubeScape"
+        }
+      ]
+    },
+    {
+      "title": "Kyverno — Controller Replicas",
+      "description": "Available admission controller replicas",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 4, "x": 20, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 1 },
+              { "color": "green", "value": 3 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(kube_deployment_status_replicas_available{deployment=~\"kyverno-admission-controller\"})",
+          "legendFormat": "Available"
+        }
+      ]
+    },
+    {
+      "title": "Scanner Job Failures (7d)",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "collapsed": false
+    },
+    {
+      "title": "CronJob Failures — Last 7 Days",
+      "description": "Number of failed job runs per security scanner CronJob",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "targets": [
+        {
+          "expr": "sum by (owner_name) (increase(kube_job_status_failed{owner_name=~\"grype-vulnerability-scan.*|trufflehog-secret-scan.*|kube-bench-cis-scan.*|kubescape-scan.*|prowler-soc2-scan.*\"}[7d]))",
+          "legendFormat": "{{ owner_name }}"
+        }
+      ]
+    },
+    {
+      "title": "CronJob Duration — Last Runs",
+      "description": "Duration of the latest completed runs for each security scanner",
+      "type": "bargauge",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1800 },
+              { "color": "red", "value": 3600 }
+            ]
+          },
+          "unit": "s"
+        }
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": { "calcs": ["lastNotNull"] }
+      },
+      "targets": [
+        {
+          "expr": "max by (job_name) (kube_job_status_completion_time{job_name=~\"grype-vulnerability-scan.*|trufflehog-secret-scan.*|kube-bench-cis-scan.*|kubescape-scan.*\"} - kube_job_status_start_time{job_name=~\"grype-vulnerability-scan.*|trufflehog-secret-scan.*|kube-bench-cis-scan.*|kubescape-scan.*\"})",
+          "legendFormat": "{{ job_name }}"
+        }
+      ]
+    },
+    {
+      "title": "Falco Runtime Security",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "collapsed": false
+    },
+    {
+      "title": "Falco Pods — Restarts",
+      "description": "Restart count for Falco DaemonSet pods (high restarts may indicate kernel issues)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 17 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (kube_pod_container_status_restarts_total{container=\"falco\"})",
+          "legendFormat": "{{ pod }}"
+        }
+      ]
+    },
+    {
+      "title": "Falco Pod Memory Usage",
+      "description": "Working set memory per Falco pod",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 17 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (container_memory_working_set_bytes{container=\"falco\"})",
+          "legendFormat": "{{ pod }}"
+        }
+      ]
+    },
+    {
+      "title": "Falco Pod CPU Usage",
+      "description": "CPU usage rate per Falco pod",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 17 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (rate(container_cpu_usage_seconds_total{container=\"falco\"}[5m]))",
+          "legendFormat": "{{ pod }}"
+        }
+      ]
+    },
+    {
+      "title": "Kyverno Admission Control",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+      "collapsed": false
+    },
+    {
+      "title": "Kyverno Policy Violations — Audit",
+      "description": "Count of Kyverno policy violations in Audit mode (admission requests that would be blocked in Enforce mode)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 26 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "bars", "fillOpacity": 50 }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (policy_name) (increase(kyverno_policy_results_total{rule_result=\"fail\", policy_execution_cause=\"admission\"}[1h]))",
+          "legendFormat": "{{ policy_name }}"
+        }
+      ]
+    },
+    {
+      "title": "Kyverno Admission Latency (p99)",
+      "description": "99th percentile latency for Kyverno webhook admission requests",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 26 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(kyverno_admission_review_duration_seconds_bucket[5m])))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "title": "Kyverno Controller Pod Health",
+      "description": "Replicas available vs desired for Kyverno controllers",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 26 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "line", "fillOpacity": 10 }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(kube_deployment_status_replicas_available{deployment=~\"kyverno.*\"})",
+          "legendFormat": "Available"
+        },
+        {
+          "expr": "sum(kube_deployment_spec_replicas{deployment=~\"kyverno.*\"})",
+          "legendFormat": "Desired"
+        }
+      ]
+    },
+    {
+      "title": "Wazuh Security Events",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 34 },
+      "collapsed": false
+    },
+    {
+      "title": "Wazuh Agent Health — DaemonSet",
+      "description": "Ready vs desired Wazuh agent pods",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 35 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 80 },
+              { "color": "green", "value": 100 }
+            ]
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(kube_daemonset_status_number_ready{daemonset=\"wazuh-agent\"}) / sum(kube_daemonset_status_desired_number_scheduled{daemonset=\"wazuh-agent\"})",
+          "legendFormat": "Ready %"
+        }
+      ]
+    },
+    {
+      "title": "Wazuh Manager Pod Status",
+      "description": "Wazuh Manager StatefulSet availability",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 35 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum(kube_statefulset_status_replicas_ready{statefulset=~\"wazuh.*\"})",
+          "legendFormat": "Ready"
+        }
+      ]
+    },
+    {
+      "title": "Security Namespace Pod Restarts (24h)",
+      "description": "Pod restarts in the security namespace — may indicate crashloops or OOM kills",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 35 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "drawStyle": "bars", "fillOpacity": 30 }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (pod) (increase(kube_pod_container_status_restarts_total{namespace=\"security\"}[24h])) > 0",
+          "legendFormat": "{{ pod }}"
+        }
+      ]
+    },
+    {
+      "title": "Evidence Locker & Coverage",
+      "type": "row",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 43 },
+      "collapsed": false
+    },
+    {
+      "title": "Scanner Coverage Matrix",
+      "description": "Shows which security scanners have run successfully in the last expected interval. Green = on schedule, Red = overdue.",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 44 },
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "ON SCHEDULE", "color": "green" }, "1": { "text": "OVERDUE", "color": "red" } } }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Scanner", "desc": false }]
+      },
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        }
+      ],
+      "targets": [
+        {
+          "expr": "(time() - max(kube_cronjob_status_last_successful_time{cronjob=\"grype-vulnerability-scan\"}) > 172800) or vector(0)",
+          "legendFormat": "Grype (CVE)",
+          "refId": "A",
+          "instant": true
+        },
+        {
+          "expr": "(time() - max(kube_cronjob_status_last_successful_time{cronjob=\"trufflehog-secret-scan\"}) > 172800) or vector(0)",
+          "legendFormat": "TruffleHog (Secrets)",
+          "refId": "B",
+          "instant": true
+        },
+        {
+          "expr": "(time() - max(kube_cronjob_status_last_successful_time{cronjob=\"kube-bench-cis-scan\"}) > 1209600) or vector(0)",
+          "legendFormat": "kube-bench (CIS)",
+          "refId": "C",
+          "instant": true
+        },
+        {
+          "expr": "(time() - max(kube_cronjob_status_last_successful_time{cronjob=\"kubescape-scan\"}) > 172800) or vector(0)",
+          "legendFormat": "KubeScape (MITRE/NSA)",
+          "refId": "D",
+          "instant": true
+        },
+        {
+          "expr": "(time() - max(kube_cronjob_status_last_successful_time{cronjob=\"prowler-soc2-scan\"}) > 172800) or vector(0)",
+          "legendFormat": "Prowler (SOC2/CIS)",
+          "refId": "E",
+          "instant": true
+        }
+      ]
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 39,
+  "tags": ["security", "soc2", "falco", "grype", "trufflehog", "kube-bench", "kubescape", "kyverno"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "utc",
+  "title": "Security Operations Center",
+  "uid": "security-tools-soc",
+  "version": 1
+}

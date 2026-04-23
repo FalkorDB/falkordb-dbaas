@@ -24,6 +24,7 @@ data:
         <remote_enrollment>yes</remote_enrollment>
         <port>1514</port>
         <use_source_ip>no</use_source_ip>
+        <ssl_agent_ca>/var/ossec/etc/rootCA.pem</ssl_agent_ca>
         <force>
           <enabled>yes</enabled>
           <disconnected_time enabled="no">0</disconnected_time>

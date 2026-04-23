@@ -7,5 +7,6 @@ resources:
   - api-cred-env-secret.yaml
   - indexer-cred-env-secret.yaml
   - dashboard-cred-env-secret.yaml
+  - cluster-key-env-secret.yaml
 patches:
   - path: service-lb-patch.yaml

@@ -47,3 +47,43 @@ export async function createObservabilityNodePool(cluster: Cluster): Promise<voi
     logger.error({ cluster: cluster.name, error }, 'Failed to create observability node pool:',);
   }
 }
+
+export async function createSecurityNodePool(cluster: Cluster): Promise<void> {
+  try {
+    const parent = `projects/${process.env.APPLICATION_PLANE_GOOGLE_CLOUD_PROJECT}/locations/${cluster.region}/clusters/${cluster.name}`;
+
+    const [nodePools] = await client.listNodePools({ parent });
+
+    const exists = nodePools.nodePools?.some((np) => np.name === 'security');
+
+    if (exists) {
+      logger.info({ cluster: cluster.name }, 'Security node pool already exists.');
+      return;
+    }
+
+    await client.createNodePool({
+      parent,
+      nodePool: {
+        name: 'security',
+        initialNodeCount: 0,
+        config: {
+          machineType: 'e2-standard-4',
+          diskSizeGb: 50,
+          labels: { node_pool: 'security' },
+        },
+        autoscaling: {
+          enabled: true,
+          maxNodeCount: 3,
+          minNodeCount: 0,
+        },
+        maxPodsConstraint: {
+          maxPodsPerNode: 25,
+        },
+      },
+    });
+
+    logger.info({ cluster: cluster.name }, 'Security node pool created.');
+  } catch (error) {
+    logger.error({ cluster: cluster.name, error }, 'Failed to create security node pool');
+  }
+}

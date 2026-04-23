@@ -49,6 +49,7 @@ export type ClusterRole = (typeof CLUSTER_ROLE)[keyof typeof CLUSTER_ROLE];
 // Node pool names
 export const NODE_POOL_NAME = {
   OBSERVABILITY: 'observability',
+  SECURITY: 'security',
   DEFAULT: 'default',
 } as const;
 
@@ -56,18 +57,24 @@ export const NODE_POOL_NAME = {
 export const AWS = {
   DEFAULT_ROLE_NAME: 'omnistrate-bootstrap-role',
   DEFAULT_INSTANCE_TYPE: 'm5.large',
+  SECURITY_INSTANCE_TYPE: 'm5.xlarge',
   DEFAULT_DISK_SIZE_GB: 50,
   DEFAULT_MIN_NODES: 1,
   DEFAULT_MAX_NODES: 10,
+  SECURITY_MIN_NODES: 0,
+  SECURITY_MAX_NODES: 3,
   WEB_IDENTITY_TOKEN_FILE: '/var/run/secrets/eks.amazonaws.com/serviceaccount/token',
 } as const;
 
 // GCP specific constants
 export const GCP = {
   DEFAULT_MACHINE_TYPE: 'e2-standard-2',
+  SECURITY_MACHINE_TYPE: 'e2-standard-4',
   DEFAULT_DISK_SIZE_GB: 50,
   DEFAULT_MIN_NODES: 1,
   DEFAULT_MAX_NODES: 10,
+  SECURITY_MIN_NODES: 0,
+  SECURITY_MAX_NODES: 3,
   DEFAULT_MAX_PODS_PER_NODE: 25,
   WORKLOAD_IDENTITY_POOL_PATH:
     'projects/{projectNumber}/locations/global/workloadIdentityPools/omnistrate-bootstrap-id-pool/providers/omnistrate-oidc-prov',

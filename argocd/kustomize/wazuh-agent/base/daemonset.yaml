@@ -31,6 +31,22 @@ spec:
       # Required: hostNetwork uses host DNS by default, which can't resolve
       # *.svc.cluster.local names. This policy falls back to cluster DNS.
       dnsPolicy: ClusterFirstWithHostNet
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: NotIn
+                    values:
+                      - e2-small
+                      - e2-medium
+                      - t2.small
+                      - t2.medium
+                      - t3.small
+                      - t3a.small
+                      - t3.medium
+                      - t3a.medium
       tolerations:
         - operator: Exists
           effect: NoSchedule
@@ -68,7 +84,17 @@ spec:
               cpu: "200m"
               memory: "256Mi"
           securityContext:
-            privileged: true
+            privileged: false
+            capabilities:
+              add:
+                # Read host files (logs, /etc, /proc) for FIM and log collection
+                - DAC_READ_SEARCH
+                # Monitor processes on the host (ps, /proc inspection)
+                - SYS_PTRACE
+                # Needed for rootcheck and host audit
+                - AUDIT_READ
+              drop:
+                - ALL
           env:
             - name: WAZUH_MANAGER_SERVER
               valueFrom:
@@ -102,6 +128,10 @@ spec:
               mountPath: /wazuh-config-mount/etc/ossec.conf
               subPath: ossec.conf
               readOnly: true
+            - name: manager-ca
+              mountPath: /var/ossec/etc/rootCA.pem
+              subPath: ca.crt
+              readOnly: true
           livenessProbe:
             exec:
               command:
@@ -132,3 +162,7 @@ spec:
         - name: ossec-conf
           configMap:
             name: wazuh-agent-ossec-conf
+        - name: manager-ca
+          secret:
+            secretName: wazuh-manager-ca
+            optional: true

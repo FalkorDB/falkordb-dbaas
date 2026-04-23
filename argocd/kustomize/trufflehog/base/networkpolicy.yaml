@@ -1,0 +1,31 @@
+# NetworkPolicy — TruffleHog secret scanner CronJob pods
+# Allows egress to: DNS, K8s API, GCS, Wazuh syslog, PyPI,
+# GitHub (trufflehog binary download). Denies all ingress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: trufflehog-netpol
+  namespace: security
+spec:
+  podSelector:
+    matchLabels:
+      app: trufflehog
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress:
+    # DNS resolution
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # HTTPS — K8s API, GCS, PyPI, GitHub releases
+    - ports:
+        - protocol: TCP
+          port: 443
+    # Wazuh syslog forwarding
+    - ports:
+        - protocol: TCP
+          port: 514

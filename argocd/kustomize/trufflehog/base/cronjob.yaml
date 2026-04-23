@@ -1,0 +1,270 @@
+# TruffleHog daily CronJob — scans all running container images for leaked
+# secrets and credentials, uploads JSON reports to GCS Evidence Locker,
+# and forwards verified/unknown findings to Wazuh Manager via syslog.
+#
+# Runs at 05:00 UTC daily (after Grype at 04:00).
+# Results are stored as: gs://BUCKET/trufflehog/YYYY/MM/DD/<cluster>/
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: trufflehog-secret-scan
+  namespace: security
+spec:
+  schedule: "0 5 * * *"
+  timeZone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 14400  # 4h max
+      template:
+        metadata:
+          labels:
+            app: trufflehog
+            component: soc2-evidence
+        spec:
+          serviceAccountName: trufflehog
+          restartPolicy: Never
+          nodeSelector:
+            node_pool: security
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: syslog-ca
+              secret:
+                secretName: wazuh-syslog-ca
+                optional: true
+          containers:
+            - name: trufflehog
+              image: python:3.12-slim@sha256:4386a385d81dba9f72ed72a6fe4237755d7f5440c84b417650f38336bbc43117
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "1Gi"
+                limits:
+                  cpu: "2"
+                  memory: "4Gi"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+                - name: syslog-ca
+                  mountPath: /run/secrets/syslog-ca
+                  readOnly: true
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: TRUFFLEHOG_VERSION
+                  value: "3.88.0"
+                - name: EVIDENCE_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: trufflehog-infra
+                      key: evidence-bucket
+                - name: CLUSTER_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: trufflehog-config
+                      key: cluster-name
+                - name: WAZUH_SYSLOG_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: trufflehog-config
+                      key: wazuh-syslog-host
+                      optional: true
+                - name: WAZUH_SYSLOG_CA_PATH
+                  value: /run/secrets/syslog-ca/ca.crt
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+
+                  pip install --quiet --no-cache-dir --user \
+                    google-cloud-storage kubernetes
+
+                  export PATH="$HOME/.local/bin:$PATH"
+                  python3 <<'PYEOF'
+                  import os, sys, json, subprocess, socket, time, glob
+
+                  cluster = os.environ['CLUSTER_NAME']
+                  output_dir = '/tmp/trufflehog-output'
+                  os.makedirs(output_dir, exist_ok=True)
+
+                  # ── Install trufflehog binary ──────────────────────────────
+                  version = os.environ.get('TRUFFLEHOG_VERSION', '3.88.0')
+                  print(f'Installing trufflehog v{version}...')
+                  subprocess.check_call([
+                      sys.executable, '-m', 'pip', 'install', '--quiet',
+                      '--no-cache-dir', '--user', f'trufflehog=={version}'
+                  ])
+                  thog_bin = os.path.expanduser('~/.local/bin/trufflehog')
+                  if not os.path.exists(thog_bin):
+                      # Try finding it via pip show
+                      import shutil
+                      thog_bin = shutil.which('trufflehog') or '/tmp/.local/bin/trufflehog'
+                  print(f'trufflehog binary: {thog_bin}')
+
+                  # ── Discover running container images ──────────────────────
+                  from kubernetes import client, config
+                  config.load_incluster_config()
+                  v1 = client.CoreV1Api()
+
+                  images = set()
+                  pods = v1.list_pod_for_all_namespaces(timeout_seconds=30)
+                  for pod in pods.items:
+                      for cs in (pod.status.container_statuses or []):
+                          if cs.image:
+                              images.add(cs.image)
+                      for cs in (pod.status.init_container_statuses or []):
+                          if cs.image:
+                              images.add(cs.image)
+
+                  print(f'Discovered {len(images)} unique container images')
+
+                  # ── Scan each image for secrets ────────────────────────────
+                  all_findings = []
+                  scan_errors = []
+
+                  for img in sorted(images):
+                      print(f'Scanning: {img}')
+                      safe_name = img.replace('/', '__').replace(':', '_')[:200]
+                      result_file = os.path.join(output_dir, f'{safe_name}.json')
+                      try:
+                          result = subprocess.run(
+                              [thog_bin, 'docker', '--image', img,
+                               '--results=verified,unknown', '--json'],
+                              capture_output=True, text=True, timeout=300,
+                          )
+                          # TruffleHog outputs NDJSON to stdout
+                          findings = []
+                          for line in result.stdout.strip().split('\n'):
+                              line = line.strip()
+                              if not line:
+                                  continue
+                              try:
+                                  finding = json.loads(line)
+                                  finding['ImageName'] = img
+                                  finding['Cluster'] = cluster
+                                  finding['Scanner'] = 'trufflehog'
+                                  findings.append(finding)
+                              except json.JSONDecodeError:
+                                  continue
+
+                          if findings:
+                              with open(result_file, 'w') as f:
+                                  json.dump(findings, f, indent=2)
+                              all_findings.extend(findings)
+                              print(f'  Found {len(findings)} secrets')
+                          else:
+                              print(f'  Clean')
+
+                      except subprocess.TimeoutExpired:
+                          scan_errors.append({'image': img, 'error': 'timeout (300s)'})
+                      except Exception as e:
+                          scan_errors.append({'image': img, 'error': str(e)[:500]})
+
+                  # ── Write summary ──────────────────────────────────────────
+                  verified = sum(1 for f in all_findings if f.get('Verified'))
+                  unverified = len(all_findings) - verified
+                  summary = {
+                      'scan_date': time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                      'cluster': cluster,
+                      'images_scanned': len(images),
+                      'scan_errors': len(scan_errors),
+                      'total_secrets': len(all_findings),
+                      'verified_secrets': verified,
+                      'unverified_secrets': unverified,
+                      'by_detector': {},
+                      'errors': scan_errors,
+                  }
+                  for f in all_findings:
+                      det = f.get('DetectorName', 'unknown')
+                      summary['by_detector'][det] = summary['by_detector'].get(det, 0) + 1
+
+                  with open(os.path.join(output_dir, 'summary.json'), 'w') as f:
+                      json.dump(summary, f, indent=2)
+
+                  print(f'Scan complete: {len(images)} images, {len(all_findings)} secrets '
+                        f'(verified:{verified} unverified:{unverified}), '
+                        f'{len(scan_errors)} errors')
+
+                  # ── Upload to GCS evidence locker ──────────────────────────
+                  try:
+                      from google.cloud import storage as gcs
+                      bucket_name = os.environ['EVIDENCE_BUCKET']
+                      date_path = time.strftime('%Y/%m/%d')
+                      prefix = f'trufflehog/{date_path}/{cluster}'
+                      gclient = gcs.Client()
+                      bucket = gclient.bucket(bucket_name)
+                      for f_path in glob.glob(os.path.join(output_dir, '*.json')):
+                          if os.path.isfile(f_path):
+                              blob = bucket.blob(f'{prefix}/{os.path.basename(f_path)}')
+                              blob.upload_from_filename(f_path)
+                              print(f'  Uploaded {os.path.basename(f_path)}')
+                      print(f'Results uploaded to gs://{bucket_name}/{prefix}/')
+                  except Exception as e:
+                      print(f'WARNING: GCS upload failed: {e}')
+
+                  # ── Forward findings to Wazuh via syslog ───────────────────
+                  syslog_host = os.environ.get('WAZUH_SYSLOG_HOST', '')
+                  if not syslog_host:
+                      print('WAZUH_SYSLOG_HOST not set, skipping syslog forwarding')
+                      sys.exit(0)
+
+                  fwd_count = 0
+                  try:
+                      import ssl as _ssl
+                      ctx = _ssl.create_default_context()
+                      ca_path = os.environ.get('WAZUH_SYSLOG_CA_PATH', '')
+                      if ca_path and os.path.isfile(ca_path):
+                          ctx.load_verify_locations(ca_path)
+                      else:
+                          print('WARNING: WAZUH_SYSLOG_CA_PATH not set or missing, TLS verification disabled')
+                          ctx.check_hostname = False
+                          ctx.verify_mode = _ssl.CERT_NONE
+                      raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                      raw_sock.settimeout(10)
+                      sock = ctx.wrap_socket(raw_sock, server_hostname=syslog_host)
+                      sock.connect((syslog_host, 1516))
+                      for f in all_findings:
+                          # Build a Wazuh-friendly JSON payload
+                          payload = {
+                              'Scanner': 'trufflehog',
+                              'DetectorName': f.get('DetectorName', ''),
+                              'Verified': f.get('Verified', False),
+                              'Redacted': f.get('Redacted', ''),
+                              'ImageName': f.get('ImageName', ''),
+                              'Cluster': cluster,
+                              'SourceType': 'docker_image',
+                          }
+                          # Include source metadata if present
+                          src = f.get('SourceMetadata', {}).get('Data', {})
+                          if src:
+                              for k, v in src.items():
+                                  if isinstance(v, dict):
+                                      payload['SourceFile'] = v.get('file', '')
+                                      break
+                          ts = time.strftime('%b %d %H:%M:%S')
+                          msg = '<134>{} {} trufflehog: {}\n'.format(
+                              ts, cluster, json.dumps(payload, separators=(',', ':'))
+                          )
+                          sock.sendall(msg.encode())
+                          fwd_count += 1
+                      sock.close()
+                      print(f'Forwarded {fwd_count} findings to Wazuh at {syslog_host}:1516 (TLS)')
+                  except Exception as e:
+                      print(f'WARNING: Syslog forwarding failed: {e}')
+                  PYEOF

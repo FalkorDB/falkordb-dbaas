@@ -4,8 +4,12 @@
 # at /var/ossec/etc/decoders/local_decoder.xml.
 #
 # Decoders:
-#   grype   — Matches syslog program_name "grype", extracts JSON fields
-#   prowler — Matches syslog program_name "prowler", extracts JSON fields
+#   grype      — Matches syslog program_name "grype", extracts JSON fields
+#   prowler    — Matches syslog program_name "prowler", extracts JSON fields
+#   falco      — Matches syslog program_name "falco", extracts JSON fields
+#   trufflehog — Matches syslog program_name "trufflehog", extracts JSON fields
+#   kube-bench — Matches syslog program_name "kube-bench", extracts JSON fields
+#   kubescape  — Matches syslog program_name "kubescape", extracts JSON fields
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -31,5 +35,37 @@ data:
          (Provider, CheckTitle, StatusExtended, Severity, etc.) -->
     <decoder name="prowler">
         <program_name>prowler</program_name>
+        <plugin_decoder>JSON_Decoder</plugin_decoder>
+    </decoder>
+
+    <!-- Falco runtime threat detection: syslog messages with program_name "falco"
+         containing a JSON body. JSON_Decoder extracts fields
+         (output, priority, rule, time, etc.) -->
+    <decoder name="falco">
+        <program_name>falco</program_name>
+        <plugin_decoder>JSON_Decoder</plugin_decoder>
+    </decoder>
+
+    <!-- TruffleHog secret scanner: syslog messages with program_name "trufflehog"
+         containing a JSON body. JSON_Decoder extracts fields
+         (Scanner, DetectorName, Verified, ImageName, Cluster, etc.) -->
+    <decoder name="trufflehog">
+        <program_name>trufflehog</program_name>
+        <plugin_decoder>JSON_Decoder</plugin_decoder>
+    </decoder>
+
+    <!-- kube-bench CIS benchmark: syslog messages with program_name "kube-bench"
+         containing a JSON body. JSON_Decoder extracts fields
+         (Scanner, TestNumber, TestDesc, Status, Remediation, etc.) -->
+    <decoder name="kube-bench">
+        <program_name>kube-bench</program_name>
+        <plugin_decoder>JSON_Decoder</plugin_decoder>
+    </decoder>
+
+    <!-- KubeScape security scanner: syslog messages with program_name "kubescape"
+         containing a JSON body. JSON_Decoder extracts fields
+         (Scanner, ControlID, ControlName, Framework, Severity, etc.) -->
+    <decoder name="kubescape">
+        <program_name>kubescape</program_name>
         <plugin_decoder>JSON_Decoder</plugin_decoder>
     </decoder>

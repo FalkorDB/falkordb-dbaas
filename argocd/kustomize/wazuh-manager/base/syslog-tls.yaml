@@ -1,0 +1,40 @@
+# Certificate for syslog TLS endpoint (stunnel sidecar).
+# Uses the cert-manager self-signed issuer deployed by the Wazuh chart.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wazuh-syslog-tls
+  namespace: security
+spec:
+  secretName: wazuh-syslog-tls
+  duration: 8760h  # 1 year
+  renewBefore: 720h  # 30 days
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+  dnsNames:
+    - wazuh-manager-lb
+    - wazuh-manager-lb.security
+    - wazuh-manager-lb.security.svc
+    - wazuh-manager-lb.security.svc.cluster.local
+    - wazuh-manager-master-0
+    - wazuh-manager-master-0.wazuh-manager-master
+  ipAddresses:
+    - 127.0.0.1
+---
+# stunnel configuration — terminates TLS on port 1516 and forwards
+# cleartext to the Wazuh syslog listener on localhost:514.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: syslog-tls-stunnel
+  namespace: security
+data:
+  stunnel.conf: |
+    pid = /tmp/stunnel.pid
+    foreground = yes
+    [syslog-tls]
+    accept = 0.0.0.0:1516
+    connect = 127.0.0.1:514
+    cert = /etc/stunnel/tls/tls.crt
+    key = /etc/stunnel/tls/tls.key

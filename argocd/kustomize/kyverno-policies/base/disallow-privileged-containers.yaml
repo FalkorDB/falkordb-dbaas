@@ -1,0 +1,49 @@
+# Disallow privileged containers — prevents container escapes
+# and enforces least-privilege for SOC 2 CC6.1.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-privileged-containers
+  annotations:
+    policies.kyverno.io/title: Disallow Privileged Containers
+    policies.kyverno.io/category: Pod Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Privileged containers can access the host and bypass security
+      boundaries. Only allowed for system components (Falco, Wazuh agent).
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: deny-privileged
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+          # Allow security DaemonSets that need host access
+          - resources:
+              kinds:
+                - Pod
+              selector:
+                matchLabels:
+                  app: falco
+          - resources:
+              kinds:
+                - Pod
+              selector:
+                matchLabels:
+                  app: wazuh-agent
+      validate:
+        message: "Privileged containers are not allowed. Use specific capabilities instead."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  privileged: "false"

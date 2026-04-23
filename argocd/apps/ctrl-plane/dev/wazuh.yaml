@@ -39,10 +39,10 @@ spec:
           enabled: true
           nodeSelector:
             node_pool: security
-          # TODO(security): Move cluster key to SealedSecret. The chart does not
-          # support existingSecret for the cluster key — requires a kustomize
-          # patch or post-renderer to inject from a Kubernetes Secret.
-          key: "c58253e9a1d5a527ac715f5853942d9d"
+          # Cluster key is injected at runtime by the init-cluster-key
+          # init container from the wazuh-cluster-key SealedSecret.
+          # This placeholder is overwritten before the manager starts.
+          key: "placeholder-replaced-at-runtime"
           # Password-based agent registration
           authd:
             enabled: true
@@ -218,21 +218,59 @@ spec:
                 <level>10</level>
                 <alert_format>json</alert_format>
               </integration>
+              <vulnerability-detector>
+                <enabled>yes</enabled>
+                <interval>12h</interval>
+                <run_on_start>yes</run_on_start>
+                <provider name="canonical">
+                  <enabled>yes</enabled>
+                  <os>focal</os>
+                  <os>jammy</os>
+                  <update_interval>1h</update_interval>
+                </provider>
+                <provider name="redhat">
+                  <enabled>yes</enabled>
+                  <os>8</os>
+                  <os>9</os>
+                  <update_interval>1h</update_interval>
+                </provider>
+                <provider name="nvd">
+                  <enabled>yes</enabled>
+                  <update_interval>1h</update_interval>
+                </provider>
+              </vulnerability-detector>
+              <command>
+                <name>yara-scan</name>
+                <executable>yara.sh</executable>
+                <extra_args>-yara_path /usr/bin/yara -yara_rules /var/ossec/ruleset/yara/rules/</extra_args>
+                <timeout_allowed>yes</timeout_allowed>
+              </command>
+              <active-response>
+                <command>yara-scan</command>
+                <location>local</location>
+                <rules_id>100200,100201,100202</rules_id>
+              </active-response>
             # Inject Google Chat webhook URL from sealed secret
             extraSpec:
               # Raise the Wazuh API rate limit so all agents can register
               # concurrently without hitting 429 "Too Many Requests".
               pod:
                 initContainers:
-                  - name: api-rate-limit
-                    image: alpine
+                  - name: init-cluster-key
+                    image: alpine:3.21@sha256:f27cad9117495d32d067133afff942cb2dc745dfe9163e949f6bfe8a6a245339
                     command: ["sh", "-c"]
                     args:
                       - |
+                        # Inject cluster key from SealedSecret into ossec.conf
+                        OSSEC_CONF=/mnt/master/wazuh/var/ossec/etc/ossec.conf
+                        CLUSTER_KEY=$(cat /run/secrets/cluster-key/CLUSTER_KEY)
+                        if [ -f "$OSSEC_CONF" ]; then
+                          sed -i "s|<key>.*</key>|<key>${CLUSTER_KEY}</key>|" "$OSSEC_CONF"
+                        fi
+                        # Also configure API rate limits
                         API_YAML=/mnt/master/wazuh/var/ossec/api/configuration/api.yaml
                         mkdir -p "$(dirname "$API_YAML")"
                         if grep -q 'max_request_per_minute' "$API_YAML" 2>/dev/null; then
-                          # Update existing values
                           sed -i 's/max_login_attempts:.*/max_login_attempts: 50/' "$API_YAML"
                           sed -i 's/block_time:.*/block_time: 300/' "$API_YAML"
                           sed -i 's/max_request_per_minute:.*/max_request_per_minute: 1000/' "$API_YAML"
@@ -247,6 +285,9 @@ spec:
                     volumeMounts:
                       - name: wazuh-manager-master
                         mountPath: /mnt/master
+                      - name: cluster-key
+                        mountPath: /run/secrets/cluster-key
+                        readOnly: true
                     resources:
                       requests:
                         cpu: 10m
@@ -254,6 +295,58 @@ spec:
                       limits:
                         cpu: 10m
                         memory: 16Mi
+                # stunnel sidecar — TLS termination for syslog (port 1516 → 514)
+                containers:
+                  - name: syslog-tls
+                    image: alpine/socat:1.8.0.1@sha256:50b7de7ff6c3685d9f85bc83eb80d691b786c0ca79184b60b39ac8d883c3dcf1
+                    command: ["sh", "-c"]
+                    args:
+                      - |
+                        set -e
+                        CHECKSUM="d462cf2e317e97e30c4f5e14e13e0e79503030860db82fa40b880e1dc6a03b67"
+                        apk add --no-cache stunnel
+                        echo "${CHECKSUM}  $(which stunnel)" | sha256sum -c -
+                        exec stunnel /etc/stunnel/stunnel.conf
+                    ports:
+                      - containerPort: 1516
+                        protocol: TCP
+                    volumeMounts:
+                      - name: stunnel-config
+                        mountPath: /etc/stunnel/stunnel.conf
+                        subPath: stunnel.conf
+                        readOnly: true
+                      - name: syslog-tls-cert
+                        mountPath: /etc/stunnel/tls
+                        readOnly: true
+                      - name: stunnel-tmp
+                        mountPath: /tmp
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 32Mi
+                      limits:
+                        cpu: 50m
+                        memory: 64Mi
+                    securityContext:
+                      runAsNonRoot: true
+                      runAsUser: 65534
+                      allowPrivilegeEscalation: false
+                      readOnlyRootFilesystem: true
+                      capabilities:
+                        drop:
+                          - ALL
+                volumes:
+                  - name: stunnel-config
+                    configMap:
+                      name: syslog-tls-stunnel
+                  - name: syslog-tls-cert
+                    secret:
+                      secretName: wazuh-syslog-tls
+                  - name: stunnel-tmp
+                    emptyDir: {}
+                  - name: cluster-key
+                    secret:
+                      secretName: wazuh-cluster-key
           worker:
             enabled: true
             replicas: 1
@@ -315,6 +408,8 @@ spec:
           ingress:
             enabled: true
             className: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-prod
             host: "wazuh.security.dev.internal.falkordb.cloud"
             tls:
               - secretName: dashboard-tls

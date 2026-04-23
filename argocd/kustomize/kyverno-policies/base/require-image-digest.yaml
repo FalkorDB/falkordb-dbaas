@@ -1,0 +1,32 @@
+# Require image digests for production workloads — ensures immutable
+# references and prevents supply-chain tag mutation attacks.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-image-digest
+  annotations:
+    policies.kyverno.io/title: Require Image Digest
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Images should use digests (sha256) to ensure the exact image
+      version is deployed and prevent tag mutation attacks.
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: require-digest
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - production
+                - default
+      validate:
+        message: "Images must use a digest (@sha256:...) for supply chain security."
+        pattern:
+          spec:
+            containers:
+              - image: "*@sha256:*"

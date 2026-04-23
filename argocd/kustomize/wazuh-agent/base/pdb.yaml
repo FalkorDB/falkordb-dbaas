@@ -1,0 +1,14 @@
+# PodDisruptionBudget — keep at least 1 Wazuh Agent running on each node
+# during voluntary disruptions (node upgrades, drains).
+# maxUnavailable is used instead of minAvailable because DaemonSets
+# run one pod per node — minAvailable would need to know the node count.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: wazuh-agent-pdb
+  namespace: security
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: wazuh-agent

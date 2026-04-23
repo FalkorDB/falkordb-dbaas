@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: security
+resources:
+  - ../../base
+  - secrets-env-secret.yaml
+configMapGenerator:
+  - name: trufflehog-config
+    behavior: create
+    literals:
+      - cluster-name=app-plane-aws-dev
+      - wazuh-syslog-host=34.46.116.195
+generatorOptions:
+  disableNameSuffixHash: true
+patches:
+  - path: aws-credentials-patch.yaml
