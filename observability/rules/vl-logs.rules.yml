@@ -96,6 +96,31 @@ spec:
               Crash count: {{ $value }}.
             view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%20AND%20container%3A%5C%22service%5C%22%22%7D%5D%7D'
 
+        - alert: RedisClusterJoinStuck
+          # LogsQL: Detect when a Redis cluster join is stuck.
+          # During cluster creation, redis-cli prints dots while waiting for nodes to join.
+          # A normal join completes in seconds. If lines consisting entirely of dots appear
+          # and persist, the join is stuck at "Waiting for the cluster to join".
+          # The anchored regex ^\.{10,}$ avoids matching unrelated log lines that
+          # happen to contain dots embedded in other text.
+          expr: |
+            ~"^\.{10,}$" and namespace:~"instance-.*" and _time:5m |
+            stats by (pod, namespace, cluster, environment) count() as dot_count |
+            filter dot_count :> 0
+          for: 2m
+          labels:
+            severity: critical
+            cluster: "{{ $labels.cluster }}"
+            environment: "{{ $labels.environment }}"
+          annotations:
+            summary: "Redis cluster join stuck in {{ $labels.pod }} ({{ $labels.namespace }})"
+            description: |
+              [cluster={{ $labels.cluster }}] Redis cluster join appears stuck in pod '{{ $labels.pod }}' 
+              in namespace '{{ $labels.namespace }}'. The cluster creation process is stuck at the 
+              "Waiting for the cluster to join" stage, indicating nodes cannot communicate properly.
+              Dot count: {{ $value }}.
+            view_logs: 'https://grafana.observability{{ if eq $labels.environment "dev" }}.dev{{ end }}.internal.falkordb.cloud/explore?orgId=1&left=%7B%22datasource%22%3A%22VictoriaLogs%22%2C%22queries%22%3A%5B%7B%22expr%22%3A%22pod%3A%5C%22{{ $labels.pod }}%5C%22%20AND%20namespace%3A%5C%22{{ $labels.namespace }}%5C%22%22%7D%5D%7D'
+
         - alert: RedisCrashLoop
           # LogsQL: Detect Redis crash loop (2+ crashes in last 10 minutes).
           # Uses "=== REDIS BUG REPORT START" as the single anchor — it is emitted exactly once per
