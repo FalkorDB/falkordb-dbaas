@@ -105,7 +105,7 @@ spec:
           # happen to contain dots embedded in other text. The double backslash is
           # needed because the LogsQL double-quoted string consumes one level of escaping.
           expr: |
-            ~"^\\.{5,}$" and namespace:~"instance-.*" and _time:5m |
+            ~"^\\.{10,}$" and namespace:~"instance-.*" and _time:5m |
             stats by (pod, namespace, cluster, environment) count() as dot_count |
             filter dot_count :> 0
           for: 2m
