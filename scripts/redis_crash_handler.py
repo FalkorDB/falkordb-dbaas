@@ -1008,6 +1008,9 @@ class GitHubIssueManager:
 class GrafanaLinkGenerator:
     """Generates Grafana log viewer links"""
     
+    # Maximum number of log lines returned in a Grafana Explore link
+    LOG_LINE_LIMIT = 5000
+
     def __init__(self, base_url: str):
         self.base_url = base_url.rstrip('/')
     
@@ -1024,21 +1027,15 @@ class GrafanaLinkGenerator:
         # Build query: namespace:instance-123 AND container:service AND pod:node-f-0
         query = f'namespace:{namespace} AND container:{container} AND pod:{pod}'
         
-        # Build the Grafana Explore state as normal Python data and URL-encode it
+        # Build the Grafana Explore state using the object format (consistent with oom_handler.py)
         from urllib.parse import urlencode
-        left_state = [
-            str(from_ms),
-            str(to_ms),
-            "VictoriaLogs",
-            {
-                "expr": query,
-                "sort": "asc",
-                "limit": 9999,
-            },
-        ]
         params = urlencode(
             {
-                "left": json.dumps(left_state, separators=(",", ":")),
+                "left": json.dumps({
+                    "datasource": "VictoriaLogs",
+                    "queries": [{"expr": query, "refId": "A", "sort": "asc", "limit": self.LOG_LINE_LIMIT}],
+                    "range": {"from": str(from_ms), "to": str(to_ms)},
+                }),
                 "time.timezone": "browser",
             }
         )
