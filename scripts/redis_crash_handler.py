@@ -1024,18 +1024,26 @@ class GrafanaLinkGenerator:
         # Build query: namespace:instance-123 AND container:service AND pod:node-f-0
         query = f'namespace:{namespace} AND container:{container} AND pod:{pod}'
         
-        # URL encode the query
-        from urllib.parse import quote
-        encoded_query = quote(query)
-        
-        # Construct Grafana explore URL with browser timezone, oldest-first sort, and 9999 line limit
-        grafana_url = (
-            f"{self.base_url}/explore?left=%5B%22{from_ms}%22,%22{to_ms}%22,%22VictoriaLogs%22,"
-            f"%7B%22expr%22:%22{encoded_query}%22,%22sort%22:%22asc%22,%22limit%22:9999%7D%5D"
-            f"&time.timezone=browser"
+        # Build the Grafana Explore state as normal Python data and URL-encode it
+        from urllib.parse import urlencode
+        left_state = [
+            str(from_ms),
+            str(to_ms),
+            "VictoriaLogs",
+            {
+                "expr": query,
+                "sort": "asc",
+                "limit": 9999,
+            },
+        ]
+        params = urlencode(
+            {
+                "left": json.dumps(left_state, separators=(",", ":")),
+                "time.timezone": "browser",
+            }
         )
         
-        return grafana_url
+        return f"{self.base_url}/explore?{params}"
 
 
 class GoogleChatNotifier:
