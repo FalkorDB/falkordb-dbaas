@@ -127,17 +127,32 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
 
   // Set viewer permissions on the folder for all org users
   try {
-    const orgUsers = await client.getOrgUsersForCurrentOrg();
-    const permissionItems = (orgUsers.data ?? [])
-      .filter((u) => u.userId)
-      .map((u) => ({ userId: u.userId!, permission: 1 as const }));
+    if (folderUid) {
+      const orgUsers = await client.getOrgUsersForCurrentOrg();
+      const existing = await client.getFolderPermissionList({ folder_uid: folderUid });
+      const items = (existing.data ?? []).map((p) => {
+        if (p.userId) {
+          return { userId: p.userId, permission: p.permission ?? 1 };
+        } else if (p.teamId) {
+          return { teamId: p.teamId, permission: p.permission ?? 1 };
+        } else if (p.role) {
+          return { role: p.role as "None" | "Viewer" | "Editor" | "Admin", permission: p.permission ?? 1 };
+        }
+        return { permission: p.permission ?? 1 };
+      });
 
-    if (permissionItems.length > 0 && folderUid) {
-      await client.updateFolderPermissions(
-        { folder_uid: folderUid },
-        { items: permissionItems },
-      );
-      console.log('set folder permissions for', permissionItems.length, 'users on folder', folderUid);
+      const existingUserIds = new Set(items.filter((i) => 'userId' in i).map((i) => (i as any).userId));
+      const newUserItems = (orgUsers.data ?? [])
+        .filter((u) => u.userId && !existingUserIds.has(u.userId))
+        .map((u) => ({ userId: u.userId!, permission: 1 as const }));
+
+      if (newUserItems.length > 0) {
+        await client.updateFolderPermissions(
+          { folder_uid: folderUid },
+          { items: [...items, ...newUserItems] },
+        );
+        console.log('set folder permissions for', newUserItems.length, 'new users on folder', folderUid);
+      }
     }
   } catch (error) {
     console.error('error setting folder permissions', (error as any)?.response?.data ?? error);
