@@ -134,12 +134,12 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
         const alreadyHasPermission = items.some((item) => item.userId === existingUserId);
         if (!alreadyHasPermission) {
           items.push({ userId: existingUserId, permission: 1 });
-          await client.updateFolderPermissions(
-            { folder_uid: folder.uid },
-            { items },
-          );
-          console.log('set viewer permission for user', email, 'on folder', folder.uid);
         }
+        await client.updateFolderPermissions(
+          { folder_uid: folder.uid },
+          { items },
+        );
+        console.log('set viewer permission for user', email, 'on folder', folder.uid);
       } catch (error) {
         console.error('error setting folder permission on', folder.uid, (error as any)?.response?.data ?? error);
       }

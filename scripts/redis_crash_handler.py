@@ -1031,12 +1031,12 @@ class GrafanaLinkGenerator:
         from urllib.parse import urlencode
         params = urlencode(
             {
-                "orgId": "1",
                 "left": json.dumps({
                     "datasource": "VictoriaLogs",
-                    "queries": [{"expr": f"{query} | sort asc | limit {self.LOG_LINE_LIMIT}", "refId": "A"}],
+                    "queries": [{"expr": query, "refId": "A", "sort": "asc", "limit": self.LOG_LINE_LIMIT}],
                     "range": {"from": str(from_ms), "to": str(to_ms)},
                 }),
+                "time.timezone": "browser",
             }
         )
         
