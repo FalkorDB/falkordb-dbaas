@@ -125,6 +125,24 @@ export const instanceCreatedHandler = async (data: yup.InferType<typeof CreateGr
     );
   }
 
+  // Set viewer permissions on the folder for all org users
+  try {
+    const orgUsers = await client.getOrgUsersForCurrentOrg();
+    const permissionItems = (orgUsers.data ?? [])
+      .filter((u) => u.userId)
+      .map((u) => ({ userId: u.userId!, permission: 1 as const }));
+
+    if (permissionItems.length > 0 && folderUid) {
+      await client.updateFolderPermissions(
+        { folder_uid: folderUid },
+        { items: permissionItems },
+      );
+      console.log('set folder permissions for', permissionItems.length, 'users on folder', folderUid);
+    }
+  } catch (error) {
+    console.error('error setting folder permissions', (error as any)?.response?.data ?? error);
+  }
+
   return NextResponse.json({}, { status: 200 });
 };
 
