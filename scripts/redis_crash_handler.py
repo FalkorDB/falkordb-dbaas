@@ -1031,6 +1031,7 @@ class GrafanaLinkGenerator:
         from urllib.parse import urlencode
         params = urlencode(
             {
+                "orgId": "1",
                 "left": json.dumps({
                     "datasource": "VictoriaLogs",
                     "queries": [{"expr": query, "refId": "A", "sort": "asc", "limit": self.LOG_LINE_LIMIT}],

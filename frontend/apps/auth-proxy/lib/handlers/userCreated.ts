@@ -125,21 +125,25 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
       if (!folder.uid) continue;
       try {
         const existing = await client.getFolderPermissionList({ folder_uid: folder.uid });
-        const items = (existing.data ?? []).map((p) => ({
-          ...(p.userId ? { userId: p.userId } : {}),
-          ...(p.teamId ? { teamId: p.teamId } : {}),
-          ...(p.role ? { role: p.role as "None" | "Viewer" | "Editor" | "Admin" } : {}),
-          permission: p.permission ?? 1,
-        }));
+        const items = (existing.data ?? []).map((p) => {
+          if (p.userId) {
+            return { userId: p.userId, permission: p.permission ?? 1 };
+          } else if (p.teamId) {
+            return { teamId: p.teamId, permission: p.permission ?? 1 };
+          } else if (p.role) {
+            return { role: p.role as "None" | "Viewer" | "Editor" | "Admin", permission: p.permission ?? 1 };
+          }
+          return { permission: p.permission ?? 1 };
+        });
         const alreadyHasPermission = items.some((item) => item.userId === existingUserId);
         if (!alreadyHasPermission) {
           items.push({ userId: existingUserId, permission: 1 });
+          await client.updateFolderPermissions(
+            { folder_uid: folder.uid },
+            { items },
+          );
+          console.log('set viewer permission for user', email, 'on folder', folder.uid);
         }
-        await client.updateFolderPermissions(
-          { folder_uid: folder.uid },
-          { items },
-        );
-        console.log('set viewer permission for user', email, 'on folder', folder.uid);
       } catch (error) {
         console.error('error setting folder permission on', folder.uid, (error as any)?.response?.data ?? error);
       }
