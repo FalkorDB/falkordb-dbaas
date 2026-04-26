@@ -119,8 +119,9 @@ export const userCreatedHandler = async (data: yup.InferType<typeof AddUserAcces
 
   // 5. Add viewer permission on all existing folders for the new user
   try {
-    await client.userSetUsingOrg({ org_id: existingOrgId });
-    const folders = await client.getFolders();
+    const folders = await client.getFolders(null, null, {
+      params: { orgId: existingOrgId },
+    });
     for (const folder of folders.data ?? []) {
       if (!folder.uid) continue;
       try {
