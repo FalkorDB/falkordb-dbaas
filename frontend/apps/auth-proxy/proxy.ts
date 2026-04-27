@@ -14,7 +14,7 @@ export async function proxy(request: NextRequest) {
     return response;
   };
 
-  const cookies = request.cookies.get("token");
+  const cookies = request.cookies.get("omnistrate_token") ?? request.cookies.get("token");
 
   if (
     (path !== "/grafana/login" || !path.startsWith("/grafana/public")) &&
