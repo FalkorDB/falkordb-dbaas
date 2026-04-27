@@ -185,11 +185,12 @@ def detect_falkordb_version(namespace: str, pod: str, container: str) -> str:
     If the first attempt fails (e.g. Redis is down after a crash), waits for
     the pod to become Ready and retries once.
     """
-    output = kubectl_exec_output(namespace, pod, container, ["redis-cli", "MODULE", "LIST"])
+    cmd = ["sh", "-c", "export REDISCLI_AUTH=$(cat /run/secrets/adminpassword) && redis-cli --no-auth-warning MODULE LIST"]
+    output = kubectl_exec_output(namespace, pod, container, cmd)
     if not output:
         print("  ⚠️  Could not retrieve MODULE LIST — waiting for pod to be Ready and retrying...")
         kubectl_wait_pod_ready(namespace, pod)
-        output = kubectl_exec_output(namespace, pod, container, ["redis-cli", "MODULE", "LIST"])
+        output = kubectl_exec_output(namespace, pod, container, cmd)
     if not output:
         print("  ⚠️  Could not retrieve MODULE LIST after retry — version unknown")
         return ""
