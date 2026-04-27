@@ -14,6 +14,12 @@ export default function Page() {
       secure: true,
       sameSite: 'Lax',
     });
+    Cookie.remove("omnistrate_token", {
+      path: '/',
+      domain: process.env.NEXT_PUBLIC_COOKIE_DOMAIN,
+      secure: true,
+      sameSite: 'Lax',
+    });
     redirect("/signin");
   }, []);
 
