@@ -101,6 +101,9 @@ spec:
                     - match:
                         alertname: Watchdog
                       receiver: "blackhole"
+                    - match:
+                        alertname: InfoInhibitor
+                      receiver: "blackhole"
                     - receiver: "pagerduty"
                 receivers:
                   - name: blackhole

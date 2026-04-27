@@ -65,6 +65,19 @@ spec:
           config:
             global:
               resolve_timeout: 5m
+            inhibit_rules:
+              # When RedisCrashed triggers, suppress FalkorDBDown, FalkorDBMultiplePodsDown, FalkorDBDownLoop and SustainedErrorLogInK8s
+              - source_match:
+                  alertname: RedisCrashed
+                target_match_re:
+                  alertname: (FalkorDBDown|FalkorDBMultiplePodsDown|FalkorDBDownLoop|SustainedErrorLogInK8s)
+                equal: ['namespace', 'cluster']
+              # When namespace-wide multi-pod outage is active, suppress per-pod FalkorDBDown alerts
+              - source_match:
+                  alertname: FalkorDBMultiplePodsDown
+                target_match:
+                  alertname: FalkorDBDown
+                equal: ['namespace', 'cluster', 'environment']
             route:
               group_by: ["alertname", "namespace", "pod"]
               group_wait: 30s
@@ -74,6 +87,9 @@ spec:
               routes:
                 - match:
                     alertname: Watchdog
+                  receiver: "blackhole"
+                - match:
+                    alertname: InfoInhibitor
                   receiver: "blackhole"
                 - receiver: 'k8s-alert-reaction-operator'
                   continue: true
