@@ -8,15 +8,14 @@ updates:
   - package-ecosystem: "npm" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
-      interval: "weekly"
-    target-branch: "dev"      
+    target-branch: "dev"
     groups:
       npm-minor-patch:
         update-types:
           - "patch"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     target-branch: "dev"
-      
