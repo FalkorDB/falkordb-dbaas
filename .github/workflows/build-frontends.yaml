@@ -22,14 +22,14 @@ jobs:
     environment: ${{  github.ref_name == 'main' && 'prod' || 'dev' }}
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
         with:
           version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6.3.0
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: "22.x.x"
           cache: "pnpm"
@@ -41,14 +41,22 @@ jobs:
 
       - name: Docker Build
         id: build-push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
           push: false
-          tags: |
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:${{ github.sha }}
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:latest
+          # load into the local daemon so Grype can inspect the image
+          load: true
+          tags: us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:sha-${{ github.sha }}
+
+      - name: Grype image scan
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+        with:
+          image: us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web:sha-${{ github.sha }}
+          fail-build: "false"
+          severity-cutoff: high
+          output-format: table
 
   push:
     runs-on: ubuntu-latest
@@ -57,14 +65,14 @@ jobs:
     needs: build
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
         with:
           version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6.3.0
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: "22.x.x"
           cache: "pnpm"
@@ -76,14 +84,14 @@ jobs:
 
       - name: Authenticate to Google Cloud
         id: auth
-        uses: google-github-actions/auth@v3
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           token_format: access_token
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Docker Login
-        uses: docker/login-action@v4
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4
         with:
           registry: us-central1-docker.pkg.dev
           username: oauth2accesstoken
@@ -92,6 +100,19 @@ jobs:
       - name: Get version from package.json
         id: version
         run: echo "VERSION=$(node -p "require('./frontend/apps/auth-proxy/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Set tags
+        id: set-tags
+        run: |
+          BASE_IMAGE="us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-8)
+          if [ "${{ github.ref }}" = "refs/heads/dev" ]; then
+            echo "TAGS=${BASE_IMAGE}:${{ steps.version.outputs.VERSION }}-dev.${{ github.run_number }},${BASE_IMAGE}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "TAGS=${BASE_IMAGE}:${{ steps.version.outputs.VERSION }},${BASE_IMAGE}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          else
+            echo "TAGS=${BASE_IMAGE}:sha-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create .env
         working-directory: frontend/apps/auth-proxy
@@ -105,12 +126,21 @@ jobs:
 
       - name: Docker Build and Push
         id: build-push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ./frontend
           file: ./frontend/apps/auth-proxy/Dockerfile
           push: true
-          tags: |
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:${{ github.sha }}
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:${{ steps.version.outputs.VERSION }}
-            us-central1-docker.pkg.dev/${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}/frontend/auth-proxy-web-${{  github.ref_name == 'main' && 'prod' || 'dev' }}:latest
+          tags: ${{ steps.set-tags.outputs.TAGS }}
+
+      - name: Extract primary tag for scan
+        id: primary-tag
+        run: echo "TAG=$(echo '${{ steps.set-tags.outputs.TAGS }}' | cut -d',' -f1)" >> "$GITHUB_OUTPUT"
+
+      - name: Grype image scan
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7.4.0
+        with:
+          image: ${{ steps.primary-tag.outputs.TAG }}
+          fail-build: "false"
+          severity-cutoff: high
+          output-format: table

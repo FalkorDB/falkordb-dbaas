@@ -7,8 +7,8 @@ export interface IOmnistrateRepository {
   checkIfUserHasAccessToInstance(
     userId: string,
     instanceId: string,
-    minRole?: 'root' | 'writer' | 'reader'
-  ): Promise<{ hasAccess: boolean; role?: 'root' | 'writer' | 'reader' }>;
+    minRole?: 'root' | 'editor' | 'reader'
+  ): Promise<{ hasAccess: boolean; role?: 'root' | 'editor' | 'reader' }>;
 }
 
 export interface OmnistrateInstance {
@@ -20,6 +20,7 @@ export interface OmnistrateInstance {
   serviceId: string;
   environmentId: string;
   productTierId: string;
+  tierVersion: string;
   status: string;
   resourceId: string;
   cloudProvider: 'gcp' | 'aws' | 'azure';
@@ -32,7 +33,7 @@ export interface OmnistrateInstance {
 export interface SubscriptionUser {
   userId: string;
   email: string;
-  role: 'root' | 'writer' | 'reader';
+  role: 'root' | 'editor' | 'reader';
 }
 
 export const IOmnistrateRepository = {

@@ -1,5 +1,5 @@
 import { FastifyBaseLogger } from 'fastify';
-import { IOmnistrateRepository } from '../repositories/omnistrate/IOmnistrateRepository';
+import { IOmnistrateRepository, OmnistrateInstance } from '../repositories/omnistrate/IOmnistrateRepository';
 import { ISessionRepository, SessionData } from '../repositories/session/ISessionRepository';
 import * as assert from 'assert';
 import { ApiError } from '@falkordb/errors';
@@ -19,8 +19,8 @@ export class AuthService {
     token: string,
     instanceId: string,
     subscriptionId: string,
-    minRole: 'root' | 'writer' | 'reader' = 'reader',
-  ): Promise<{ session: string; sessionData: SessionData }> {
+    minRole: 'root' | 'editor' | 'reader' = 'reader',
+  ): Promise<{ session: string; sessionData: SessionData; instance: OmnistrateInstance }> {
     assert.ok(token, 'AuthService: Token is required');
     assert.ok(instanceId, 'AuthService: Instance ID is required');
     assert.ok(subscriptionId, 'AuthService: Subscription ID is required');
@@ -79,7 +79,7 @@ export class AuthService {
 
     this._options.logger.info({ userId, instanceId, role }, 'User authenticated successfully');
 
-    return { session, sessionData };
+    return { session, sessionData, instance };
   }
 
   validateSession(cookie: string): boolean {
@@ -90,8 +90,8 @@ export class AuthService {
     return this._sessionRepository.decodeSession(cookie);
   }
 
-  static checkPermission(role: 'root' | 'writer' | 'reader', requiredRole: 'writer' | 'reader'): boolean {
-    const roleHierarchy = { root: 3, writer: 2, reader: 1 };
+  static checkPermission(role: 'root' | 'editor' | 'reader', requiredRole: 'editor' | 'reader'): boolean {
+    const roleHierarchy = { root: 3, editor: 2, reader: 1 };
     return roleHierarchy[role] >= roleHierarchy[requiredRole];
   }
 

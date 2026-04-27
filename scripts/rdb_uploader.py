@@ -3,7 +3,8 @@
 RDB Uploader
 Generates signed GCS PUT URLs then triggers the Redis pod to upload
 its RDB (and optionally AOF) directly to GCS via kubectl exec + curl.
-Finally generates signed GET URLs and writes them to GITHUB_OUTPUT.
+Finally writes the gs:// bucket paths to GITHUB_OUTPUT (IAM authentication
+required to download — no publicly-accessible signed URLs are produced).
 
 Mirrors the logic of upload_to_gcp.sh.
 """
@@ -118,14 +119,101 @@ def kubectl_exec(
     return result.returncode
 
 
-def write_github_output(key: str, value: str) -> None:
+def kubectl_exec_output(
+    namespace: str,
+    pod: str,
+    container: str,
+    command: list[str],
+) -> str | None:
+    """Run a command inside a pod and return its stdout, or None on failure."""
+    cmd = [
+        "kubectl", "exec",
+        "-n", namespace,
+        "-c", container,
+        pod, "--",
+    ] + command
+    print(f"  $ {' '.join(cmd)}")
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=_KUBECTL_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        print(f"  ⚠️  Command timed out after {_KUBECTL_TIMEOUT}s: {' '.join(cmd)}")
+        return None
+    if result.returncode != 0:
+        print(f"  ⚠️  Command exited with code {result.returncode}")
+        stderr_snippet = (result.stderr or "").strip()
+        if stderr_snippet:
+            if len(stderr_snippet) > 300:
+                stderr_snippet = f"{stderr_snippet[:300]}..."
+            print(f"  stderr: {stderr_snippet}")
+        return None
+    return result.stdout
+
+
+def parse_falkordb_version(module_list_output: str) -> str | None:
+    """Parse FalkorDB version from MODULE LIST output.
+
+    Locates the 'graph' module block and extracts its version integer MNNPP
+    where M=major, NN=minor, PP=patch.  e.g. 41608 → v4.16.8, 41800 → v4.18.0.
+    """
+    import re
+
+    # Split output into per-module blocks (each starts with  N)  1) "name" )
+    # and find the one whose name is "graph" or "falkordb".
+    blocks = re.split(r'(?=\d+\)\s*1\)\s*"name")', module_list_output)
+    for block in blocks:
+        name_match = re.search(r'"name"\s*\n\s*\d+\)\s*"(\w+)"', block)
+        if not name_match:
+            continue
+        name = name_match.group(1).lower()
+        if name not in ("graph", "falkordb"):
+            continue
+        # Found the graph module block — extract its version
+        ver_match = re.search(r'"ver"\s*\n\s*\d+\)\s*\(integer\)\s*(\d+)', block)
+        if ver_match:
+            ver = int(ver_match.group(1))
+            major = ver // 10000
+            minor = (ver % 10000) // 100
+            patch = ver % 100
+            return f"v{major}.{minor}.{patch}"
+
+    return None
+
+
+def detect_falkordb_version(namespace: str, pod: str, container: str) -> str:
+    """Run MODULE LIST on the pod and return the FalkorDB version string.
+
+    If the first attempt fails (e.g. Redis is down after a crash), waits for
+    the pod to become Ready and retries once.
+    """
+    cmd = ["sh", "-c", "export REDISCLI_AUTH=$(cat /run/secrets/adminpassword) && redis-cli --no-auth-warning MODULE LIST"]
+    output = kubectl_exec_output(namespace, pod, container, cmd)
+    if not output:
+        print("  ⚠️  Could not retrieve MODULE LIST — waiting for pod to be Ready and retrying...")
+        kubectl_wait_pod_ready(namespace, pod)
+        output = kubectl_exec_output(namespace, pod, container, cmd)
+    if not output:
+        print("  ⚠️  Could not retrieve MODULE LIST after retry — version unknown")
+        return ""
+    version = parse_falkordb_version(output)
+    if version:
+        print(f"  FalkorDB version: {version}")
+        return version
+    print(f"  ⚠️  Could not parse FalkorDB version from MODULE LIST output")
+    return ""
+
+
+def write_github_output(key: str, value: str, sensitive: bool = False) -> None:
     github_output = os.environ.get("GITHUB_OUTPUT")
     if github_output:
-        # Mask the value in Actions logs before writing to GITHUB_OUTPUT
-        print(f"::add-mask::{value}")
+        if sensitive:
+            # Mask sensitive values (e.g. signed PUT URLs) in Actions logs
+            print(f"::add-mask::{value}")
         with open(github_output, "a") as f:
             f.write(f"{key}={value}\n")
-    print(f"  Output: {key}=<redacted>")
+    if sensitive:
+        print(f"  Output: {key}=<redacted>")
+    else:
+        print(f"  Output: {key}={value}")
 
 
 def mask_in_actions(value: str) -> None:
@@ -157,30 +245,32 @@ def main() -> None:
 
     rdb_object = f"{args.namespace}/dump.rdb"
     aof_object = f"{args.namespace}/appendonlydir.tar.gz"
-
-    # Load credentials and GCS client once
-    creds = _load_credentials()
-    client = storage.Client(credentials=creds)
-    rdb_blob = client.bucket(args.bucket).blob(rdb_object)
-    aof_blob = client.bucket(args.bucket).blob(aof_object)
+    rdb_gcs_path = f"gs://{args.bucket}/{rdb_object}"
+    aof_gcs_path = f"gs://{args.bucket}/{aof_object}"
 
     if args.sign_only:
         # ------------------------------------------------------------------
-        # Sign-only: just regenerate GET URLs — no pod access whatsoever
+        # Sign-only: output GCS paths without accessing the pod — no
+        # publicly-accessible signed URLs are produced.
         # ------------------------------------------------------------------
-        print("[1/1] Regenerating signed download URLs (72h)...")
-        write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
-
+        print("[1/1] Outputting GCS paths (IAM authentication required to download)...")
+        write_github_output("rdb_url", rdb_gcs_path)
         if aof_enabled:
-            write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
+            write_github_output("aof_url", aof_gcs_path)
 
     else:
         # ------------------------------------------------------------------
-        # Upload: sign PUT URLs → pod curl-PUTs → sign GET URLs
+        # Upload: sign PUT URLs → pod curl-PUTs → output gs:// paths
         # ------------------------------------------------------------------
         if not args.container:
             print("ERROR: --container is required in upload mode", file=sys.stderr)
             sys.exit(1)
+
+        # Load credentials and GCS client (needed for PUT URL signing)
+        creds = _load_credentials()
+        client = storage.Client(credentials=creds)
+        rdb_blob = client.bucket(args.bucket).blob(rdb_object)
+        aof_blob = client.bucket(args.bucket).blob(aof_object)
 
         # 1. Generate signed PUT URLs (1h)
         print("[1/4] Generating signed PUT URLs (1h)...")
@@ -205,6 +295,9 @@ def main() -> None:
                 raise RuntimeError("/data/appendonlydir not found on pod.")
             print("  /data/appendonlydir — found.")
 
+        # 2b. Detect FalkorDB version via MODULE LIST
+        falkordb_version = detect_falkordb_version(args.namespace, args.pod, args.container)
+
         # 3. Pod uploads directly to GCS via curl
         print("\n[3/4] Uploading from pod to GCS...")
         print("  Uploading dump.rdb...")
@@ -221,13 +314,21 @@ def main() -> None:
         print("  dump.rdb uploaded successfully.")
 
         if aof_enabled:
-            print("  Snapshotting appendonlydir on pod...")
-            kubectl_exec(args.namespace, args.pod, args.container, [
-                "cp", "-r", "/data/appendonlydir", "/data/appendonlydir.snapshot",
-            ])
-            print("  Archiving and uploading AOF...")
             aof_upload_failed = False
             try:
+                print("  Snapshotting appendonlydir on pod...")
+                try:
+                    kubectl_exec(args.namespace, args.pod, args.container, [
+                        "sh", "-c", "rm -rf /data/appendonlydir.snapshot && cp -r /data/appendonlydir /data/appendonlydir.snapshot",
+                    ])
+                except RuntimeError:
+                    print("  ⚠️  cp failed, checking pod status before retry...")
+                    kubectl_wait_pod_ready(args.namespace, args.pod)
+                    print("  Retrying cp...")
+                    kubectl_exec(args.namespace, args.pod, args.container, [
+                        "sh", "-c", "rm -rf /data/appendonlydir.snapshot && cp -r /data/appendonlydir /data/appendonlydir.snapshot",
+                    ])
+                print("  Archiving and uploading AOF...")
                 try:
                     kubectl_exec(args.namespace, args.pod, args.container, [
                         "tar", "-czf", "/data/appendonlydir.tar.gz",
@@ -268,12 +369,15 @@ def main() -> None:
                         pass
                 print("  Cleanup complete.")
 
-        # 4. Generate signed GET/download URLs (72h)
-        print("\n[4/4] Generating signed download URLs (72h)...")
-        write_github_output("rdb_url", get_signed_url(rdb_blob, creds, 72 * 60))
+        # 4. Output GCS paths (IAM authentication required to download)
+        print("\n[4/4] Outputting GCS paths...")
+        write_github_output("rdb_url", rdb_gcs_path)
 
         if aof_enabled and not aof_upload_failed:
-            write_github_output("aof_url", get_signed_url(aof_blob, creds, 72 * 60))
+            write_github_output("aof_url", aof_gcs_path)
+
+        if falkordb_version:
+            write_github_output("falkordb_version", falkordb_version)
 
     print(f"\n{'='*60}")
     print("✅ Done!")

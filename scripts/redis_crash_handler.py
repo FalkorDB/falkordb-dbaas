@@ -1008,6 +1008,9 @@ class GitHubIssueManager:
 class GrafanaLinkGenerator:
     """Generates Grafana log viewer links"""
     
+    # Maximum number of log lines returned in a Grafana Explore link
+    LOG_LINE_LIMIT = 5000
+
     def __init__(self, base_url: str):
         self.base_url = base_url.rstrip('/')
     
@@ -1024,14 +1027,21 @@ class GrafanaLinkGenerator:
         # Build query: namespace:instance-123 AND container:service AND pod:node-f-0
         query = f'namespace:{namespace} AND container:{container} AND pod:{pod}'
         
-        # URL encode the query
-        from urllib.parse import quote
-        encoded_query = quote(query)
+        # Build the Grafana Explore state using the object format (consistent with oom_handler.py)
+        from urllib.parse import urlencode
+        params = urlencode(
+            {
+                "orgId": "1",
+                "left": json.dumps({
+                    "datasource": "VictoriaLogs",
+                    "queries": [{"expr": query, "refId": "A", "sort": "asc", "limit": self.LOG_LINE_LIMIT}],
+                    "range": {"from": str(from_ms), "to": str(to_ms)},
+                }),
+                "time.timezone": "browser",
+            }
+        )
         
-        # Construct Grafana explore URL
-        grafana_url = f"{self.base_url}/explore?left=%5B%22{from_ms}%22,%22{to_ms}%22,%22VictoriaLogs%22,%7B%22expr%22:%22{encoded_query}%22%7D%5D"
-        
-        return grafana_url
+        return f"{self.base_url}/explore?{params}"
 
 
 class GoogleChatNotifier:
@@ -1051,7 +1061,7 @@ class GoogleChatNotifier:
     ):
         """Send error notification to Google Chat"""
         payload = {
-            "text": "❌ Redis Crash Handler Failed @Roi Lipman @Avi Avni",
+            "text": "❌ Redis Crash Handler Failed <users/116170488112818253188> <users/115942454099354054771>",
             "cards": [{
                 "header": {
                     "title": "❌ Redis Crash Handler Failed",
@@ -1113,7 +1123,7 @@ class GoogleChatNotifier:
             subtitle = f"Customer: {customer_email}"
         
         payload = {
-            "text": f"{crash_type} @Roi Lipman @Avi Avni",
+            "text": f"{crash_type} <users/116170488112818253188> <users/115942454099354054771>",
             "cards": [{
                 "header": {
                     "title": crash_type,
@@ -1199,7 +1209,7 @@ class GoogleChatNotifier:
         crash notifications.
         """
         payload = {
-            "text": "🔁 Recurring Redis Crash @Roi Lipman @Avi Avni",
+            "text": "🔁 Recurring Redis Crash <users/116170488112818253188> <users/115942454099354054771>",
             "cards": [{
                 "header": {
                     "title": "🔁 Recurring Redis Crash",

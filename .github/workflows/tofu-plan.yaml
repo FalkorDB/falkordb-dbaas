@@ -19,130 +19,196 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  ENVIRONMENT: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
+  ENVIRONMENT: ${{ (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main') && 'prod' || (github.event_name != 'pull_request' && github.ref_name == 'main') && 'prod' || 'dev' }}
 
 jobs:
-  load-stack-matrix:
-    runs-on: ubuntu-latest
-    # if the pr is to the main branch, set the environment to prod. If the event is workflow_dispatch, set the environment to the base branch
-    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Read stacks.json
-        id: set-matrix
-        run: |
-          sudo apt-get update && sudo apt-get install -y jq gettext
-          delimiter="$(openssl rand -hex 8)"
-          JSON="$(cat .github/workflows/stacks.json)"
-          # Replace strings starting with TF_ with their respective environment variables
-          JSON=$(echo "$JSON" | sed -e "s/TF_STATE_BUCKET/\$TF_STATE_BUCKET/g" | sed -e "s/: \"TF_/: \"\$TF_/g")
-          echo "matrix<<${delimiter}" >> "${GITHUB_OUTPUT}"
-          echo "$JSON" >> "${GITHUB_OUTPUT}"
-          echo "${delimiter}" >> "${GITHUB_OUTPUT}"
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix || '[]' }}
-
   plan:
-    needs: load-stack-matrix
-    name: Plan stack ${{ matrix.stack.name }}
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && 'prod' || github.ref_name == 'main' && 'prod' || 'dev' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        stack: ${{fromJson(needs.load-stack-matrix.outputs.matrix)}}
+    environment: ${{ (github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main') && 'prod' || (github.event_name != 'pull_request' && github.ref_name == 'main') && 'prod' || 'dev' }}
+    env:
+      TF_ARGOCD_ADMIN_PASSWORD: ${{ secrets.TF_ARGOCD_ADMIN_PASSWORD }}
+      TF_ARGOCD_GROUPS_SA_JSON: ${{ secrets.TF_ARGOCD_GROUPS_SA_JSON }}
+      TF_CLUSTER_CA_CERTIFICATE: ${{ secrets.TF_CLUSTER_CA_CERTIFICATE }}
+      TF_CLUSTER_ENDPOINT: ${{ secrets.TF_CLUSTER_ENDPOINT }}
+      TF_CLUSTER_NAME: ${{ secrets.TF_CLUSTER_NAME }}
+      TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
+      TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
+      TF_CTRL_PLANE_DEV_ZONES: ${{ secrets.TF_CTRL_PLANE_ZONES }}
+      TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
+      TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
+      TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
+      TF_DB_EXPORTER_SA_ID: ${{ secrets.TF_DB_EXPORTER_SA_ID }}
+      TF_DEFAULT_MAX_PODS_PER_NODE: ${{ vars.TF_DEFAULT_MAX_PODS_PER_NODE }}
+      TF_DEX_GOOGLE_ADMIN_EMAIL: ${{ secrets.TF_DEX_GOOGLE_ADMIN_EMAIL }}
+      TF_DEX_GOOGLE_CLIENT_ID: ${{ secrets.TF_DEX_GOOGLE_CLIENT_ID }}
+      TF_DEX_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_DEX_GOOGLE_CLIENT_SECRET }}
+      TF_ENVIRONMENT: ${{ vars.TF_ENVIRONMENT }}
+      TF_GRAFANA_GOOGLE_CLIENT_ID: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_ID }}
+      TF_GRAFANA_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_SECRET }}
+      TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+      TF_ARGOCD_SA_ID: ${{ secrets.TF_ARGOCD_SA_ID }}
+      TF_OMNISTRATE_SERVICE_ID: ${{ secrets.TF_OMNISTRATE_SERVICE_ID }}
+      TF_OMNISTRATE_ENVIRONMENT_ID: ${{ secrets.TF_OMNISTRATE_ENVIRONMENT_ID }}
+      TF_AZURE_SUBSCRIPTION_ID: ${{ secrets.TF_AZURE_SUBSCRIPTION_ID }}
+      TF_AZURE_TENANT_ID: ${{ secrets.TF_AZURE_TENANT_ID }}
+      # Tell Terragrunt to use the OpenTofu binary instead of the default 'terraform'
+      TERRAGRUNT_TFPATH: tofu
     steps:
-      - name: Set environment vars
-        env:
-          TF_ARGOCD_ADMIN_PASSWORD: ${{ secrets.TF_ARGOCD_ADMIN_PASSWORD }}
-          TF_ARGOCD_GROUPS_SA_JSON: ${{ secrets.TF_ARGOCD_GROUPS_SA_JSON }}
-          TF_CLUSTER_CA_CERTIFICATE: ${{ secrets.TF_CLUSTER_CA_CERTIFICATE }}
-          TF_CLUSTER_ENDPOINT: ${{ secrets.TF_CLUSTER_ENDPOINT }}
-          TF_CLUSTER_NAME: ${{ secrets.TF_CLUSTER_NAME }}
-          TF_CTRL_PLANE_DEV_PROJECT_ID: ${{ secrets.TF_CTRL_PLANE_PROJECT_ID }}
-          TF_CTRL_PLANE_DEV_REGION: ${{ secrets.TF_CTRL_PLANE_REGION }}
-          TF_CTRL_PLANE_DEV_ZONES: ${{ secrets.TF_CTRL_PLANE_ZONES }}
-          TF_CTRL_PLANE_IP_RANGE_PODS: ${{ vars.TF_CTRL_PLANE_IP_RANGE_PODS }}
-          TF_CTRL_PLANE_IP_RANGE_SERVICES: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SERVICES }}
-          TF_CTRL_PLANE_IP_RANGE_SUBNET: ${{ vars.TF_CTRL_PLANE_IP_RANGE_SUBNET }}
-          TF_DB_EXPORTER_SA_ID: ${{ secrets.TF_DB_EXPORTER_SA_ID }}
-          TF_DEFAULT_MAX_PODS_PER_NODE: ${{ vars.TF_DEFAULT_MAX_PODS_PER_NODE }}
-          TF_DEX_GOOGLE_ADMIN_EMAIL: ${{ secrets.TF_DEX_GOOGLE_ADMIN_EMAIL }}
-          TF_DEX_GOOGLE_CLIENT_ID: ${{ secrets.TF_DEX_GOOGLE_CLIENT_ID }}
-          TF_DEX_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_DEX_GOOGLE_CLIENT_SECRET }}
-          TF_ENVIRONMENT: ${{ vars.TF_ENVIRONMENT }}
-          TF_GRAFANA_GOOGLE_CLIENT_ID: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_ID }}
-          TF_GRAFANA_GOOGLE_CLIENT_SECRET: ${{ secrets.TF_GRAFANA_GOOGLE_CLIENT_SECRET }}
-          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
-          TF_ARGOCD_SA_ID: ${{ secrets.TF_ARGOCD_SA_ID }}
-          TF_OMNISTRATE_SERVICE_ID: ${{ secrets.TF_OMNISTRATE_SERVICE_ID }}
-          TF_OMNISTRATE_ENVIRONMENT_ID: ${{ secrets.TF_OMNISTRATE_ENVIRONMENT_ID }}
-          TF_AZURE_SUBSCRIPTION_ID: ${{ secrets.TF_AZURE_SUBSCRIPTION_ID }}
-          TF_AZURE_TENANT_ID: ${{ secrets.TF_AZURE_TENANT_ID }}
-        run: |
-          json='${{ toJson(matrix) }}'
-          # Resolve $VARS from the environment without re-serializing JSON.
-          while IFS=$'\t' read -r key value; do
-            if [[ "$value" == \$* ]]; then
-              var_name="${value:1}"
-              resolved="${!var_name}"
-            else
-              resolved="$value"
-            fi
-            echo "${key}=${resolved}" >> "$GITHUB_ENV"
-          done < <(echo "$json" | jq -r '.stack.variables | to_entries[] | "\(.key)\t\(.value)"')
-          # set init_param variable
-          init_param_template=$(echo "$json" | jq -r '.stack.init_param')
-          echo "init_param=$(echo "$init_param_template" | envsubst)" >> "$GITHUB_ENV"
-
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Install OpenTofu
-        uses: opentofu/setup-opentofu@v1
+        uses: opentofu/setup-opentofu@9d84900f3238fab8cd84ce47d658d25dd008be2f # v1
 
-      - name: Setup GCloud
-        uses: "google-github-actions/auth@v3"
+      - name: Install Terragrunt
+        run: |
+          TG_VERSION="0.77.19"
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL "https://github.com/gruntwork-io/terragrunt/releases/download/v${TG_VERSION}/terragrunt_linux_amd64" \
+            -o "$HOME/.local/bin/terragrunt"
+          chmod +x "$HOME/.local/bin/terragrunt"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/terragrunt" --version
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
-        uses: "google-github-actions/setup-gcloud@v3.0.1"
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
         with:
           version: ">= 363.0.0"
 
-      - name: Setup Azure Login
-        if: startsWith(matrix.stack.path, 'tofu/azure/')
-        uses: azure/login@v2
+      - name: Authenticate Azure
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3.0.0
         with:
           client-id: ${{ secrets.TF_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.TF_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.TF_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Setup Tofu workspace
+      - name: Plan all stacks
+        id: plan
         run: |
-          cd ${{ matrix.stack.path }}
-          tofu init --upgrade ${{ env.init_param }}
+          terragrunt run-all plan \
+            --terragrunt-working-dir tofu/runtime \
+            --terragrunt-non-interactive \
+            --terragrunt-parallelism 3 \
+            -input=false \
+            -out=tfplan 2>&1 | tee plan-output.txt
 
-      - name: Plan Tofu
-        id: plan-run
-        working-directory: ${{ matrix.stack.path }}
+      - name: Summarise plan output
+        id: summary
+        # Extract per-stack resource change counts from the plan output.
+        # Only counts are surfaced in the PR comment; full logs stay in the
+        # workflow run where access is governed by repo permissions.
         run: |
-          tofu plan -input=false -out=tfplan
-          tofu show -json tfplan > tfplan.json
+          python3 - <<'EOF'
+          import re, os
 
-      - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: tofu-plan-${{ env.ENVIRONMENT }}-${{ matrix.stack.name }}
-          path: ${{ matrix.stack.path }}/tfplan
+          text = open('plan-output.txt').read()
+          # Strip ANSI codes
+          text = re.sub(r'\x1B\[[0-9;]*m', '', text)
 
-      - name: Comment Plan Changes
-        uses: liatrio/terraform-change-pr-commenter@v1.14.1
+          # Collect per-stack summaries emitted by tofu/terraform:
+          #   "Plan: 2 to add, 1 to change, 0 to destroy."
+          #   "No changes. Your infrastructure matches the configuration."
+          stacks = []
+          for line in text.splitlines():
+              m = re.search(
+                  r'Plan:\s*(\d+) to add,\s*(\d+) to change,\s*(\d+) to destroy',
+                  line
+              )
+              if m:
+                  stacks.append(('change', int(m.group(1)), int(m.group(2)), int(m.group(3))))
+              elif 'No changes.' in line and 'matches the configuration' in line:
+                  stacks.append(('no-change', 0, 0, 0))
+
+          totals = [sum(s[i] for s in stacks) for i in (1, 2, 3)]
+
+          rows = []
+          for i, s in enumerate(stacks, 1):
+              if s[0] == 'no-change':
+                  rows.append(f'| Stack {i} | ✅ no changes | — | — | — |')
+              else:
+                  add_icon  = '🟢' if s[1] > 0 else '⬜'
+                  chg_icon  = '🟡' if s[2] > 0 else '⬜'
+                  dest_icon = '🔴' if s[3] > 0 else '⬜'
+                  rows.append(
+                      f'| Stack {i} | 🔄 changes pending'
+                      f' | {add_icon} {s[1]} | {chg_icon} {s[2]} | {dest_icon} {s[3]} |'
+                  )
+
+          table = '\n'.join([
+              '| Stack | Status | ➕ add | 🔄 change | ➖ destroy |',
+              '|---|---|:---:|:---:|:---:|',
+          ] + rows + [
+              f'| **Total** | | **{totals[0]}** | **{totals[1]}** | **{totals[2]}** |',
+          ])
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              # Use heredoc delimiter to handle newlines in the output variable
+              f.write('TABLE<<SUMMARY_EOF\n')
+              f.write(table + '\n')
+              f.write('SUMMARY_EOF\n')
+              f.write(f'totals={totals[0]}+{totals[1]}+{totals[2]}\n')
+          EOF
+
+      - name: Comment Plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        env:
+          PLAN_TABLE: ${{ steps.summary.outputs.TABLE }}
         with:
-          json-file: ${{ matrix.stack.path }}/tfplan.json
-          comment-header: "Tofu Plan for ${{ matrix.stack.name }} in ${{ env.ENVIRONMENT }} environment"
-          expand-comment: 'true'
+          script: |
+            const env    = process.env.ENVIRONMENT;
+            const pr     = context.payload.pull_request;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const table  = process.env.PLAN_TABLE;
+
+            // Full plan output is intentionally NOT included in the comment to
+            // avoid leaking sensitive resource attribute values that providers
+            // may not mark as sensitive. Reviewers can inspect the workflow run.
+            const body = [
+              `## Terragrunt Plan — \`${env}\``,
+              '',
+              `| | |`,
+              `|---|---|`,
+              `| **Base branch** | \`${pr.base.ref}\` |`,
+              `| **Head branch** | \`${pr.head.ref}\` |`,
+              `| **Full logs** | [Workflow run #${context.runId}](${runUrl}) |`,
+              '',
+              table,
+              '',
+              '> [!NOTE]',
+              '> Full plan output is available in the workflow run linked above.',
+              '> It is not reproduced here to avoid inadvertently surfacing',
+              '> sensitive infrastructure values in PR comments.',
+            ].join('\n');
+
+            // Replace previous bot comment if one exists (avoids comment pile-up)
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+            const existing = comments.find(
+              c => c.user.type === 'Bot' && c.body.startsWith('## Terragrunt Plan')
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                comment_id: existing.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body,
+              });
+            }
+

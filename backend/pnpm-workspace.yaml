@@ -3,4 +3,3 @@ packages:
   - "jobs/**"
   - "libs/**"
   - "tools/**"
-  - "!services/provisioner"

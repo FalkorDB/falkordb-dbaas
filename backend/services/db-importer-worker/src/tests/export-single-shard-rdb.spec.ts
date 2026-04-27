@@ -62,28 +62,28 @@ describe('export single shard rdb test', () => {
 
     const chain = await producer.add(
       makeJobNode(
-        RdbExportCopyRDBToBucketProcessor,
+        RdbExportRequestReadSignedURLProcessor,
         {
           taskId: task.taskId,
-          cloudProvider: task.payload.cloudProvider,
-          clusterId: task.payload.clusterId,
-          region: task.payload.region,
-          instanceId: task.payload.instanceId,
-          podId: task.payload.podId,
           bucketName: task.payload.destination.bucketName,
           fileName: task.payload.destination.fileName,
+          expiresIn: task.payload.destination.expiresIn,
         },
         {
           failParentOnFailure: true,
         },
         [
           makeJobNode(
-            RdbExportRequestReadSignedURLProcessor,
+            RdbExportCopyRDBToBucketProcessor,
             {
               taskId: task.taskId,
+              cloudProvider: task.payload.cloudProvider,
+              clusterId: task.payload.clusterId,
+              region: task.payload.region,
+              instanceId: task.payload.instanceId,
+              podId: task.payload.podId,
               bucketName: task.payload.destination.bucketName,
               fileName: task.payload.destination.fileName,
-              expiresIn: task.payload.destination.expiresIn,
             },
             {
               failParentOnFailure: true,
@@ -128,7 +128,7 @@ describe('export single shard rdb test', () => {
     );
 
     // Wait for the job to complete
-    const queue = new QueueEvents(RdbExportCopyRDBToBucketProcessor.name);
+    const queue = new QueueEvents(RdbExportRequestReadSignedURLProcessor.name);
     await chain.job.waitUntilFinished(queue);
 
     const state = await chain.job.getState();

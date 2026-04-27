@@ -132,7 +132,7 @@ export class OmnistrateRepository {
 
   async getSubscriptionUsers(
     subscriptionId: string,
-  ): Promise<{ userId: string; email: string; role: 'root' | 'writer' | 'reader' }[]> {
+  ): Promise<{ userId: string; email: string; role: 'root' | 'editor' | 'reader' }[]> {
     assert(subscriptionId, 'OmnistrateRepository: Subscription ID is required');
     this._options.logger.info({ subscriptionId }, 'Getting subscription users');
 
@@ -144,13 +144,14 @@ export class OmnistrateRepository {
       userId: d?.['userId'],
       email: d?.['email'],
       role: d?.['userSubscriptionRole'],
-    })) as { userId: string; email: string; role: 'root' | 'writer' | 'reader' }[];
+    })) as { userId: string; email: string; role: 'root' | 'editor' | 'reader' }[];
   }
 
   async checkIfUserHasAccessToInstance(
     userId: string,
     instance?: OmnistrateInstanceSchemaType,
     instanceId?: string,
+    roles: ('root' | 'editor' | 'reader')[] = ['reader'],
   ): Promise<boolean> {
     assert(instance || instanceId, 'OmnistrateRepository: Instance or Instance ID is required');
     assert(userId, 'OmnistrateRepository: User ID is required');
@@ -171,7 +172,7 @@ export class OmnistrateRepository {
       return false;
     }
 
-    if (['root', 'writer', 'reader'].includes(user.role)) {
+    if (roles.includes(user.role)) {
       return true;
     }
 

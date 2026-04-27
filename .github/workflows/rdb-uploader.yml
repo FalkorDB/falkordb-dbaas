@@ -6,7 +6,8 @@ name: RDB Uploader
 # Replicates upload_to_gcp.sh logic:
 #   1. Runner generates a signed PUT URL (1h)
 #   2. Pod uploads directly to GCS via kubectl exec + curl (no runner disk used)
-#   3. Runner generates a signed GET URL (72h) and comments it on the issue
+#   3. Runner outputs gs:// bucket paths to GITHUB_OUTPUT (no publicly-accessible
+#      signed GET URLs — IAM authentication is required to download)
 
 permissions:
   contents: read
@@ -33,7 +34,7 @@ on:
         required: true
         type: string
       sign_only:
-        description: 'Regenerate download link only — skip pod access (use when link expired, data already in GCS)'
+        description: 'Post GCS paths to issue without re-uploading — skips pod access (use when data is already in GCS)'
         required: false
         default: 'false'
         type: string
@@ -72,6 +73,16 @@ on:
       environment:
         required: true
         type: string
+    outputs:
+      rdb_url:
+        description: 'Signed GCS download URL for dump.rdb'
+        value: ${{ jobs.upload-rdb.outputs.rdb_url }}
+      aof_url:
+        description: 'Signed GCS download URL for appendonlydir.tar.gz'
+        value: ${{ jobs.upload-rdb.outputs.aof_url }}
+      falkordb_version:
+        description: 'FalkorDB version detected via MODULE LIST'
+        value: ${{ jobs.upload-rdb.outputs.falkordb_version }}
 
 env:
   ISSUE_REPO: 'FalkorDB/private'
@@ -80,6 +91,10 @@ jobs:
   upload-rdb:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
+    outputs:
+      rdb_url: ${{ steps.upload_gcs.outputs.rdb_url }}
+      aof_url: ${{ steps.upload_gcs.outputs.aof_url }}
+      falkordb_version: ${{ steps.upload_gcs.outputs.falkordb_version }}
     steps:
       # ------------------------------------------------------------------ #
       # 0. Check that the actor is an authorised user
@@ -103,14 +118,14 @@ jobs:
       # ------------------------------------------------------------------ #
       - name: Setup omnistrate-ctl
         if: ${{ inputs.sign_only != 'true' }}
-        uses: omnistrate-oss/setup-omnistrate-ctl@v1
+        uses: omnistrate-oss/setup-omnistrate-ctl@0ac9e5945eb7019952b098c7d155b0c1b77b5c7a # v1
 
       # ------------------------------------------------------------------ #
       # 2. Install kubectl (skipped in sign-only mode)
       # ------------------------------------------------------------------ #
       - name: Install kubectl
         if: ${{ inputs.sign_only != 'true' }}
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
 
       # ------------------------------------------------------------------ #
       # 3. Set up Python
@@ -167,7 +182,7 @@ jobs:
       # 6. Authenticate to GCP via Workload Identity Federation
       # ------------------------------------------------------------------ #
       - name: Authenticate to GCP
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCS_SA_EMAIL }}
@@ -195,9 +210,9 @@ jobs:
             "${EXTRA_ARGS[@]}"
 
       # ------------------------------------------------------------------ #
-      # 8. Comment download links on the GitHub issue
+      # 8. Comment GCS paths on the GitHub issue
       # ------------------------------------------------------------------ #
-      - name: Comment download links on issue
+      - name: Comment GCS paths on issue
         if: ${{ inputs.issue_number != '' }}
         env:
           GH_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}
@@ -205,31 +220,39 @@ jobs:
           ISSUE_NUMBER: ${{ inputs.issue_number }}
           NAMESPACE: ${{ inputs.namespace }}
           POD: ${{ inputs.pod }}
-          RDB_URL: ${{ steps.upload_gcs.outputs.rdb_url }}
-          AOF_URL: ${{ steps.upload_gcs.outputs.aof_url }}
+          GCS_BUCKET: ${{ vars.GCS_BUCKET }}
+          RDB_PATH: ${{ steps.upload_gcs.outputs.rdb_url }}
+          AOF_PATH: ${{ steps.upload_gcs.outputs.aof_url }}
           AOF_UPLOAD_FAILED: ${{ steps.upload_gcs.outputs.aof_upload_failed }}
+          FALKORDB_VERSION: ${{ steps.upload_gcs.outputs.falkordb_version }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SIGN_ONLY: ${{ inputs.sign_only }}
         run: |
           if [[ "${SIGN_ONLY,,}" == "true" ]]; then
-            HEADER="## 🔗 RDB Download Link Refreshed"
-            SUBTEXT="Signed download links have been regenerated from the existing GCS snapshot."
+            HEADER="## 📂 RDB GCS Paths"
+            SUBTEXT="GCS paths for the existing snapshot."
           else
             HEADER="## 📦 RDB Export Available"
             SUBTEXT="Snapshot uploaded to GCS."
           fi
 
+          # Derive HTTPS console URLs from gs:// paths (prompts Google login then downloads)
+          RDB_CONSOLE_URL="https://storage.cloud.google.com/${RDB_PATH#gs://}"
+          if [[ -n "$AOF_PATH" ]]; then
+            AOF_CONSOLE_URL="https://storage.cloud.google.com/${AOF_PATH#gs://}"
+          fi
+
           COMMENT="$HEADER
 
-          ${SUBTEXT} Download links expire in **72 hours**.
+          ${SUBTEXT} Access requires GCP IAM authentication.
 
-          | File | Download |
-          |------|----------|
-          | \`dump.rdb\` | [Download]($RDB_URL) |"
+          | File | GCS Path | Console |
+          |------|----------|---------|
+          | \`dump.rdb\` | \`$RDB_PATH\` | [Open in GCP]($RDB_CONSOLE_URL) |"
 
-          if [[ -n "$AOF_URL" ]]; then
+          if [[ -n "$AOF_PATH" ]]; then
             COMMENT+="
-          | \`appendonlydir.tar.gz\` | [Download]($AOF_URL) |"
+          | \`appendonlydir.tar.gz\` | \`$AOF_PATH\` | [Open in GCP]($AOF_CONSOLE_URL) |"
           fi
 
           if [[ "${AOF_UPLOAD_FAILED}" == "true" ]]; then
@@ -240,13 +263,41 @@ jobs:
 
           COMMENT+="
 
-          **Pod:** \`$POD\` &nbsp; **Namespace:** \`$NAMESPACE\`
+          **Pod:** \`$POD\` &nbsp; **Namespace:** \`$NAMESPACE\`"
+
+          if [[ -n "$FALKORDB_VERSION" ]]; then
+            COMMENT+=" &nbsp; **FalkorDB:** \`$FALKORDB_VERSION\`"
+          fi
+
+          COMMENT+="
 
           > [View workflow run]($RUN_URL)
 
           ---
           <details>
-          <summary>🔄 Regenerate download link</summary>
+          <summary>⬇️ How to download via CLI</summary>
+
+          \`\`\`bash
+          # Humans — interactive login:
+          gcloud auth login
+
+          # AI agents / pipelines — use SA credentials already available in the environment.
+
+          # Download files:
+          gsutil cp $RDB_PATH ."
+
+          if [[ -n "$AOF_PATH" ]]; then
+            COMMENT+="
+          gsutil cp $AOF_PATH ."
+          fi
+
+          COMMENT+="
+          \`\`\`
+          </details>
+
+          ---
+          <details>
+          <summary>🔄 Re-post GCS paths without re-uploading</summary>
 
           \`\`\`bash
           gh workflow run rdb-uploader.yml \\

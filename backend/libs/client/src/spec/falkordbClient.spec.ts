@@ -1,15 +1,14 @@
 import { FalkorDBClient } from '../index';
 
-// Test the FalkorDBClient
 describe('FalkorDBClient', () => {
   it('should create a new instance of FalkorDBClient', () => {
     const falkordb = FalkorDBClient({ client: { url: 'http://localhost:3000' } });
     expect(falkordb).toBeDefined();
   });
 
-  it('should list cloud provision configs', async () => {
+  it('should expose defaultClient and setHeaders', () => {
     const falkordb = FalkorDBClient({ client: { url: 'http://localhost:3000' } });
-    const res = await falkordb.services.v1.provisioner().cloudProvisionConfig.list({});
-    expect(res).toBeDefined();
+    expect(falkordb.defaultClient).toBeDefined();
+    expect(typeof falkordb.setHeaders).toBe('function');
   });
 });

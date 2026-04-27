@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: customer-observability
+
+resources:
+  - ../../base
+  - auth-proxy-env-secret.yaml
+
+images:
+  - name: us-central1-docker.pkg.dev/PROJECT/frontend/auth-proxy-web
+    newName: us-central1-docker.pkg.dev/ctrl-plane-prod-b1b92df2/frontend/auth-proxy-web

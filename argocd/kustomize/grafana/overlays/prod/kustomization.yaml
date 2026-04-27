@@ -1,0 +1,67 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+patches:
+  # Grafana CR: memory limit, root_url, ingress host
+  - target:
+      kind: Grafana
+      name: grafana
+    patch: |-
+      - op: replace
+        path: /spec/deployment/spec/template/spec/containers/0/resources/limits/memory
+        value: "4Gi"
+      - op: replace
+        path: /spec/config/server/root_url
+        value: "https://grafana.observability.internal.falkordb.cloud"
+      - op: replace
+        path: /spec/ingress/spec/rules/0/host
+        value: "grafana.observability.internal.falkordb.cloud"
+
+  # ManagedCertificate: prod domain
+  - target:
+      kind: ManagedCertificate
+      name: grafana-managed-cert
+    patch: |-
+      - op: replace
+        path: /spec/domains/0
+        value: "grafana.observability.internal.falkordb.cloud"
+
+  # customer-grafana CR: prod domain/URLs
+  - target:
+      kind: Grafana
+      name: customer-grafana
+    patch: |-
+      - op: replace
+        path: /spec/config/auth/signout_redirect_url
+        value: "https://grafana.falkordb.cloud/api/auth/signout"
+      - op: replace
+        path: /spec/config/server/domain
+        value: "grafana.falkordb.cloud"
+      - op: replace
+        path: /spec/config/server/root_url
+        value: "https://grafana.falkordb.cloud/grafana/"
+
+  # customer-grafana Ingresses: prod host
+  - target:
+      kind: Ingress
+      name: grafana-auth-ingress
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: "grafana.falkordb.cloud"
+      - op: replace
+        path: /spec/rules/0/host
+        value: "grafana.falkordb.cloud"
+  - target:
+      kind: Ingress
+      name: grafana-public-ingress
+    patch: |-
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: "grafana.falkordb.cloud"
+      - op: replace
+        path: /spec/rules/0/host
+        value: "grafana.falkordb.cloud"

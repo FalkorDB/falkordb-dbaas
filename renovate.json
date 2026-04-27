@@ -1,0 +1,55 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":separatePatchReleases"
+  ],
+  "schedule": ["before 6am on Monday"],
+  "labels": ["dependencies"],
+  "ignorePaths": ["**/node_modules/**"],
+  "packageRules": [
+    {
+      "description": "Group all GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions",
+      "automerge": false
+    },
+    {
+      "description": "Group npm minor and patch updates",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm minor and patch",
+      "automerge": false
+    },
+    {
+      "description": "OpenTofu / Terraform provider bumps",
+      "matchManagers": ["terraform"],
+      "groupName": "opentofu providers",
+      "automerge": false
+    },
+    {
+      "description": "Docker base image updates",
+      "matchManagers": ["dockerfile"],
+      "groupName": "docker base images",
+      "automerge": false
+    },
+    {
+      "description": "Helm chart version updates in ArgoCD Application CRDs",
+      "matchManagers": ["helm-values", "helmv3"],
+      "groupName": "helm charts",
+      "automerge": false
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "Terragrunt version pinned in CI workflows",
+      "customType": "regex",
+      "fileMatch": [".github/workflows/.+\\.ya?ml$"],
+      "matchStrings": ["TG_VERSION=\"(?<currentValue>[\\d.]+)\""],
+      "depNameTemplate": "gruntwork-io/terragrunt",
+      "datasourceTemplate": "github-releases"
+    }
+  ]
+}

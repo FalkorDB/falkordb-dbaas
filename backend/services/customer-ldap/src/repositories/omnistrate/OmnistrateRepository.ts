@@ -90,10 +90,11 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       serviceId: instance?.['serviceId'],
       environmentId: instance?.['environmentId'],
       productTierId: instance?.['productTierId'],
+      tierVersion: instance?.['tierVersion'] || '0',
       status: instance?.['consumptionResourceInstanceResult']?.['status'],
       resourceId:
         Object.entries(instance?.['consumptionResourceInstanceResult']?.['detailedNetworkTopology'] ?? {}).filter(
-          (ob) => (ob[1] as unknown)?.['main'],
+          (ob) => (ob[1] as any)?.['main'],
         )?.[0]?.[0] ?? null,
       cloudProvider: instance?.['cloudProvider'],
       productTierName: instance?.['productTierName'],
@@ -117,7 +118,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
     );
 
     return (
-      response.data['users']?.map((d: unknown) => ({
+      response.data['users']?.map((d: any) => ({
         userId: d?.['userId'],
         email: d?.['email'],
         role: d?.['userSubscriptionRole'],
@@ -128,8 +129,8 @@ export class OmnistrateRepository implements IOmnistrateRepository {
   async checkIfUserHasAccessToInstance(
     userId: string,
     instanceId: string,
-    minRole?: 'root' | 'writer' | 'reader',
-  ): Promise<{ hasAccess: boolean; role?: 'root' | 'writer' | 'reader' }> {
+    minRole?: 'root' | 'editor' | 'reader',
+  ): Promise<{ hasAccess: boolean; role?: 'root' | 'editor' | 'reader' }> {
     assert(instanceId, 'OmnistrateRepository: Instance ID is required');
     assert(userId, 'OmnistrateRepository: User ID is required');
 
@@ -144,7 +145,7 @@ export class OmnistrateRepository implements IOmnistrateRepository {
       return { hasAccess: false };
     }
 
-    const roleHierarchy = { root: 3, writer: 2, reader: 1 };
+    const roleHierarchy = { root: 3, editor: 2, reader: 1 };
     const userRoleLevel = roleHierarchy[user.role];
     const minRoleLevel = minRole ? roleHierarchy[minRole] : 1;
 

@@ -55,7 +55,7 @@ export default fp(
     fastify.post(
       '/v1/instances/:instanceId/users',
       {
-        preHandler: createAuthenticateHook('writer'),
+        preHandler: createAuthenticateHook('editor'),
         schema: {
           security: [{ bearerAuth: [] }],
           tags: ['users'],
@@ -74,7 +74,7 @@ export default fp(
     fastify.put(
       '/v1/instances/:instanceId/users/:username',
       {
-        preHandler: createAuthenticateHook('writer'),
+        preHandler: createAuthenticateHook('editor'),
         schema: {
           security: [{ bearerAuth: [] }],
           tags: ['users'],
@@ -93,7 +93,7 @@ export default fp(
     fastify.delete(
       '/v1/instances/:instanceId/users/:username',
       {
-        preHandler: createAuthenticateHook('writer'),
+        preHandler: createAuthenticateHook('editor'),
         schema: {
           security: [{ bearerAuth: [] }],
           tags: ['users'],
