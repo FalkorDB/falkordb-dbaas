@@ -14,7 +14,6 @@ updates:
       npm-minor-patch:
         update-types:
           - "patch"
-          
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
