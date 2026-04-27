@@ -5,16 +5,18 @@
 
 version: 2
 updates:
-  - package-ecosystem: "npm" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "npm"
+    directory: "/"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
     groups:
       npm-minor-patch:
         update-types:
           - "patch"
+
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "dev"
     schedule:
       interval: "weekly"
-      
