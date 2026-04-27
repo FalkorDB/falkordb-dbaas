@@ -15,8 +15,10 @@ Changes:
 """
 
 import json
+import os
 
-FILEPATH = 'observability/grafana/dashboards/falkordb-cloud.json'
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+FILEPATH = os.path.join(SCRIPT_DIR, '..', 'observability', 'grafana', 'dashboards', 'falkordb-cloud.json')
 
 with open(FILEPATH, 'r') as f:
     dashboard = json.load(f)
@@ -56,7 +58,7 @@ for i, var in enumerate(template_list):
         namespace_idx = i
         break
 
-if namespace_idx is not None:
+if namespace_idx is not None and not any(v.get('name') == 'deployment_mode' for v in template_list):
     deployment_mode_var = {
         "current": {},
         "datasource": {
@@ -278,7 +280,7 @@ _, total_cmds = find_panel(panels, 18)
 if total_cmds:
     internal_exclude = (
         'cmd!~"ping|cluster.*|command|config.*|auth|client.*|'
-        'bgrewriteaof|exists|latency.*|slowlog.*|info|replconf|unlink"'
+        'bgrewriteaof|latency.*|slowlog.*|info|replconf|unlink"'
     )
     total_cmds['title'] = 'Total Commands / sec (excl. internal)'
     total_cmds['description'] = (

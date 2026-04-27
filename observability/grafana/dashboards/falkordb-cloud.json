@@ -1025,7 +1025,7 @@
             "type": "prometheus",
             "uid": "${datasource}"
           },
-          "expr": "sum(rate(redis_commands_total{pod=~\"$pod\", namespace=~\"$namespace\", container=~\"$container\", cmd!~\"ping|cluster.*|command|config.*|auth|client.*|bgrewriteaof|exists|latency.*|slowlog.*|info|replconf|unlink\"} [1m])) by (cmd)",
+          "expr": "sum(rate(redis_commands_total{pod=~\"$pod\", namespace=~\"$namespace\", container=~\"$container\", cmd!~\"ping|cluster.*|command|config.*|auth|client.*|bgrewriteaof|latency.*|slowlog.*|info|replconf|unlink\"} [1m])) by (cmd)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
