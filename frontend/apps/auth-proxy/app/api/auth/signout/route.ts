@@ -16,7 +16,7 @@ export const GET = async (req: NextRequest) => {
     "Set-Cookie",
     `omnistrate_token=rmvd; Path=/; Domain=${process.env.NEXT_PUBLIC_COOKIE_DOMAIN}; Secure; SameSite=Lax; Expires=${expires}`,
   );
-  response.headers.set("Access-Control-Expose-Headers", "Set-Cookie");
+  response.headers.append("Access-Control-Expose-Headers", "Set-Cookie");
 
   return response;
 };
