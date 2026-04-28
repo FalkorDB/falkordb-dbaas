@@ -84,6 +84,7 @@ spec:
             ~"=== REDIS BUG REPORT START" and -pod:~"vmalert*" | 
             stats by (pod, namespace, cluster, environment) count() as crash_count    
           for: 0m
+          keep_firing_for: 5m
           labels:
             severity: warning
             cluster: "{{ $labels.cluster }}"

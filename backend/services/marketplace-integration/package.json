@@ -27,7 +27,7 @@
     "@fastify/awilix": "^8.2.0",
     "@fastify/cors": "^11.2.0",
     "@fastify/env": "^5.0.3",
-    "@fastify/middie": "^9.3.1",
+    "@fastify/middie": "^9.3.2",
     "@fastify/mongodb": "^8.0.0",
     "@fastify/request-context": "^6.2.1",
     "@fastify/sensible": "^6.0.4",
