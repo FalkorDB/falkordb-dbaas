@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export const GET = async () => {
-  const response = NextResponse.redirect(process.env.NEXTAUTH_URL ?? "", {
+export const GET = async (req: NextRequest) => {
+  const origin = process.env.NEXTAUTH_URL || new URL(req.url).origin;
+  const response = NextResponse.redirect(origin, {
     status: 302,
   });
 
