@@ -32,7 +32,7 @@ export const GET = async (req: NextRequest) => {
     }
   }
 
-  const token = req.cookies.get("token");
+  const token = req.cookies.get("omnistrate_token") ?? req.cookies.get("token");
 
   // check if token is set
   if (!token) {
