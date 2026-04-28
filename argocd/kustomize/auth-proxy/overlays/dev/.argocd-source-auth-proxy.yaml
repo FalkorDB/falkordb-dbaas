@@ -1,3 +1,3 @@
 kustomize:
   images:
-  - us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/frontend/auth-proxy-web:0.2.1-dev.1813
+  - us-central1-docker.pkg.dev/ctrl-plane-dev-f7a2434f/frontend/auth-proxy-web:0.2.1-dev.1817
