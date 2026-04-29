@@ -40,6 +40,7 @@ spec:
             --arg cluster "${CLUSTER}" \
             --arg container "${CONTAINER}" \
             --arg grafana_url "${GRAFANA_URL}" \
+            --arg vmauth_url "${VMAUTH_URL}" \
             --arg env "dev" \
             '{
               ref: $ref,
@@ -49,6 +50,7 @@ spec:
                 cluster: $cluster,
                 container: $container,
                 grafana_url: $grafana_url,
+                vmauth_url: $vmauth_url,
                 environment: $env
               }
             }')")
@@ -94,3 +96,5 @@ spec:
       value: "oom-handler.yml"
     - name: GRAFANA_URL
       value: "https://grafana.observability.dev.internal.falkordb.cloud"
+    - name: VMAUTH_URL
+      value: "https://vmauth.observability.dev.internal.falkordb.cloud"

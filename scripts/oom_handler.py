@@ -438,6 +438,18 @@ def main(args):
     )
     print("   Notification sent.")
 
+    # Write outputs for downstream GitHub Actions jobs (AI triage pipeline)
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output:
+        with open(github_output, "a") as f:
+            f.write(f"namespace={args.namespace}\n")
+            f.write(f"pod={args.pod}\n")
+            f.write(f"cluster={args.cluster}\n")
+            f.write(f"container={args.container}\n")
+            f.write(f"customer_name={customer.name}\n")
+            f.write(f"customer_email={customer.email}\n")
+            f.write(f"subscription_id={customer.subscription_id}\n")
+
     print(f"\n{'='*60}")
     print("✅ OOM handling complete!")
     print(f"{'='*60}")

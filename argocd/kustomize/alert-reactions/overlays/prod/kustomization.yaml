@@ -33,7 +33,7 @@ patches:
         path: /spec/actions/0/env/0/value
         value: "ctrl-plane-prod-b1b92df2"
 
-  # oom-killed: prod Grafana URL env var + environment=prod in workflow dispatch
+  # oom-killed: prod Grafana URL, prod VMAuth URL, environment=prod in workflow dispatch
   - target:
       kind: AlertReaction
       name: container-oom-killed-alert
@@ -41,6 +41,9 @@ patches:
       - op: replace
         path: /spec/actions/0/env/9/value
         value: "https://grafana.observability.internal.falkordb.cloud"
+      - op: replace
+        path: /spec/actions/0/env/10/value
+        value: "https://vmauth.observability.internal.falkordb.cloud"
       - op: replace
         path: /spec/actions/0/args/0
         value: |
@@ -71,6 +74,7 @@ patches:
               --arg cluster "${CLUSTER}" \
               --arg container "${CONTAINER}" \
               --arg grafana_url "${GRAFANA_URL}" \
+              --arg vmauth_url "${VMAUTH_URL}" \
               --arg env "prod" \
               '{
                 ref: $ref,
@@ -80,6 +84,7 @@ patches:
                   cluster: $cluster,
                   container: $container,
                   grafana_url: $grafana_url,
+                  vmauth_url: $vmauth_url,
                   environment: $env
                 }
               }')")
