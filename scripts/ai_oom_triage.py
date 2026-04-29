@@ -30,6 +30,7 @@ import os
 import sys
 import re
 import json
+import html
 import argparse
 import asyncio
 from datetime import datetime
@@ -41,6 +42,8 @@ from copilot import CopilotClient, SubprocessConfig
 from copilot.session import PermissionHandler
 
 from oom_triage_tools import ALL_TOOLS, cleanup
+
+_EMAIL_RE = re.compile(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
 
 
 SYSTEM_MESSAGE = """\
@@ -301,6 +304,7 @@ def _send_report_to_chat(
         recommended_action = action_match.group(1).strip()
         if len(recommended_action) > 400:
             recommended_action = recommended_action[:397] + "..."
+        recommended_action = html.escape(recommended_action)
 
     masked_email = _mask_email(customer_email)
 
@@ -369,9 +373,10 @@ def _send_report_to_chat(
         response.raise_for_status()
         print("AI triage card sent to Google Chat.")
 
-        # Send full report as a follow-up message
+        # Send full report as a follow-up message — scrub emails for PII safety
+        scrubbed_report = _EMAIL_RE.sub(lambda m: _mask_email(m.group(0)), report)
         full_report_payload = {
-            "text": f"📋 *Full AI OOM Triage Report — {pod} ({namespace})*\n\n{report}",
+            "text": f"📋 *Full AI OOM Triage Report — {pod} ({namespace})*\n\n{scrubbed_report}",
         }
         follow_up = requests.post(webhook_url, json=full_report_payload, timeout=30, verify=verify_ssl)
         follow_up.raise_for_status()

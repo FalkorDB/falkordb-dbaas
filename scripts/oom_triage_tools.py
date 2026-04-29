@@ -31,6 +31,15 @@ from google.cloud import storage as gcs_storage
 _local_container_id: Optional[str] = None
 _work_dir: Optional[str] = None
 
+_EMAIL_RE = re.compile(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
+
+
+def _verify_ssl() -> bool:
+    """Compute SSL verification flag consistent with oom_handler / ai_oom_triage."""
+    if os.environ.get("DISABLE_SSL_VERIFY", "false").lower() == "true":
+        return False
+    return os.environ.get("ENVIRONMENT", "prod").lower() != "dev"
+
 
 def _download_gcs_or_url(url: str, dest: str) -> Optional[str]:
     """Download a file from a gs:// path (using ADC) or HTTPS URL.
@@ -117,24 +126,32 @@ async def query_metrics(params: QueryMetricsParams) -> str:
     if not all([vmauth_url, username, password]):
         return "ERROR: VMAUTH_URL, VMAUTH_METRICS_USERNAME, and VMAUTH_METRICS_PASSWORD env vars required"
 
-    verify_ssl = os.environ.get("ENVIRONMENT", "prod").lower() != "dev"
+    if params.start_minutes_ago <= params.end_minutes_ago:
+        return "ERROR: start_minutes_ago must be greater than end_minutes_ago (start is further in the past)."
+    if params.end_minutes_ago < 0 or params.start_minutes_ago < 0:
+        return "ERROR: minutes values must be non-negative."
+
+    verify_ssl = _verify_ssl()
 
     now = datetime.now(timezone.utc)
     start = now - timedelta(minutes=params.start_minutes_ago)
     end = now - timedelta(minutes=params.end_minutes_ago)
 
-    resp = requests.get(
-        f"{vmauth_url}/api/v1/query_range",
-        params={
-            "query": params.expr,
-            "start": int(start.timestamp()),
-            "end": int(end.timestamp()),
-            "step": params.step,
-        },
-        auth=(username, password),
-        timeout=60,
-        verify=verify_ssl,
-    )
+    try:
+        resp = requests.get(
+            f"{vmauth_url}/api/v1/query_range",
+            params={
+                "query": params.expr,
+                "start": int(start.timestamp()),
+                "end": int(end.timestamp()),
+                "step": params.step,
+            },
+            auth=(username, password),
+            timeout=60,
+            verify=verify_ssl,
+        )
+    except requests.RequestException as exc:
+        return f"ERROR: Failed to connect to VictoriaMetrics: {str(exc)[:300]}"
 
     if resp.status_code == 401:
         return "ERROR: Authentication failed (401). Check VMAUTH_METRICS_USERNAME and VMAUTH_METRICS_PASSWORD."
@@ -143,7 +160,10 @@ async def query_metrics(params: QueryMetricsParams) -> str:
     if resp.status_code != 200:
         return f"ERROR: VictoriaMetrics returned {resp.status_code}: {resp.text[:500]}"
 
-    data = resp.json()
+    try:
+        data = resp.json()
+    except (ValueError, json.JSONDecodeError):
+        return f"ERROR: VictoriaMetrics returned non-JSON response: {resp.text[:300]}"
     if data.get("status") != "success":
         return f"ERROR: Query failed: {data.get('error', 'unknown error')}"
 
@@ -232,24 +252,27 @@ async def fetch_logs(params: FetchLogsParams) -> str:
     if not all([vmauth_url, vmauth_user, vmauth_pass]):
         return "ERROR: VMAUTH_URL, VMAUTH_USERNAME, and VMAUTH_PASSWORD env vars required"
 
-    verify_ssl = os.environ.get("ENVIRONMENT", "prod").lower() != "dev"
+    verify_ssl = _verify_ssl()
 
     end = datetime.now(timezone.utc)
     start = end - timedelta(minutes=params.minutes)
     query = f'{{namespace="{params.namespace}", pod="{params.pod}", container="{params.container}"}}'
 
-    resp = requests.get(
-        f"{vmauth_url}/select/logsql/query",
-        params={
-            "query": query,
-            "start": int(start.timestamp() * 1e9),
-            "end": int(end.timestamp() * 1e9),
-            "limit": 50000,
-        },
-        auth=(vmauth_user, vmauth_pass),
-        timeout=60,
-        verify=verify_ssl,
-    )
+    try:
+        resp = requests.get(
+            f"{vmauth_url}/select/logsql/query",
+            params={
+                "query": query,
+                "start": int(start.timestamp() * 1e9),
+                "end": int(end.timestamp() * 1e9),
+                "limit": 50000,
+            },
+            auth=(vmauth_user, vmauth_pass),
+            timeout=60,
+            verify=verify_ssl,
+        )
+    except requests.RequestException as exc:
+        return f"ERROR: Failed to connect to VictoriaLogs: {str(exc)[:300]}"
 
     if resp.status_code == 401:
         return "ERROR: Authentication failed (401). Check VMAUTH_USERNAME and VMAUTH_PASSWORD."
@@ -283,6 +306,13 @@ async def fetch_logs(params: FetchLogsParams) -> str:
         cleaned.append(ts_pattern.sub("", line))
 
     full_log = "\n".join(cleaned)
+
+    # Cap output to prevent overwhelming LLM context
+    MAX_LOG_BYTES = 100_000
+    if len(full_log) > MAX_LOG_BYTES:
+        full_log = full_log[:MAX_LOG_BYTES]
+        return f"=== LOGS ({len(cleaned)} lines, last {params.minutes} minutes — TRUNCATED to {MAX_LOG_BYTES // 1000}KB) ===\n\n{full_log}"
+
     return f"=== LOGS ({len(cleaned)} lines, last {params.minutes} minutes) ===\n\n{full_log}"
 
 
