@@ -11,6 +11,7 @@ uses when investigating a ContainerOOMKilled event:
 import os
 import re
 import json
+import shlex
 import subprocess
 import tarfile
 import tempfile
@@ -378,7 +379,7 @@ async def execute_query(params: ExecuteQueryParams) -> str:
         return "ERROR: No local FalkorDB container running. Use run_falkordb_local first."
 
     result = subprocess.run(
-        ["redis-cli", "-p", str(params.port)] + params.command.split(),
+        ["redis-cli", "-p", str(params.port), "--"] + shlex.split(params.command),
         capture_output=True,
         text=True,
         timeout=30,

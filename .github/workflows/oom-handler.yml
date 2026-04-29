@@ -3,7 +3,6 @@ name: OOM Handler
 permissions:
   contents: read
   id-token: write
-  issues: write
 
 on:
   workflow_dispatch:
@@ -41,9 +40,6 @@ on:
         required: false
         type: boolean
         default: false
-
-env:
-  ISSUE_REPO: 'FalkorDB/private'
 
 jobs:
   log-dev-oom:
@@ -198,7 +194,11 @@ jobs:
           VMAUTH_METRICS_PASSWORD: ${{ env.VMAUTH_METRICS_PASSWORD }}
           VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
           VMAUTH_PASSWORD: ${{ env.VMAUTH_PASSWORD }}
+          CUSTOMER_NAME: ${{ needs.analyze-oom.outputs.customer_name }}
+          CUSTOMER_EMAIL: ${{ needs.analyze-oom.outputs.customer_email }}
+          SUBSCRIPTION_ID: ${{ needs.analyze-oom.outputs.subscription_id }}
         run: |
+          echo "::add-mask::$CUSTOMER_EMAIL"
           cd scripts
           python ai_oom_triage.py \
             --pod "${{ needs.analyze-oom.outputs.pod }}" \
@@ -207,9 +207,9 @@ jobs:
             --container "${{ inputs.container }}" \
             --vmauth-url "$VMAUTH_URL" \
             --grafana-url "${{ inputs.grafana_url }}" \
-            --customer-name "${{ needs.analyze-oom.outputs.customer_name }}" \
-            --customer-email "${{ needs.analyze-oom.outputs.customer_email }}" \
-            --subscription-id "${{ needs.analyze-oom.outputs.subscription_id }}" \
+            --customer-name "$CUSTOMER_NAME" \
+            --customer-email "$CUSTOMER_EMAIL" \
+            --subscription-id "$SUBSCRIPTION_ID" \
             ${{ needs.upload-rdb.outputs.rdb_url != '' && format('--rdb-url "{0}"', needs.upload-rdb.outputs.rdb_url) || '' }} \
             ${{ needs.upload-rdb.outputs.aof_url != '' && format('--aof-url "{0}"', needs.upload-rdb.outputs.aof_url) || '' }} \
             ${{ needs.upload-rdb.outputs.falkordb_version != '' && format('--falkordb-version "{0}"', needs.upload-rdb.outputs.falkordb_version) || '' }}
