@@ -555,13 +555,63 @@ class CrashAnalyzer:
         if crash_sections:
             print(f"   Found {len(crash_sections)} crash dump section(s), analyzing most recent")
         
+        # Pre-process: reassemble log lines that were split by the container runtime.
+        # Docker/containerd splits lines exceeding ~16KB into multiple log entries.
+        # FluentBit ingests each chunk as a separate _msg, so we must merge them.
+        reassembled = []
+        i = 0
+        argv_start_re = re.compile(r'\s*argv\[\d+\]:')
+        # Patterns indicating the start of a new structured crash dump line
+        new_entry_re = re.compile(
+            r'\s*(?:'
+            r'argv\[\d+\]:|'           # another argv entry
+            r'graph_command:|'          # FalkorDB graph command
+            r'---\s+\w|'               # section header: --- STACK TRACE ---
+            r'===\s+\w|'               # report boundary: === REDIS BUG REPORT ===
+            r'cmd=\S|'                 # Redis client info
+            r'client:\s|'              # client info line
+            r'key:\s'                  # key info line
+            r')'
+        )
+        while i < len(lines_to_search):
+            line = lines_to_search[i]
+            i += 1
+            is_argv = argv_start_re.match(line)
+            is_graph_cmd = 'graph_command:' in line.lower()
+            
+            if is_argv and not line.rstrip().endswith("\"'"):
+                # Incomplete argv entry — merge continuation lines until closing "' or next entry
+                chunks = [line]
+                while i < len(lines_to_search):
+                    next_line = lines_to_search[i]
+                    if new_entry_re.match(next_line):
+                        break
+                    chunks.append(next_line)
+                    i += 1
+                    if next_line.rstrip().endswith("\"'"):
+                        break
+                line = ''.join(chunks)
+            elif is_graph_cmd:
+                # graph_command may also be split — merge non-structured continuations
+                chunks = [line]
+                while i < len(lines_to_search):
+                    next_line = lines_to_search[i]
+                    if new_entry_re.match(next_line):
+                        break
+                    chunks.append(next_line)
+                    i += 1
+                line = ''.join(chunks)
+            
+            reassembled.append(line)
+        lines_to_search = reassembled
+        
         # Pattern 1: FalkorDB graph command format: graph_command:GRAPH.QUERY MATCH ...
         graph_cmd_pattern = re.compile(r'graph_command:GRAPH\.QUERY\s+(.+)', re.IGNORECASE)
         for line in lines_to_search:
             match = graph_cmd_pattern.search(line)
             if match:
                 query = match.group(1).strip()
-                client_command = f"GRAPH.QUERY {query[:100]}"
+                client_command = f"GRAPH.QUERY {query}"
                 break
         
         # Pattern 2: Redis client info format: cmd=debug
@@ -574,27 +624,41 @@ class CrashAnalyzer:
                     break
         
         # Pattern 3: argv format: argv[0]: '"debug"' argv[1]: '"segfault"'
+        # Also handles: argv[0]: '"GRAPH.QUERY"' argv[1]: '"CYPHER items=[{source_id:"..."}]"'
         if client_command == "unknown":
-            argv_parts = []
-            argv_pattern = re.compile(r"argv\[\d+\]:\s*['\"]([^'\"]+)['\"]")
+            argv_parts = {}
+            # Primary format: argv[N]: '"value"'
+            argv_pattern = re.compile(r"argv\[(\d+)\]:\s*'\"(.+?)\"'")
             for line in lines_to_search:
-                matches = argv_pattern.findall(line)
-                argv_parts.extend(matches)
+                for m in argv_pattern.finditer(line):
+                    idx = int(m.group(1))
+                    argv_parts[idx] = m.group(2)
+            # Fallback format: argv[N]: "value" or argv[N]: 'value'
+            # Only attempt for indices we haven't captured yet
+            fallback_pattern = re.compile(r"argv\[(\d+)\]:\s*['\"](.+?)['\"]\s*$")
+            for line in lines_to_search:
+                m = fallback_pattern.search(line)
+                if m:
+                    idx = int(m.group(1))
+                    if idx not in argv_parts:
+                        argv_parts[idx] = m.group(2).strip('"\'')
             if argv_parts:
-                client_command = ' '.join(argv_parts)
+                sorted_parts = [argv_parts[k] for k in sorted(argv_parts.keys())]
+                client_command = ' '.join(sorted_parts)
         
         # Pattern 4: Generic command format
+        # Capture the full remainder of the line after the label, including quotes
         if client_command == "unknown":
             command_patterns = [
-                re.compile(r'client.*command[:\s]+["\']?([^"\']+)["\']?', re.IGNORECASE),
-                re.compile(r'last.*command[:\s]+["\']?([^"\']+)["\']?', re.IGNORECASE),
+                re.compile(r'client.*command[:\s]+(.+)', re.IGNORECASE),
+                re.compile(r'last.*command[:\s]+(.+)', re.IGNORECASE),
             ]
             
             for line in reversed(lines_to_search):
                 for pattern in command_patterns:
                     match = pattern.search(line)
                     if match:
-                        client_command = match.group(1).strip()
+                        client_command = match.group(1).strip().strip('"\'')
                         break
                 if client_command != "unknown":
                     break
@@ -614,6 +678,16 @@ class GitHubIssueManager:
     
     # GitHub label name maximum length
     MAX_LABEL_LENGTH = 50
+    # Maximum length for client command displayed in issue body/comments.
+    # Full command is preserved in CrashSummary for AI triage analysis.
+    MAX_DISPLAY_COMMAND_LENGTH = 2000
+    
+    @staticmethod
+    def _truncate_command(command: str, max_len: int = 2000) -> str:
+        """Truncate a client command for display in issue body/comments."""
+        if not command or len(command) <= max_len:
+            return command
+        return command[:max_len] + '… (truncated)'
     
     def __init__(self, token: str, repo: str, project_id: Optional[str] = None):
         self.token = token
@@ -916,7 +990,7 @@ class GitHubIssueManager:
 {stack_trace_section}
 **Exit Code:** {crash.exit_code}
 **Memory RSS:** {crash.memory_rss} bytes
-**Client Command:** {crash.client_command}
+**Client Command:** {self._truncate_command(crash.client_command, self.MAX_DISPLAY_COMMAND_LENGTH)}
 
 **Crash Logs:** [View in Grafana]({log_url})"""
         
@@ -984,7 +1058,7 @@ class GitHubIssueManager:
 {stack_trace_section}
 **Exit Code:** {crash.exit_code}
 **Memory RSS:** {crash.memory_rss} bytes
-**Client Command:** {crash.client_command}
+**Client Command:** {self._truncate_command(crash.client_command, self.MAX_DISPLAY_COMMAND_LENGTH)}
 
 **Crash Logs:** [View in Grafana]({log_url})"""
         
