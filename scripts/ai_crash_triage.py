@@ -25,6 +25,7 @@ Usage:
 
 import os
 import sys
+import re
 import argparse
 import asyncio
 
@@ -207,6 +208,94 @@ def _post_report_to_issue(report: str, issue_number: int, issue_repo: str):
         print(report)
 
 
+def _extract_report_field(report: str, field_name: str) -> str:
+    """Extract a **Field:** value from the triage report markdown."""
+    pattern = re.compile(rf'\*\*{re.escape(field_name)}:\*\*\s*(.+)', re.IGNORECASE)
+    match = pattern.search(report)
+    return match.group(1).strip() if match else ""
+
+
+def _build_title_from_report(report: str, namespace: str) -> str:
+    """Build a descriptive issue title from the triage report.
+
+    Format: [CRITICAL] <Status>: <Primary Function> — <Root Cause> (<namespace>)
+
+    Examples:
+      [CRITICAL] New bug: AlgebraicExpression_Dest — NULL dereference in path expression (instance-abc)
+      [CRITICAL] Known issue: OpAggregate_Next — use-after-free on aggregation (instance-xyz)
+      [CRITICAL] Fixed in v4.2.1: Record_Get — index out of bounds on OPTIONAL MATCH (instance-def)
+    """
+    primary_func = _extract_report_field(report, "Primary Function")
+    status = _extract_report_field(report, "Status")
+
+    # Extract a one-line root cause from the Root Cause Hypothesis section
+    root_cause = ""
+    rch_match = re.search(
+        r'###\s*Root Cause Hypothesis\s*\n+(.+)', report, re.IGNORECASE
+    )
+    if rch_match:
+        root_cause = rch_match.group(1).strip().rstrip(".")
+        # Trim to something reasonable for a title
+        if len(root_cause) > 100:
+            root_cause = root_cause[:97] + "..."
+
+    # Shorten long namespace identifiers for the title
+    ns_short = namespace
+    if len(ns_short) > 30:
+        ns_short = ns_short[:27] + "..."
+
+    # Build the title parts
+    parts = ["[CRITICAL]"]
+
+    if status:
+        parts.append(f"{status}:")
+    
+    if primary_func:
+        parts.append(primary_func)
+        if root_cause:
+            parts.append(f"— {root_cause}")
+    elif root_cause:
+        parts.append(root_cause)
+    else:
+        # Fallback — keep something meaningful even without parsed fields
+        parts.append("Redis/FalkorDB crash")
+
+    parts.append(f"({ns_short})")
+    
+    title = " ".join(parts)
+
+    # GitHub issue titles have a soft limit; keep it reasonable
+    if len(title) > 256:
+        title = title[:253] + "..."
+
+    return title
+
+
+def _update_issue_title(title: str, issue_number: int, issue_repo: str):
+    """Update the GitHub issue title after triage."""
+    token = os.environ.get("PRIVATE_REPO_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
+    if not token:
+        print("WARNING: No token available, cannot update issue title", file=sys.stderr)
+        return
+
+    resp = requests.patch(
+        f"https://api.github.com/repos/{issue_repo}/issues/{issue_number}",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github.v3+json",
+        },
+        json={"title": title},
+        timeout=30,
+    )
+    if resp.status_code == 200:
+        print(f"Issue title updated to: {title}")
+    else:
+        print(
+            f"WARNING: Failed to update issue title (HTTP {resp.status_code}): {resp.text[:500]}",
+            file=sys.stderr,
+        )
+
+
 async def run_triage(args):
     """Run the AI crash triage session."""
     triage_report = None
@@ -302,6 +391,9 @@ def main():
         report = asyncio.run(run_triage(args))
         if report:
             _post_report_to_issue(report, args.issue_number, args.issue_repo)
+            # Update the issue title to reflect the triage findings
+            new_title = _build_title_from_report(report, args.namespace)
+            _update_issue_title(new_title, args.issue_number, args.issue_repo)
         else:
             print("ERROR: No triage report generated", file=sys.stderr, flush=True)
             sys.exit(1)
