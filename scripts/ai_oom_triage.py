@@ -365,33 +365,17 @@ def _send_report_to_chat(
 
     try:
         # Send the card summary
-        response = requests.post(
-            webhook_url + "&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD",
-            json=payload,
-            timeout=30,
-            verify=verify_ssl,
-        )
+        response = requests.post(webhook_url, json=payload, timeout=30, verify=verify_ssl)
         response.raise_for_status()
         print("AI triage card sent to Google Chat.")
 
-        # Send full report as a threaded reply
-        resp_data = response.json()
-        thread_name = resp_data.get("thread", {}).get("name", "")
-        if thread_name:
-            thread_payload = {
-                "text": f"```\n{report}\n```",
-                "thread": {"name": thread_name},
-            }
-            thread_resp = requests.post(
-                webhook_url + "&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD",
-                json=thread_payload,
-                timeout=30,
-                verify=verify_ssl,
-            )
-            thread_resp.raise_for_status()
-            print("Full triage report sent as thread reply.")
-        else:
-            print("⚠️  Could not get thread name — full report not threaded.", file=sys.stderr)
+        # Send full report as a follow-up message
+        full_report_payload = {
+            "text": f"📋 *Full AI OOM Triage Report — {pod} ({namespace})*\n\n{report}",
+        }
+        follow_up = requests.post(webhook_url, json=full_report_payload, timeout=30, verify=verify_ssl)
+        follow_up.raise_for_status()
+        print("Full triage report sent to Google Chat.")
     except requests.RequestException as e:
         print(f"⚠️  Failed to send AI triage report to Google Chat: {e}", file=sys.stderr)
 
