@@ -264,9 +264,16 @@ async def run_triage(args):
             await session.send(prompt)
             await done.wait()
 
-            # Prefer the last assistant.message; fall back to streamed chunks
+            # Prefer the message containing the structured report header;
+            # fall back to the last message if no structured report is found.
+            REPORT_HEADER = "## 🤖 AI Crash Triage Report"
             if messages:
-                triage_report = messages[-1]
+                for msg in reversed(messages):
+                    if REPORT_HEADER in msg:
+                        triage_report = msg
+                        break
+                else:
+                    triage_report = messages[-1]
             elif streamed_chunks:
                 triage_report = "".join(streamed_chunks)
 
