@@ -41,3 +41,9 @@ configMapGenerator:
 
   - name: dashboards-k8s-views-ldap-system
     files: [json=./dashboards/ldap-system.json]
+
+  - name: dashboards-security-soc2-compliance
+    files: [json=./dashboards/soc2-compliance.json]
+
+  - name: dashboards-security-tools
+    files: [json=./dashboards/security-tools.json]

@@ -1,0 +1,31 @@
+# NetworkPolicy — KubeScape scanner CronJob pods
+# Allows egress to: DNS, K8s API, GCS, Wazuh syslog, PyPI,
+# GitHub (kubescape binary download). Denies all ingress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kubescape-netpol
+  namespace: security
+spec:
+  podSelector:
+    matchLabels:
+      app: kubescape
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress:
+    # DNS resolution
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # HTTPS — K8s API, GCS, PyPI, GitHub releases, KubeScape cloud
+    - ports:
+        - protocol: TCP
+          port: 443
+    # Wazuh syslog forwarding
+    - ports:
+        - protocol: TCP
+          port: 514

@@ -1,6 +1,6 @@
 import logger from '../logger';
 import { OmnistrateClient } from '../providers/omnistrate/client';
-import { deleteObservabilityNodePool } from '../providers';
+import { deleteObservabilityNodePool, deleteSecurityNodePool } from '../providers';
 import { Cluster } from '../types';
 
 interface DeploymentCell {
@@ -135,9 +135,10 @@ function buildManagedClusterConfig(deploymentCell: DeploymentCell, clusterName: 
 async function deleteNodePool(cluster: Partial<Cluster>, deploymentCellId: string, clusterName: string): Promise<void> {
   const hostMode = cluster.hostMode || 'managed';
 
-  logger.info({ deploymentCellId, clusterName, hostMode }, `Deleting observability node pool for ${hostMode} cluster`);
+  logger.info({ deploymentCellId, clusterName, hostMode }, `Deleting node pools for ${hostMode} cluster`);
 
   await deleteObservabilityNodePool(cluster as Cluster);
+  await deleteSecurityNodePool(cluster as Cluster);
 
-  logger.info({ deploymentCellId, clusterName }, 'Successfully deleted observability node pool');
+  logger.info({ deploymentCellId, clusterName }, 'Successfully deleted node pools');
 }

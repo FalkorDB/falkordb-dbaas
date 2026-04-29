@@ -1,0 +1,9 @@
+# Patch ServiceAccount with GCP Workload Identity annotation.
+# grype-uploader SA has objectCreator on the evidence-locker bucket.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grype
+  namespace: security
+  annotations:
+    iam.gke.io/gcp-service-account: prowler-uploader@ctrl-plane-dev-f7a2434f.iam.gserviceaccount.com

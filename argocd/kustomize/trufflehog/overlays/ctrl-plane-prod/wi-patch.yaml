@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trufflehog
+  namespace: security
+  annotations:
+    iam.gke.io/gcp-service-account: prowler-uploader@ctrl-plane-prod-b1b92df2.iam.gserviceaccount.com

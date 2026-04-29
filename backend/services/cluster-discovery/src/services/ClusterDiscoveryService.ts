@@ -81,11 +81,9 @@ export class ClusterDiscoveryService {
 
       const isNewCluster = !existingSecret;
 
-      // Create node pool for new clusters
-      if (isNewCluster || (cluster.createdAt && cluster.createdAt > new Date(Date.now() - 24 * 60 * 60 * 1000))) {
-        // Also create node pool for clusters created in the last 24 hours
-        await this.nodePoolService.createObservabilityNodePoolIfNeeded(cluster);
-      }
+      // Ensure node pools exist and are up to date for all clusters
+      await this.nodePoolService.createObservabilityNodePoolIfNeeded(cluster);
+      await this.nodePoolService.createSecurityNodePoolIfNeeded(cluster);
 
       // Register or update cluster
       await this.registrationService.registerOrUpdateCluster(cluster, existingSecret);
@@ -97,6 +95,9 @@ export class ClusterDiscoveryService {
 
       // Always update VMUser secret
       await this.secretService.createOrUpdateVMUserSecret(cluster);
+
+      // Always ensure sealed-secrets key is present
+      await this.secretService.createOrUpdateSealedSecretsKey(cluster);
     }
   }
 

@@ -46,3 +46,45 @@ export async function deleteObservabilityNodePool(cluster: Cluster): Promise<voi
     throw error;
   }
 }
+
+export async function deleteSecurityNodePool(cluster: Cluster): Promise<void> {
+  try {
+    const credentials = await getAWSCredentials();
+    const eksClient = new EKSClient({ credentials, region: cluster.region });
+
+    try {
+      await eksClient.send(
+        new DescribeNodegroupCommand({
+          clusterName: cluster.name,
+          nodegroupName: 'security',
+        }),
+      );
+    } catch (error: any) {
+      if (error.name === 'ResourceNotFoundException') {
+        logger.info({ cluster: cluster.name }, 'Security node pool does not exist, nothing to delete.');
+        return;
+      }
+      throw error;
+    }
+
+    await eksClient.send(
+      new DeleteNodegroupCommand({
+        clusterName: cluster.name,
+        nodegroupName: 'security',
+      }),
+    );
+
+    logger.info({ cluster: cluster.name }, 'Security node pool deletion initiated.');
+  } catch (error) {
+    logger.error(
+      {
+        cluster: cluster.name,
+        error,
+        errorName: (error as any)?.name,
+        errorMessage: (error as any)?.message,
+      },
+      'Failed to delete security node pool',
+    );
+    throw error;
+  }
+}

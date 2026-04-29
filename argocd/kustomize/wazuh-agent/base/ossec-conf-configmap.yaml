@@ -1,0 +1,211 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wazuh-agent-ossec-conf
+  namespace: security
+data:
+  ossec.conf: |
+    <ossec_config>
+      <client>
+        <server>
+          <address>CHANGE_MANAGER_IP</address>
+          <port>CHANGE_MANAGER_PORT</port>
+          <protocol>tcp</protocol>
+        </server>
+        <config-profile>ubuntu, ubuntu20, ubuntu20.04, ubuntu16, ubuntu16.04, centos, windows</config-profile>
+        <notify_time>10</notify_time>
+        <time-reconnect>30</time-reconnect>
+        <auto_restart>yes</auto_restart>
+        <crypto_method>aes</crypto_method>
+      </client>
+
+      <auth>
+        <disabled>no</disabled>
+        <remote_enrollment>yes</remote_enrollment>
+        <port>1514</port>
+        <use_source_ip>no</use_source_ip>
+        <ssl_agent_ca>/var/ossec/etc/rootCA.pem</ssl_agent_ca>
+        <force>
+          <enabled>yes</enabled>
+          <disconnected_time enabled="no">0</disconnected_time>
+          <after_registration_time>0</after_registration_time>
+          <key_mismatch>yes</key_mismatch>
+          <purge>yes</purge>
+        </force>
+      </auth>
+
+      <client_buffer>
+        <disabled>no</disabled>
+        <queue_size>5000</queue_size>
+        <events_per_second>500</events_per_second>
+      </client_buffer>
+
+      <!-- Policy monitoring -->
+      <rootcheck>
+        <disabled>no</disabled>
+        <check_files>yes</check_files>
+        <check_trojans>yes</check_trojans>
+        <check_dev>yes</check_dev>
+        <check_sys>yes</check_sys>
+        <check_pids>yes</check_pids>
+        <check_ports>yes</check_ports>
+        <check_if>yes</check_if>
+        <frequency>43200</frequency>
+        <rootkit_files>/var/ossec/etc/shared/rootkit_files.txt</rootkit_files>
+        <rootkit_trojans>/var/ossec/etc/shared/rootkit_trojans.txt</rootkit_trojans>
+        <skip_nfs>yes</skip_nfs>
+      </rootcheck>
+
+      <wodle name="docker-listener">
+        <disabled>no</disabled>
+        <attempts>10</attempts>
+        <run_on_start>yes</run_on_start>
+        <interval>5m</interval>
+      </wodle>
+
+      <!-- System inventory -->
+      <wodle name="syscollector">
+        <disabled>no</disabled>
+        <interval>1h</interval>
+        <scan_on_start>yes</scan_on_start>
+        <hardware>yes</hardware>
+        <os>yes</os>
+        <network>yes</network>
+        <packages>yes</packages>
+        <ports all="no">yes</ports>
+        <processes>yes</processes>
+      </wodle>
+
+      <sca>
+        <enabled>yes</enabled>
+        <scan_on_start>yes</scan_on_start>
+        <interval>12h</interval>
+        <skip_nfs>yes</skip_nfs>
+      </sca>
+
+      <!-- File integrity monitoring — SOC 2 CC6.1 -->
+      <syscheck>
+        <disabled>no</disabled>
+        <frequency>900</frequency>
+        <scan_on_start>yes</scan_on_start>
+
+        <!-- Host OS critical configs (realtime inotify) -->
+        <directories check_all="yes" realtime="yes">/host/etc</directories>
+        <directories check_all="yes" realtime="yes">/usr/bin,/usr/sbin</directories>
+
+        <!-- Kubernetes PKI and configuration -->
+        <directories check_all="yes" realtime="yes">/host/etc/kubernetes</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/cni</directories>
+
+        <!-- Container runtime configuration -->
+        <directories check_all="yes" realtime="yes">/host/etc/containerd</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/docker</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/crictl.yaml</directories>
+
+        <!-- Authentication and authorisation -->
+        <directories check_all="yes" realtime="yes">/host/etc/pam.d</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/sudoers.d</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/security</directories>
+
+        <!-- Scheduled tasks (persistence detection) -->
+        <directories check_all="yes" realtime="yes">/host/etc/cron.d</directories>
+        <directories check_all="yes" realtime="yes">/host/etc/cron.daily</directories>
+        <directories check_all="yes">/host/etc/crontab</directories>
+
+        <!-- Systemd units (persistence / service tampering) -->
+        <directories check_all="yes">/host/etc/systemd/system</directories>
+
+        <!-- Cloud provider agent configs -->
+        <directories check_all="yes">/host/etc/google_cloud_ops</directories>
+        <directories check_all="yes">/host/etc/amazon</directories>
+        <directories check_all="yes">/host/etc/waagent.conf</directories>
+
+        <ignore>/host/etc/mtab</ignore>
+        <ignore>/host/etc/hosts.deny</ignore>
+        <ignore>/host/etc/mail/statistics</ignore>
+        <ignore>/host/etc/random-seed</ignore>
+        <ignore>/host/etc/random.seed</ignore>
+        <ignore>/host/etc/adjtime</ignore>
+        <ignore>/host/etc/httpd/logs</ignore>
+        <ignore>/host/etc/utmpx</ignore>
+        <ignore>/host/etc/wtmpx</ignore>
+        <ignore>/host/etc/cups/certs</ignore>
+        <ignore>/host/etc/dumpdates</ignore>
+        <ignore>/host/etc/svc/volatile</ignore>
+        <ignore>/host/etc/resolv.conf</ignore>
+        <ignore type="sregex">.log$|.swp$</ignore>
+
+        <nodiff>/host/etc/ssl/private.key</nodiff>
+        <nodiff>/host/etc/kubernetes/pki/*.key</nodiff>
+        <nodiff>/host/etc/shadow</nodiff>
+
+        <skip_nfs>yes</skip_nfs>
+        <skip_dev>yes</skip_dev>
+        <skip_proc>yes</skip_proc>
+        <skip_sys>yes</skip_sys>
+
+        <process_priority>10</process_priority>
+        <max_eps>100</max_eps>
+
+        <synchronization>
+          <enabled>yes</enabled>
+          <interval>5m</interval>
+          <max_interval>1h</max_interval>
+          <max_eps>10</max_eps>
+        </synchronization>
+
+        <file_limit>
+          <enabled>no</enabled>
+          <entries>1000000</entries>
+        </file_limit>
+      </syscheck>
+
+      <!-- Log analysis -->
+      <localfile>
+        <log_format>syslog</log_format>
+        <location>/var/ossec/logs/active-responses.log</location>
+      </localfile>
+
+      <localfile>
+        <log_format>syslog</log_format>
+        <location>/var/log/auth.log</location>
+      </localfile>
+
+      <localfile>
+        <log_format>syslog</log_format>
+        <location>/var/log/syslog</location>
+      </localfile>
+
+      <localfile>
+        <log_format>syslog</log_format>
+        <location>/var/log/kern.log</location>
+      </localfile>
+
+      <localfile>
+        <log_format>command</log_format>
+        <command>df -P</command>
+        <frequency>360</frequency>
+      </localfile>
+
+      <localfile>
+        <log_format>full_command</log_format>
+        <command>last -n 20</command>
+        <frequency>360</frequency>
+      </localfile>
+
+      <localfile>
+        <location>/var/log/*.log</location>
+        <log_format>syslog</log_format>
+      </localfile>
+
+      <!-- Active response -->
+      <active-response>
+        <disabled>no</disabled>
+        <ca_store>/var/ossec/etc/wpk_root.pem</ca_store>
+        <ca_verification>yes</ca_verification>
+      </active-response>
+
+      <logging>
+        <log_format>plain</log_format>
+      </logging>
+    </ossec_config>

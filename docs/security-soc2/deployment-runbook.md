@@ -1,0 +1,473 @@
+# Deployment Runbook — Security & SOC 2 Evidence Engine
+
+First-time deployment procedure. Deploy to **dev first**, validate, then repeat for prod.
+
+---
+
+## Prerequisites
+
+Before starting, ensure the following are available:
+
+- [ ] `tofu` / `terragrunt` CLI installed
+- [ ] `kubectl` access to the control-plane GKE cluster
+- [ ] `kubeseal` CLI for creating SealedSecrets
+- [ ] `argocd` CLI or ArgoCD UI access
+- [ ] `gcloud` CLI authenticated with the GCP project
+- [ ] A Google Chat space webhook URL for Wazuh alerts
+- [ ] Access to AWS console (if deploying to AWS spokes)
+- [ ] Access to Azure portal (if deploying to Azure spokes)
+
+---
+
+## Step 1 — Infrastructure (OpenTofu)
+
+### 1.1 GCP Control Plane
+
+This creates the Wazuh static IP, GCS evidence locker bucket, Prowler service account, and Workload Identity binding.
+
+```bash
+cd tofu/runtime/gcp/infra
+
+tofu plan
+tofu apply
+```
+
+Capture outputs — you will need these in Step 2:
+
+```bash
+tofu output wazuh_ip                # → Static IP for Wazuh Manager LoadBalancer
+tofu output evidence_locker_bucket  # → GCS bucket name
+tofu output prowler_uploader_email  # → Prowler GCP service account email
+```
+
+The `security` node pool in GKE (e2-standard-4, 0–10 autoscale) is created as part of `gke.tf`. No separate step needed.
+
+### 1.2 AWS IAM Role (if you have AWS spokes)
+
+Creates an IAM role with `SecurityAudit` + `ViewOnlyAccess` policies, trusted by the EKS OIDC provider for IRSA.
+
+```bash
+cd tofu/org/aws/org
+
+# Ensure these variables are set in your tfvars:
+#   eks_oidc_issuer = "oidc.eks.us-east-1.amazonaws.com/id/EXAMPLE123"
+#   environment     = "dev"  # or "prod"
+
+tofu plan
+tofu apply
+```
+
+Capture the output:
+```bash
+tofu output prowler_role_arn  # → ARN for the prowler-aws-credentials Secret
+```
+
+### 1.3 Azure Service Principal (if you have Azure spokes)
+
+Creates an Azure AD application + service principal with `Reader` and `Security Reader` roles.
+
+```bash
+cd tofu/runtime/azure
+
+tofu plan
+tofu apply
+```
+
+Capture outputs:
+```bash
+tofu output prowler_client_id
+tofu output -raw prowler_client_secret  # sensitive
+tofu output prowler_tenant_id
+tofu output prowler_subscription_id
+```
+
+---
+
+## Step 2 — Replace Placeholders
+
+Two sets of placeholders must be replaced before deploying ArgoCD apps.
+
+### 2.1 Wazuh Static IP (Helm values only)
+
+Replace `${WAZUH_STATIC_IP}` with the IP from Step 1.1 in the Wazuh Manager Helm Application files:
+
+| File | Purpose |
+|------|---------|
+| `argocd/apps/ctrl-plane/dev/wazuh.yaml` | LoadBalancer IP |
+| `argocd/apps/ctrl-plane/prod/wazuh.yaml` | LoadBalancer IP |
+
+> **Note:** The agent `manager-ip` is now a SealedSecret (see Step 6). Only the Helm LoadBalancer IP requires a direct placeholder replacement — Helm values cannot reference K8s secrets.
+
+### 2.2 Google Chat Webhook URL
+
+The webhook URL is now managed as a SealedSecret (see Step 6). You no longer need to edit the Wazuh Helm values directly — the integration script reads `GOOGLE_CHAT_WEBHOOK_URL` from the sealed secret mounted as an environment variable.
+
+To create a webhook: Google Chat space → Apps & integrations → Webhooks → Create.
+
+### 2.3 GCP Project ID
+
+Replace `PROJECT_ID` in the Workload Identity annotation with your actual GCP project ID (e.g., `falkordb-prod`):
+
+| File |
+|------|
+| `argocd/kustomize/prowler/overlays/gcp-dev/wi-patch.yaml` |
+| `argocd/kustomize/prowler/overlays/gcp-prod/wi-patch.yaml` |
+
+The annotation should read:
+```yaml
+iam.gke.io/gcp-service-account: prowler-uploader@<YOUR_PROJECT_ID>.iam.gserviceaccount.com
+```
+
+---
+
+## Step 3 — Sealed Secrets for App-Plane Clusters
+
+App-plane clusters all share the same sealed-secrets key pair so that a single SealedSecret YAML works across every spoke.
+
+### 3.1 Generate Key Pair
+
+```bash
+mkdir -p certs/app-plane/sealed-secrets/dev
+openssl req -x509 -nodes -newkey rsa:4096 \
+  -keyout certs/app-plane/sealed-secrets/dev/tls.key \
+  -out certs/app-plane/sealed-secrets/dev/pub-cert.pem \
+  -subj "/CN=sealed-secret/O=sealed-secrets" -days 3650
+```
+
+The public cert (`pub-cert.pem`) is used locally by `seal_env.sh` to encrypt app-plane secrets. The private key (`tls.key`) is provisioned to each cluster by the cluster-discovery service.
+
+> **Note:** The `certs/` directory is gitignored. Store the key pair securely (e.g., a password manager or vault) and distribute to team members who need to seal secrets.
+
+### 3.2 Seal Key Pair for Cluster-Discovery
+
+The cluster-discovery service pushes the key pair to every app-plane cluster as a TLS Secret in the `sealed-secrets` namespace. The key pair is injected via env vars from a sealed secret:
+
+```bash
+# Build the multiline env file
+{
+  echo '# sealed-secrets-app-plane-key'
+  printf 'SEALED_SECRETS_TLS_CRT="'
+  cat certs/app-plane/sealed-secrets/dev/pub-cert.pem
+  printf '"\n'
+  printf 'SEALED_SECRETS_TLS_KEY="'
+  cat certs/app-plane/sealed-secrets/dev/tls.key
+  printf '"\n'
+} > argocd/kustomize/cluster-discovery/overlays/dev/sealed-secrets-key.env
+
+# Seal it
+./scripts/seal_env.sh argocd/kustomize/cluster-discovery/overlays/dev/sealed-secrets-key.env argocd \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+### 3.3 Deploy Sealed-Secrets Controller to App-Plane
+
+```bash
+kubectl apply -f argocd/apps/app-plane/dev/sealed-secrets.yaml
+```
+
+The ApplicationSet deploys the sealed-secrets Helm chart to all clusters labeled `role: app-plane`. The cluster-discovery service provisions the shared key pair on each scan cycle, so the controller picks it up automatically.
+
+---
+
+## Step 4 — ArgoCD Cluster Labels
+
+Spoke clusters registered in ArgoCD must have the following labels for ApplicationSets to target them:
+
+The ArgoCD cluster secrets already carry `cloud_provider` and `host_mode` labels. Verify they are set:
+
+```bash
+# Check existing labels on a cluster
+argocd cluster get <CLUSTER_NAME> -o json | jq '.labels'
+
+# Expected labels:
+#   role: app-plane
+#   cloud_provider: gcp   (or aws, azure)
+#   host_mode: managed    (or byoa)
+```
+
+| Label | Required By | Values |
+|-------|-------------|--------|
+| `role: app-plane` | All spoke ApplicationSets | `app-plane` |
+| `cloud_provider` | Prowler ApplicationSet (routes to cloud-specific overlay) | `gcp`, `aws`, `azure` |
+| `host_mode` | Informational (not used by security stack selectors) | `managed`, `byoa` |
+
+Without `role: app-plane` and `cloud_provider`, the ApplicationSets will not generate Applications for the cluster.
+
+---
+
+## Step 5 — DNS for Wazuh Dashboard
+
+The Wazuh Dashboard is exposed via nginx ingress on the same DNS as the Wazuh Manager.
+
+> **App-plane security services** (agents, sensors, Prowler) have **no** ingress or LoadBalancer — they are outbound-only.
+
+Create DNS records pointing to the nginx LB static IP:
+
+| Record | Dev | Prod |
+|--------|-----|------|
+| `wazuh.security.dev.internal.falkordb.cloud` | nginx LB IP | — |
+| `wazuh.security.internal.falkordb.cloud` | — | nginx LB IP |
+
+---
+
+## Step 6 — Seal Secrets
+
+All secrets are managed as **SealedSecrets** via `.env` files committed to Git.
+Each kustomize overlay has a `secrets.env` file with `REPLACE_ME` placeholders.
+The workflow:
+
+1. Edit `secrets.env` — replace `REPLACE_ME` with real values
+2. Run `./scripts/seal_env.sh` — produces `secrets-env-secret.yaml` (SealedSecret YAML)
+3. Commit the sealed YAML (never commit plaintext values to Git)
+4. ArgoCD syncs the SealedSecret to the cluster
+
+```bash
+# Generic sealing command (ctrl-plane secrets → ctrl-plane cert)
+./scripts/seal_env.sh <path>/secrets.env security \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
+
+# App-plane secrets → app-plane cert
+./scripts/seal_env.sh <path>/secrets.env security \
+  certs/app-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+### 6.1 Google Chat Webhook (ctrl-plane only)
+
+```bash
+# Edit the webhook URL
+vi argocd/kustomize/wazuh-rules/secrets.env
+# Set: WAZUH_GOOGLE_CHAT_WEBHOOK_URL=https://chat.googleapis.com/v1/spaces/...
+
+./scripts/seal_env.sh argocd/kustomize/wazuh-rules/secrets.env security \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+### 6.2 Wazuh Manager Enrollment Password (ctrl-plane only)
+
+Generate a random enrollment password and seal it for the Manager. The Wazuh Docker image reads `WAZUH_AUTHD_PASS` at startup and writes it to `/var/ossec/etc/authd.pass` — no need to retrieve it after boot.
+
+```bash
+ENROLLMENT_PASS=$(openssl rand -hex 32)
+echo "$ENROLLMENT_PASS"  # Save this — agents need the same value
+
+vi argocd/kustomize/wazuh-manager/overlays/dev/secrets.env
+# Set: WAZUH_AUTHD_PASS=<generated password>
+
+./scripts/seal_env.sh argocd/kustomize/wazuh-manager/overlays/dev/secrets.env security \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+Deploy the secret before the Wazuh Manager:
+
+```bash
+kubectl apply -f argocd/apps/ctrl-plane/dev/wazuh-manager-secrets.yaml
+```
+
+### 6.3 Wazuh Agent Enrollment Key + Manager IP (all clusters)
+
+Use the **same** `ENROLLMENT_PASS` from Step 6.3. The manager IP is the static IP from Step 1.1. Set both in all overlays:
+
+```bash
+# ctrl-plane
+vi argocd/kustomize/wazuh-agent/overlays/ctrl-plane-dev/secrets.env
+# Set: enrollment-key=<same password from Step 6.3>
+# Set: manager-ip=<WAZUH_STATIC_IP from Step 1.1>
+./scripts/seal_env.sh argocd/kustomize/wazuh-agent/overlays/ctrl-plane-dev/secrets.env security \
+  certs/ctrl-plane/sealed-secrets/dev/pub-cert.pem
+
+# app-plane (seal with app-plane cert)
+vi argocd/kustomize/wazuh-agent/overlays/app-plane-dev/secrets.env
+./scripts/seal_env.sh argocd/kustomize/wazuh-agent/overlays/app-plane-dev/secrets.env security \
+  certs/app-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+### 6.4 Prowler AWS Credentials (AWS spokes only)
+
+```bash
+vi argocd/kustomize/prowler/overlays/aws-dev/secrets.env
+# Set: role-arn=arn:aws:iam::123456789012:role/prowler-soc2-scanner
+# Set: region=us-east-1
+# Set: sa-key.json=<contents of GCS service account key JSON>
+# Set: evidence-bucket=falkordb-evidence-locker-dev
+
+./scripts/seal_env.sh argocd/kustomize/prowler/overlays/aws-dev/secrets.env security \
+  certs/app-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+### 6.5 Prowler Azure Credentials (Azure spokes only)
+
+```bash
+vi argocd/kustomize/prowler/overlays/azure-dev/secrets.env
+# Set all fields from tofu output (Step 1.3)
+# Set: sa-key.json=<contents of GCS service account key JSON>
+# Set: evidence-bucket=falkordb-evidence-locker-dev
+
+./scripts/seal_env.sh argocd/kustomize/prowler/overlays/azure-dev/secrets.env security \
+  certs/app-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+### 6.6 Prowler GCP Evidence Bucket (GCP spokes only)
+
+GCP spokes use Workload Identity for GCS access but still need the bucket name sealed:
+
+```bash
+vi argocd/kustomize/prowler/overlays/gcp-dev/secrets.env
+# Set: evidence-bucket=falkordb-evidence-locker-dev
+
+./scripts/seal_env.sh argocd/kustomize/prowler/overlays/gcp-dev/secrets.env security \
+  certs/app-plane/sealed-secrets/dev/pub-cert.pem
+```
+
+### Secret Summary
+
+| Secret | `.env` Location | Clusters | Keys |
+|--------|----------------|----------|------|
+| `wazuh-google-chat-webhook` | `wazuh-rules/secrets.env` | Ctrl-plane | `WAZUH_GOOGLE_CHAT_WEBHOOK_URL` |
+| `wazuh-manager-authd` | `wazuh-manager/overlays/*/secrets.env` | Ctrl-plane | `WAZUH_AUTHD_PASS` |
+| `wazuh-agent-key` | `wazuh-agent/overlays/*/secrets.env` | All | `enrollment-key`, `manager-ip` |
+| `prowler-aws-credentials` | `prowler/overlays/aws-*/secrets.env` | AWS spokes | `role-arn`, `region` |
+| `prowler-azure-credentials` | `prowler/overlays/azure-*/secrets.env` | Azure spokes | `client-id`, `client-secret`, `tenant-id`, `subscription-id` |
+| `prowler-gcs-credentials` | `prowler/overlays/{aws,azure}-*/secrets.env` | AWS + Azure spokes | `sa-key.json` |
+| `prowler-infra` | `prowler/overlays/*/secrets.env` | All spokes | `evidence-bucket` |
+| `sealed-secrets-app-plane-key` | `cluster-discovery/overlays/*/sealed-secrets-key.env` | Ctrl-plane (injected to app-plane by cluster-discovery) | `SEALED_SECRETS_TLS_CRT`, `SEALED_SECRETS_TLS_KEY` |
+
+TLS secrets (`wazuh-dashboard-tls`) are auto-provisioned by cert-manager via the `letsencrypt-prod` ClusterIssuer.
+
+---
+
+## Step 7 — Deploy ArgoCD Applications (Ordered)
+
+Deploy in this order. Wait for each component to be healthy before proceeding.
+
+### 7.1 Wazuh Manager
+
+Deploy the manager secrets first (enrollment password), then the manager itself:
+
+```bash
+kubectl apply -f argocd/apps/ctrl-plane/dev/wazuh-manager-secrets.yaml
+kubectl apply -f argocd/apps/ctrl-plane/dev/wazuh.yaml
+```
+
+Wait until:
+- Wazuh Manager pod is `Running`
+- Wazuh Indexer cluster is green (3 replicas)
+- Wazuh Dashboard is accessible
+- LoadBalancer has the static IP assigned
+
+```bash
+kubectl get pods -n security -l app=wazuh
+kubectl get svc -n security -l app=wazuh-manager
+```
+
+### 7.2 Wazuh Custom Rules
+
+```bash
+kubectl apply -f argocd/apps/ctrl-plane/dev/wazuh-rules.yaml
+```
+
+Deploys the custom rules ConfigMap and dashboard saved objects. The Manager auto-reloads rules when the ConfigMap is mounted.
+
+### 7.3 ThreatMapper Console
+
+> **Removed.** ThreatMapper has been decommissioned (project abandoned, Helm charts no longer available).
+
+### 7.4 Wazuh Agents (Control Plane)
+
+```bash
+kubectl apply -f argocd/apps/ctrl-plane/dev/wazuh-agent.yaml
+```
+
+Verify agents register with the Manager:
+```bash
+# Check DaemonSet rollout
+kubectl get ds wazuh-agent -n security
+
+# Check agent registration on Manager
+curl -k -u admin:admin \
+  "https://$(kubectl get svc wazuh-manager -n security -o jsonpath='{.status.loadBalancer.ingress[0].ip}'):55000/agents?status=active"
+```
+
+### 7.5 Wazuh Agents (Spoke Clusters)
+
+```bash
+kubectl apply -f argocd/apps/app-plane/dev/wazuh-agent.yaml
+```
+
+The ApplicationSet will generate one Application per cluster labeled `role: app-plane`.
+
+### 7.6 ThreatMapper Sensors (Control Plane + Spokes)
+
+> **Removed.** ThreatMapper has been decommissioned.
+
+### 7.7 Prowler (Spoke Clusters)
+
+```bash
+kubectl apply -f argocd/apps/app-plane/dev/prowler.yaml
+```
+
+The Prowler CronJob runs at 02:00 UTC daily. To trigger an immediate test:
+
+```bash
+# On a spoke cluster
+kubectl create job --from=cronjob/prowler-soc2-scan prowler-test -n security
+kubectl logs -f job/prowler-test -n security
+```
+
+Verify results appear in the evidence locker:
+```bash
+gsutil ls "gs://$(tofu -chdir=tofu/runtime/gcp/infra output -raw evidence_locker_bucket)/prowler/"
+```
+
+---
+
+## Step 8 — Verify End-to-End
+
+### Observability
+
+```bash
+# VMRule alerts are loaded
+kubectl get vmrules -n observability | grep soc2
+
+# Check Grafana dashboard exists
+# Navigate to Grafana → Dashboards → "SOC 2 Compliance"
+```
+
+### Evidence Report
+
+Run the on-demand evidence collection script:
+
+```bash
+export WAZUH_API_URL="https://wazuh.security.dev.internal.falkordb.cloud:55000"
+export WAZUH_API_TOKEN="<TOKEN>"
+export WAZUH_CA_BUNDLE="/path/to/wazuh-ca.pem"         # optional
+
+./scripts/generate_compliance_report.sh \
+  --bucket "$(tofu -chdir=tofu/runtime/gcp/infra output -raw evidence_locker_bucket)" \
+  --output-dir ./reports
+```
+
+### Checklist
+
+- [ ] Wazuh Manager healthy, LoadBalancer IP assigned
+- [ ] Wazuh Dashboard accessible via ingress
+- [ ] Wazuh Agents registered from all clusters
+- [ ] Prowler CronJob completed at least one run
+- [ ] Prowler results visible in GCS evidence locker
+- [ ] Grafana SOC 2 dashboard showing data
+- [ ] VMRule alerts loaded (no `ProwlerScanStale` firing)
+- [ ] Google Chat integration receives Wazuh alerts
+
+---
+
+## Deploying to Production
+
+Repeat Steps 2–6 using the `prod` variants:
+
+- Replace placeholders in prod files
+- Use `argocd/apps/ctrl-plane/prod/*.yaml`
+- Use `argocd/apps/app-plane/prod/*.yaml`
+- Seal secrets with `certs/ctrl-plane/sealed-secrets/prod/pub-cert.pem`
+
+Key differences in prod:
+- Wazuh Manager: `ssl_verify_host: "yes"` (strict mTLS)
+- Domain: `*.security.internal.falkordb.cloud` (no `dev` subdomain)

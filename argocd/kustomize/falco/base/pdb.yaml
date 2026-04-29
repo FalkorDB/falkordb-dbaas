@@ -1,0 +1,12 @@
+# PodDisruptionBudget — keep at least 1 Falco pod running during
+# voluntary disruptions (node upgrades, drains).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: falco-pdb
+  namespace: security
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: falco

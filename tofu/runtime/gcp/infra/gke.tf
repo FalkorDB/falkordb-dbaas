@@ -5,6 +5,7 @@
 #   observability-resources    — observability stack pods (0-20, e2-standard-2)
 #   observability-resources-large — Grafana/heavy pods (0-20, e2-standard-4)
 #   backend                    — backend API pods (0-20, e2-standard-2)
+#   security                   — Wazuh Manager (0-10, e2-standard-4)
 #   public-pool                — internet-facing workloads (0-220, e2-standard-2,
 #                                 private_nodes=false for L4 LoadBalancer IPs)
 #
@@ -40,7 +41,7 @@ module "gke" {
   service_account_name                 = "gke-obs-${random_string.cluster_suffix.result}-nodes-sa"
   remove_default_node_pool             = true
   gce_pd_csi_driver                    = true
-  network_policy                       = false
+  network_policy                       = true
   monitoring_enable_managed_prometheus = false
   enable_cost_allocation               = false
   horizontal_pod_autoscaling           = false
@@ -117,6 +118,33 @@ module "gke" {
     }
     "backend" = {
       "goog-gke-node-pool-provisioning-model" = "on-demand"
+    }
+  }
+
+  node_pools_labels = {
+    "default-pool" = {
+      "node_pool" = "default"
+    }
+    "observability-resources" = {
+      "node_pool" = "observability"
+    }
+    "observability-resources-large" = {
+      "node_pool" = "observability-large"
+    }
+    "backend" = {
+      "node_pool" = "backend"
+    }
+    "security" = {
+      "node_pool" = "security"
+    }
+  }
+
+  # OpenSearch / Wazuh Indexer requires vm.max_map_count >= 262144.
+  # Set at node pool level so it persists across reboots and pod restarts.
+  node_pools_linux_node_configs_sysctls = {
+    "security" = {
+      "net.core.somaxconn"    = "65535"
+      "vm.max_map_count"      = "262144"
     }
   }
 }

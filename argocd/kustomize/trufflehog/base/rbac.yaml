@@ -1,0 +1,25 @@
+# RBAC for TruffleHog — read-only access to list pods across all namespaces
+# so the scanner can discover running container images for secret scanning.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trufflehog-image-reader
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - namespaces
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: trufflehog-image-reader-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: trufflehog-image-reader
+subjects:
+  - kind: ServiceAccount
+    name: trufflehog
+    namespace: security

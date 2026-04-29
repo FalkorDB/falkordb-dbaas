@@ -1,0 +1,284 @@
+# KubeScape daily CronJob — scans the cluster against MITRE ATT&CK and
+# NSA-CISA frameworks, uploads JSON reports to GCS Evidence Locker,
+# and forwards high/critical findings to Wazuh Manager via syslog.
+#
+# Runs at 06:00 UTC daily.
+# Results: gs://BUCKET/kubescape/YYYY/MM/DD/<cluster>/
+#
+# NOTE: KubeScape provides attack path analysis similar to (but not
+# identical to) ThreatMapper's attack graph. Missing capabilities:
+#   - Interactive graph visualization (ThreatMapper had a GUI)
+#   - Cross-cluster attack path correlation
+#   - Real-time attack simulation / what-if analysis
+# These gaps are documented and should be addressed via Grafana dashboards
+# that aggregate KubeScape + Falco + Prowler findings for risk scoring.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: kubescape-scan
+  namespace: security
+spec:
+  schedule: "0 6 * * *"
+  timeZone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 7200  # 2h max
+      template:
+        metadata:
+          labels:
+            app: kubescape
+            component: soc2-evidence
+        spec:
+          serviceAccountName: kubescape
+          restartPolicy: Never
+          nodeSelector:
+            node_pool: security
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: syslog-ca
+              secret:
+                secretName: wazuh-syslog-ca
+                optional: true
+          containers:
+            - name: kubescape
+              image: quay.io/kubescape/kubescape:v3.0.18@sha256:8cee5d84fe0ab887e0c624b2a830dd144542f07773eb5180998ccc6d8ac83831
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "2"
+                  memory: "2Gi"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+                - name: syslog-ca
+                  mountPath: /run/secrets/syslog-ca
+                  readOnly: true
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: EVIDENCE_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: kubescape-infra
+                      key: evidence-bucket
+                - name: CLUSTER_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: kubescape-config
+                      key: cluster-name
+                - name: WAZUH_SYSLOG_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: kubescape-config
+                      key: wazuh-syslog-host
+                      optional: true
+                - name: WAZUH_SYSLOG_CA_PATH
+                  value: /run/secrets/syslog-ca/ca.crt
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+
+                  CLUSTER="${CLUSTER_NAME}"
+                  OUTPUT_DIR="/tmp/kubescape-output"
+                  mkdir -p "${OUTPUT_DIR}"
+
+                  # ── Run framework scans ────────────────────────────────────
+                  SCAN_FAILURES=0
+
+                  echo "Running KubeScape MITRE ATT&CK scan..."
+                  if ! kubescape scan framework mitre \
+                    --format json \
+                    --output "${OUTPUT_DIR}/mitre-results.json" \
+                    --severity-threshold high \
+                    --logger silent \
+                    2>"${OUTPUT_DIR}/mitre-stderr.log"; then
+                    echo "ERROR: KubeScape MITRE scan failed. stderr:"
+                    cat "${OUTPUT_DIR}/mitre-stderr.log"
+                    SCAN_FAILURES=$((SCAN_FAILURES + 1))
+                  fi
+
+                  echo "Running KubeScape NSA-CISA scan..."
+                  if ! kubescape scan framework nsa \
+                    --format json \
+                    --output "${OUTPUT_DIR}/nsa-results.json" \
+                    --severity-threshold high \
+                    --logger silent \
+                    2>"${OUTPUT_DIR}/nsa-stderr.log"; then
+                    echo "ERROR: KubeScape NSA scan failed. stderr:"
+                    cat "${OUTPUT_DIR}/nsa-stderr.log"
+                    SCAN_FAILURES=$((SCAN_FAILURES + 1))
+                  fi
+
+                  echo "Running KubeScape AllControls scan..."
+                  if ! kubescape scan framework allcontrols \
+                    --format json \
+                    --output "${OUTPUT_DIR}/allcontrols-results.json" \
+                    --logger silent \
+                    2>"${OUTPUT_DIR}/allcontrols-stderr.log"; then
+                    echo "ERROR: KubeScape AllControls scan failed. stderr:"
+                    cat "${OUTPUT_DIR}/allcontrols-stderr.log"
+                    SCAN_FAILURES=$((SCAN_FAILURES + 1))
+                  fi
+
+                  if [ "$SCAN_FAILURES" -gt 0 ]; then
+                    echo "WARNING: ${SCAN_FAILURES}/3 KubeScape scans failed — review stderr logs above"
+                  fi
+
+                  # ── Process results and forward to Wazuh ───────────────────
+                  # Install python deps for GCS upload and syslog forwarding
+                  pip install --quiet --no-cache-dir --user google-cloud-storage 2>/dev/null || true
+                  export PATH="$HOME/.local/bin:$PATH"
+
+                  python3 <<'PYEOF'
+                  import os, sys, json, socket, time, glob
+
+                  cluster = os.environ['CLUSTER_NAME']
+                  output_dir = '/tmp/kubescape-output'
+
+                  # ── Parse findings from all framework results ──────────────
+                  all_findings = []
+                  for result_file in glob.glob(os.path.join(output_dir, '*-results.json')):
+                      if not os.path.isfile(result_file):
+                          continue
+                      framework = os.path.basename(result_file).replace('-results.json', '')
+                      try:
+                          with open(result_file) as f:
+                              data = json.load(f)
+                      except (json.JSONDecodeError, IOError):
+                          continue
+
+                      # KubeScape JSON has results[].controls[]
+                      for result in data.get('results', []):
+                          resource_id = result.get('resourceID', '')
+                          for ctrl in result.get('controls', []):
+                              status = ctrl.get('status', {})
+                              if status.get('status', '') == 'passed':
+                                  continue
+                              severity = ctrl.get('scoreFactor', 0)
+                              sev_label = 'low'
+                              if severity >= 9:
+                                  sev_label = 'critical'
+                              elif severity >= 7:
+                                  sev_label = 'high'
+                              elif severity >= 4:
+                                  sev_label = 'medium'
+
+                              finding = {
+                                  'Scanner': 'kubescape',
+                                  'Cluster': cluster,
+                                  'Framework': framework,
+                                  'ControlID': ctrl.get('controlID', ''),
+                                  'ControlName': ctrl.get('name', ''),
+                                  'Severity': sev_label,
+                                  'ScoreFactor': severity,
+                                  'Status': status.get('status', ''),
+                                  'ResourceID': resource_id,
+                              }
+                              all_findings.append(finding)
+
+                  # Deduplicate by controlID + resourceID
+                  seen = set()
+                  unique_findings = []
+                  for f in all_findings:
+                      key = f'{f["ControlID"]}:{f["ResourceID"]}'
+                      if key not in seen:
+                          seen.add(key)
+                          unique_findings.append(f)
+
+                  # ── Write summary ──────────────────────────────────────────
+                  summary = {
+                      'scan_date': time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                      'cluster': cluster,
+                      'total_findings': len(unique_findings),
+                      'by_severity': {
+                          'critical': sum(1 for f in unique_findings if f['Severity'] == 'critical'),
+                          'high': sum(1 for f in unique_findings if f['Severity'] == 'high'),
+                          'medium': sum(1 for f in unique_findings if f['Severity'] == 'medium'),
+                          'low': sum(1 for f in unique_findings if f['Severity'] == 'low'),
+                      },
+                      'by_framework': {},
+                  }
+                  for f in unique_findings:
+                      fw = f['Framework']
+                      summary['by_framework'][fw] = summary['by_framework'].get(fw, 0) + 1
+
+                  with open(os.path.join(output_dir, 'summary.json'), 'w') as fp:
+                      json.dump(summary, fp, indent=2)
+                  with open(os.path.join(output_dir, 'findings.json'), 'w') as fp:
+                      json.dump(unique_findings, fp, indent=2)
+
+                  sev = summary['by_severity']
+                  print(f'KubeScape scan: {len(unique_findings)} findings '
+                        f'(C:{sev["critical"]} H:{sev["high"]} M:{sev["medium"]} L:{sev["low"]})')
+
+                  # ── Upload to GCS ──────────────────────────────────────────
+                  try:
+                      from google.cloud import storage as gcs
+                      bucket_name = os.environ['EVIDENCE_BUCKET']
+                      date_path = time.strftime('%Y/%m/%d')
+                      prefix = f'kubescape/{date_path}/{cluster}'
+                      gclient = gcs.Client()
+                      bucket = gclient.bucket(bucket_name)
+                      for f_path in glob.glob(os.path.join(output_dir, '*.json')):
+                          if os.path.isfile(f_path):
+                              blob = bucket.blob(f'{prefix}/{os.path.basename(f_path)}')
+                              blob.upload_from_filename(f_path)
+                              print(f'  Uploaded {os.path.basename(f_path)}')
+                      print(f'Results uploaded to gs://{bucket_name}/{prefix}/')
+                  except Exception as e:
+                      print(f'WARNING: GCS upload failed: {e}')
+
+                  # ── Forward high/critical to Wazuh via syslog ──────────────
+                  syslog_host = os.environ.get('WAZUH_SYSLOG_HOST', '')
+                  if not syslog_host:
+                      print('WAZUH_SYSLOG_HOST not set, skipping syslog forwarding')
+                      sys.exit(0)
+
+                  fwd_count = 0
+                  try:
+                      import ssl as _ssl
+                      ctx = _ssl.create_default_context()
+                      ca_path = os.environ.get('WAZUH_SYSLOG_CA_PATH', '')
+                      if ca_path and os.path.isfile(ca_path):
+                          ctx.load_verify_locations(ca_path)
+                      else:
+                          print('WARNING: WAZUH_SYSLOG_CA_PATH not set or missing, TLS verification disabled')
+                          ctx.check_hostname = False
+                          ctx.verify_mode = _ssl.CERT_NONE
+                      raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                      raw_sock.settimeout(10)
+                      sock = ctx.wrap_socket(raw_sock, server_hostname=syslog_host)
+                      sock.connect((syslog_host, 1516))
+                      for f in unique_findings:
+                          if f['Severity'] in ('critical', 'high'):
+                              ts = time.strftime('%b %d %H:%M:%S')
+                              msg = '<134>{} {} kubescape: {}\n'.format(
+                                  ts, cluster, json.dumps(f, separators=(',', ':'))
+                              )
+                              sock.sendall(msg.encode())
+                              fwd_count += 1
+                      sock.close()
+                      print(f'Forwarded {fwd_count} findings to Wazuh at {syslog_host}:1516 (TLS)')
+                  except Exception as e:
+                      print(f'WARNING: Syslog forwarding failed: {e}')
+                  PYEOF

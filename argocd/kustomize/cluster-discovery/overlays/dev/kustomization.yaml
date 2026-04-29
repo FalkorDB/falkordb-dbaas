@@ -5,6 +5,7 @@ namespace: argocd
 resources:
   - ../../base/
   - cluster-discovery-env-secret.yaml
+  - sealed-secrets-key-env-secret.yaml
 
 patches:
   - target:
@@ -17,6 +18,11 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/imagePullPolicy
         value: "Always"
+      - op: add
+        path: /spec/template/spec/containers/0/envFrom/-
+        value:
+          secretRef:
+            name: sealed-secrets-app-plane-key
   - target:
       kind: Ingress
       name: cluster-discovery-ingress

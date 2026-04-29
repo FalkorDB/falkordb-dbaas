@@ -1,0 +1,14 @@
+# Patch: use the cert-manager root CA from the Wazuh Helm chart.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: wazuh-agent
+  namespace: security
+spec:
+  template:
+    spec:
+      volumes:
+        - name: manager-ca
+          secret:
+            secretName: node-tls
+            optional: true

@@ -1,0 +1,259 @@
+# Prowler daily CronJob — runs SOC 2 compliance checks against the cloud
+# provider and Kubernetes cluster, then uploads results to the central
+# GCS Evidence Locker bucket.
+#
+# Runs at 02:00 UTC daily (after the GKE backup at 01:00).
+# Results are stored as: gs://BUCKET/prowler/YYYY/MM/DD/<cloud>-<cluster>/
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: prowler-soc2-scan
+  namespace: security
+spec:
+  schedule: "0 2 * * *"
+  timeZone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 7200  # 2h max
+      template:
+        metadata:
+          labels:
+            app: prowler
+            component: soc2-evidence
+        spec:
+          serviceAccountName: prowler
+          restartPolicy: Never
+          nodeSelector:
+            node_pool: security
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          volumes:
+            - name: prowler-tmp
+              emptyDir: {}
+            - name: syslog-ca
+              secret:
+                secretName: wazuh-syslog-ca
+                optional: true
+          containers:
+            - name: prowler
+              image: toniblyx/prowler:4.6.1@sha256:04bbabd0a66bc0e9d68b3065524ad36df8c2886aab9bbbfef2f80464b026d2b1
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "1"
+                  memory: "1Gi"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              volumeMounts:
+                - name: prowler-tmp
+                  mountPath: /tmp
+                - name: syslog-ca
+                  mountPath: /run/secrets/syslog-ca
+                  readOnly: true
+              env:
+                - name: EVIDENCE_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: prowler-infra
+                      key: evidence-bucket
+                - name: CLOUD_PROVIDER
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: cloud-provider
+                - name: CLUSTER_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: cluster-name
+                - name: COMPLIANCE
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: compliance
+                - name: GCP_PROJECT_ID
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: gcp-project-id
+                      optional: true
+                - name: WAZUH_SYSLOG_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: prowler-config
+                      key: wazuh-syslog-host
+                      optional: true
+                - name: WAZUH_SYSLOG_CA_PATH
+                  value: /run/secrets/syslog-ca/ca.crt
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  DATE_PATH=$(date -u +%Y/%m/%d)
+                  OUTPUT_DIR="/tmp/prowler-output"
+                  mkdir -p "$OUTPUT_DIR"
+
+                  # Build provider-specific flags
+                  EXTRA_ARGS=""
+                  if [ "$CLOUD_PROVIDER" = "gcp" ] && [ -n "$GCP_PROJECT_ID" ]; then
+                    EXTRA_ARGS="--project-id $GCP_PROJECT_ID"
+                  fi
+
+                  # Run Prowler compliance scan
+                  set +e
+                  prowler "$CLOUD_PROVIDER" \
+                    --compliance "$COMPLIANCE" \
+                    --output-formats json-ocsf csv \
+                    --output-directory "$OUTPUT_DIR" \
+                    $EXTRA_ARGS \
+                    --ignore-exit-code-3 \
+                    --verbose
+                  PROWLER_EXIT=$?
+                  set -e
+
+                  # Upload results to the central GCS evidence locker.
+                  # google-cloud-storage is not bundled in the Prowler image.
+                  pip install --quiet --user google-cloud-storage
+
+                  export DATE_PATH OUTPUT_DIR
+                  python3 <<'PYEOF'
+                  import os, glob
+                  from google.cloud import storage
+                  bucket_name = os.environ['EVIDENCE_BUCKET']
+                  cloud = os.environ['CLOUD_PROVIDER']
+                  cluster = os.environ['CLUSTER_NAME']
+                  date_path = os.environ['DATE_PATH']
+                  output_dir = os.environ['OUTPUT_DIR']
+                  prefix = f'prowler/{date_path}/{cloud}-{cluster}'
+                  client = storage.Client()
+                  bucket = client.bucket(bucket_name)
+                  for f in glob.glob(os.path.join(output_dir, '**', '*'), recursive=True):
+                      if os.path.isfile(f):
+                          rel = os.path.relpath(f, output_dir)
+                          blob = bucket.blob(prefix + '/' + rel)
+                          blob.upload_from_filename(f)
+                          print(f'Uploaded {rel}')
+                  PYEOF
+
+                  echo "Prowler scan complete. Results uploaded to gs://${EVIDENCE_BUCKET}/prowler/${DATE_PATH}/${CLOUD_PROVIDER}-${CLUSTER_NAME}/"
+
+                  # Exit with prowler's original exit code after uploads complete
+                  SYSLOG_EXIT=0
+
+                  # Forward FAIL findings to Wazuh Manager via TCP syslog.
+                  # This bridges the Prowler→Wazuh gap so rules 100100-100103
+                  # trigger real-time alerts and Google Chat notifications.
+                  # Uses OCSF JSON output format. Maps OCSF fields to the
+                  # field names expected by Wazuh rules (Status, Provider,
+                  # CheckTitle, Severity, StatusExtended).
+                  python3 <<'SYSLOG_EOF'
+                  import os, glob, json, socket, time
+                  import ssl as _ssl
+
+                  syslog_host = os.environ.get('WAZUH_SYSLOG_HOST', '')
+                  syslog_port = 1516  # TLS syslog (stunnel)
+                  if not syslog_host:
+                      print('WAZUH_SYSLOG_HOST not set, skipping syslog forwarding')
+                      exit(0)
+
+                  output_dir = os.environ['OUTPUT_DIR']
+                  cluster = os.environ['CLUSTER_NAME']
+
+                  def safe_get(obj, *keys, default=''):
+                      for k in keys:
+                          if isinstance(obj, dict):
+                              obj = obj.get(k, default)
+                          elif isinstance(obj, (list, tuple)) and isinstance(k, int):
+                              obj = obj[k] if len(obj) > k else default
+                          else:
+                              return default
+                      return obj if obj is not None else default
+
+                  # OCSF JSON files (.ocsf.json) - Prowler 4.x writes a JSON
+                  # array (pretty-printed), not NDJSON.
+                  json_files = sorted(
+                      glob.glob(os.path.join(output_dir, '**', '*.ocsf.json'), recursive=True)
+                  )
+                  if not json_files:
+                      print('No Prowler OCSF JSON files found, skipping syslog forwarding')
+                      exit(0)
+
+                  # Load all findings from all OCSF files
+                  findings = []
+                  for f in json_files:
+                      with open(f) as fh:
+                          data = json.load(fh)
+                      if isinstance(data, list):
+                          findings.extend(data)
+                      elif isinstance(data, dict):
+                          findings.append(data)
+
+                  fail_count = 0
+                  try:
+                      ctx = _ssl.create_default_context()
+                      ca_path = os.environ.get('WAZUH_SYSLOG_CA_PATH', '')
+                      if ca_path and os.path.isfile(ca_path):
+                          ctx.load_verify_locations(ca_path)
+                      else:
+                          print('WARNING: WAZUH_SYSLOG_CA_PATH not set or missing, TLS verification disabled')
+                          ctx.check_hostname = False
+                          ctx.verify_mode = _ssl.CERT_NONE
+                      raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                      raw_sock.settimeout(10)
+                      sock = ctx.wrap_socket(raw_sock, server_hostname=syslog_host)
+                      sock.connect((syslog_host, syslog_port))
+                      for finding in findings:
+                          if not isinstance(finding, dict):
+                              continue
+                          # Prowler OCSF: status_code="PASS"|"FAIL", status is always "New"
+                          status_code = str(finding.get('status_code', ''))
+                          if status_code.upper() != 'FAIL':
+                              continue
+                          resources_0 = {}
+                          res = finding.get('resources')
+                          if isinstance(res, list) and res and isinstance(res[0], dict):
+                              resources_0 = res[0]
+                          sev = finding.get('severity', '')
+                          severity_str = sev if isinstance(sev, str) else safe_get(sev, 'name', default='')
+                          mapped = {
+                              'Status': 'FAIL',
+                              'Provider': safe_get(finding, 'cloud', 'provider'),
+                              'CheckTitle': safe_get(finding, 'finding_info', 'title') or safe_get(finding, 'metadata', 'product', 'name'),
+                              'CheckID': safe_get(finding, 'finding_info', 'uid'),
+                              'Severity': severity_str,
+                              'StatusExtended': str(finding.get('status_detail', finding.get('message', ''))),
+                              'ServiceName': safe_get(resources_0, 'group', 'name') or resources_0.get('type', ''),
+                              'ResourceId': resources_0.get('uid', ''),
+                              'Region': resources_0.get('region', ''),
+                              'ClusterName': cluster,
+                          }
+                          ts = time.strftime('%b %d %H:%M:%S')
+                          msg = '<134>{} {} prowler: {}\n'.format(
+                              ts, cluster, json.dumps(mapped, separators=(',', ':'))
+                          )
+                          sock.sendall(msg.encode())
+                          fail_count += 1
+                      sock.close()
+                      print('Forwarded {} FAIL findings to Wazuh syslog at {}:{}'.format(
+                          fail_count, syslog_host, syslog_port))
+                  except Exception as e:
+                      print('WARNING: Syslog forwarding failed: {}'.format(e))
+                      print('Scan and GCS upload succeeded; syslog is best-effort.')
+                  SYSLOG_EOF
+
+                  # Propagate prowler's exit code so the Job status reflects scan result
+                  exit $PROWLER_EXIT

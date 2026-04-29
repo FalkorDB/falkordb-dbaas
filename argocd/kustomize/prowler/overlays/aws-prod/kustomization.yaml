@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: security
+resources:
+  - ../../base
+  - secrets-env-secret.yaml
+configMapGenerator:
+  - name: prowler-config
+    behavior: create
+    literals:
+      - cloud-provider=aws
+      - cluster-name=app-plane-aws-prod
+      - compliance=soc2_aws
+      - wazuh-syslog-host=REPLACE_WITH_PROD_WAZUH_IP
+generatorOptions:
+  disableNameSuffixHash: true
+patches:
+  - path: aws-credentials-patch.yaml

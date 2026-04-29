@@ -1,0 +1,11 @@
+# Wazuh Manager CA certificate for agent SSL enrollment verification.
+# See app-plane-dev/wazuh-manager-ca.yaml for instructions.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wazuh-manager-ca
+  namespace: security
+  annotations:
+    falkordb.com/note: "Replace with SealedSecret after extracting CA from ctrl-plane"
+type: Opaque
+data: {}

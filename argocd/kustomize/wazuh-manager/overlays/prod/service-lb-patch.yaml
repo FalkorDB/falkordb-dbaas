@@ -1,0 +1,12 @@
+# Patch: pin LoadBalancer to the prod static IP from OpenTofu.
+# TODO: replace REPLACE_WITH_PROD_WAZUH_IP with the actual IP from
+#       `tofu output wazuh_ip` in the prod workspace.
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-manager-lb
+  namespace: security
+  annotations:
+    cloud.google.com/load-balancer-type: "External"
+spec:
+  loadBalancerIP: "REPLACE_WITH_PROD_WAZUH_IP"

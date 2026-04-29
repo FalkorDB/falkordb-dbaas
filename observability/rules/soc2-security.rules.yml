@@ -1,0 +1,293 @@
+# VMRule for SOC 2 security alerting.
+# These integrate with the VictoriaMetrics stack and route through
+# the existing Alertmanager → PagerDuty / Slack pipeline.
+#
+# Metrics strategy:
+#   - Prowler: uses kube-state-metrics CronJob/Job metrics (available by default)
+#   - Wazuh:   uses up{} service monitor + Wazuh Prometheus exporter if deployed
+
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  name: soc2-security-rules
+  namespace: observability
+  labels:
+    is_logs: "false"
+spec:
+  groups:
+    - name: soc2.prowler
+      interval: 5m
+      rules:
+        - alert: ProwlerScanFailing
+          expr: |
+            kube_job_status_failed{job_name=~"prowler-soc2-scan-.*"} > 0
+          for: 30m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Prowler SOC 2 scan job is failing"
+            description: "Prowler CronJob has failed runs. Evidence collection is degraded. Check CronJob logs in the security namespace."
+            runbook_url: "https://falkordb.atlassian.net/wiki/spaces/SEC/pages/soc2-remediation"
+
+        - alert: ProwlerScanStale
+          expr: |
+            time() - max(kube_cronjob_status_last_successful_time{cronjob="prowler-soc2-scan"}) > 172800
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Prowler scan data is stale (>48h)"
+            description: "No successful Prowler scan in over 48 hours. Check the Prowler CronJob status in the security namespace."
+
+        - alert: ProwlerCronJobSuspended
+          expr: |
+            kube_cronjob_spec_suspend{cronjob="prowler-soc2-scan"} == 1
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Prowler CronJob is suspended"
+            description: "The Prowler SOC 2 CronJob has been suspended. Compliance scanning is not running."
+
+    - name: soc2.wazuh
+      interval: 1m
+      rules:
+        - alert: WazuhManagerDown
+          expr: up{job="wazuh-manager"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            team: security
+          annotations:
+            summary: "Wazuh Manager is unreachable"
+            description: "The central Wazuh Manager has been down for >5 minutes. All agent communication is interrupted."
+
+        - alert: WazuhAgentDaemonSetUnavailable
+          expr: |
+            kube_daemonset_status_number_unavailable{daemonset="wazuh-agent"} > 0
+          for: 15m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "{{ $value }} Wazuh agent pod(s) unavailable"
+            description: "Wazuh agent DaemonSet has unavailable pods for >15 minutes. Host security monitoring coverage is degraded."
+
+        - alert: WazuhAgentDaemonSetMisscheduled
+          expr: |
+            kube_daemonset_status_number_misscheduled{daemonset="wazuh-agent"} > 0
+          for: 15m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Wazuh agent pod(s) misscheduled"
+            description: "Wazuh agent DaemonSet has misscheduled pods. Investigate node scheduling."
+
+    - name: soc2.grype
+      interval: 5m
+      rules:
+        - alert: GrypeScanFailing
+          expr: |
+            kube_job_status_failed{job_name=~"grype-cve-scan-.*"} > 0
+          for: 30m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Grype CVE scan job is failing"
+            description: "Grype CronJob has failed runs. Vulnerability scanning is degraded."
+
+        - alert: GrypeScanStale
+          expr: |
+            time() - max(kube_cronjob_status_last_successful_time{cronjob="grype-cve-scan"}) > 172800
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Grype scan data is stale (>48h)"
+            description: "No successful Grype CVE scan in over 48 hours."
+
+        - alert: GrypeCronJobSuspended
+          expr: |
+            kube_cronjob_spec_suspend{cronjob="grype-cve-scan"} == 1
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Grype CronJob is suspended"
+            description: "The Grype CVE scanning CronJob has been suspended."
+
+    - name: soc2.kube-bench
+      interval: 5m
+      rules:
+        - alert: KubeBenchScanFailing
+          expr: |
+            kube_job_status_failed{job_name=~"kube-bench-cis-scan-.*"} > 0
+          for: 30m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Kube-bench CIS scan job is failing"
+            description: "Kube-bench CronJob has failed runs. CIS benchmark scanning is degraded."
+
+        - alert: KubeBenchScanStale
+          expr: |
+            time() - max(kube_cronjob_status_last_successful_time{cronjob="kube-bench-cis-scan"}) > 604800
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Kube-bench scan data is stale (>7d)"
+            description: "No successful kube-bench CIS scan in over 7 days (runs weekly)."
+
+        - alert: KubeBenchCronJobSuspended
+          expr: |
+            kube_cronjob_spec_suspend{cronjob="kube-bench-cis-scan"} == 1
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Kube-bench CronJob is suspended"
+            description: "The kube-bench CIS benchmark CronJob has been suspended."
+
+    - name: soc2.kubescape
+      interval: 5m
+      rules:
+        - alert: KubescapeScanFailing
+          expr: |
+            kube_job_status_failed{job_name=~"kubescape-scan-.*"} > 0
+          for: 30m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Kubescape scan job is failing"
+            description: "Kubescape CronJob has failed runs. Kubernetes security scanning is degraded."
+
+        - alert: KubescapeScanStale
+          expr: |
+            time() - max(kube_cronjob_status_last_successful_time{cronjob="kubescape-scan"}) > 172800
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Kubescape scan data is stale (>48h)"
+            description: "No successful Kubescape scan in over 48 hours."
+
+        - alert: KubescapeCronJobSuspended
+          expr: |
+            kube_cronjob_spec_suspend{cronjob="kubescape-scan"} == 1
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Kubescape CronJob is suspended"
+            description: "The Kubescape security scanning CronJob has been suspended."
+
+    - name: soc2.trufflehog
+      interval: 5m
+      rules:
+        - alert: TrufflehogScanFailing
+          expr: |
+            kube_job_status_failed{job_name=~"trufflehog-secret-scan-.*"} > 0
+          for: 30m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "TruffleHog secret scan job is failing"
+            description: "TruffleHog CronJob has failed runs. Secret detection scanning is degraded."
+
+        - alert: TrufflehogScanStale
+          expr: |
+            time() - max(kube_cronjob_status_last_successful_time{cronjob="trufflehog-secret-scan"}) > 172800
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "TruffleHog scan data is stale (>48h)"
+            description: "No successful TruffleHog secret scan in over 48 hours."
+
+        - alert: TrufflehogCronJobSuspended
+          expr: |
+            kube_cronjob_spec_suspend{cronjob="trufflehog-secret-scan"} == 1
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "TruffleHog CronJob is suspended"
+            description: "The TruffleHog secret scanning CronJob has been suspended."
+
+    - name: soc2.compliance-report
+      interval: 5m
+      rules:
+        - alert: ComplianceReportFailing
+          expr: |
+            kube_job_status_failed{job_name=~"compliance-report-.*"} > 0
+          for: 30m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Compliance report job is failing"
+            description: "Compliance report CronJob has failed runs. Evidence aggregation is degraded."
+
+        - alert: ComplianceReportStale
+          expr: |
+            time() - max(kube_cronjob_status_last_successful_time{cronjob="compliance-report"}) > 604800
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Compliance report is stale (>7d)"
+            description: "No successful compliance report in over 7 days (runs weekly)."
+
+        - alert: ComplianceReportCronJobSuspended
+          expr: |
+            kube_cronjob_spec_suspend{cronjob="compliance-report"} == 1
+          for: 1h
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Compliance report CronJob is suspended"
+            description: "The compliance report CronJob has been suspended."
+
+    - name: soc2.falco
+      interval: 1m
+      rules:
+        - alert: FalcoDaemonSetUnavailable
+          expr: |
+            kube_daemonset_status_number_unavailable{daemonset="falco"} > 0
+          for: 15m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "{{ $value }} Falco pod(s) unavailable"
+            description: "Falco DaemonSet has unavailable pods for >15 minutes. Runtime threat detection coverage is degraded."
+
+        - alert: FalcoDaemonSetMisscheduled
+          expr: |
+            kube_daemonset_status_number_misscheduled{daemonset="falco"} > 0
+          for: 15m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Falco pod(s) misscheduled"
+            description: "Falco DaemonSet has misscheduled pods. Investigate node scheduling."

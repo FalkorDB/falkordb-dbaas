@@ -1,0 +1,43 @@
+# Wazuh Manager LoadBalancer — external entry point for spoke-cluster agents.
+#
+# Replaces the morgoved/wazuh-helm chart's built-in LB service so we can
+# pin the loadBalancerIP to the static IP provisioned by OpenTofu
+# (module.wazuh_ip in tofu/runtime/gcp/infra/security.tf).
+#
+# Ports:
+#   514   — syslog ingestion (TCP)  (master: Prowler compliance findings)
+#   1514  — agent event forwarding   (workers)
+#   1515  — agent registration/authd (master)
+#   55000 — Wazuh API               (master)
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-manager-lb
+  namespace: security
+  labels:
+    app: wazuh-manager
+spec:
+  type: LoadBalancer
+  selector:
+    app: wazuh-manager
+  ports:
+    - name: syslog
+      protocol: TCP
+      port: 514
+      targetPort: 514
+    - name: syslog-tls
+      protocol: TCP
+      port: 1516
+      targetPort: 1516
+    - name: agents-events
+      protocol: TCP
+      port: 1514
+      targetPort: 1514
+    - name: registration
+      protocol: TCP
+      port: 1515
+      targetPort: 1515
+    - name: api
+      protocol: TCP
+      port: 55000
+      targetPort: 55000

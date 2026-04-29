@@ -1,0 +1,455 @@
+# Wazuh Manager — central SIEM/XDR hub (production).
+# See dev/wazuh.yaml for detailed comments.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wazuh
+  namespace: argocd
+spec:
+  project: default
+  source:
+    chart: wazuh
+    repoURL: https://morgoved.github.io/wazuh-helm/
+    targetRevision: 1.0.22
+    helm:
+      releaseName: wazuh
+      valuesObject:
+        cert-manager:
+          enabled: false
+        certificates:
+          enabled: true
+        agent:
+          enabled: false
+
+        wazuh:
+          enabled: true
+          nodeSelector:
+            node_pool: security
+          # Cluster key is injected at runtime by the init-cluster-key
+          # init container from the wazuh-cluster-key SealedSecret.
+          key: "placeholder-replaced-at-runtime"
+          authd:
+            enabled: true
+            existingSecret: "wazuh-manager-authd"
+          # Custom SOC 2 rules (injected into chart's wazuh-manager-config ConfigMap)
+          localRules: |
+            <!-- SOC 2 Evidence Engine — Custom Rules -->
+            <group name="prowler_compliance,soc2">
+              <rule id="100100" level="3">
+                <decoded_as>json</decoded_as>
+                <field name="Provider">\w+</field>
+                <regex>"Status":\s*"\w+"</regex>
+                <description>Prowler compliance check result received.</description>
+                <group>prowler_compliance</group>
+              </rule>
+              <rule id="100101" level="10">
+                <if_sid>100100</if_sid>
+                <regex>"Status":\s*"FAIL"</regex>
+                <description>Prowler SOC 2 compliance check FAILED: $(CheckTitle) — $(StatusExtended)</description>
+                <group>prowler_compliance,soc2_fail</group>
+                <options>alert_by_email</options>
+              </rule>
+              <rule id="100102" level="13">
+                <if_sid>100101</if_sid>
+                <field name="Severity">critical</field>
+                <description>CRITICAL Prowler SOC 2 failure: $(CheckTitle) — $(StatusExtended)</description>
+                <group>prowler_compliance,soc2_fail,soc2_critical</group>
+              </rule>
+              <rule id="100103" level="12">
+                <if_sid>100101</if_sid>
+                <field name="Severity">high</field>
+                <description>HIGH Prowler SOC 2 failure: $(CheckTitle) — $(StatusExtended)</description>
+                <group>prowler_compliance,soc2_fail</group>
+              </rule>
+            </group>
+            <group name="fim_critical,soc2">
+              <rule id="100200" level="12">
+                <if_group>syscheck</if_group>
+                <match>/etc/passwd|/etc/shadow|/etc/group</match>
+                <description>SOC 2 CC6.1: Critical authentication file modified — $(file)</description>
+                <group>fim_critical,soc2_cc6</group>
+              </rule>
+              <rule id="100201" level="11">
+                <if_group>syscheck</if_group>
+                <match>/etc/ssh/sshd_config</match>
+                <description>SOC 2 CC6.1: SSH daemon configuration modified.</description>
+                <group>fim_critical,soc2_cc6</group>
+              </rule>
+              <rule id="100202" level="12">
+                <if_group>syscheck</if_group>
+                <match>/etc/kubernetes/pki</match>
+                <description>SOC 2 CC6.1: Kubernetes PKI certificate modified — $(file)</description>
+                <group>fim_critical,soc2_cc6</group>
+              </rule>
+            </group>
+            <group name="soc2_auth">
+              <rule id="100300" level="12" frequency="8" timeframe="120">
+                <if_matched_sid>5710</if_matched_sid>
+                <description>SOC 2 CC6.2: Possible SSH brute-force attack (8+ failures in 2 min).</description>
+                <group>soc2_auth,authentication_failures</group>
+              </rule>
+              <rule id="100301" level="11">
+                <if_sid>5402</if_sid>
+                <time>02:00-22:00</time>
+                <description>SOC 2 CC6.1: Privilege escalation outside maintenance window.</description>
+                <group>soc2_auth,privilege_escalation</group>
+              </rule>
+            </group>
+          # Pre-create agent groups so the register_agent.py script can assign
+          # agents immediately without a 404 "group does not exist" error.
+          agentGroupConf:
+            - name: ctrl-plane-prod
+              agent: |
+                <agent_config>
+                  <labels>
+                    <label key="cluster_id">ctrl-plane-prod</label>
+                    <label key="plane">ctrl-plane</label>
+                    <label key="env">prod</label>
+                    <label key="cloud">gcp</label>
+                  </labels>
+                  <localfile>
+                    <location>journald</location>
+                    <log_format>journald</log_format>
+                  </localfile>
+                </agent_config>
+            - name: app-plane-prod
+              agent: |
+                <agent_config>
+                  <labels>
+                    <label key="cluster_id">app-plane-prod</label>
+                    <label key="plane">app-plane</label>
+                    <label key="env">prod</label>
+                  </labels>
+                  <localfile>
+                    <location>journald</location>
+                    <log_format>journald</log_format>
+                  </localfile>
+                </agent_config>
+          # LoadBalancer managed separately via kustomize (wazuh-manager)
+          apiCred:
+            existingSecret: "wazuh-api-cred"
+          loadBalancer:
+            enabled: false
+
+          master:
+            enabled: true
+            resources:
+              requests:
+                cpu: "2"
+                memory: "4Gi"
+              limits:
+                cpu: "4"
+                memory: "8Gi"
+            storageSize: 100Gi
+            storageClass: "standard-rwo"
+            service:
+              type: ClusterIP
+              annotations: {}
+              ports:
+                - name: registration
+                  protocol: TCP
+                  port: 1515
+                  targetPort: 1515
+                - name: api
+                  protocol: TCP
+                  port: 55000
+                  targetPort: 55000
+                - name: syslog
+                  protocol: TCP
+                  port: 514
+                  targetPort: 514
+            # Google Chat integration scripts
+            additionalVolumes:
+              - name: google-chat-integration
+                configMap:
+                  name: wazuh-google-chat-integration
+                  defaultMode: 0755
+              - name: google-chat-webhook
+                secret:
+                  secretName: wazuh-google-chat-webhook
+            additionalVolumeMounts:
+              - name: google-chat-integration
+                mountPath: /var/ossec/integrations/custom-google-chat
+                subPath: custom-google-chat
+                readOnly: true
+              - name: google-chat-integration
+                mountPath: /var/ossec/integrations/custom-google-chat.py
+                subPath: custom-google-chat.py
+                readOnly: true
+              - name: google-chat-webhook
+                mountPath: /var/ossec/etc/secrets/google-chat
+                readOnly: true
+            extraConf: |
+              <remote>
+                <connection>syslog</connection>
+                <port>514</port>
+                <protocol>tcp</protocol>
+                <allowed-ips>0.0.0.0/0</allowed-ips>
+              </remote>
+              <syscheck>
+                <frequency>43200</frequency>
+                <scan_on_start>yes</scan_on_start>
+                <directories check_all="yes" realtime="yes">/etc</directories>
+                <directories check_all="yes">/usr/bin</directories>
+                <directories check_all="yes">/usr/sbin</directories>
+                <directories check_all="yes">/bin</directories>
+              </syscheck>
+              <integration>
+                <name>custom-google-chat</name>
+                <hook_url>FROM_SECRET</hook_url>
+                <level>10</level>
+                <alert_format>json</alert_format>
+              </integration>
+              <vulnerability-detector>
+                <enabled>yes</enabled>
+                <interval>12h</interval>
+                <run_on_start>yes</run_on_start>
+                <provider name="canonical">
+                  <enabled>yes</enabled>
+                  <os>focal</os>
+                  <os>jammy</os>
+                  <update_interval>1h</update_interval>
+                </provider>
+                <provider name="redhat">
+                  <enabled>yes</enabled>
+                  <os>8</os>
+                  <os>9</os>
+                  <update_interval>1h</update_interval>
+                </provider>
+                <provider name="nvd">
+                  <enabled>yes</enabled>
+                  <update_interval>1h</update_interval>
+                </provider>
+              </vulnerability-detector>
+              <command>
+                <name>yara-scan</name>
+                <executable>yara.sh</executable>
+                <extra_args>-yara_path /usr/bin/yara -yara_rules /var/ossec/ruleset/yara/rules/</extra_args>
+                <timeout_allowed>yes</timeout_allowed>
+              </command>
+              <active-response>
+                <command>yara-scan</command>
+                <location>local</location>
+                <rules_id>100200,100201,100202</rules_id>
+              </active-response>
+            extraSpec:
+              # Raise the Wazuh API rate limit so all agents can register
+              # concurrently without hitting 429 "Too Many Requests".
+              pod:
+                initContainers:
+                  - name: init-cluster-key
+                    image: alpine:3.21@sha256:f27cad9117495d32d067133afff942cb2dc745dfe9163e949f6bfe8a6a245339
+                    command: ["sh", "-c"]
+                    args:
+                      - |
+                        # Inject cluster key from SealedSecret into ossec.conf
+                        OSSEC_CONF=/mnt/master/wazuh/var/ossec/etc/ossec.conf
+                        CLUSTER_KEY=$(cat /run/secrets/cluster-key/CLUSTER_KEY)
+                        if [ -f "$OSSEC_CONF" ]; then
+                          sed -i "s|<key>.*</key>|<key>${CLUSTER_KEY}</key>|" "$OSSEC_CONF"
+                        fi
+                        # Also configure API rate limits
+                        API_YAML=/mnt/master/wazuh/var/ossec/api/configuration/api.yaml
+                        mkdir -p "$(dirname "$API_YAML")"
+                        if grep -q 'max_request_per_minute' "$API_YAML" 2>/dev/null; then
+                          sed -i 's/max_login_attempts:.*/max_login_attempts: 50/' "$API_YAML"
+                          sed -i 's/block_time:.*/block_time: 300/' "$API_YAML"
+                          sed -i 's/max_request_per_minute:.*/max_request_per_minute: 1000/' "$API_YAML"
+                        else
+                          cat > "$API_YAML" <<'EOF'
+                        access:
+                          max_login_attempts: 50
+                          block_time: 300
+                          max_request_per_minute: 1000
+                        EOF
+                        fi
+                    volumeMounts:
+                      - name: wazuh-manager-master
+                        mountPath: /mnt/master
+                      - name: cluster-key
+                        mountPath: /run/secrets/cluster-key
+                        readOnly: true
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 16Mi
+                      limits:
+                        cpu: 10m
+                        memory: 16Mi
+                # stunnel sidecar — TLS termination for syslog (port 1516 → 514)
+                containers:
+                  - name: syslog-tls
+                    image: alpine/socat:1.8.0.1@sha256:50b7de7ff6c3685d9f85bc83eb80d691b786c0ca79184b60b39ac8d883c3dcf1
+                    command: ["sh", "-c"]
+                    args:
+                      - |
+                        set -e
+                        CHECKSUM="d462cf2e317e97e30c4f5e14e13e0e79503030860db82fa40b880e1dc6a03b67"
+                        apk add --no-cache stunnel
+                        echo "${CHECKSUM}  $(which stunnel)" | sha256sum -c -
+                        exec stunnel /etc/stunnel/stunnel.conf
+                    ports:
+                      - containerPort: 1516
+                        protocol: TCP
+                    volumeMounts:
+                      - name: stunnel-config
+                        mountPath: /etc/stunnel/stunnel.conf
+                        subPath: stunnel.conf
+                        readOnly: true
+                      - name: syslog-tls-cert
+                        mountPath: /etc/stunnel/tls
+                        readOnly: true
+                      - name: stunnel-tmp
+                        mountPath: /tmp
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 32Mi
+                      limits:
+                        cpu: 50m
+                        memory: 64Mi
+                    securityContext:
+                      runAsNonRoot: true
+                      runAsUser: 65534
+                      allowPrivilegeEscalation: false
+                      readOnlyRootFilesystem: true
+                      capabilities:
+                        drop:
+                          - ALL
+                volumes:
+                  - name: stunnel-config
+                    configMap:
+                      name: syslog-tls-stunnel
+                  - name: syslog-tls-cert
+                    secret:
+                      secretName: wazuh-syslog-tls
+                  - name: stunnel-tmp
+                    emptyDir: {}
+                  - name: cluster-key
+                    secret:
+                      secretName: wazuh-cluster-key
+          worker:
+            enabled: true
+            replicas: 2
+            resources:
+              requests:
+                cpu: "2"
+                memory: "4Gi"
+              limits:
+                cpu: "4"
+                memory: "8Gi"
+            storageSize: 100Gi
+            storageClass: "standard-rwo"
+
+        indexer:
+          enabled: true
+          replicas: 3
+          cred:
+            existingSecret: "wazuh-indexer-cred"
+          resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+          nodeSelector:
+            node_pool: security
+          storageSize: 200Gi
+          storageClass: "standard-rwo"
+          env:
+            OPENSEARCH_JAVA_OPTS: "-Xms4g -Xmx4g -Dlog4j2.formatMsgNoLookups=true"
+          # Chart's built-in securityadmin job is disabled (PostDelete = only runs
+          # on app deletion). Our securityadmin-patch job in wazuh-manager-secrets
+          # handles security index initialization with correct hashes from sealed
+          # secrets, preventing the chart's lookup() fallback to default passwords.
+          job:
+            annotations:
+              argocd.argoproj.io/hook: PostDelete
+              argocd.argoproj.io/hook-delete-policy: HookSucceeded,BeforeHookCreation
+
+        dashboard:
+          enabled: true
+          replicas: 2
+          cred:
+            existingSecret: "wazuh-dashboard-cred"
+            username: "kibanaserver"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+          nodeSelector:
+            node_pool: security
+          ingress:
+            enabled: true
+            className: nginx
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-prod
+            host: "wazuh.security.internal.falkordb.cloud"
+            tls:
+              - secretName: dashboard-tls
+                hosts:
+                  - wazuh.security.internal.falkordb.cloud
+          extraSpec:
+            pod:
+              volumes:
+                - name: soc2-dashboard
+                  configMap:
+                    name: wazuh-dashboard-soc2
+                - name: api-cred
+                  secret:
+                    secretName: wazuh-api-cred
+            container:
+              volumeMounts:
+                - name: soc2-dashboard
+                  mountPath: /usr/share/wazuh-dashboard/config/security-dashboards.ndjson
+                  subPath: security-dashboards.ndjson
+                  readOnly: true
+                - name: api-cred
+                  mountPath: /run/secrets/api-cred
+                  readOnly: true
+              lifecycle:
+                postStart:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - |
+                        WAZUH_YML=/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml
+                        # Wait for wazuh.yml to be created by the plugin (up to 120s)
+                        for i in $(seq 1 60); do
+                          [ -f "$WAZUH_YML" ] && break
+                          sleep 2
+                        done
+                        if [ -f "$WAZUH_YML" ]; then
+                          API_USER=$(cat /run/secrets/api-cred/API_USERNAME)
+                          API_PASS=$(cat /run/secrets/api-cred/API_PASSWORD)
+                          # Escape sed-special characters in credentials
+                          ESC_USER=$(printf '%s' "$API_USER" | sed 's/[&|\\]/\\&/g')
+                          ESC_PASS=$(printf '%s' "$API_PASS" | sed 's/[&|\\]/\\&/g')
+                          sed -i "/hosts:/,/password:/{s|username:.*|username: $ESC_USER|;s|password:.*|password: $ESC_PASS|}" "$WAZUH_YML"
+                        fi
+                        sleep 30 && curl -sS -k --fail -XPOST \
+                          "https://localhost:5601/api/saved_objects/_import?overwrite=true" \
+                          -H "osd-xsrf: true" \
+                          --form file=@/usr/share/wazuh-dashboard/config/security-dashboards.ndjson
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: security
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+    automated:
+      prune: true
+      selfHeal: true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: wazuh-dashboard-tls
+      jsonPointers:
+        - /data

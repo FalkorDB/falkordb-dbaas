@@ -1,0 +1,134 @@
+# Falco DaemonSet — runtime threat detection via eBPF.
+#
+# Runs on every node, monitors syscalls for container escapes, suspicious
+# processes, network anomalies, and file system changes. Outputs JSON
+# alerts to syslog (Wazuh Manager) and stdout (kubectl logs).
+#
+# Uses modern_ebpf engine — no kernel module, no privileged container.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: falco
+  namespace: security
+  labels:
+    app: falco
+spec:
+  selector:
+    matchLabels:
+      app: falco
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: falco
+    spec:
+      serviceAccountName: falco
+      priorityClassName: security-monitoring
+      hostPID: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node.kubernetes.io/instance-type
+                    operator: NotIn
+                    values:
+                      # GCP burstable / shared-core
+                      - e2-small
+                      - e2-medium
+                      # AWS burstable
+                      - t2.small
+                      - t2.medium
+                      - t3.small
+                      - t3a.small
+                      - t3.medium
+                      - t3a.medium
+                      # Azure burstable
+                      - Standard_B1s
+                      - Standard_B1ms
+                      - Standard_B2s
+                      - Standard_B2als_v2
+                      - Standard_B2as_v2
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+        - operator: Exists
+          effect: NoExecute
+      volumes:
+        - name: falco-config
+          configMap:
+            name: falco-config
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: dev-shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
+      containers:
+        - name: falco
+          image: falcosecurity/falco-no-driver:0.40.0
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          securityContext:
+            # modern_ebpf requires CAP_BPF + CAP_SYS_PTRACE + CAP_SYS_RESOURCE
+            privileged: false
+            capabilities:
+              add:
+                - BPF
+                - SYS_PTRACE
+                - SYS_RESOURCE
+                - PERFMON
+              drop:
+                - ALL
+          env:
+            - name: HOST_ROOT
+              value: /host
+            - name: FALCO_BPF_PROBE
+              value: ""
+          args:
+            - /usr/bin/falco
+            - --cri
+            - /run/containerd/containerd.sock,/run/crio/crio.sock
+            - -c
+            - /etc/falco/falco.yaml
+          volumeMounts:
+            - name: falco-config
+              mountPath: /etc/falco/falco.yaml
+              subPath: falco.yaml
+            - name: falco-config
+              mountPath: /etc/falco/falco_rules.local.yaml
+              subPath: falco_rules.local.yaml
+            - name: proc
+              mountPath: /host/proc
+              readOnly: true
+            - name: dev-shm
+              mountPath: /dev/shm
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8765
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8765
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3

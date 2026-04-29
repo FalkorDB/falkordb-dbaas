@@ -1,0 +1,16 @@
+# PriorityClass for security DaemonSets — ensures Falco and similar
+# security monitoring pods are scheduled before regular workloads and
+# are not preempted during resource pressure on ctrl-plane/observability nodes.
+#
+# Value 1000000 sits above the default (0) and typical workload classes
+# but below system-cluster-critical (2000000000) and system-node-critical.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: security-monitoring
+globalDefault: false
+value: 1000000
+preemptionPolicy: PreemptLowerPriority
+description: >-
+  High-priority class for security monitoring DaemonSets (Falco, Wazuh Agent).
+  Ensures these pods preempt regular workloads when node resources are scarce.

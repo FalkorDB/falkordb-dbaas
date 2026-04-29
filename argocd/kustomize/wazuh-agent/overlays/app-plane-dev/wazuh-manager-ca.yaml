@@ -1,0 +1,17 @@
+# Wazuh Manager CA certificate for agent SSL enrollment verification.
+#
+# Populate this Secret with the CA cert from the ctrl-plane Wazuh deployment:
+#   kubectl -n security get secret node-tls -o jsonpath='{.data.ca\.crt}' | base64 -d > ca.crt
+#   kubectl create secret generic wazuh-manager-ca --from-file=ca.crt -n security --dry-run=client -o yaml
+#   kubeseal --format yaml --cert <sealed-secrets-cert> < secret.yaml > wazuh-manager-ca.yaml
+#
+# Until sealed, this placeholder ensures the DaemonSet starts (volume is optional).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: wazuh-manager-ca
+  namespace: security
+  annotations:
+    falkordb.com/note: "Replace with SealedSecret after extracting CA from ctrl-plane"
+type: Opaque
+data: {}

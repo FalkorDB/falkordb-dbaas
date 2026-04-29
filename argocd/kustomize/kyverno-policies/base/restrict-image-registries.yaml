@@ -1,0 +1,49 @@
+# Restrict images to approved registries — prevents pulling from
+# untrusted sources and ensures supply chain provenance.
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-image-registries
+  annotations:
+    policies.kyverno.io/title: Restrict Image Registries
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Only allow images from approved registries to prevent deployment
+      of untrusted or malicious container images.
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: validate-registries
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kyverno
+      validate:
+        message: >-
+          Images must come from an approved registry.
+          Allowed: gcr.io, us-docker.pkg.dev, docker.io, ghcr.io,
+          quay.io, registry.k8s.io, public.ecr.aws
+        deny:
+          conditions:
+            all:
+              - key: "{{ request.object.spec.containers[].image }}"
+                operator: AnyNotIn
+                value:
+                  - "gcr.io/*"
+                  - "us-docker.pkg.dev/*"
+                  - "docker.io/*"
+                  - "ghcr.io/*"
+                  - "quay.io/*"
+                  - "registry.k8s.io/*"
+                  - "public.ecr.aws/*"
+                  - "*.gcr.io/*"
+                  - "*.pkg.dev/*"

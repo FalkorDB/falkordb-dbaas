@@ -1,0 +1,485 @@
+# Custom Wazuh rules for SOC 2 compliance monitoring.
+#
+# Deployed as a ConfigMap and mounted into the Wazuh Manager container
+# at /var/ossec/etc/rules/local_rules.xml.
+#
+# Rule groups:
+#   prowler_compliance  — Triggers on Prowler FAIL results pushed via syslog
+#   fim_critical        — High-severity FIM alerts for SOC 2 CC6.1
+#   soc2_auth           — Authentication anomaly detection for SOC 2 CC6.1/CC6.2
+#   grype_vuln          — CVE vulnerability detection from Grype scanner
+#   falco_runtime       — Runtime threat detection from Falco (100500-100599)
+#   trufflehog_secrets  — Secret leak detection from TruffleHog (100600-100699)
+#   kubebench_cis       — CIS benchmark findings from kube-bench (100700-100799)
+#   kubescape_attack    — Attack path findings from KubeScape (100800-100899)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wazuh-custom-rules
+  namespace: security
+  labels:
+    app: wazuh
+    component: rules
+data:
+  local_rules.xml: |
+    <!-- SOC 2 Evidence Engine — Custom Rules -->
+    <group name="prowler_compliance,soc2">
+
+      <!-- ====================================================
+           Prowler Compliance FAIL Detection
+           Matches JSON log lines from Prowler results containing
+           "Status": "FAIL" that are forwarded via syslog or API.
+           ==================================================== -->
+
+      <!-- Base rule: any Prowler result ingested
+           NOTE: Wazuh reserves "Status" as a static field, so we use
+           decoded_as prowler + match on the raw JSON instead of <field>. -->
+      <rule id="100100" level="3">
+        <decoded_as>prowler</decoded_as>
+        <field name="Provider">\.+</field>
+        <description>Prowler compliance check result received.</description>
+        <group>prowler_compliance</group>
+      </rule>
+
+      <!-- Prowler FAIL — triggers Google Chat notification (level ≥ 10) -->
+      <rule id="100101" level="10">
+        <if_sid>100100</if_sid>
+        <match>"Status":"FAIL"</match>
+        <description>Prowler SOC 2 compliance check FAILED: $(CheckTitle) — $(StatusExtended)</description>
+        <group>prowler_compliance,soc2_fail</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- Prowler FAIL — critical severity -->
+      <rule id="100102" level="13">
+        <if_sid>100101</if_sid>
+        <field name="Severity">critical</field>
+        <description>CRITICAL Prowler SOC 2 failure: $(CheckTitle) — $(StatusExtended)</description>
+        <group>prowler_compliance,soc2_fail,soc2_critical</group>
+      </rule>
+
+      <!-- Prowler FAIL — high severity -->
+      <rule id="100103" level="12">
+        <if_sid>100101</if_sid>
+        <field name="Severity">high</field>
+        <description>HIGH Prowler SOC 2 failure: $(CheckTitle) — $(StatusExtended)</description>
+        <group>prowler_compliance,soc2_fail</group>
+      </rule>
+
+    </group>
+
+    <group name="fim_critical,soc2">
+
+      <!-- ====================================================
+           File Integrity Monitoring — SOC 2 CC6.1
+           Elevated alerts for changes to critical system files.
+           ==================================================== -->
+
+      <!-- /etc/passwd or /etc/shadow modification -->
+      <rule id="100200" level="12">
+        <if_group>syscheck</if_group>
+        <match>/etc/passwd|/etc/shadow|/etc/group</match>
+        <description>SOC 2 CC6.1: Critical authentication file modified — $(file)</description>
+        <group>fim_critical,soc2_cc6</group>
+      </rule>
+
+      <!-- SSH configuration change -->
+      <rule id="100201" level="11">
+        <if_group>syscheck</if_group>
+        <match>/etc/ssh/sshd_config</match>
+        <description>SOC 2 CC6.1: SSH daemon configuration modified.</description>
+        <group>fim_critical,soc2_cc6</group>
+      </rule>
+
+      <!-- Kubernetes PKI certificate change -->
+      <rule id="100202" level="12">
+        <if_group>syscheck</if_group>
+        <match>/etc/kubernetes/pki</match>
+        <description>SOC 2 CC6.1: Kubernetes PKI certificate modified — $(file)</description>
+        <group>fim_critical,soc2_cc6</group>
+      </rule>
+
+    </group>
+
+    <group name="soc2_auth">
+
+      <!-- ====================================================
+           Authentication Anomaly Detection — SOC 2 CC6.1/CC6.2
+           ==================================================== -->
+
+      <!-- Brute-force SSH detection (8+ failures in 120s) -->
+      <rule id="100300" level="12" frequency="8" timeframe="120">
+        <if_matched_sid>5710</if_matched_sid>
+        <description>SOC 2 CC6.2: Possible SSH brute-force attack (8+ failures in 2 min).</description>
+        <group>soc2_auth,authentication_failures</group>
+      </rule>
+
+      <!-- Root/sudo escalation outside maintenance window -->
+      <rule id="100301" level="11">
+        <if_sid>5402</if_sid>
+        <time>02:00-22:00</time>
+        <description>SOC 2 CC6.1: Privilege escalation outside maintenance window.</description>
+        <group>soc2_auth,privilege_escalation</group>
+      </rule>
+
+    </group>
+
+    <group name="grype_vuln,soc2">
+
+      <!-- ====================================================
+           Grype CVE Vulnerability Detection
+           Matches JSON log lines from Grype scanner results forwarded
+           via syslog containing "Scanner": "grype".
+           ==================================================== -->
+
+      <!-- Base rule: any Grype CVE result ingested
+           Uses the custom "grype" decoder (program_name match + JSON_Decoder plugin)
+           so JSON fields are extracted under their original names. -->
+      <rule id="100400" level="3">
+        <decoded_as>grype</decoded_as>
+        <field name="Scanner">grype</field>
+        <field name="VulnerabilityID">\.+</field>
+        <description>Grype CVE scan result: $(VulnerabilityID) in $(Package) on $(ImageName).</description>
+        <group>grype_vuln</group>
+      </rule>
+
+      <!-- Any vulnerability found — triggers Google Chat (level >= 10) -->
+      <rule id="100401" level="10">
+        <if_sid>100400</if_sid>
+        <field name="Severity">critical|high</field>
+        <description>Grype CVE $(VulnerabilityID) [$(Severity)] in $(Package) on $(ImageName) — $(Cluster)</description>
+        <group>grype_vuln,soc2_fail</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- Critical CVE -->
+      <rule id="100402" level="13">
+        <if_sid>100401</if_sid>
+        <field name="Severity">critical</field>
+        <description>CRITICAL CVE $(VulnerabilityID) in $(Package) ($(InstalledVersion)) on $(ImageName) — $(Cluster)</description>
+        <group>grype_vuln,soc2_fail,soc2_critical</group>
+      </rule>
+
+      <!-- High CVE -->
+      <rule id="100403" level="12">
+        <if_sid>100401</if_sid>
+        <field name="Severity">high</field>
+        <description>HIGH CVE $(VulnerabilityID) in $(Package) ($(InstalledVersion)) on $(ImageName) — $(Cluster)</description>
+        <group>grype_vuln,soc2_fail</group>
+      </rule>
+
+    </group>
+
+    <!-- ================================================================
+         Falco Runtime Threat Detection (100500-100599)
+         Matches Falco syslog output with JSON body. Falco sends events
+         via syslog_output to Wazuh Manager at port 514.
+         ================================================================ -->
+    <group name="falco_runtime,soc2">
+
+      <!-- Base rule: any Falco event ingested -->
+      <rule id="100500" level="3">
+        <decoded_as>falco</decoded_as>
+        <field name="rule">\.+</field>
+        <description>Falco runtime event: $(rule) — $(output)</description>
+        <group>falco_runtime</group>
+      </rule>
+
+      <!-- Falco WARNING priority -->
+      <rule id="100501" level="8">
+        <if_sid>100500</if_sid>
+        <field name="priority">Warning</field>
+        <description>Falco WARNING: $(rule) — $(output)</description>
+        <group>falco_runtime</group>
+      </rule>
+
+      <!-- Falco ERROR priority — triggers notification (level >= 10) -->
+      <rule id="100502" level="10">
+        <if_sid>100500</if_sid>
+        <field name="priority">Error</field>
+        <description>Falco ERROR: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- Falco CRITICAL priority -->
+      <rule id="100503" level="13">
+        <if_sid>100500</if_sid>
+        <field name="priority">Critical</field>
+        <description>CRITICAL Falco: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail,soc2_critical</group>
+      </rule>
+
+      <!-- Falco ALERT (highest) priority -->
+      <rule id="100504" level="14">
+        <if_sid>100500</if_sid>
+        <field name="priority">Alert</field>
+        <description>ALERT Falco: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail,soc2_critical</group>
+      </rule>
+
+      <!-- Container escape detected -->
+      <rule id="100510" level="14">
+        <if_sid>100500</if_sid>
+        <match>Container Escape|nsenter|mount namespace</match>
+        <description>CONTAINER ESCAPE ATTEMPT: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail,soc2_critical,container_escape</group>
+      </rule>
+
+      <!-- Crypto mining detection -->
+      <rule id="100511" level="13">
+        <if_sid>100500</if_sid>
+        <match>Crypto Mining|stratum+tcp|xmr</match>
+        <description>CRYPTO MINING detected: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail,soc2_critical,crypto_mining</group>
+      </rule>
+
+      <!-- Reverse shell detection -->
+      <rule id="100512" level="14">
+        <if_sid>100500</if_sid>
+        <match>Reverse Shell</match>
+        <description>REVERSE SHELL detected: $(rule) — $(output)</description>
+        <group>falco_runtime,soc2_fail,soc2_critical,reverse_shell</group>
+      </rule>
+
+    </group>
+
+    <!-- ================================================================
+         TruffleHog Secret Scanning (100600-100699)
+         Matches TruffleHog syslog output from CronJob.
+         ================================================================ -->
+    <group name="trufflehog_secrets,soc2">
+
+      <!-- Base rule: any TruffleHog finding -->
+      <rule id="100600" level="3">
+        <decoded_as>trufflehog</decoded_as>
+        <field name="Scanner">trufflehog</field>
+        <description>TruffleHog secret finding: $(DetectorName) in $(ImageName) — $(Cluster)</description>
+        <group>trufflehog_secrets</group>
+      </rule>
+
+      <!-- Verified secret found — HIGH priority -->
+      <rule id="100601" level="12">
+        <if_sid>100600</if_sid>
+        <field name="Verified">true</field>
+        <description>VERIFIED SECRET leaked: $(DetectorName) in $(ImageName) — $(Cluster)</description>
+        <group>trufflehog_secrets,soc2_fail,secret_leak</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- Unverified secret found — MEDIUM priority -->
+      <rule id="100602" level="8">
+        <if_sid>100600</if_sid>
+        <field name="Verified">false</field>
+        <description>Possible secret leak: $(DetectorName) in $(ImageName) — $(Cluster)</description>
+        <group>trufflehog_secrets,secret_leak</group>
+      </rule>
+
+    </group>
+
+    <!-- ================================================================
+         kube-bench CIS Benchmark (100700-100799)
+         Matches kube-bench syslog output from CronJob.
+         ================================================================ -->
+    <group name="kubebench_cis,soc2">
+
+      <!-- Base rule: any kube-bench finding -->
+      <rule id="100700" level="3">
+        <decoded_as>kube-bench</decoded_as>
+        <field name="Scanner">kube-bench</field>
+        <description>kube-bench CIS finding: [$(TestNumber)] $(TestDesc) — $(Cluster)</description>
+        <group>kubebench_cis</group>
+      </rule>
+
+      <!-- FAIL finding — scored -->
+      <rule id="100701" level="11">
+        <if_sid>100700</if_sid>
+        <field name="Status">FAIL</field>
+        <field name="Scored">true</field>
+        <description>CIS Benchmark FAIL (scored): [$(TestNumber)] $(TestDesc) — $(Cluster)</description>
+        <group>kubebench_cis,soc2_fail,cis_fail</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- FAIL finding — not scored -->
+      <rule id="100702" level="8">
+        <if_sid>100700</if_sid>
+        <field name="Status">FAIL</field>
+        <field name="Scored">false</field>
+        <description>CIS Benchmark FAIL (unscored): [$(TestNumber)] $(TestDesc) — $(Cluster)</description>
+        <group>kubebench_cis,cis_fail</group>
+      </rule>
+
+      <!-- WARN finding -->
+      <rule id="100703" level="6">
+        <if_sid>100700</if_sid>
+        <field name="Status">WARN</field>
+        <description>CIS Benchmark WARN: [$(TestNumber)] $(TestDesc) — $(Cluster)</description>
+        <group>kubebench_cis,cis_warn</group>
+      </rule>
+
+    </group>
+
+    <!-- ================================================================
+         KubeScape Attack Path Analysis (100800-100899)
+         Matches KubeScape syslog output from CronJob.
+         ================================================================ -->
+    <group name="kubescape_attack,soc2">
+
+      <!-- Base rule: any KubeScape finding -->
+      <rule id="100800" level="3">
+        <decoded_as>kubescape</decoded_as>
+        <field name="Scanner">kubescape</field>
+        <description>KubeScape finding: [$(ControlID)] $(ControlName) — $(Cluster)</description>
+        <group>kubescape_attack</group>
+      </rule>
+
+      <!-- Critical severity finding -->
+      <rule id="100801" level="13">
+        <if_sid>100800</if_sid>
+        <field name="Severity">critical</field>
+        <description>CRITICAL KubeScape: [$(ControlID)] $(ControlName) in $(Framework) — $(Cluster)</description>
+        <group>kubescape_attack,soc2_fail,soc2_critical</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- High severity finding -->
+      <rule id="100802" level="12">
+        <if_sid>100800</if_sid>
+        <field name="Severity">high</field>
+        <description>HIGH KubeScape: [$(ControlID)] $(ControlName) in $(Framework) — $(Cluster)</description>
+        <group>kubescape_attack,soc2_fail</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- Medium severity finding -->
+      <rule id="100803" level="8">
+        <if_sid>100800</if_sid>
+        <field name="Severity">medium</field>
+        <description>MEDIUM KubeScape: [$(ControlID)] $(ControlName) in $(Framework) — $(Cluster)</description>
+        <group>kubescape_attack</group>
+      </rule>
+
+      <!-- MITRE ATT&CK specific findings -->
+      <rule id="100810" level="13">
+        <if_sid>100800</if_sid>
+        <field name="Framework">mitre</field>
+        <field name="Severity">critical|high</field>
+        <description>MITRE ATT&CK: [$(ControlID)] $(ControlName) — $(Cluster)</description>
+        <group>kubescape_attack,soc2_fail,mitre_attack</group>
+      </rule>
+
+    </group>
+
+    <!-- ================================================================
+         YARA Malware Detection (108000-108001)
+         Matches active-response output from yara.sh script
+         triggered by FIM events on Wazuh agents.
+         ================================================================ -->
+    <group name="yara_malware,soc2">
+
+      <!-- YARA scan result — malware match found -->
+      <rule id="108000" level="12">
+        <if_sid>657</if_sid>
+        <match>yara:</match>
+        <description>YARA malware match: $(yara_rule) detected in $(yara_scanned_file)</description>
+        <group>yara_malware,soc2_fail,malware_detection</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- YARA scan error -->
+      <rule id="108001" level="5">
+        <if_sid>657</if_sid>
+        <match>yara: error</match>
+        <description>YARA scan error during active response.</description>
+        <group>yara_malware</group>
+      </rule>
+
+    </group>
+
+    <!-- ================================================================
+         Cross-Tool SIEM Correlation Rules (109000-109099)
+         Composite rules that fire when multiple security tools detect
+         related events within a time window, indicating higher-confidence
+         threats than any single tool alone.
+         ================================================================ -->
+    <group name="siem_correlation,soc2">
+
+      <!-- ── Falco runtime + Grype CVE on same cluster ──────────
+           A container with known critical CVEs is also triggering
+           runtime threat alerts → possible active exploitation. -->
+      <rule id="109000" level="14" frequency="2" timeframe="3600">
+        <if_matched_group>falco_runtime</if_matched_group>
+        <same_field>Cluster</same_field>
+        <description>CORRELATION: Falco runtime threat + active CVEs on same cluster $(Cluster) — possible exploitation in progress</description>
+        <group>siem_correlation,soc2_critical,active_exploitation</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── Grype critical CVE + Falco container escape ────────
+           Critical CVE found and a container escape attempt detected
+           in the same timeframe → high-confidence attack chain. -->
+      <rule id="109001" level="15" frequency="2" timeframe="1800">
+        <if_matched_group>soc2_critical</if_matched_group>
+        <if_matched_group>container_escape</if_matched_group>
+        <description>CORRELATION: Container escape + critical finding on same cluster — active attack chain</description>
+        <group>siem_correlation,soc2_critical,attack_chain</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── TruffleHog secret leak + Prowler auth failure ──────
+           A leaked secret was found and cloud authentication config
+           is failing → credential may be in active misuse. -->
+      <rule id="109002" level="14" frequency="2" timeframe="7200">
+        <if_matched_group>secret_leak</if_matched_group>
+        <same_field>Cluster</same_field>
+        <description>CORRELATION: Secret leak + auth/compliance failure on $(Cluster) — credential exposure risk</description>
+        <group>siem_correlation,soc2_critical,credential_exposure</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── FIM change + privilege escalation ──────────────────
+           A critical system file was modified and a privilege
+           escalation was detected within 30 minutes → tampering. -->
+      <rule id="109003" level="14" frequency="2" timeframe="1800">
+        <if_matched_group>fim_critical</if_matched_group>
+        <same_agent>yes</same_agent>
+        <description>CORRELATION: Critical file modification + privilege escalation on same host — possible system tampering</description>
+        <group>siem_correlation,soc2_critical,system_tampering</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── kube-bench CIS FAIL + KubeScape MITRE finding ─────
+           Both CIS benchmark and MITRE ATT&CK frameworks flag the
+           same cluster → systemic misconfiguration. -->
+      <rule id="109004" level="13" frequency="3" timeframe="86400">
+        <if_matched_group>cis_fail</if_matched_group>
+        <same_field>Cluster</same_field>
+        <description>CORRELATION: CIS benchmark failures + MITRE ATT&CK findings on $(Cluster) — systemic misconfiguration</description>
+        <group>siem_correlation,soc2_fail,systemic_misconfig</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── Multi-tool critical alert storm ────────────────────
+           3+ critical alerts from different tools within 1 hour
+           on the same cluster → coordinated attack or major incident. -->
+      <rule id="109005" level="15" frequency="3" timeframe="3600">
+        <if_matched_group>soc2_critical</if_matched_group>
+        <same_field>Cluster</same_field>
+        <description>CRITICAL CORRELATION: 3+ critical alerts across tools on $(Cluster) — potential coordinated attack</description>
+        <group>siem_correlation,soc2_critical,coordinated_attack</group>
+        <options>alert_by_email</options>
+      </rule>
+
+      <!-- ── Crypto mining + reverse shell on same cluster ──────
+           Both crypto mining and reverse shell detected → compromised
+           workload being used for profit + C2 access. -->
+      <rule id="109006" level="15" frequency="2" timeframe="3600">
+        <if_matched_group>crypto_mining</if_matched_group>
+        <same_field>Cluster</same_field>
+        <description>CORRELATION: Crypto mining + reverse shell on $(Cluster) — fully compromised workload</description>
+        <group>siem_correlation,soc2_critical,full_compromise</group>
+        <options>alert_by_email</options>
+      </rule>
+
+    </group>

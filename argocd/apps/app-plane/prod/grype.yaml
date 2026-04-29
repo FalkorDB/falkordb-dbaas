@@ -1,0 +1,34 @@
+# Grype CVE scanner — deployed to all app-plane prod clusters.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: grype
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            role: app-plane
+        values:
+          cloud: '{{ index .metadata.labels "cloud_provider" }}'
+  template:
+    metadata:
+      name: '{{ regexFind "h?c-[A-Za-z0-9]+" .name }}-grype'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/FalkorDB/falkordb-dbaas.git
+        targetRevision: main
+        path: 'argocd/kustomize/grype/overlays/{{ .values.cloud }}-prod'
+      destination:
+        server: "{{.server}}"
+        namespace: security
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          prune: true
+          selfHeal: true

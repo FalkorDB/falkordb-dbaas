@@ -1,0 +1,350 @@
+# Grype daily CronJob — scans all running container images for known CVEs,
+# uploads JSON reports to the central GCS Evidence Locker, and forwards
+# critical/high findings to Wazuh Manager via syslog for alerting.
+#
+# Runs at 04:00 UTC daily (after Prowler at 02:00).
+# Results are stored as: gs://BUCKET/grype/YYYY/MM/DD/<cluster>/
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: grype-cve-scan
+  namespace: security
+spec:
+  schedule: "0 4 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 14400  # 4h max (many images to scan)
+      template:
+        metadata:
+          labels:
+            app: grype
+            component: soc2-evidence
+        spec:
+          serviceAccountName: grype
+          restartPolicy: Never
+          nodeSelector:
+            node_pool: security
+          containers:
+            - name: grype
+              image: python:3.12-slim@sha256:4386a385d81dba9f72ed72a6fe4237755d7f5440c84b417650f38336bbc43117
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "1Gi"
+                limits:
+                  cpu: "2"
+                  memory: "6Gi"
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              env:
+                - name: HOME
+                  value: /tmp
+                - name: GRYPE_VERSION
+                  value: "0.86.1"
+                - name: SYFT_VERSION
+                  value: "1.18.1"
+                - name: GRYPE_DB_CACHE_DIR
+                  value: /tmp/grype-db
+                - name: EVIDENCE_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: grype-infra
+                      key: evidence-bucket
+                - name: CLUSTER_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: grype-config
+                      key: cluster-name
+                - name: WAZUH_SYSLOG_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: grype-config
+                      key: wazuh-syslog-host
+                      optional: true
+                - name: WAZUH_SYSLOG_CA_PATH
+                  value: /run/secrets/syslog-ca/ca.crt
+              volumeMounts:
+                - name: syslog-ca
+                  mountPath: /run/secrets/syslog-ca
+                  readOnly: true
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+
+                  # Install Python dependencies (non-root, user-local)
+                  pip install --quiet --no-cache-dir --user \
+                    google-cloud-storage kubernetes
+
+                  # Run the scanner
+                  export PATH="$HOME/.local/bin:$PATH"
+                  python3 <<'PYEOF'
+                  import os, sys, json, subprocess, socket, time, glob, tarfile, stat
+                  import urllib.request, hashlib
+
+                  def verify_checksum(filepath, checksums_url, expected_filename):
+                      """Download checksums file and verify the given file."""
+                      checksums_path = filepath + '.checksums'
+                      urllib.request.urlretrieve(checksums_url, checksums_path)
+                      expected_hash = None
+                      with open(checksums_path) as f:
+                          for line in f:
+                              parts = line.strip().split()
+                              if len(parts) == 2 and parts[1] == expected_filename:
+                                  expected_hash = parts[0]
+                                  break
+                      if not expected_hash:
+                          raise RuntimeError(f'Checksum not found for {expected_filename}')
+                      sha256 = hashlib.sha256()
+                      with open(filepath, 'rb') as f:
+                          for chunk in iter(lambda: f.read(8192), b''):
+                              sha256.update(chunk)
+                      actual = sha256.hexdigest()
+                      if actual != expected_hash:
+                          raise RuntimeError(
+                              f'Checksum mismatch for {expected_filename}: '
+                              f'expected {expected_hash}, got {actual}'
+                          )
+                      print(f'  Checksum verified: {expected_filename}')
+
+                  cluster = os.environ['CLUSTER_NAME']
+                  grype_version = os.environ.get('GRYPE_VERSION', '0.86.1')
+                  output_dir = '/tmp/grype-output'
+                  os.makedirs(output_dir, exist_ok=True)
+                  os.makedirs('/tmp/grype-db', exist_ok=True)
+
+                  # ── Download grype binary ──────────────────────────────────
+                  grype_bin = '/tmp/grype'
+                  tarball_name = f'grype_{grype_version}_linux_amd64.tar.gz'
+                  url = (
+                      f'https://github.com/anchore/grype/releases/download/'
+                      f'v{grype_version}/{tarball_name}'
+                  )
+                  checksums_url = (
+                      f'https://github.com/anchore/grype/releases/download/'
+                      f'v{grype_version}/grype_{grype_version}_checksums.txt'
+                  )
+                  print(f'Downloading grype v{grype_version}...')
+                  urllib.request.urlretrieve(url, '/tmp/grype.tar.gz')
+                  verify_checksum('/tmp/grype.tar.gz', checksums_url, tarball_name)
+                  with tarfile.open('/tmp/grype.tar.gz') as tar:
+                      tar.extract('grype', '/tmp', filter='data')
+                  os.chmod(grype_bin, 0o755)
+
+                  # Verify install
+                  result = subprocess.run([grype_bin, 'version'], capture_output=True, text=True)
+                  print(f'grype: {result.stdout.strip()}')
+
+                  # ── Discover running container images ──────────────────────
+                  from kubernetes import client, config
+                  config.load_incluster_config()
+                  v1 = client.CoreV1Api()
+
+                  images = set()
+                  pods = v1.list_pod_for_all_namespaces(timeout_seconds=30)
+                  for pod in pods.items:
+                      for cs in (pod.status.container_statuses or []):
+                          if cs.image:
+                              images.add(cs.image)
+                      for cs in (pod.status.init_container_statuses or []):
+                          if cs.image:
+                              images.add(cs.image)
+
+                  print(f'Discovered {len(images)} unique container images')
+
+                  # ── Scan each image ────────────────────────────────────────
+                  all_vulns = []
+                  scan_errors = []
+
+                  for img in sorted(images):
+                      print(f'Scanning: {img}')
+                      safe_name = img.replace('/', '__').replace(':', '_')[:200]
+                      result_file = os.path.join(output_dir, f'{safe_name}.json')
+                      try:
+                          result = subprocess.run(
+                              [grype_bin, img, '-o', 'json', '--file', result_file, '--by-cve'],
+                              capture_output=True, text=True, timeout=600,
+                          )
+                          if result.returncode != 0 and not os.path.exists(result_file):
+                              scan_errors.append({'image': img, 'error': result.stderr[:500]})
+                              continue
+                          if not os.path.exists(result_file):
+                              continue
+                          with open(result_file) as f:
+                              data = json.load(f)
+                          for m in data.get('matches', []):
+                              vuln = m.get('vulnerability', {})
+                              artifact = m.get('artifact', {})
+                              sev = (vuln.get('severity') or '').lower()
+                              fix_obj = vuln.get('fix', {}) or {}
+                              fix_versions = fix_obj.get('versions') or []
+                              all_vulns.append({
+                                  'Scanner': 'grype',
+                                  'ImageName': img,
+                                  'VulnerabilityID': vuln.get('id', ''),
+                                  'Severity': sev,
+                                  'Package': artifact.get('name', ''),
+                                  'InstalledVersion': artifact.get('version', ''),
+                                  'FixedVersions': ','.join(str(v) for v in fix_versions),
+                                  'Cluster': cluster,
+                              })
+                      except subprocess.TimeoutExpired:
+                          scan_errors.append({'image': img, 'error': 'timeout (600s)'})
+                      except Exception as e:
+                          scan_errors.append({'image': img, 'error': str(e)[:500]})
+
+                  # ── Generate SBOMs with Syft ─────────────────────────────────
+                  syft_version = os.environ.get('SYFT_VERSION', '1.18.1')
+                  sbom_dir = '/tmp/sbom-output'
+                  os.makedirs(sbom_dir, exist_ok=True)
+
+                  syft_bin = '/tmp/syft'
+                  syft_tarball = f'syft_{syft_version}_linux_amd64.tar.gz'
+                  syft_url = (
+                      f'https://github.com/anchore/syft/releases/download/'
+                      f'v{syft_version}/{syft_tarball}'
+                  )
+                  syft_checksums_url = (
+                      f'https://github.com/anchore/syft/releases/download/'
+                      f'v{syft_version}/syft_{syft_version}_checksums.txt'
+                  )
+                  print(f'Downloading syft v{syft_version}...')
+                  try:
+                      urllib.request.urlretrieve(syft_url, '/tmp/syft.tar.gz')
+                      verify_checksum('/tmp/syft.tar.gz', syft_checksums_url, syft_tarball)
+                      with tarfile.open('/tmp/syft.tar.gz') as tar:
+                          tar.extract('syft', '/tmp', filter='data')
+                      os.chmod(syft_bin, 0o755)
+                      sv = subprocess.run([syft_bin, 'version'], capture_output=True, text=True)
+                      print(f'syft: {sv.stdout.strip()}')
+
+                      sbom_count = 0
+                      sbom_errors = []
+                      for img in sorted(images):
+                          safe_name = img.replace('/', '__').replace(':', '_')[:200]
+                          sbom_file = os.path.join(sbom_dir, f'{safe_name}.cdx.json')
+                          try:
+                              result = subprocess.run(
+                                  [syft_bin, img, '-o', f'cyclonedx-json={sbom_file}'],
+                                  capture_output=True, text=True, timeout=300,
+                              )
+                              if os.path.exists(sbom_file):
+                                  sbom_count += 1
+                              else:
+                                  sbom_errors.append({'image': img, 'error': result.stderr[:300]})
+                          except subprocess.TimeoutExpired:
+                              sbom_errors.append({'image': img, 'error': 'timeout (300s)'})
+                          except Exception as e:
+                              sbom_errors.append({'image': img, 'error': str(e)[:300]})
+
+                      print(f'SBOM generation: {sbom_count}/{len(images)} succeeded, {len(sbom_errors)} errors')
+                  except Exception as e:
+                      print(f'WARNING: Syft setup failed, skipping SBOM generation: {e}')
+                      sbom_count = 0
+                      sbom_errors = [{'error': str(e)}]
+
+                  # ── Write summary report ───────────────────────────────────
+                  summary = {
+                      'scan_date': time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                      'cluster': cluster,
+                      'images_scanned': len(images),
+                      'scan_errors': len(scan_errors),
+                      'total_vulnerabilities': len(all_vulns),
+                      'by_severity': {
+                          'critical': sum(1 for v in all_vulns if v['Severity'] == 'critical'),
+                          'high': sum(1 for v in all_vulns if v['Severity'] == 'high'),
+                          'medium': sum(1 for v in all_vulns if v['Severity'] == 'medium'),
+                          'low': sum(1 for v in all_vulns if v['Severity'] == 'low'),
+                          'negligible': sum(1 for v in all_vulns if v['Severity'] == 'negligible'),
+                      },
+                      'errors': scan_errors,
+                      'sbom_generated': sbom_count if 'sbom_count' in dir() else 0,
+                      'sbom_errors': len(sbom_errors) if 'sbom_errors' in dir() else 0,
+                  }
+                  with open(os.path.join(output_dir, 'summary.json'), 'w') as f:
+                      json.dump(summary, f, indent=2)
+                  with open(os.path.join(output_dir, 'all-vulnerabilities.json'), 'w') as f:
+                      json.dump(all_vulns, f, indent=2)
+
+                  sev = summary['by_severity']
+                  print(f'Scan complete: {len(images)} images, {len(all_vulns)} vulns '
+                        f'(C:{sev["critical"]} H:{sev["high"]} M:{sev["medium"]} L:{sev["low"]}), '
+                        f'{len(scan_errors)} errors')
+
+                  # ── Upload to GCS evidence locker ──────────────────────────
+                  try:
+                      from google.cloud import storage as gcs
+                      bucket_name = os.environ['EVIDENCE_BUCKET']
+                      date_path = time.strftime('%Y/%m/%d')
+                      prefix = f'grype/{date_path}/{cluster}'
+                      gclient = gcs.Client()
+                      bucket = gclient.bucket(bucket_name)
+                      for f_path in glob.glob(os.path.join(output_dir, '*.json')):
+                          if os.path.isfile(f_path):
+                              blob = bucket.blob(f'{prefix}/{os.path.basename(f_path)}')
+                              blob.upload_from_filename(f_path)
+                              print(f'  Uploaded {os.path.basename(f_path)}')
+                      print(f'Results uploaded to gs://{bucket_name}/{prefix}/')
+                      # Upload SBOMs
+                      if 'sbom_count' in dir() and sbom_count > 0:
+                          sbom_prefix = f'sbom/{date_path}/{cluster}'
+                          for f_path in glob.glob(os.path.join(sbom_dir, '*.cdx.json')):
+                              if os.path.isfile(f_path):
+                                  blob = bucket.blob(f'{sbom_prefix}/{os.path.basename(f_path)}')
+                                  blob.upload_from_filename(f_path)
+                          print(f'SBOMs uploaded to gs://{bucket_name}/{sbom_prefix}/')
+                  except Exception as e:
+                      print(f'WARNING: GCS upload failed: {e}')
+                      print('Scan completed but evidence upload failed.')
+
+                  # ── Forward critical/high CVEs to Wazuh via syslog ────────
+                  syslog_host = os.environ.get('WAZUH_SYSLOG_HOST', '')
+                  if not syslog_host:
+                      print('WAZUH_SYSLOG_HOST not set, skipping syslog forwarding')
+                      sys.exit(0)
+
+                  fwd_count = 0
+                  try:
+                      import ssl as _ssl
+                      ctx = _ssl.create_default_context()
+                      ca_path = os.environ.get('WAZUH_SYSLOG_CA_PATH', '')
+                      if ca_path and os.path.isfile(ca_path):
+                          ctx.load_verify_locations(ca_path)
+                      else:
+                          print('WARNING: WAZUH_SYSLOG_CA_PATH not set or missing, TLS verification disabled')
+                          ctx.check_hostname = False
+                          ctx.verify_mode = _ssl.CERT_NONE
+                      raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                      raw_sock.settimeout(10)
+                      sock = ctx.wrap_socket(raw_sock, server_hostname=syslog_host)
+                      sock.connect((syslog_host, 1516))
+                      for v in all_vulns:
+                          if v['Severity'] in ('critical', 'high'):
+                              ts = time.strftime('%b %d %H:%M:%S')
+                              msg = '<134>{} {} grype: {}\n'.format(
+                                  ts, cluster, json.dumps(v, separators=(',', ':'))
+                              )
+                              sock.sendall(msg.encode())
+                              fwd_count += 1
+                      sock.close()
+                      print(f'Forwarded {fwd_count} critical/high CVEs to Wazuh at {syslog_host}:1516 (TLS)')
+                  except Exception as e:
+                      print(f'WARNING: Syslog forwarding failed: {e}')
+                      print('Scan and GCS upload succeeded; syslog is best-effort.')
+                  PYEOF
+          volumes:
+            - name: syslog-ca
+              secret:
+                secretName: wazuh-syslog-ca
+                optional: true
