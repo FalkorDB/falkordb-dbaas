@@ -34,7 +34,7 @@ export default function Page() {
 
 
   useEffect(() => {
-    const session = Cookie.get("token");
+    const session = Cookie.get("omnistrate_token") || Cookie.get("token");
     try {
       if (session && jwtDecode(session)) {
         window.location.replace(process.env.NEXT_PUBLIC_GRAFANA_URL ?? window.location.origin + "/grafana");
