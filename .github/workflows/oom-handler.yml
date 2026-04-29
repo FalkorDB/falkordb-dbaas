@@ -175,16 +175,16 @@ jobs:
       - name: Set environment variables
         env:
           ENVIRONMENT: ${{ inputs.environment }}
-          VMAUTH_METRICS_PASS_DEV: ${{ secrets.VMAUTH_METRICS_PASSWORD_DEV }}
-          VMAUTH_METRICS_PASS_PROD: ${{ secrets.VMAUTH_METRICS_PASSWORD_PROD }}
+          VMMETRICS_PASS_DEV: ${{ secrets.VMMETRICS_PASSWORD_DEV }}
+          VMMETRICS_PASS_PROD: ${{ secrets.VMMETRICS_PASSWORD_PROD }}
           VMAUTH_PASS_DEV: ${{ secrets.VMAUTH_PASSWORD_DEV }}
           VMAUTH_PASS_PROD: ${{ secrets.VMAUTH_PASSWORD_PROD }}
         run: |
           if [ "$ENVIRONMENT" = "dev" ]; then
-            echo "VMAUTH_METRICS_PASSWORD=$VMAUTH_METRICS_PASS_DEV" >> $GITHUB_ENV
+            echo "VMAUTH_METRICS_PASSWORD=$VMMETRICS_PASS_DEV" >> $GITHUB_ENV
             echo "VMAUTH_PASSWORD=$VMAUTH_PASS_DEV" >> $GITHUB_ENV
           else
-            echo "VMAUTH_METRICS_PASSWORD=$VMAUTH_METRICS_PASS_PROD" >> $GITHUB_ENV
+            echo "VMAUTH_METRICS_PASSWORD=$VMMETRICS_PASS_PROD" >> $GITHUB_ENV
             echo "VMAUTH_PASSWORD=$VMAUTH_PASS_PROD" >> $GITHUB_ENV
           fi
 
@@ -194,7 +194,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
           GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL_PRODUCTION_CHAT }}
           VMAUTH_URL: ${{ inputs.vmauth_url }}
-          VMAUTH_METRICS_USERNAME: ${{ vars.VMAUTH_METRICS_USERNAME }}
+          VMAUTH_METRICS_USERNAME: ${{ vars.VMMETRICS_USERNAME }}
           VMAUTH_METRICS_PASSWORD: ${{ env.VMAUTH_METRICS_PASSWORD }}
           VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
           VMAUTH_PASSWORD: ${{ env.VMAUTH_PASSWORD }}

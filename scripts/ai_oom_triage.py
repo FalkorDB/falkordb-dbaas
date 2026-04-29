@@ -304,12 +304,15 @@ def _send_report_to_chat(
 
     masked_email = _mask_email(customer_email)
 
+    # Short confidence for subtitle (e.g. "High" from "High — detailed explanation")
+    confidence_short = confidence.split("—")[0].split("-")[0].strip() if confidence else "Unknown"
+
     payload = {
         "text": f"🤖 OOM Triage Complete — {pod} ({namespace}) <users/116170488112818253188> <users/115942454099354054771>",
         "cards": [{
             "header": {
                 "title": f"🤖 OOM Triage: {category}",
-                "subtitle": f"{masked_email} — {confidence}",
+                "subtitle": f"{masked_email} — {confidence_short}",
             },
             "sections": [
                 {
@@ -361,9 +364,34 @@ def _send_report_to_chat(
     }
 
     try:
-        response = requests.post(webhook_url, json=payload, timeout=30, verify=verify_ssl)
+        # Send the card summary
+        response = requests.post(
+            webhook_url + "&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD",
+            json=payload,
+            timeout=30,
+            verify=verify_ssl,
+        )
         response.raise_for_status()
-        print("AI triage report sent to Google Chat.")
+        print("AI triage card sent to Google Chat.")
+
+        # Send full report as a threaded reply
+        resp_data = response.json()
+        thread_name = resp_data.get("thread", {}).get("name", "")
+        if thread_name:
+            thread_payload = {
+                "text": f"```\n{report}\n```",
+                "thread": {"name": thread_name},
+            }
+            thread_resp = requests.post(
+                webhook_url + "&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD",
+                json=thread_payload,
+                timeout=30,
+                verify=verify_ssl,
+            )
+            thread_resp.raise_for_status()
+            print("Full triage report sent as thread reply.")
+        else:
+            print("⚠️  Could not get thread name — full report not threaded.", file=sys.stderr)
     except requests.RequestException as e:
         print(f"⚠️  Failed to send AI triage report to Google Chat: {e}", file=sys.stderr)
 
