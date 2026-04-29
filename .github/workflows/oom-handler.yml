@@ -128,6 +128,7 @@ jobs:
     needs: [analyze-oom, upload-rdb]
     if: ${{ always() && needs.analyze-oom.outputs.customer_name != '' }}
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
       - name: Check authorised actor
         env:
@@ -160,6 +161,13 @@ jobs:
         run: |
           npm install -g @github/copilot
           pip install github-copilot-sdk requests pydantic google-cloud-storage
+
+      - name: Authenticate to GCP
+        if: ${{ startsWith(needs.upload-rdb.outputs.rdb_url || '', 'gs://') || startsWith(needs.upload-rdb.outputs.aof_url || '', 'gs://') }}
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCS_SA_EMAIL }}
 
       - name: Set environment variables
         env:
