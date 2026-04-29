@@ -581,22 +581,26 @@ class CrashAnalyzer:
             
             if is_argv and not line.rstrip().endswith("\"'"):
                 # Incomplete argv entry — merge continuation lines until closing "' or next entry
+                chunks = [line]
                 while i < len(lines_to_search):
                     next_line = lines_to_search[i]
                     if new_entry_re.match(next_line):
                         break
-                    line += next_line
+                    chunks.append(next_line)
                     i += 1
-                    if line.rstrip().endswith("\"'"):
+                    if next_line.rstrip().endswith("\"'"):
                         break
+                line = ''.join(chunks)
             elif is_graph_cmd:
                 # graph_command may also be split — merge non-structured continuations
+                chunks = [line]
                 while i < len(lines_to_search):
                     next_line = lines_to_search[i]
                     if new_entry_re.match(next_line):
                         break
-                    line += next_line
+                    chunks.append(next_line)
                     i += 1
+                line = ''.join(chunks)
             
             reassembled.append(line)
         lines_to_search = reassembled
@@ -674,6 +678,16 @@ class GitHubIssueManager:
     
     # GitHub label name maximum length
     MAX_LABEL_LENGTH = 50
+    # Maximum length for client command displayed in issue body/comments.
+    # Full command is preserved in CrashSummary for AI triage analysis.
+    MAX_DISPLAY_COMMAND_LENGTH = 2000
+    
+    @staticmethod
+    def _truncate_command(command: str, max_len: int = 2000) -> str:
+        """Truncate a client command for display in issue body/comments."""
+        if not command or len(command) <= max_len:
+            return command
+        return command[:max_len] + '… (truncated)'
     
     def __init__(self, token: str, repo: str, project_id: Optional[str] = None):
         self.token = token
@@ -976,7 +990,7 @@ class GitHubIssueManager:
 {stack_trace_section}
 **Exit Code:** {crash.exit_code}
 **Memory RSS:** {crash.memory_rss} bytes
-**Client Command:** {crash.client_command}
+**Client Command:** {self._truncate_command(crash.client_command, self.MAX_DISPLAY_COMMAND_LENGTH)}
 
 **Crash Logs:** [View in Grafana]({log_url})"""
         
@@ -1044,7 +1058,7 @@ class GitHubIssueManager:
 {stack_trace_section}
 **Exit Code:** {crash.exit_code}
 **Memory RSS:** {crash.memory_rss} bytes
-**Client Command:** {crash.client_command}
+**Client Command:** {self._truncate_command(crash.client_command, self.MAX_DISPLAY_COMMAND_LENGTH)}
 
 **Crash Logs:** [View in Grafana]({log_url})"""
         
