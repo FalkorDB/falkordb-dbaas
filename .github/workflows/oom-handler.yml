@@ -2,6 +2,7 @@ name: OOM Handler
 
 permissions:
   contents: read
+  id-token: write
 
 on:
   workflow_dispatch:
@@ -24,6 +25,10 @@ on:
         type: string
       grafana_url:
         description: 'Grafana base URL'
+        required: true
+        type: string
+      vmauth_url:
+        description: 'VMAuth URL for metrics and log collection'
         required: true
         type: string
       environment:
@@ -49,6 +54,14 @@ jobs:
   analyze-oom:
     runs-on: ubuntu-latest
     if: ${{ inputs.environment != 'dev' || inputs.test }}
+    outputs:
+      namespace: ${{ steps.run_handler.outputs.namespace }}
+      pod: ${{ steps.run_handler.outputs.pod }}
+      cluster: ${{ steps.run_handler.outputs.cluster }}
+      container: ${{ steps.run_handler.outputs.container }}
+      customer_name: ${{ steps.run_handler.outputs.customer_name }}
+      customer_email: ${{ steps.run_handler.outputs.customer_email }}
+      subscription_id: ${{ steps.run_handler.outputs.subscription_id }}
 
     steps:
       - name: Checkout repository
@@ -76,6 +89,7 @@ jobs:
           fi
 
       - name: Run OOM handler
+        id: run_handler
         env:
           ENVIRONMENT: ${{ inputs.environment }}
           OMNISTRATE_API_URL: "https://api.omnistrate.cloud/2022-09-01-00/"
@@ -96,3 +110,106 @@ jobs:
             --cluster "$CLUSTER" \
             --container "$CONTAINER" \
             --grafana-url "$GRAFANA_URL"
+
+  upload-rdb:
+    needs: analyze-oom
+    if: ${{ needs.analyze-oom.outputs.customer_name != '' }}
+    uses: ./.github/workflows/rdb-uploader.yml
+    secrets: inherit
+    with:
+      pod: ${{ needs.analyze-oom.outputs.pod }}
+      namespace: ${{ needs.analyze-oom.outputs.namespace }}
+      container: ${{ inputs.container }}
+      cluster: ${{ needs.analyze-oom.outputs.cluster }}
+      environment: ${{ inputs.environment }}
+
+  ai-oom-triage:
+    needs: [analyze-oom, upload-rdb]
+    if: ${{ always() && needs.analyze-oom.outputs.customer_name != '' }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Check authorised actor
+        env:
+          ACTOR: ${{ github.actor }}
+        run: |
+          ALLOWED_USERS=("swilly22" "MuhammadQadora" "dudizimber" "AviAvni" "barakb")
+          for user in "${ALLOWED_USERS[@]}"; do
+            if [[ "$ACTOR" == "$user" ]]; then
+              echo "Actor '$ACTOR' is authorised. Proceeding."
+              exit 0
+            fi
+          done
+          echo "Actor '$ACTOR' is not authorised to run this workflow."
+          exit 1
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d # v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Copilot CLI and Python deps
+        run: |
+          npm install -g @github/copilot
+          pip install github-copilot-sdk requests pydantic google-cloud-storage
+
+      - name: Authenticate to GCP
+        if: ${{ startsWith(needs.upload-rdb.outputs.rdb_url || '', 'gs://') || startsWith(needs.upload-rdb.outputs.aof_url || '', 'gs://') }}
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCS_SA_EMAIL }}
+
+      - name: Set environment variables
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          VMMETRICS_PASS_DEV: ${{ secrets.VMMETRICS_PASSWORD_DEV }}
+          VMMETRICS_PASS_PROD: ${{ secrets.VMMETRICS_PASSWORD_PROD }}
+          VMAUTH_PASS_DEV: ${{ secrets.VMAUTH_PASSWORD_DEV }}
+          VMAUTH_PASS_PROD: ${{ secrets.VMAUTH_PASSWORD_PROD }}
+        run: |
+          if [ "$ENVIRONMENT" = "dev" ]; then
+            echo "VMAUTH_METRICS_PASSWORD=$VMMETRICS_PASS_DEV" >> $GITHUB_ENV
+            echo "VMAUTH_PASSWORD=$VMAUTH_PASS_DEV" >> $GITHUB_ENV
+          else
+            echo "VMAUTH_METRICS_PASSWORD=$VMMETRICS_PASS_PROD" >> $GITHUB_ENV
+            echo "VMAUTH_PASSWORD=$VMAUTH_PASS_PROD" >> $GITHUB_ENV
+          fi
+
+      - name: Run AI OOM triage
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GOOGLE_CHAT_WEBHOOK_URL: ${{ secrets.GOOGLE_CHAT_WEBHOOK_URL_PRODUCTION_CHAT }}
+          VMAUTH_URL: ${{ inputs.vmauth_url }}
+          VMAUTH_METRICS_USERNAME: ${{ vars.VMMETRICS_USERNAME }}
+          VMAUTH_METRICS_PASSWORD: ${{ env.VMAUTH_METRICS_PASSWORD }}
+          VMAUTH_USERNAME: ${{ vars.VMAUTH_USERNAME }}
+          VMAUTH_PASSWORD: ${{ env.VMAUTH_PASSWORD }}
+          CUSTOMER_NAME: ${{ needs.analyze-oom.outputs.customer_name }}
+          CUSTOMER_EMAIL: ${{ needs.analyze-oom.outputs.customer_email }}
+          SUBSCRIPTION_ID: ${{ needs.analyze-oom.outputs.subscription_id }}
+        run: |
+          echo "::add-mask::$CUSTOMER_EMAIL"
+          cd scripts
+          python ai_oom_triage.py \
+            --pod "${{ needs.analyze-oom.outputs.pod }}" \
+            --namespace "${{ needs.analyze-oom.outputs.namespace }}" \
+            --cluster "${{ needs.analyze-oom.outputs.cluster }}" \
+            --container "${{ inputs.container }}" \
+            --vmauth-url "$VMAUTH_URL" \
+            --grafana-url "${{ inputs.grafana_url }}" \
+            --customer-name "$CUSTOMER_NAME" \
+            --customer-email "$CUSTOMER_EMAIL" \
+            --subscription-id "$SUBSCRIPTION_ID" \
+            ${{ needs.upload-rdb.outputs.rdb_url != '' && format('--rdb-url "{0}"', needs.upload-rdb.outputs.rdb_url) || '' }} \
+            ${{ needs.upload-rdb.outputs.aof_url != '' && format('--aof-url "{0}"', needs.upload-rdb.outputs.aof_url) || '' }} \
+            ${{ needs.upload-rdb.outputs.falkordb_version != '' && format('--falkordb-version "{0}"', needs.upload-rdb.outputs.falkordb_version) || '' }}

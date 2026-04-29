@@ -438,6 +438,24 @@ def main(args):
     )
     print("   Notification sent.")
 
+    # Write outputs for downstream GitHub Actions jobs (AI triage pipeline)
+    # Use <<EOF delimiter syntax to safely handle special characters in values
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output:
+        import uuid
+        delimiter = f"ghadelimiter_{uuid.uuid4().hex}"
+        with open(github_output, "a") as f:
+            for key, val in [
+                ("namespace", args.namespace),
+                ("pod", args.pod),
+                ("cluster", args.cluster),
+                ("container", args.container),
+                ("customer_name", customer.name),
+                ("customer_email", customer.email),
+                ("subscription_id", customer.subscription_id),
+            ]:
+                f.write(f"{key}<<{delimiter}\n{val}\n{delimiter}\n")
+
     print(f"\n{'='*60}")
     print("✅ OOM handling complete!")
     print(f"{'='*60}")
