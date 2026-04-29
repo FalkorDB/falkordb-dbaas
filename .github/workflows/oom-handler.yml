@@ -127,7 +127,6 @@ jobs:
     needs: [analyze-oom, upload-rdb]
     if: ${{ always() && needs.analyze-oom.outputs.customer_name != '' }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
     steps:
       - name: Check authorised actor
         env:
