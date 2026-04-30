@@ -42,6 +42,7 @@ from copilot import CopilotClient, SubprocessConfig
 from copilot.session import PermissionHandler
 
 from oom_triage_tools import ALL_TOOLS, cleanup
+from oom_handler import CHAT_MENTIONS
 
 _EMAIL_RE = re.compile(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
 
@@ -53,39 +54,54 @@ You are a senior FalkorDB/Redis operations engineer investigating a ContainerOOM
 Determine WHY this pod ran out of memory and classify the root cause. You have access \
 to the same metrics, logs, and tools a human engineer uses.
 
-## Key Principle
-The diagnosis depends on CONTEXT. A large query that causes OOM when the database is at \
-50% memory is a genuine problem query. The same query at 90% memory just reveals that \
-the real issue is insufficient memory — the query is not the root cause. Always consider \
-the memory utilization at the time of the event.
+## Key Principles
+
+1. **RSS is ground truth.** The OOM killer looks at container_memory_rss, NOT \
+redis_memory_used_bytes. Always prioritize RSS when analyzing the OOM event. \
+The redis_exporter may have scrape gaps during high CPU, but container_memory_rss \
+(scraped by cadvisor/node-exporter) is always available.
+
+2. **Do NOT assume replication unless explicitly told.** The topology (standalone vs \
+replicated) is provided in the context. If the instance is standalone, there is NO \
+primary/replica relationship — do not mention replication, syncing, or resync in your \
+analysis. If the pod restarts on a standalone instance, it recovers from its own \
+RDB/AOF on disk.
+
+3. **Context determines diagnosis.** A large query that causes OOM when the database \
+is at 50% memory is a genuine problem query. The same query at 90% memory just reveals \
+that the real issue is insufficient memory — the query is not the root cause.
 
 ## Workflow — Follow These Steps In Order
 
 ### Step 1: Long-Term Memory Trend (7-day view)
 Query these metrics over the **past 7 days** (step="1h") to understand the growth pattern:
-- `redis_memory_used_bytes{namespace="NAMESPACE", pod="POD", container="service"}`
-- `redis_memory_max_bytes{namespace="NAMESPACE", pod="POD", container="service"}`
+- `redis_memory_used_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"}` (may have gaps during high CPU)
+- `redis_memory_max_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"}`
+- `container_memory_rss{namespace="NAMESPACE", pod="POD", container="CONTAINER"}` (always available, ground truth)
 
 Determine:
 - Is memory steadily growing day over day? (legitimate growth)
 - Has it been flat and then spiked recently? (event-triggered)
 - What percentage of maxmemory was in use 7 days ago vs now?
+- What was RSS 7 days ago vs at OOM? (RSS includes fork CoW, fragmentation, module overhead)
 
 ### Step 2: Short-Term Memory Analysis (60-minute view)
 Query these metrics over the **past 60 minutes** (step="15s") to see the immediate event:
-- `redis_memory_used_bytes{namespace="NAMESPACE", pod="POD", container="service"}`
-- `container_memory_rss{namespace="NAMESPACE", pod="POD"}`
-- `container_memory_working_set_bytes{namespace="NAMESPACE", pod="POD"}`
-- `redis_memory_max_bytes{namespace="NAMESPACE", pod="POD", container="service"}`
+- `redis_memory_used_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"}`
+- `container_memory_rss{namespace="NAMESPACE", pod="POD", container="CONTAINER"}` ← PRIMARY signal for OOM
+- `container_memory_working_set_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"}`
+- `redis_memory_max_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"}`
 
 Determine:
-- Was there a sudden spike right before the OOM?
+- Was there a sudden RSS spike right before the OOM?
 - How much did RSS exceed the container limit?
-- Is RSS significantly higher than redis_memory_used_bytes? (fragmentation)
+- Is RSS significantly higher than redis_memory_used_bytes? (fragmentation / fork CoW)
+- Are there gaps in redis_memory_used_bytes where RSS still has data? (exporter scrape failures during high CPU)
 
 ### Step 3: Memory Utilization at OOM Time
-Calculate the utilization ratio just before the OOM:
-- `redis_memory_used_bytes / redis_memory_max_bytes * 100`
+Calculate the utilization ratio just before the OOM using BOTH:
+- `redis_memory_used_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"} / redis_memory_max_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"} * 100` (if available)
+- `container_memory_rss{namespace="NAMESPACE", pod="POD", container="CONTAINER"} / on(namespace,pod,container) kube_pod_container_resource_limits{namespace="NAMESPACE", pod="POD", container="CONTAINER", resource="memory"} * 100` (ground truth)
 
 This is CRITICAL for diagnosis:
 - **< 70%**: Something caused a massive spike — likely a huge query or bulk operation
@@ -95,9 +111,9 @@ The real issue is insufficient memory, not the specific query.
 
 ### Step 4: Command Rate & Latency Analysis
 Query over the **past 60 minutes** (step="15s"):
-- `rate(redis_commands_total{namespace="NAMESPACE", pod="POD", container="service"}[5m])`
-- `rate(redis_commands_duration_seconds_total{namespace="NAMESPACE", pod="POD", container="service"}[5m])`
-- `redis_connected_clients{namespace="NAMESPACE", pod="POD", container="service"}`
+- `rate(redis_commands_total{namespace="NAMESPACE", pod="POD", container="CONTAINER"}[5m])`
+- `rate(redis_commands_duration_seconds_total{namespace="NAMESPACE", pod="POD", container="CONTAINER"}[5m])`
+- `redis_connected_clients{namespace="NAMESPACE", pod="POD", container="CONTAINER"}`
 
 Look for:
 - Spike in command rate (bulk import / many concurrent queries)
@@ -106,10 +122,10 @@ Look for:
 
 ### Step 5: Network I/O Analysis
 Query over the **past 60 minutes** (step="15s"):
-- `rate(redis_net_input_bytes_total{namespace="NAMESPACE", pod="POD", container="service"}[5m])`
-- `rate(redis_net_output_bytes_total{namespace="NAMESPACE", pod="POD", container="service"}[5m])`
+- `rate(redis_net_input_bytes_total{namespace="NAMESPACE", pod="POD", container="CONTAINER"}[5m])`
+- `rate(redis_net_output_bytes_total{namespace="NAMESPACE", pod="POD", container="CONTAINER"}[5m])`
 
-A spike in input bytes can indicate bulk data ingestion.
+A spike in input bytes can indicate bulk data ingestion. Report the PEAK value, not just the average.
 
 ### Step 6: Log Analysis
 Use `fetch_logs` to get the last 30 minutes of logs. Look for:
@@ -131,6 +147,24 @@ If RDB or AOF URLs are provided:
 `GRAPH.QUERY <name> "CALL db.relationshipTypes()"` to understand the schema
   - `CONFIG GET maxmemory` — configured memory limit
 
+## Common OOM Patterns
+
+### Consecutive OOMs on Standalone Instance
+When a standalone instance OOMs repeatedly in short succession, the pattern is:
+1. Pod starts → loads data from RDB/AOF on disk
+2. Memory grows as dataset is restored
+3. Background save (BGSAVE or AOF rewrite) triggers fork()
+4. Copy-on-Write (CoW) pages accumulate during fork, pushing RSS past limit
+5. OOM killer terminates the container → restart → repeat from step 1
+
+This is NOT caused by replication resync. The fix is more memory headroom.
+
+### Fork + Copy-on-Write
+BGSAVE and AOF rewrite fork the Redis process. The child initially shares pages, \
+but as the parent modifies pages during writes, CoW duplicates them. Peak RSS can \
+reach up to 2x used_memory during active writes + fork. This is the most common \
+hidden cause of OOMs when redis_memory_used_bytes shows plenty of headroom.
+
 ### Step 8: Produce Diagnosis
 After completing your analysis, output EXACTLY this structured report:
 
@@ -139,17 +173,19 @@ After completing your analysis, output EXACTLY this structured report:
 
 ### Memory Timeline
 - **7-day trend:** [Steady growth / Flat / Recent spike / etc.]
-- **Memory 7 days ago:** [X MB / X% of maxmemory]
-- **Memory at OOM:** [X MB / X% of maxmemory]
+- **Memory (used_bytes) 7 days ago:** [X MB / X% of maxmemory]
+- **Memory (used_bytes) at OOM:** [X MB / X% of maxmemory]
+- **Container RSS at OOM:** [X MB] ← this is what the OOM killer saw
+- **Container memory limit:** [X MB]
+- **RSS / limit ratio:** [X%]
 - **Maxmemory config:** [X MB]
-- **Container RSS at OOM:** [X MB]
-- **Fragmentation ratio:** [RSS / used_bytes, if significantly > 1.0 note it]
+- **Fragmentation ratio:** [RSS / used_bytes \u2014 if > 1.5 highlight CoW or fragmentation]
 
 ### Command Activity
-- **Command rate before OOM:** [X ops/sec — normal / elevated / spike]
-- **Command latency before OOM:** [X ms avg — normal / elevated / spike]
-- **Connected clients:** [X — normal / elevated / spike]
-- **Network I/O:** [normal / spike in input (bulk ingestion) / spike in output]
+- **Command rate before OOM:** [X ops/sec \u2014 normal / elevated / spike]
+- **Command latency before OOM:** [X ms avg \u2014 normal / elevated / spike]
+- **Connected clients:** [X \u2014 normal / elevated / spike]
+- **Network I/O (peak):** [X KB/s in / X KB/s out \u2014 note if spike correlates with OOM]
 
 ### Log Analysis
 [Summary of any relevant findings from logs — errors, large queries, \
@@ -183,9 +219,11 @@ Explain WHY you chose this category and why other categories don't fit.]
 - You are READ-ONLY on production systems. Only use local Docker for inspection.
 - Be concise but thorough. Evidence-based reasoning only.
 - If you cannot determine something, say so — don't guess.
+- **NEVER fabricate or assume replication/topology** — only state what the provided topology tells you.
 - Mask customer email addresses if they appear in logs.
 - Include actual metric values in your report, not just descriptions.
-- Replace NAMESPACE and POD placeholders in the PromQL queries with the actual values.
+- Replace NAMESPACE, POD, and CONTAINER placeholders in the PromQL queries with the actual values.
+- When reporting Network I/O, report the **peak** value observed, not just steady-state.
 """
 
 
@@ -216,6 +254,32 @@ def _scrub_report(text: str) -> str:
 
 def _build_initial_prompt(args) -> str:
     """Build the initial prompt with OOM context for the AI session."""
+    # Determine topology description
+    topology = args.topology if args.topology else "unknown"
+    if topology == "standalone":
+        topology_note = (
+            "This is a **standalone** instance (single node, NO replication). "
+            "If it OOMs and restarts, it recovers from its own RDB/AOF on disk. "
+            "Do NOT mention replication, primary/replica, or resync in your analysis."
+        )
+    elif topology == "replicated":
+        topology_note = (
+            "This is a **replicated** instance (primary + replica nodes). "
+            "Consider replication buffer memory and whether replica resync after "
+            "restart contributed to the OOM."
+        )
+    elif topology == "cluster":
+        topology_note = (
+            "This is a **cluster** instance (sharded, with replication). "
+            "Consider replication buffer memory, cluster bus overhead, and whether "
+            "replica resync after restart contributed to the OOM."
+        )
+    else:
+        topology_note = (
+            "Topology is unknown. Do NOT assume replication unless you find explicit "
+            "evidence (e.g., connected_slaves > 0 in INFO output)."
+        )
+
     prompt = f"""\
 A ContainerOOMKilled event has been detected. Please perform a full OOM triage.
 
@@ -225,6 +289,7 @@ A ContainerOOMKilled event has been detected. Please perform a full OOM triage.
 - Cluster: {args.cluster}
 - Container: {args.container}
 - Customer: {args.customer_name} ({_mask_email(args.customer_email)})
+- Topology: {topology}
 """
     if args.falkordb_version:
         prompt += f"- FalkorDB Version: {args.falkordb_version}\n"
@@ -236,6 +301,8 @@ A ContainerOOMKilled event has been detected. Please perform a full OOM triage.
         prompt += f"  AOF URL: {args.aof_url}\n"
 
     prompt += f"""
+**Topology Note:** {topology_note}
+
 When querying metrics, use these label selectors:
 - namespace="{args.namespace}"
 - pod="{args.pod}"
@@ -303,7 +370,7 @@ def _send_report_to_chat(
     category = html.escape(_extract_report_field(report, "Category") or "Unknown")
     confidence = html.escape(_extract_report_field(report, "Confidence") or "Unknown")
     seven_day_trend = html.escape(_extract_report_field(report, "7-day trend") or "N/A")
-    memory_at_oom = html.escape(_extract_report_field(report, "Memory at OOM") or "N/A")
+    memory_at_oom = html.escape(_extract_report_field(report, "Container RSS at OOM") or _extract_report_field(report, "Memory (used_bytes) at OOM") or "N/A")
     maxmemory = html.escape(_extract_report_field(report, "Maxmemory config") or "N/A")
     command_rate = html.escape(_extract_report_field(report, "Command rate before OOM") or "N/A")
 
@@ -325,7 +392,7 @@ def _send_report_to_chat(
     confidence_short = confidence.split("—")[0].split("-")[0].strip() if confidence else "Unknown"
 
     payload = {
-        "text": f"🤖 OOM Triage Complete — {pod} ({namespace}) <users/116170488112818253188> <users/115942454099354054771>",
+        "text": f"🤖 OOM Triage Complete — {pod} ({namespace}) {CHAT_MENTIONS}",
         "cards": [{
             "header": {
                 "title": f"🤖 OOM Triage: {category}",
@@ -483,6 +550,7 @@ def main():
     parser.add_argument("--aof-url", default="", help="GCS path for appendonlydir.tar.gz")
     parser.add_argument("--falkordb-version", default="", help="FalkorDB version")
     parser.add_argument("--alert-timestamp", default="", help="ISO timestamp of the OOM event (fallback: now)")
+    parser.add_argument("--topology", default="", choices=["", "standalone", "replicated", "cluster"], help="Instance topology: standalone, replicated, or cluster")
     args = parser.parse_args()
 
     # Pass vmauth-url to tools via env
