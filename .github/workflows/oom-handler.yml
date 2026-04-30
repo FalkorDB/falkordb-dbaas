@@ -52,7 +52,26 @@ jobs:
           echo "Environment is 'dev' — OOMKilled event noted."
           echo "Pod: ${{ inputs.pod }}, Namespace: ${{ inputs.namespace }}, Container: ${{ inputs.container }}"
 
+  check-authorised-actor:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.environment != 'dev' || inputs.test }}
+    steps:
+      - name: Check authorised actor
+        env:
+          ACTOR: ${{ github.actor }}
+        run: |
+          ALLOWED_USERS=("swilly22" "MuhammadQadora" "dudizimber" "AviAvni" "barakb")
+          for user in "${ALLOWED_USERS[@]}"; do
+            if [[ "$ACTOR" == "$user" ]]; then
+              echo "Actor '$ACTOR' is authorised. Proceeding."
+              exit 0
+            fi
+          done
+          echo "Actor '$ACTOR' is not authorised to run this workflow."
+          exit 1
+
   analyze-oom:
+    needs: check-authorised-actor
     runs-on: ubuntu-latest
     if: ${{ inputs.environment != 'dev' || inputs.test }}
     outputs:
@@ -113,7 +132,7 @@ jobs:
             --grafana-url "$GRAFANA_URL"
 
   upload-rdb:
-    needs: analyze-oom
+    needs: [analyze-oom, check-authorised-actor]
     if: ${{ needs.analyze-oom.outputs.customer_name != '' }}
     uses: ./.github/workflows/rdb-uploader.yml
     secrets: inherit
@@ -125,25 +144,11 @@ jobs:
       environment: ${{ inputs.environment }}
 
   ai-oom-triage:
-    needs: [analyze-oom, upload-rdb]
-    if: ${{ always() && needs.analyze-oom.outputs.customer_name != '' }}
+    needs: [analyze-oom, upload-rdb, check-authorised-actor]
+    if: ${{ always() && needs.analyze-oom.outputs.customer_name != '' && needs.check-authorised-actor.result == 'success' }}
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
-      - name: Check authorised actor
-        env:
-          ACTOR: ${{ github.actor }}
-        run: |
-          ALLOWED_USERS=("swilly22" "MuhammadQadora" "dudizimber" "AviAvni" "barakb")
-          for user in "${ALLOWED_USERS[@]}"; do
-            if [[ "$ACTOR" == "$user" ]]; then
-              echo "Actor '$ACTOR' is authorised. Proceeding."
-              exit 0
-            fi
-          done
-          echo "Actor '$ACTOR' is not authorised to run this workflow."
-          exit 1
-
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
