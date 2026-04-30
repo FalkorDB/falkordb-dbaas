@@ -42,6 +42,7 @@ from copilot import CopilotClient, SubprocessConfig
 from copilot.session import PermissionHandler
 
 from oom_triage_tools import ALL_TOOLS, cleanup
+from oom_handler import CHAT_MENTIONS
 
 _EMAIL_RE = re.compile(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+')
 
@@ -76,7 +77,7 @@ that the real issue is insufficient memory — the query is not the root cause.
 Query these metrics over the **past 7 days** (step="1h") to understand the growth pattern:
 - `redis_memory_used_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"}` (may have gaps during high CPU)
 - `redis_memory_max_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"}`
-- `container_memory_rss{namespace="NAMESPACE", pod="POD"}` (always available, ground truth)
+- `container_memory_rss{namespace="NAMESPACE", pod="POD", container="CONTAINER"}` (always available, ground truth)
 
 Determine:
 - Is memory steadily growing day over day? (legitimate growth)
@@ -87,8 +88,8 @@ Determine:
 ### Step 2: Short-Term Memory Analysis (60-minute view)
 Query these metrics over the **past 60 minutes** (step="15s") to see the immediate event:
 - `redis_memory_used_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"}`
-- `container_memory_rss{namespace="NAMESPACE", pod="POD"}` ← PRIMARY signal for OOM
-- `container_memory_working_set_bytes{namespace="NAMESPACE", pod="POD"}`
+- `container_memory_rss{namespace="NAMESPACE", pod="POD", container="CONTAINER"}` ← PRIMARY signal for OOM
+- `container_memory_working_set_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"}`
 - `redis_memory_max_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"}`
 
 Determine:
@@ -99,8 +100,8 @@ Determine:
 
 ### Step 3: Memory Utilization at OOM Time
 Calculate the utilization ratio just before the OOM using BOTH:
-- `redis_memory_used_bytes / redis_memory_max_bytes * 100` (if available)
-- `container_memory_rss / kube_pod_container_resource_limits{resource="memory"} * 100` (ground truth)
+- `redis_memory_used_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"} / redis_memory_max_bytes{namespace="NAMESPACE", pod="POD", container="CONTAINER"} * 100` (if available)
+- `container_memory_rss{namespace="NAMESPACE", pod="POD", container="CONTAINER"} / on(namespace,pod,container) kube_pod_container_resource_limits{namespace="NAMESPACE", pod="POD", container="CONTAINER", resource="memory"} * 100` (ground truth)
 
 This is CRITICAL for diagnosis:
 - **< 70%**: Something caused a massive spike — likely a huge query or bulk operation
@@ -172,8 +173,8 @@ After completing your analysis, output EXACTLY this structured report:
 
 ### Memory Timeline
 - **7-day trend:** [Steady growth / Flat / Recent spike / etc.]
-- **Memory (redis_memory_used_bytes) 7 days ago:** [X MB / X% of maxmemory]
-- **Memory (redis_memory_used_bytes) at OOM:** [X MB / X% of maxmemory]
+- **Memory (used_bytes) 7 days ago:** [X MB / X% of maxmemory]
+- **Memory (used_bytes) at OOM:** [X MB / X% of maxmemory]
 - **Container RSS at OOM:** [X MB] ← this is what the OOM killer saw
 - **Container memory limit:** [X MB]
 - **RSS / limit ratio:** [X%]
@@ -263,8 +264,15 @@ def _build_initial_prompt(args) -> str:
         )
     elif topology == "replicated":
         topology_note = (
-            "This is a **replicated** instance. Consider replication buffer memory "
-            "and whether replica resync after restart contributed to the OOM."
+            "This is a **replicated** instance (primary + replica nodes). "
+            "Consider replication buffer memory and whether replica resync after "
+            "restart contributed to the OOM."
+        )
+    elif topology == "cluster":
+        topology_note = (
+            "This is a **cluster** instance (sharded, with replication). "
+            "Consider replication buffer memory, cluster bus overhead, and whether "
+            "replica resync after restart contributed to the OOM."
         )
     else:
         topology_note = (
@@ -362,7 +370,7 @@ def _send_report_to_chat(
     category = html.escape(_extract_report_field(report, "Category") or "Unknown")
     confidence = html.escape(_extract_report_field(report, "Confidence") or "Unknown")
     seven_day_trend = html.escape(_extract_report_field(report, "7-day trend") or "N/A")
-    memory_at_oom = html.escape(_extract_report_field(report, "Memory at OOM") or "N/A")
+    memory_at_oom = html.escape(_extract_report_field(report, "Container RSS at OOM") or _extract_report_field(report, "Memory (used_bytes) at OOM") or "N/A")
     maxmemory = html.escape(_extract_report_field(report, "Maxmemory config") or "N/A")
     command_rate = html.escape(_extract_report_field(report, "Command rate before OOM") or "N/A")
 
@@ -384,7 +392,7 @@ def _send_report_to_chat(
     confidence_short = confidence.split("—")[0].split("-")[0].strip() if confidence else "Unknown"
 
     payload = {
-        "text": f"🤖 OOM Triage Complete — {pod} ({namespace}) <users/111622808083881015737> <users/117793002495590672566> <users/117131850958413609302>",
+        "text": f"🤖 OOM Triage Complete — {pod} ({namespace}) {CHAT_MENTIONS}",
         "cards": [{
             "header": {
                 "title": f"🤖 OOM Triage: {category}",
