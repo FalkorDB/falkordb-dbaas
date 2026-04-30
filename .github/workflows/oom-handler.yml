@@ -3,6 +3,7 @@ name: OOM Handler
 permissions:
   contents: read
   id-token: write
+  issues: write
 
 on:
   workflow_dispatch:
