@@ -207,18 +207,16 @@ jobs:
           echo "::add-mask::$CUSTOMER_EMAIL"
           cd scripts
           # Determine topology from pod name convention
-          # node-s-0 / node-f-0 = standalone
+          # node-s-* / node-f-* = standalone (free-tier or single-node)
           # node-sz-* / node-mz-* = replicated
           # cluster-sz-* / cluster-mz-* = cluster (replicated)
           POD_NAME="${{ needs.analyze-oom.outputs.pod }}"
-          if [[ "$POD_NAME" == "node-s-0" || "$POD_NAME" == "node-f-0" ]]; then
+          if [[ "$POD_NAME" == node-s-* || "$POD_NAME" == node-f-* ]]; then
             TOPOLOGY="standalone"
-          elif [[ "$POD_NAME" == node-sz-* || "$POD_NAME" == node-mz-* ]]; then
-            TOPOLOGY="replicated"
           elif [[ "$POD_NAME" == cluster-sz-* || "$POD_NAME" == cluster-mz-* ]]; then
             TOPOLOGY="cluster"
           else
-            TOPOLOGY="unknown"
+            TOPOLOGY="replicated"
           fi
           python ai_oom_triage.py \
             --pod "${{ needs.analyze-oom.outputs.pod }}" \
