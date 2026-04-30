@@ -550,7 +550,7 @@ def main():
     parser.add_argument("--aof-url", default="", help="GCS path for appendonlydir.tar.gz")
     parser.add_argument("--falkordb-version", default="", help="FalkorDB version")
     parser.add_argument("--alert-timestamp", default="", help="ISO timestamp of the OOM event (fallback: now)")
-    parser.add_argument("--topology", default="", help="Instance topology: standalone or replicated")
+    parser.add_argument("--topology", default="", choices=["", "standalone", "replicated", "cluster"], help="Instance topology: standalone, replicated, or cluster")
     args = parser.parse_args()
 
     # Pass vmauth-url to tools via env

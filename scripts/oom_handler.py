@@ -163,8 +163,8 @@ class OmnistrateClient:
 # Google Chat notifier
 # ---------------------------------------------------------------------------
 
-# Centralized mention list for OOM notifications (Google Chat user IDs)
-CHAT_MENTIONS = (
+# Centralized mention string appended to OOM notifications (Google Chat user IDs)
+CHAT_MENTIONS: str = (
     "<users/111622808083881015737> "  # Muhammad
     "<users/117793002495590672566> "  # David
     "<users/117131850958413609302>"   # Barak
