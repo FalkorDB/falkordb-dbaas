@@ -206,6 +206,13 @@ jobs:
         run: |
           echo "::add-mask::$CUSTOMER_EMAIL"
           cd scripts
+          # Determine topology from pod name convention
+          POD_NAME="${{ needs.analyze-oom.outputs.pod }}"
+          if [[ "$POD_NAME" == node-s-* ]]; then
+            TOPOLOGY="standalone"
+          else
+            TOPOLOGY="replicated"
+          fi
           python ai_oom_triage.py \
             --pod "${{ needs.analyze-oom.outputs.pod }}" \
             --namespace "${{ needs.analyze-oom.outputs.namespace }}" \
@@ -216,6 +223,7 @@ jobs:
             --customer-name "$CUSTOMER_NAME" \
             --customer-email "$CUSTOMER_EMAIL" \
             --subscription-id "$SUBSCRIPTION_ID" \
+            --topology "$TOPOLOGY" \
             ${{ needs.upload-rdb.outputs.rdb_url != '' && format('--rdb-url "{0}"', needs.upload-rdb.outputs.rdb_url) || '' }} \
             ${{ needs.upload-rdb.outputs.aof_url != '' && format('--aof-url "{0}"', needs.upload-rdb.outputs.aof_url) || '' }} \
             ${{ needs.upload-rdb.outputs.falkordb_version != '' && format('--falkordb-version "{0}"', needs.upload-rdb.outputs.falkordb_version) || '' }}

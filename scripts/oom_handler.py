@@ -181,7 +181,7 @@ class GoogleChatNotifier:
         timestamp: str,
     ):
         payload = {
-            "text": f"🚨 ContainerOOMKilled — {pod} ({namespace})",
+            "text": f"🚨 ContainerOOMKilled — {pod} ({namespace}) <users/111622808083881015737> <users/117793002495590672566> <users/117131850958413609302>",
             "cards": [{
                 "header": {
                     "title": "🚨 ContainerOOMKilled",
@@ -232,7 +232,7 @@ class GoogleChatNotifier:
                                            cluster: str, container: str,
                                            timestamp: str):
         payload = {
-            "text": f"🚨 ContainerOOMKilled (non-FalkorDB) — {pod} ({namespace})",
+            "text": f"🚨 ContainerOOMKilled (non-FalkorDB) — {pod} ({namespace}) <users/111622808083881015737> <users/117793002495590672566> <users/117131850958413609302>",
             "cards": [{
                 "header": {
                     "title": "🚨 ContainerOOMKilled (non-FalkorDB workload)",
@@ -261,7 +261,7 @@ class GoogleChatNotifier:
                                 namespace: str, cluster: str,
                                 error_details: Optional[str] = None):
         payload = {
-            "text": "❌ OOM Handler Failed",
+            "text": "❌ OOM Handler Failed <users/111622808083881015737> <users/117793002495590672566> <users/117131850958413609302>",
             "cards": [{
                 "header": {
                     "title": "❌ OOM Handler Failed",
