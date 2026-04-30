@@ -451,7 +451,7 @@ def main(args):
                 ("cluster", args.cluster),
                 ("container", args.container),
                 ("customer_name", customer.name),
-                ("customer_email", customer.email),
+                ("customer_email", mask_email(customer.email)),
                 ("subscription_id", customer.subscription_id),
             ]:
                 f.write(f"{key}<<{delimiter}\n{val}\n{delimiter}\n")

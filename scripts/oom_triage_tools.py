@@ -8,6 +8,7 @@ uses when investigating a ContainerOOMKilled event:
   - RDB/AOF dumps and local FalkorDB instance for database inspection
 """
 
+import math
 import os
 import re
 import json
@@ -15,6 +16,7 @@ import shlex
 import subprocess
 import tarfile
 import tempfile
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -45,7 +47,14 @@ def _download_gcs_or_url(url: str, dest: str) -> Optional[str]:
     """Download a file from a gs:// path (using ADC) or HTTPS URL.
 
     Returns an error string on failure, or None on success.
+    Only allows gs:// paths or HTTPS URLs from known GCS signed-URL hosts.
     """
+    # Allowed HTTPS hosts for signed download URLs
+    _ALLOWED_HTTPS_HOSTS = {
+        "storage.googleapis.com",
+        "storage.cloud.google.com",
+    }
+
     try:
         if url.startswith("gs://"):
             without_scheme = url[len("gs://"):]
@@ -53,12 +62,18 @@ def _download_gcs_or_url(url: str, dest: str) -> Optional[str]:
             client = gcs_storage.Client()
             bucket = client.bucket(bucket_name)
             bucket.blob(blob_name).download_to_filename(dest)
-        else:
+        elif url.startswith("https://"):
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            if parsed.hostname not in _ALLOWED_HTTPS_HOSTS:
+                return f"ERROR: Host '{parsed.hostname}' is not in the allowed download hosts whitelist."
             with requests.get(url, timeout=300, stream=True) as resp:
                 resp.raise_for_status()
                 with open(dest, "wb") as f:
                     for chunk in resp.iter_content(chunk_size=8 * 1024 * 1024):
                         f.write(chunk)
+        else:
+            return f"ERROR: Unsupported URL scheme. Only gs:// and https:// from allowed hosts are supported."
     except Exception as exc:
         return f"ERROR: Failed to download {url}: {exc}"
     return None
@@ -193,7 +208,9 @@ async def query_metrics(params: QueryMetricsParams) -> str:
         numeric_values = []
         for ts, val in values:
             try:
-                numeric_values.append(float(val))
+                v = float(val)
+                if math.isfinite(v):
+                    numeric_values.append(v)
             except (ValueError, TypeError):
                 pass
 
@@ -307,6 +324,9 @@ async def fetch_logs(params: FetchLogsParams) -> str:
 
     full_log = "\n".join(cleaned)
 
+    # Scrub emails from logs to avoid PII leaking into AI context / Actions logs
+    full_log = _EMAIL_RE.sub(lambda m: m.group(0)[0] + "****@" + m.group(0).split("@")[1], full_log)
+
     # Cap output to prevent overwhelming LLM context
     MAX_LOG_BYTES = 100_000
     if len(full_log) > MAX_LOG_BYTES:
@@ -340,6 +360,10 @@ async def run_falkordb_local(params: RunFalkorDBLocalParams) -> str:
 
     if _local_container_id:
         subprocess.run(["docker", "rm", "-f", _local_container_id], capture_output=True)
+        _local_container_id = None
+
+    # Remove any leftover container with the same name to avoid conflicts
+    subprocess.run(["docker", "rm", "-f", "falkordb-oom-triage"], capture_output=True)
 
     _work_dir = tempfile.mkdtemp(prefix="falkordb_oom_triage_")
     data_dir = os.path.join(_work_dir, "data")
@@ -376,8 +400,30 @@ async def run_falkordb_local(params: RunFalkorDBLocalParams) -> str:
         return f"ERROR: Docker run failed: {result.stderr}"
 
     _local_container_id = result.stdout.strip()
+
+    # Wait for Redis to be ready (bounded readiness loop)
+    ready = False
+    for _ in range(30):
+        ping = subprocess.run(
+            ["redis-cli", "-p", "6399", "PING"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if ping.returncode == 0 and "PONG" in ping.stdout:
+            ready = True
+            break
+        time.sleep(1)
+
+    if not ready:
+        return (
+            f"WARNING: Container started but Redis not ready after 30s.\n"
+            f"Container: {_local_container_id[:12]}\n"
+            f"Image: {image}\n"
+            f"Port: 6399\n"
+            f"The container may still be loading a large RDB/AOF. Retry execute_query shortly."
+        )
+
     return (
-        f"FalkorDB container started.\n"
+        f"FalkorDB container started and ready.\n"
         f"Container: {_local_container_id[:12]}\n"
         f"Image: {image}\n"
         f"Port: 6399\n"

@@ -201,6 +201,19 @@ def _mask_email(email: str) -> str:
     return f"{masked_local}@{domain}"
 
 
+# Regex to detect GCS signed URLs (contain X-Goog-Signature or Signature query params)
+_SIGNED_URL_RE = re.compile(
+    r'https://storage\.googleapis\.com/[^\s"\'<>]+(?:X-Goog-Signature|Signature)=[^\s"\'<>]+'
+)
+
+
+def _scrub_report(text: str) -> str:
+    """Scrub PII and sensitive content from a report before logging/sending."""
+    text = _EMAIL_RE.sub(lambda m: _mask_email(m.group(0)), text)
+    text = _SIGNED_URL_RE.sub("[SIGNED-URL-REDACTED]", text)
+    return text
+
+
 def _build_initial_prompt(args) -> str:
     """Build the initial prompt with OOM context for the AI session."""
     prompt = f"""\
@@ -226,7 +239,7 @@ A ContainerOOMKilled event has been detected. Please perform a full OOM triage.
 When querying metrics, use these label selectors:
 - namespace="{args.namespace}"
 - pod="{args.pod}"
-- container="service" (for Redis metrics)
+- container="{args.container}" (for Redis metrics)
 
 Start with Step 1: query the 7-day memory trend, then proceed through all steps.
 """
@@ -287,12 +300,12 @@ def _send_report_to_chat(
     """Send the AI triage report as a Google Chat card."""
 
     # Extract key fields from the report
-    category = _extract_report_field(report, "Category") or "Unknown"
-    confidence = _extract_report_field(report, "Confidence") or "Unknown"
-    seven_day_trend = _extract_report_field(report, "7-day trend") or "N/A"
-    memory_at_oom = _extract_report_field(report, "Memory at OOM") or "N/A"
-    maxmemory = _extract_report_field(report, "Maxmemory config") or "N/A"
-    command_rate = _extract_report_field(report, "Command rate before OOM") or "N/A"
+    category = html.escape(_extract_report_field(report, "Category") or "Unknown")
+    confidence = html.escape(_extract_report_field(report, "Confidence") or "Unknown")
+    seven_day_trend = html.escape(_extract_report_field(report, "7-day trend") or "N/A")
+    memory_at_oom = html.escape(_extract_report_field(report, "Memory at OOM") or "N/A")
+    maxmemory = html.escape(_extract_report_field(report, "Maxmemory config") or "N/A")
+    command_rate = html.escape(_extract_report_field(report, "Command rate before OOM") or "N/A")
 
     # Extract the Recommended Action section
     recommended_action = ""
@@ -373,8 +386,8 @@ def _send_report_to_chat(
         response.raise_for_status()
         print("AI triage card sent to Google Chat.")
 
-        # Send full report as a follow-up message — scrub emails for PII safety
-        scrubbed_report = _EMAIL_RE.sub(lambda m: _mask_email(m.group(0)), report)
+        # Send full report as a follow-up message — scrub PII and sensitive URLs
+        scrubbed_report = _scrub_report(report)
         full_report_payload = {
             "text": f"📋 *Full AI OOM Triage Report — {pod} ({namespace})*\n\n{scrubbed_report}",
         }
@@ -469,6 +482,7 @@ def main():
     parser.add_argument("--rdb-url", default="", help="GCS path for dump.rdb")
     parser.add_argument("--aof-url", default="", help="GCS path for appendonlydir.tar.gz")
     parser.add_argument("--falkordb-version", default="", help="FalkorDB version")
+    parser.add_argument("--alert-timestamp", default="", help="ISO timestamp of the OOM event (fallback: now)")
     args = parser.parse_args()
 
     # Pass vmauth-url to tools via env
@@ -480,7 +494,15 @@ def main():
     verify_ssl = not (environment == "dev" or disable_ssl_verify)
 
     # Generate timestamp and Grafana links
-    oom_dt = datetime.now(ZoneInfo("Asia/Jerusalem"))
+    # Use alert timestamp if provided, else fall back to current time
+    tz_israel = ZoneInfo("Asia/Jerusalem")
+    if args.alert_timestamp:
+        try:
+            oom_dt = datetime.fromisoformat(args.alert_timestamp).astimezone(tz_israel)
+        except (ValueError, TypeError):
+            oom_dt = datetime.now(tz_israel)
+    else:
+        oom_dt = datetime.now(tz_israel)
     timestamp = oom_dt.strftime("%Y-%m-%d %H:%M:%S")
     oom_ts_ms = int(oom_dt.timestamp() * 1000)
     from_ms = oom_ts_ms - 10 * 60 * 1000
@@ -493,10 +515,12 @@ def main():
     try:
         report = asyncio.run(run_triage(args))
         if report:
+            # Scrub PII and sensitive URLs before any output
+            scrubbed_report = _scrub_report(report)
             print(f"\n{'='*60}")
             print("AI OOM Triage Report:")
             print(f"{'='*60}")
-            print(report)
+            print(scrubbed_report)
             print(f"{'='*60}")
 
             # Send to Google Chat
